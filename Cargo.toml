@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "resctl/below",
+    "resctl/common/cgroupfs",
+    "resctl/common/procfs",
+]
