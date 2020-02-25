@@ -1,0 +1,14 @@
+[package]
+name = "cgroupfs"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "Apache 2.0"
+include = ["src/lib.rs"]
+
+[dependencies]
+cgroupfs-thrift = { path = "if" }
+thiserror = "1.0"
+
+[dev-dependencies]
+tempfile = "3.1"
