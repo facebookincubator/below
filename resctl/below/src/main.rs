@@ -17,6 +17,8 @@
 #![recursion_limit = "256"]
 
 use std::backtrace::Backtrace;
+use std::fs;
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::mpsc::{channel, Receiver, TryRecvError};
@@ -116,6 +118,44 @@ pub enum Service {
     Off,
 }
 
+fn create_log_dir(path: &PathBuf) -> Result<()> {
+    if path.exists() && !path.is_dir() {
+        bail!("{} exists and is not a directory", path.to_string_lossy());
+    }
+
+    if !path.is_dir() {
+        match fs::create_dir_all(path) {
+            Ok(()) => (),
+            Err(e) => {
+                bail!(
+                    "Failed to create dir {}: {}\nTry sudo.",
+                    path.to_string_lossy(),
+                    e
+                );
+            }
+        }
+    }
+
+    let dir = fs::File::open(path).unwrap();
+    let mut perm = dir.metadata().unwrap().permissions();
+
+    if perm.mode() & 0o777 != 0o777 {
+        perm.set_mode(0o777);
+        match dir.set_permissions(perm) {
+            Ok(()) => (),
+            Err(e) => {
+                bail!(
+                    "Failed to set permissions on {}: {}",
+                    path.to_string_lossy(),
+                    e
+                );
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn run<F>(init: init::InitToken, opts: Opt, service: Service, command: F) -> i32
 where
     F: FnOnce(slog::Logger, Receiver<Error>) -> Result<()>,
@@ -123,6 +163,11 @@ where
     let (err_sender, err_receiver) = channel();
     let mut log_dir = opts.log_dir.clone();
     log_dir.push("error.log");
+
+    if let Err(e) = create_log_dir(&opts.log_dir) {
+        eprintln!("{}", e);
+        return 1;
+    }
 
     let logger = logging::setup(init, log_dir, opts.debug);
     setup_log_on_panic(logger.clone());
