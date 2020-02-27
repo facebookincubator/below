@@ -635,13 +635,15 @@ impl CgroupIoModel {
     }
 
     pub fn empty() -> CgroupIoModel {
+        // If io.stat file is empty, it means cgroup has no I/O at all. In that
+        // case we default to zero instead of None.
         CgroupIoModel {
-            rbytes_per_sec: None,
-            wbytes_per_sec: None,
-            rios_per_sec: None,
-            wios_per_sec: None,
-            dbytes_per_sec: None,
-            dios_per_sec: None,
+            rbytes_per_sec: Some(0.0),
+            wbytes_per_sec: Some(0.0),
+            rios_per_sec: Some(0.0),
+            wios_per_sec: Some(0.0),
+            dbytes_per_sec: Some(0.0),
+            dios_per_sec: Some(0.0),
         }
     }
 }

@@ -12,20 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::BTreeMap;
 use std::io;
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, RwLock};
-use std::time::{Duration, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use once_cell::sync::Lazy;
 use slog::{self, error, o, Drain};
 use tempdir::TempDir;
 
 use crate::logutil;
-use crate::model::collect_sample;
+use crate::model::{collect_sample, Model};
 use crate::store;
 use crate::Advance;
 
+use below_thrift::types::Sample;
 use below_thrift::DataFrame;
 
 pub fn get_logger() -> slog::Logger {
@@ -271,5 +273,44 @@ fn compound_decorator() {
         let term = TIO.read().unwrap();
         assert_eq!(&file[file.len() - 8..], "Go both\n");
         assert_eq!(&term[term.len() - 8..], "Go both\n");
+    }
+}
+
+#[test]
+/// For cgroup io stat that's empty, make sure we report zero's instead of None
+fn default_cgroup_io_model() {
+    let mut sample: Sample = Default::default();
+    let mut last_sample: Sample = Default::default();
+    sample.cgroup.io_stat = Some(BTreeMap::new());
+    last_sample.cgroup.io_stat = Some(BTreeMap::new());
+    let duration = Duration::from_secs(5);
+
+    let model = Model::new(SystemTime::now(), &sample, Some((&last_sample, duration)));
+    assert!(model.cgroup.io_total.is_some());
+    let io_total = model.cgroup.io_total.unwrap();
+    assert_eq!(io_total.rbytes_per_sec, Some(0.0));
+    assert_eq!(io_total.wbytes_per_sec, Some(0.0));
+    assert_eq!(io_total.rios_per_sec, Some(0.0));
+    assert_eq!(io_total.wios_per_sec, Some(0.0));
+    assert_eq!(io_total.dbytes_per_sec, Some(0.0));
+    assert_eq!(io_total.dios_per_sec, Some(0.0));
+}
+
+#[test]
+/// When at least one of IO stat sample is None, the IO model should also be.
+fn no_cgroup_io_model() {
+    let mut sample: Sample = Default::default();
+    let mut last_sample: Sample = Default::default();
+    for (io_stat, last_io_stat) in &[
+        (None, None),
+        (None, Some(BTreeMap::new())),
+        (Some(BTreeMap::new()), None),
+    ] {
+        sample.cgroup.io_stat = io_stat.clone();
+        last_sample.cgroup.io_stat = last_io_stat.clone();
+        let duration = Duration::from_secs(5);
+
+        let model = Model::new(SystemTime::now(), &sample, Some((&last_sample, duration)));
+        assert!(model.cgroup.io_total.is_none());
     }
 }
