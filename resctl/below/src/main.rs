@@ -26,7 +26,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, Context, Error, Result};
-use slog::{self, error, info};
+use slog::{self, debug, error};
 use structopt::StructOpt;
 
 // Shim between facebook types and open source types.
@@ -294,7 +294,7 @@ fn record(
     retain: Option<Duration>,
     collect_io_stat: bool,
 ) -> Result<()> {
-    info!(logger, "Starting up!");
+    debug!(logger, "Starting up!");
 
     dir.push("store");
     let mut store = store::StoreWriter::new(&dir)?;
