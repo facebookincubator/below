@@ -72,11 +72,17 @@ where
     where
         F: FnOnce(&mut dyn slog_term::RecordDecorator) -> io::Result<()>,
     {
-        f(&mut CompoundRecordDecorator(&self.file, &self.term))
+        f(&mut CompoundRecordDecorator(
+            &self.file,
+            &self.term,
+            *LOG_TARGET
+                .read()
+                .expect("Failed to acquire write lock on the LOG_TARGET"),
+        ))
     }
 }
 
-pub struct CompoundRecordDecorator<'a, W: 'a, T: 'a>(&'a RefCell<W>, &'a RefCell<T>)
+pub struct CompoundRecordDecorator<'a, W: 'a, T: 'a>(&'a RefCell<W>, &'a RefCell<T>, TargetLog)
 where
     W: io::Write,
     T: io::Write;
@@ -87,8 +93,7 @@ where
     T: io::Write,
 {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let log_target = get_current_log_target();
-        match log_target {
+        match self.2 {
             TargetLog::All => {
                 let term_res = self.1.borrow_mut().write(buf);
                 let file_res = self.0.borrow_mut().write(buf);

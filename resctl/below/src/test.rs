@@ -183,9 +183,10 @@ fn compound_decorator() {
     static FIO: Lazy<Arc<RwLock<String>>> = Lazy::new(|| Arc::new(RwLock::new(String::new())));
     static TIO: Lazy<Arc<RwLock<String>>> = Lazy::new(|| Arc::new(RwLock::new(String::new())));
 
-    struct FakeFileIO(Sender<bool>);
+    struct FakeFileIO(Sender<bool>, Sender<bool>);
     impl io::Write for FakeFileIO {
         fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.1.send(true).unwrap();
             let mut file_io = FIO.write().unwrap();
             let content = String::from_utf8(buf.to_vec()).unwrap();
             let content_size = content.len();
@@ -223,8 +224,9 @@ fn compound_decorator() {
 
     let (ftx, frx) = channel::<bool>();
     let (ttx, trx) = channel::<bool>();
+    let (rtx, rrx) = channel::<bool>();
 
-    let decorator = logutil::CompoundDecorator::new(FakeFileIO(ftx), FakeTermIO(ttx));
+    let decorator = logutil::CompoundDecorator::new(FakeFileIO(ftx, rtx), FakeTermIO(ttx));
     let drain = slog_term::FullFormat::new(decorator).build().fuse();
     let drain = slog_async::Async::new(drain).build().fuse();
 
@@ -273,6 +275,22 @@ fn compound_decorator() {
         let term = TIO.read().unwrap();
         assert_eq!(&file[file.len() - 8..], "Go both\n");
         assert_eq!(&term[term.len() - 8..], "Go both\n");
+    }
+    rrx.try_iter().count();
+
+    // Testing race condition during change target and flush
+    logutil::set_current_log_target(logutil::TargetLog::File);
+    error!(
+        logger,
+        "Something really long that will take multiple writes"
+    );
+    rrx.recv_timeout(timeout)
+        .expect("Race logger initial wait failed.");
+    logutil::set_current_log_target(logutil::TargetLog::Term);
+    frx.recv_timeout(timeout)
+        .expect("file logger raced with term logger");
+    if let Ok(_) = trx.recv_timeout(timeout) {
+        panic!("Term logger raced with file logger");
     }
 }
 
