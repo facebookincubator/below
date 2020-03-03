@@ -109,6 +109,23 @@ enum Command {
         #[structopt(long)]
         port: Option<u16>,
     },
+    /// Debugging facilities
+    Debug {
+        #[structopt(subcommand)]
+        cmd: DebugCommand,
+    },
+}
+
+#[derive(Debug, StructOpt)]
+enum DebugCommand {
+    DumpStore {
+        /// Time string to dump data for (same format as Replay mode)
+        #[structopt(short, long)]
+        time: String,
+        /// Pretty print in JSON
+        #[structopt(short, long)]
+        json: bool,
+    },
 }
 
 // Whether or not to start a service to respond to network request
@@ -249,6 +266,16 @@ fn real_main(init: init::InitToken) {
                 replay(logger, time, log_dir, host, port)
             })
         }
+        Command::Debug { ref cmd } => match cmd {
+            DebugCommand::DumpStore { ref time, ref json } => {
+                let time = time.clone();
+                let json = json.clone();
+                let log_dir = opts.log_dir.clone();
+                run(init, opts, Service::Off, |logger, _errs| {
+                    dump_store(logger, time, log_dir, json)
+                })
+            }
+        },
     };
     exit(rc);
 }
@@ -362,6 +389,40 @@ fn live(logger: slog::Logger, interval: Duration) -> Result<()> {
 
     logutil::set_current_log_target(logutil::TargetLog::File);
     view.run()
+}
+
+fn dump_store(logger: slog::Logger, time: String, mut path: PathBuf, json: bool) -> Result<()> {
+    let timestamp = UNIX_EPOCH
+        + Duration::from_secs(
+            dateutil::HgTime::parse(&time)
+                .ok_or(anyhow!("Unrecognized timestamp format"))?
+                .unixtime,
+        );
+
+    path.push("store");
+
+    let (ts, df) = match store::read_next_sample(
+        &path,
+        timestamp,
+        store::Direction::Forward,
+        logger.clone(),
+    ) {
+        Ok(Some((ts, df))) => (ts, df),
+        Ok(None) => bail!("Data not found for requested timestamp"),
+        Err(e) => bail!(e),
+    };
+
+    if ts != timestamp {
+        bail!("Exact requested timestamp not found (would have used next datapoint)");
+    }
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&df)?);
+    } else {
+        println!("{:#?}", df);
+    }
+
+    Ok(())
 }
 
 fn setup_log_on_panic(logger: slog::Logger) {
