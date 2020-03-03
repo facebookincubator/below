@@ -17,7 +17,7 @@ anyhow = "1.0"
 async-trait = { version = "0.1", features = ["support_old_nightly"] }
 chrono = { version="0.4", features=["serde"] }
 cursive = "0.14.0"
-futures-preview = { package = "futures", version = "0.3", features = ["async-await", "compat"] }
+futures = { version = "0.3", features = ["async-await", "compat"] }
 hostname = "0.3"
 humantime = "1.3"
 libc = "0.2"
