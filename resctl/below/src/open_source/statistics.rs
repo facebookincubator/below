@@ -22,4 +22,6 @@ impl Statistics {
     }
 
     pub fn report_store_size<P: AsRef<Path>>(&mut self, _dir: P) {}
+
+    pub fn report_collection_skew(&mut self) {}
 }

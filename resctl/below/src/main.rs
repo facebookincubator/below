@@ -26,7 +26,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, Context, Error, Result};
-use slog::{self, debug, error};
+use slog::{self, debug, error, warn};
 use structopt::StructOpt;
 
 // Shim between facebook types and open source types.
@@ -90,6 +90,9 @@ enum Command {
         /// Override default port for remote viewing server
         #[structopt(long)]
         port: Option<u16>,
+        /// Threshold for hold long data collection takes to trigger warnings.
+        #[structopt(long, default_value = "500")]
+        skew_detection_threshold_ms: u64,
     },
     /// Replay historical data (interactive)
     Replay {
@@ -239,6 +242,7 @@ fn real_main(init: init::InitToken) {
             retain_for_s,
             collect_io_stat,
             port,
+            skew_detection_threshold_ms,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
             let log_dir = opts.log_dir.clone();
@@ -250,6 +254,7 @@ fn real_main(init: init::InitToken) {
                     log_dir,
                     retain_for_s.map(|r| Duration::from_secs(r as u64)),
                     collect_io_stat,
+                    Duration::from_millis(skew_detection_threshold_ms),
                 )
             })
         }
@@ -320,6 +325,7 @@ fn record(
     mut dir: PathBuf,
     retain: Option<Duration>,
     collect_io_stat: bool,
+    skew_detection_threshold: Duration,
 ) -> Result<()> {
     debug!(logger, "Starting up!");
 
@@ -336,9 +342,25 @@ fn record(
         };
 
         let collect_instant = Instant::now();
-        match collect_sample(collect_io_stat) {
+        let collected_sample = collect_sample(collect_io_stat);
+        let post_collect_sys_time = SystemTime::now();
+        let post_collect_instant = Instant::now();
+
+        let collection_skew = post_collect_instant.duration_since(collect_instant);
+        if collection_skew >= skew_detection_threshold {
+            warn!(
+                logger,
+                "data collection took {} ms (>= {} ms)",
+                collection_skew.as_millis(),
+                skew_detection_threshold.as_millis()
+            );
+
+            stats.report_collection_skew();
+        }
+
+        match collected_sample {
             Ok(s) => {
-                if let Err(e) = store.put(SystemTime::now(), &DataFrame { sample: s }) {
+                if let Err(e) = store.put(post_collect_sys_time, &DataFrame { sample: s }) {
                     error!(logger, "{}", e);
                 }
             }
