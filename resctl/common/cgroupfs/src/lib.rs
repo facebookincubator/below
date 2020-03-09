@@ -203,7 +203,7 @@ macro_rules! key_values_format {
                         return Err(Error::UnexpectedLine(path.clone(), line));
                     }
                     let key = items[0];
-                    let val = items[1].parse().map_err(|_| Error::UnexpectedLine(path.clone(), line.clone()))?;
+                    let val = items[1].parse::<u64>().map_err(|_| Error::UnexpectedLine(path.clone(), line.clone()))? as i64;
                     match key.as_ref() {
                         $(stringify!($field) => s.$field = Some(val),)*
                         _ => (),

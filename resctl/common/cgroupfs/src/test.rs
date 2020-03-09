@@ -110,6 +110,21 @@ fn test_memory_stat_success() {
 }
 
 #[test]
+fn test_memory_stat_overflow() {
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content("memory.stat", b"slab 14914318128160131214\n");
+
+    let cgroup_reader = cgroup.get_reader();
+    let val = cgroup_reader
+        .read_memory_stat()
+        .expect("Failed to read memory.stat");
+    assert_eq!(
+        val.slab.expect("Failed to populate slab field") as u64,
+        14914318128160131214
+    );
+}
+
+#[test]
 fn test_memory_stat_parse_failure() {
     let cgroup = TestCgroup::new();
     cgroup.create_file_with_content("memory.stat", b"slab 1234\nlol\n");
