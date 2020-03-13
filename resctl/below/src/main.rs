@@ -45,6 +45,7 @@ mod open_source;
 use crate::open_source::*;
 
 mod advance;
+mod below_config;
 mod dateutil;
 mod logutil;
 mod model;
@@ -57,13 +58,14 @@ mod view;
 use crate::model::collect_sample;
 use crate::view::ViewState;
 use advance::Advance;
+use below_config::BelowConfig;
 use below_thrift::DataFrame;
 
 #[derive(Debug, StructOpt)]
 #[structopt(no_version)]
 struct Opt {
-    #[structopt(long, parse(from_os_str), default_value = "/var/log/below")]
-    log_dir: PathBuf,
+    #[structopt(long, parse(from_os_str), default_value = below_config::BELOW_DEFAULT_CONF)]
+    config: PathBuf,
     #[structopt(short, long)]
     debug: bool,
     #[structopt(subcommand)]
@@ -176,15 +178,21 @@ fn create_log_dir(path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-fn run<F>(init: init::InitToken, opts: Opt, service: Service, command: F) -> i32
+fn run<F>(
+    init: init::InitToken,
+    opts: Opt,
+    below_config: BelowConfig,
+    service: Service,
+    command: F,
+) -> i32
 where
     F: FnOnce(slog::Logger, Receiver<Error>) -> Result<()>,
 {
     let (err_sender, err_receiver) = channel();
-    let mut log_dir = opts.log_dir.clone();
+    let mut log_dir = below_config.log_dir.clone();
     log_dir.push("error.log");
 
-    if let Err(e) = create_log_dir(&opts.log_dir) {
+    if let Err(e) = create_log_dir(&below_config.log_dir) {
         eprintln!("{}", e);
         return 1;
     }
@@ -196,7 +204,7 @@ where
         init,
         logger.clone(),
         service,
-        opts.log_dir.clone().join("store"),
+        below_config.store_dir.clone(),
         err_sender,
     );
     let res = command(logger.clone(), err_receiver);
@@ -232,11 +240,20 @@ fn main() {
 
 fn real_main(init: init::InitToken) {
     let opts = Opt::from_args();
+    let below_config = match BelowConfig::load(&opts.config) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("{}", e);
+            exit(1);
+        }
+    };
 
     let rc = match opts.cmd {
-        Command::Live { interval_s } => run(init, opts, Service::Off, |logger, _errs| {
-            live(logger, Duration::from_secs(interval_s as u64))
-        }),
+        Command::Live { interval_s } => {
+            run(init, opts, below_config, Service::Off, |logger, _errs| {
+                live(logger, Duration::from_secs(interval_s as u64))
+            })
+        }
         Command::Record {
             interval_s,
             retain_for_s,
@@ -245,39 +262,45 @@ fn real_main(init: init::InitToken) {
             skew_detection_threshold_ms,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
-            let log_dir = opts.log_dir.clone();
-            run(init, opts, Service::On(port), |logger, errs| {
-                record(
-                    logger,
-                    errs,
-                    Duration::from_secs(interval_s as u64),
-                    log_dir,
-                    retain_for_s.map(|r| Duration::from_secs(r as u64)),
-                    collect_io_stat,
-                    Duration::from_millis(skew_detection_threshold_ms),
-                )
-            })
+            let store_dir = below_config.store_dir.clone();
+            run(
+                init,
+                opts,
+                below_config,
+                Service::On(port),
+                |logger, errs| {
+                    record(
+                        logger,
+                        errs,
+                        Duration::from_secs(interval_s as u64),
+                        store_dir,
+                        retain_for_s.map(|r| Duration::from_secs(r as u64)),
+                        collect_io_stat,
+                        Duration::from_millis(skew_detection_threshold_ms),
+                    )
+                },
+            )
         }
         Command::Replay {
             ref time,
             ref host,
             ref port,
         } => {
-            let log_dir = opts.log_dir.clone();
+            let store_dir = below_config.store_dir.clone();
             let time = time.clone();
             let host = host.clone();
             let port = port.clone();
-            run(init, opts, Service::Off, |logger, _errs| {
-                replay(logger, time, log_dir, host, port)
+            run(init, opts, below_config, Service::Off, |logger, _errs| {
+                replay(logger, time, store_dir, host, port)
             })
         }
         Command::Debug { ref cmd } => match cmd {
             DebugCommand::DumpStore { ref time, ref json } => {
                 let time = time.clone();
                 let json = json.clone();
-                let log_dir = opts.log_dir.clone();
-                run(init, opts, Service::Off, |logger, _errs| {
-                    dump_store(logger, time, log_dir, json)
+                let store_dir = below_config.store_dir.clone();
+                run(init, opts, below_config, Service::Off, |logger, _errs| {
+                    dump_store(logger, time, store_dir, json)
                 })
             }
         },
@@ -288,7 +311,7 @@ fn real_main(init: init::InitToken) {
 fn replay(
     logger: slog::Logger,
     time: String,
-    mut dir: PathBuf,
+    dir: PathBuf,
     host: Option<String>,
     port: Option<u16>,
 ) -> Result<()> {
@@ -302,7 +325,6 @@ fn replay(
     let mut advance = if let Some(host) = host {
         Advance::new_with_remote(logger.clone(), host, port, timestamp)?
     } else {
-        dir.push("store");
         Advance::new(logger.clone(), dir, timestamp)
     };
 
@@ -322,14 +344,13 @@ fn record(
     logger: slog::Logger,
     errs: Receiver<Error>,
     interval: Duration,
-    mut dir: PathBuf,
+    dir: PathBuf,
     retain: Option<Duration>,
     collect_io_stat: bool,
     skew_detection_threshold: Duration,
 ) -> Result<()> {
     debug!(logger, "Starting up!");
 
-    dir.push("store");
     let mut store = store::StoreWriter::new(&dir)?;
     let mut stats = statistics::Statistics::new();
 
@@ -413,15 +434,13 @@ fn live(logger: slog::Logger, interval: Duration) -> Result<()> {
     view.run()
 }
 
-fn dump_store(logger: slog::Logger, time: String, mut path: PathBuf, json: bool) -> Result<()> {
+fn dump_store(logger: slog::Logger, time: String, path: PathBuf, json: bool) -> Result<()> {
     let timestamp = UNIX_EPOCH
         + Duration::from_secs(
             dateutil::HgTime::parse(&time)
                 .ok_or(anyhow!("Unrecognized timestamp format"))?
                 .unixtime,
         );
-
-    path.push("store");
 
     let (ts, df) = match store::read_next_sample(
         &path,

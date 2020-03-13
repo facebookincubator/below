@@ -14,6 +14,7 @@
 
 use std::collections::BTreeMap;
 use std::io;
+use std::io::prelude::*;
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -22,6 +23,7 @@ use once_cell::sync::Lazy;
 use slog::{self, error, o, Drain};
 use tempdir::TempDir;
 
+use crate::below_config::BelowConfig;
 use crate::logutil;
 use crate::model::{collect_sample, Model};
 use crate::store;
@@ -330,5 +332,93 @@ fn no_cgroup_io_model() {
 
         let model = Model::new(SystemTime::now(), &sample, Some((&last_sample, duration)));
         assert!(model.cgroup.io_total.is_none());
+    }
+}
+
+#[test]
+fn test_config_default() {
+    let below_config: BelowConfig = Default::default();
+    assert_eq!(below_config.log_dir.to_string_lossy(), "/var/log/below");
+    assert_eq!(below_config.log_dir.to_string_lossy(), "/var/log/below");
+}
+
+#[test]
+fn test_config_fs_failure() {
+    let tempdir = TempDir::new("below_config_fs_failuer").expect("Failed to create temp dir");
+    let path = tempdir.path();
+    match BelowConfig::load(&path.to_path_buf()) {
+        Ok(_) => panic!("Below should not load if the non existing path is not default path"),
+        Err(e) => assert_eq!(
+            format!("{}", e),
+            format!("{} exists and is not a file", path.to_string_lossy())
+        ),
+    }
+
+    let path = tempdir.path().join("below.config");
+    match BelowConfig::load(&path) {
+        Ok(_) => panic!("Below should not load if the non existing path is not default path"),
+        Err(e) => assert_eq!(
+            format!("{}", e),
+            format!("No such file or directory: {}", path.to_string_lossy())
+        ),
+    }
+}
+
+#[test]
+fn test_config_load_success() {
+    let tempdir = TempDir::new("below_config_load").expect("Failed to create temp dir");
+    let path = tempdir.path().join("below.config");
+
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(&path)
+        .expect("Fail to open below.conf in tempdir");
+    let config_str = r#"
+        log_dir = '/var/log/below'
+        store_dir = '/var/log/below'
+        # I'm a comment
+        something_else = "demacia"
+    "#;
+    file.write_all(config_str.as_bytes())
+        .expect("Faild to write temp conf file during testing ignore");
+    file.flush().expect("Failed to flush during testing ignore");
+
+    let below_config = match BelowConfig::load(&path) {
+        Ok(b) => b,
+        Err(e) => panic!("{}", e),
+    };
+    assert_eq!(below_config.log_dir.to_string_lossy(), "/var/log/below");
+    assert_eq!(below_config.log_dir.to_string_lossy(), "/var/log/below");
+}
+
+#[test]
+fn test_below_load_failed() {
+    let tempdir = TempDir::new("below_config_load_failed").expect("Failed to create temp dir");
+    let path = tempdir.path().join("below.config");
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(&path)
+        .expect("Fail to open below.conf in tempdir");
+    let config_str = r#"
+        log_dir = '/var/log/below'
+        store_dir = '/var/log/below'
+        # I'm a comment
+        something_else = "demacia"
+        Some invalid string that is not a comment
+    "#;
+    file.write_all(config_str.as_bytes())
+        .expect("Faild to write temp conf file during testing ignore");
+    file.flush()
+        .expect("Failed to flush during testing failure");
+
+    match BelowConfig::load(&path) {
+        Ok(_) => panic!("Below should not load since it is an invalid configuration file"),
+        Err(e) => assert!(format!("{}", e).starts_with("Failed to parse config file")),
     }
 }
