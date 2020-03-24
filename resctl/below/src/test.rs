@@ -425,3 +425,33 @@ fn test_below_load_failed() {
         Err(e) => assert!(format!("{}", e).starts_with("Failed to parse config file")),
     }
 }
+
+#[test]
+fn test_config_partial_load() {
+    let tempdir = TempDir::new("below_config_load").expect("Failed to create temp dir");
+    let path = tempdir.path().join("below.config");
+
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(&path)
+        .expect("Fail to open below.conf in tempdir");
+    let config_str = r#"
+        log_dir = 'my magic string'
+    "#;
+    file.write_all(config_str.as_bytes())
+        .expect("Faild to write temp conf file during testing ignore");
+    file.flush().expect("Failed to flush during testing ignore");
+
+    let below_config = match BelowConfig::load(&path) {
+        Ok(b) => b,
+        Err(e) => panic!("{}", e),
+    };
+    assert_eq!(below_config.log_dir.to_string_lossy(), "my magic string");
+    assert_eq!(
+        below_config.store_dir.to_string_lossy(),
+        "/var/log/below/store"
+    );
+}

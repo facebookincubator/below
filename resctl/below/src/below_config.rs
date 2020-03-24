@@ -25,6 +25,8 @@ const BELOW_DEFAULT_LOG: &str = "/var/log/below";
 const BELOW_DEFAULT_STORE: &str = "/var/log/below/store";
 
 #[derive(Serialize, Deserialize, Debug)]
+// If value is missing during deserialization, use the Default::default()
+#[serde(default)]
 pub struct BelowConfig {
     pub log_dir: PathBuf,
     pub store_dir: PathBuf,

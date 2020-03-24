@@ -18,6 +18,7 @@ store_dir = "/var/log/below/store"
 1. Edit `/etc/below/below.conf` with desired value.
 2. Restart below service.
 
-## Note
+## Notes
 * After changing the `store_dir`, `below replay` may fail because of missing store directory. You can copy the old store folder to the updated location if you need historical data or simply restart the below service if you don't.
 * If the default configuration file is missing, `below` will use the default value. But if you override the config with a non-existing path, `below` will raise an error.
+* Any unset option in the config file will be implicitly set to the default value
