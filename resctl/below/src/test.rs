@@ -339,7 +339,10 @@ fn no_cgroup_io_model() {
 fn test_config_default() {
     let below_config: BelowConfig = Default::default();
     assert_eq!(below_config.log_dir.to_string_lossy(), "/var/log/below");
-    assert_eq!(below_config.log_dir.to_string_lossy(), "/var/log/below");
+    assert_eq!(
+        below_config.store_dir.to_string_lossy(),
+        "/var/log/below/store"
+    );
 }
 
 #[test]
@@ -391,7 +394,7 @@ fn test_config_load_success() {
         Err(e) => panic!("{}", e),
     };
     assert_eq!(below_config.log_dir.to_string_lossy(), "/var/log/below");
-    assert_eq!(below_config.log_dir.to_string_lossy(), "/var/log/below");
+    assert_eq!(below_config.store_dir.to_string_lossy(), "/var/log/below");
 }
 
 #[test]
