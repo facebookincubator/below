@@ -90,13 +90,11 @@ impl SystemModel {
         process_sample: &procfs::PidMap,
         process_last: Option<(&procfs::PidMap, Duration)>,
     ) -> SystemModel {
-        let cpu = if let Some((last, delta)) = last {
-            if let (Some(begin), Some(end), Some(cpus)) = (
-                last.stat.total_cpu.as_ref(),
-                sample.stat.total_cpu.as_ref(),
-                sample.stat.cpus.as_ref(),
-            ) {
-                Some(CpuModel::new(&begin, &end, cpus.len(), delta))
+        let cpu = if let Some((last, _)) = last {
+            if let (Some(begin), Some(end)) =
+                (last.stat.total_cpu.as_ref(), sample.stat.total_cpu.as_ref())
+            {
+                Some(CpuModel::new(&begin, &end))
             } else {
                 None
             }
@@ -157,20 +155,51 @@ fn opt_merge<S: Sized, T: Sized>(a: Option<S>, b: Option<T>) -> Option<(S, T)> {
 }
 
 impl CpuModel {
-    fn new(
-        begin: &procfs::CpuStat,
-        end: &procfs::CpuStat,
-        ncpus: usize,
-        delta: Duration,
-    ) -> CpuModel {
-        let idle_opt = usec_pct!(begin.idle_usec, end.idle_usec, delta);
-        let iowait_opt = usec_pct!(begin.iowait_usec, end.iowait_usec, delta);
-        let usage_opt = opt_merge(idle_opt, iowait_opt)
-            .map(|(idle, iowait)| (ncpus as f64 * 100.0) - (idle + iowait));
-        CpuModel {
-            usage_pct: usage_opt,
-            user_pct: usec_pct!(begin.user_usec, end.user_usec, delta),
-            system_pct: usec_pct!(begin.system_usec, end.system_usec, delta),
+    fn new(begin: &procfs::CpuStat, end: &procfs::CpuStat) -> CpuModel {
+        match (begin, end) {
+            // guest and guest_nice are ignored
+            (
+                procfs::CpuStat {
+                    user_usec: Some(prev_user),
+                    nice_usec: Some(prev_nice),
+                    system_usec: Some(prev_system),
+                    idle_usec: Some(prev_idle),
+                    iowait_usec: Some(prev_iowait),
+                    irq_usec: Some(prev_irq),
+                    softirq_usec: Some(prev_softirq),
+                    stolen_usec: Some(prev_stolen),
+                    ..
+                },
+                procfs::CpuStat {
+                    user_usec: Some(curr_user),
+                    nice_usec: Some(curr_nice),
+                    system_usec: Some(curr_system),
+                    idle_usec: Some(curr_idle),
+                    iowait_usec: Some(curr_iowait),
+                    irq_usec: Some(curr_irq),
+                    softirq_usec: Some(curr_softirq),
+                    stolen_usec: Some(curr_stolen),
+                    ..
+                },
+            ) => {
+                let idle_usec = (curr_idle + curr_iowait) - (prev_idle + prev_iowait);
+                let user_usec = curr_user - prev_user;
+                let system_usec = curr_system - prev_system;
+                let busy_usec =
+                    user_usec + system_usec + (curr_nice + curr_irq + curr_softirq + curr_stolen)
+                        - (prev_nice + prev_irq + prev_softirq + prev_stolen);
+                let total_usec = idle_usec + busy_usec;
+                CpuModel {
+                    usage_pct: Some(busy_usec as f64 * 100.0 / total_usec as f64),
+                    user_pct: Some(user_usec as f64 * 100.0 / total_usec as f64),
+                    system_pct: Some(system_usec as f64 * 100.0 / total_usec as f64),
+                }
+            }
+            _ => CpuModel {
+                usage_pct: None,
+                user_pct: None,
+                system_pct: None,
+            },
         }
     }
 }
@@ -591,23 +620,13 @@ impl CgroupCpuModel {
         end: &cgroupfs::CpuStat,
         delta: Duration,
     ) -> CgroupCpuModel {
-        // Calculates percentage of a core consumed during the given
-        // time period.
-        let usec_pct = |a_opt, b_opt| {
-            if let (Some(a), Some(b)) = (a_opt, b_opt) {
-                if a <= b {
-                    return Some((b - a) as f64 * 100.0 / delta.as_micros() as f64);
-                }
-            }
-            None
-        };
         CgroupCpuModel {
-            usage_pct: usec_pct(begin.usage_usec, end.usage_usec),
-            user_pct: usec_pct(begin.user_usec, end.user_usec),
-            system_pct: usec_pct(begin.system_usec, end.system_usec),
+            usage_pct: usec_pct!(begin.usage_usec, end.usage_usec, delta),
+            user_pct: usec_pct!(begin.user_usec, end.user_usec, delta),
+            system_pct: usec_pct!(begin.system_usec, end.system_usec, delta),
             nr_periods_per_sec: count_per_sec!(begin.nr_periods, end.nr_periods, delta),
             nr_throttled_per_sec: count_per_sec!(begin.nr_throttled, end.nr_throttled, delta),
-            throttled_pct: usec_pct(begin.throttled_usec, end.throttled_usec),
+            throttled_pct: usec_pct!(begin.throttled_usec, end.throttled_usec, delta),
         }
     }
 }

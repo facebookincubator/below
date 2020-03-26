@@ -25,7 +25,7 @@ use tempdir::TempDir;
 
 use crate::below_config::BelowConfig;
 use crate::logutil;
-use crate::model::{collect_sample, Model};
+use crate::model::{collect_sample, CpuModel, Model};
 use crate::store;
 use crate::Advance;
 
@@ -333,6 +333,51 @@ fn no_cgroup_io_model() {
         let model = Model::new(SystemTime::now(), &sample, Some((&last_sample, duration)));
         assert!(model.cgroup.io_total.is_none());
     }
+}
+
+#[test]
+fn calculate_cpu_usage() {
+    let mut sample: Sample = Default::default();
+    let mut last_sample: Sample = Default::default();
+    // Actual elapse is (1 + 3 + 4 + 2) = 10s
+    sample.system.stat.total_cpu = Some(procfs::CpuStat {
+        user_usec: Some(1_000_000),
+        nice_usec: Some(0),
+        system_usec: Some(3_000_000),
+        idle_usec: Some(4_000_000),
+        iowait_usec: Some(2_000_000),
+        irq_usec: Some(0),
+        softirq_usec: Some(0),
+        stolen_usec: Some(0),
+        guest_usec: Some(0),
+        guest_nice_usec: Some(0),
+    });
+    last_sample.system.stat.total_cpu = Some(procfs::CpuStat {
+        user_usec: Some(0),
+        nice_usec: Some(0),
+        system_usec: Some(0),
+        idle_usec: Some(0),
+        iowait_usec: Some(0),
+        irq_usec: Some(0),
+        softirq_usec: Some(0),
+        stolen_usec: Some(0),
+        guest_usec: Some(0),
+        guest_nice_usec: Some(0),
+    });
+    // Measure as 5s, which could happen if last sample took too long to record
+    let model = Model::new(
+        SystemTime::now(),
+        &sample,
+        Some((&last_sample, Duration::from_secs(5))),
+    );
+    assert_eq!(
+        model.system.cpu,
+        Some(CpuModel {
+            usage_pct: Some(40.0),
+            user_pct: Some(10.0),
+            system_pct: Some(30.0)
+        })
+    );
 }
 
 #[test]
