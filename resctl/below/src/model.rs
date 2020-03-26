@@ -90,25 +90,16 @@ impl SystemModel {
         process_sample: &procfs::PidMap,
         process_last: Option<(&procfs::PidMap, Duration)>,
     ) -> SystemModel {
-        let cpu = if let Some((last, _)) = last {
-            if let (Some(begin), Some(end)) =
-                (last.stat.total_cpu.as_ref(), sample.stat.total_cpu.as_ref())
-            {
-                Some(CpuModel::new(&begin, &end))
-            } else {
-                None
+        let cpu = last.and_then(|(last, _)| {
+            match (last.stat.total_cpu.as_ref(), sample.stat.total_cpu.as_ref()) {
+                (Some(begin), Some(end)) => Some(CpuModel::new(begin, end)),
+                _ => None,
             }
-        } else {
-            None
-        };
+        });
 
         let mem = Some(MemoryModel::new(&sample.meminfo));
 
-        let io = if let Some((last, delta)) = process_last {
-            Some(IoModel::new(process_sample, Some((last, delta))))
-        } else {
-            None
-        };
+        let io = process_last.map(|last| IoModel::new(process_sample, Some(last)));
 
         SystemModel {
             hostname: sample.hostname.clone(),
@@ -150,8 +141,11 @@ macro_rules! count_per_sec {
     }};
 }
 
-fn opt_merge<S: Sized, T: Sized>(a: Option<S>, b: Option<T>) -> Option<(S, T)> {
-    a.and_then(|x| b.map(|y| (x, y)))
+fn opt_add<S: Sized + std::ops::Add<T, Output = S>, T: Sized>(
+    a: Option<S>,
+    b: Option<T>,
+) -> Option<S> {
+    a.and_then(|x| b.map(|y| x + y))
 }
 
 impl CpuModel {
@@ -217,10 +211,8 @@ impl MemoryModel {
         MemoryModel {
             total: meminfo.total.map(|v| v as u64),
             free: meminfo.free.map(|v| v as u64),
-            anon: opt_merge(meminfo.active_anon, meminfo.inactive_anon)
-                .map(|(a, b)| (a + b) as u64),
-            file: opt_merge(meminfo.active_file, meminfo.inactive_file)
-                .map(|(a, b)| (a + b) as u64),
+            anon: opt_add(meminfo.active_anon, meminfo.inactive_anon).map(|x| x as u64),
+            file: opt_add(meminfo.active_file, meminfo.inactive_file).map(|x| x as u64),
         }
     }
 }
@@ -412,13 +404,11 @@ fn wrap<S: Sized>(
 fn io_stat_wrap<S: Sized>(
     v: std::result::Result<S, cgroupfs::Error>,
 ) -> std::result::Result<Option<S>, cgroupfs::Error> {
-    let wrapped = wrap(v);
-    if let Err(cgroupfs::Error::InvalidFileFormat(_)) = wrapped {
-        return Ok(None);
-    } else if let Err(cgroupfs::Error::UnexpectedLine(_, _)) = wrapped {
-        return Ok(None);
+    match wrap(v) {
+        Err(cgroupfs::Error::InvalidFileFormat(_)) => Ok(None),
+        Err(cgroupfs::Error::UnexpectedLine(_, _)) => Ok(None),
+        wrapped => wrapped,
     }
-    wrapped
 }
 
 fn collect_cgroup_sample(
@@ -512,17 +502,12 @@ impl CgroupModel {
     ) -> CgroupModel {
         let (cpu, io, io_total) = if let Some((last, delta)) = last {
             // We have cumulative data, create cpu, io models
-            let cpu = if let (Some(begin), Some(end)) =
-                (last.cpu_stat.as_ref(), sample.cpu_stat.as_ref())
-            {
-                Some(CgroupCpuModel::new(&begin, &end, delta))
-            } else {
-                None
+            let cpu = match (last.cpu_stat.as_ref(), sample.cpu_stat.as_ref()) {
+                (Some(begin), Some(end)) => Some(CgroupCpuModel::new(begin, end, delta)),
+                _ => None,
             };
-            let io: Option<BTreeMap<String, CgroupIoModel>> = if let (Some(begin), Some(end)) =
-                (last.io_stat.as_ref(), sample.io_stat.as_ref())
-            {
-                Some(
+            let io = match (last.io_stat.as_ref(), sample.io_stat.as_ref()) {
+                (Some(begin), Some(end)) => Some(
                     end.iter()
                         .filter_map(|(device_name, end_io_stat)| {
                             begin.get(device_name).map(|begin_io_stat| {
@@ -532,20 +517,15 @@ impl CgroupModel {
                                 )
                             })
                         })
-                        .collect(),
-                )
-            } else {
-                None
+                        .collect::<BTreeMap<String, CgroupIoModel>>(),
+                ),
+                _ => None,
             };
-            let io_total = if let Some(ref io_map) = io {
-                Some(
-                    io_map
-                        .iter()
-                        .fold(CgroupIoModel::empty(), |acc, (_, model)| acc + model),
-                )
-            } else {
-                None
-            };
+            let io_total = io.as_ref().map(|io_map| {
+                io_map
+                    .iter()
+                    .fold(CgroupIoModel::empty(), |acc, (_, model)| acc + model)
+            });
             (cpu, io, io_total)
         } else {
             // No cumulative data
@@ -555,12 +535,10 @@ impl CgroupModel {
             .pressure
             .as_ref()
             .map(|p| CgroupPressureModel::new(p));
-        let memory =
-            if let (Some(mem), Some(mem_stat)) = (sample.memory_current, &sample.memory_stat) {
-                Some(CgroupMemoryModel::new(mem as u64, mem_stat))
-            } else {
-                None
-            };
+        let memory = match (sample.memory_current, sample.memory_stat.as_ref()) {
+            (Some(mem), Some(mem_stat)) => Some(CgroupMemoryModel::new(mem as u64, mem_stat)),
+            _ => None,
+        };
         // recursively calculate view of children
         // `children` is optional, but we treat it the same as an empty map
         let empty = BTreeMap::new();
@@ -668,20 +646,13 @@ impl std::ops::Add<&CgroupIoModel> for CgroupIoModel {
     type Output = Self;
 
     fn add(self, other: &Self) -> Self {
-        let f = |a: Option<f64>, b: Option<f64>| {
-            if a.is_none() && b.is_none() {
-                None
-            } else {
-                Some(a.unwrap_or(0.0) + b.unwrap_or(0.0))
-            }
-        };
         Self {
-            rbytes_per_sec: f(self.rbytes_per_sec, other.rbytes_per_sec),
-            wbytes_per_sec: f(self.wbytes_per_sec, other.wbytes_per_sec),
-            rios_per_sec: f(self.rios_per_sec, other.rios_per_sec),
-            wios_per_sec: f(self.wios_per_sec, other.wios_per_sec),
-            dbytes_per_sec: f(self.dbytes_per_sec, other.dbytes_per_sec),
-            dios_per_sec: f(self.dios_per_sec, other.dios_per_sec),
+            rbytes_per_sec: opt_add(self.rbytes_per_sec, other.rbytes_per_sec),
+            wbytes_per_sec: opt_add(self.wbytes_per_sec, other.wbytes_per_sec),
+            rios_per_sec: opt_add(self.rios_per_sec, other.rios_per_sec),
+            wios_per_sec: opt_add(self.wios_per_sec, other.wios_per_sec),
+            dbytes_per_sec: opt_add(self.dbytes_per_sec, other.dbytes_per_sec),
+            dios_per_sec: opt_add(self.dios_per_sec, other.dios_per_sec),
         }
     }
 }
