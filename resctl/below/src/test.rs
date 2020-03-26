@@ -25,7 +25,7 @@ use tempdir::TempDir;
 
 use crate::below_config::BelowConfig;
 use crate::logutil;
-use crate::model::{collect_sample, CpuModel, Model};
+use crate::model::{collect_sample, CgroupPressureModel, CpuModel, Model};
 use crate::store;
 use crate::Advance;
 
@@ -98,12 +98,12 @@ fn record_replay_integration() {
     assert!(
         *restored_sample
             .cgroup
-            .pressure
+            .io_total
             .as_ref()
-            .expect("missing memory.pressure")
-            .memory_full_pct
+            .expect("missing io.stat")
+            .rbytes_per_sec
             .as_ref()
-            .expect("missing memory pressure full pct")
+            .expect("missing io stat read bytes per second")
             == 0.0
     );
     assert!(restored_sample.process.processes.len() == nr_procs);
@@ -376,6 +376,68 @@ fn calculate_cpu_usage() {
             usage_pct: Some(40.0),
             user_pct: Some(10.0),
             system_pct: Some(30.0)
+        })
+    );
+}
+
+#[test]
+fn calculate_pressure() {
+    let mut sample: Sample = Default::default();
+    let mut last_sample: Sample = Default::default();
+    // Two measurements are at least 6s apart
+    let pressure = cgroupfs::PressureMetrics {
+        avg10: Some(90.0),
+        avg60: Some(35.0),
+        avg300: Some(16.0),
+        total: Some(16_000_000),
+    };
+    let last_pressure = cgroupfs::PressureMetrics {
+        avg10: Some(80.0),
+        avg60: Some(30.0),
+        avg300: Some(15.0),
+        total: Some(10_000_000),
+    };
+    sample.cgroup.pressure = Some(cgroupfs::Pressure {
+        cpu: cgroupfs::CpuPressure {
+            some: pressure.clone(),
+        },
+        io: cgroupfs::IoPressure {
+            some: pressure.clone(),
+            full: pressure.clone(),
+        },
+        memory: cgroupfs::MemoryPressure {
+            some: pressure.clone(),
+            full: pressure.clone(),
+        },
+    });
+    last_sample.cgroup.pressure = Some(cgroupfs::Pressure {
+        cpu: cgroupfs::CpuPressure {
+            some: last_pressure.clone(),
+        },
+        io: cgroupfs::IoPressure {
+            some: last_pressure.clone(),
+            full: last_pressure.clone(),
+        },
+        memory: cgroupfs::MemoryPressure {
+            some: last_pressure.clone(),
+            full: last_pressure.clone(),
+        },
+    });
+    // Measure as 5s, which could happen if last sample took too long to record
+    let model = Model::new(
+        SystemTime::now(),
+        &sample,
+        Some((&last_sample, Duration::from_secs(5))),
+    );
+    // Use avg10 of current pressure metrics and ignore last one
+    assert_eq!(
+        model.cgroup.pressure,
+        Some(CgroupPressureModel {
+            cpu_some_pct: Some(90.0),
+            io_some_pct: Some(90.0),
+            io_full_pct: Some(90.0),
+            memory_some_pct: Some(90.0),
+            memory_full_pct: Some(90.0),
         })
     );
 }

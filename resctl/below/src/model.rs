@@ -510,8 +510,8 @@ impl CgroupModel {
         sample: &CgroupSample,
         last: Option<(&CgroupSample, Duration)>,
     ) -> CgroupModel {
-        let (cpu, io, io_total, pressure) = if let Some((last, delta)) = last {
-            // We have cumulative data, create cpu, io, and pressure models
+        let (cpu, io, io_total) = if let Some((last, delta)) = last {
+            // We have cumulative data, create cpu, io models
             let cpu = if let (Some(begin), Some(end)) =
                 (last.cpu_stat.as_ref(), sample.cpu_stat.as_ref())
             {
@@ -546,18 +546,15 @@ impl CgroupModel {
             } else {
                 None
             };
-            let pressure = if let (Some(begin), Some(end)) =
-                (last.pressure.as_ref(), sample.pressure.as_ref())
-            {
-                Some(CgroupPressureModel::new(&begin, &end, delta))
-            } else {
-                None
-            };
-            (cpu, io, io_total, pressure)
+            (cpu, io, io_total)
         } else {
             // No cumulative data
-            (None, None, None, None)
+            (None, None, None)
         };
+        let pressure = sample
+            .pressure
+            .as_ref()
+            .map(|p| CgroupPressureModel::new(p));
         let memory =
             if let (Some(mem), Some(mem_stat)) = (sample.memory_current, &sample.memory_stat) {
                 Some(CgroupMemoryModel::new(mem as u64, mem_stat))
@@ -748,25 +745,16 @@ pub struct CgroupPressureModel {
 }
 
 impl CgroupPressureModel {
-    fn new(
-        begin: &cgroupfs::Pressure,
-        end: &cgroupfs::Pressure,
-        delta: Duration,
-    ) -> CgroupPressureModel {
-        let usec_pct = |a_opt, b_opt| {
-            if let (Some(a), Some(b)) = (a_opt, b_opt) {
-                if a <= b {
-                    return Some((b - a) as f64 * 100.0 / delta.as_micros() as f64);
-                }
-            }
-            None
-        };
+    fn new(pressure: &cgroupfs::Pressure) -> CgroupPressureModel {
+        // Use avg10 instead of calculating pressure with the total metric. If
+        // elapsed time between reading pressure total and recording time is too
+        // long, pressure could exceed 100%.
         CgroupPressureModel {
-            cpu_some_pct: usec_pct(begin.cpu.some.total, end.cpu.some.total),
-            io_some_pct: usec_pct(begin.io.some.total, end.io.some.total),
-            io_full_pct: usec_pct(begin.io.full.total, end.io.full.total),
-            memory_some_pct: usec_pct(begin.memory.some.total, end.memory.some.total),
-            memory_full_pct: usec_pct(begin.memory.full.total, end.memory.full.total),
+            cpu_some_pct: pressure.cpu.some.avg10,
+            io_some_pct: pressure.io.some.avg10,
+            io_full_pct: pressure.io.full.avg10,
+            memory_some_pct: pressure.memory.some.avg10,
+            memory_full_pct: pressure.memory.full.avg10,
         }
     }
 }
