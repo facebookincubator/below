@@ -18,12 +18,11 @@ use std::iter::FromIterator;
 
 use cursive::theme::Effect;
 use cursive::view::{Identifiable, Scrollable, View};
-use cursive::views::{LinearLayout, ResizedView, TextView};
+use cursive::views::{LinearLayout, ResizedView, SelectView, TextView};
 use cursive::Cursive;
 
 use super::util::convert_bytes;
 use crate::model;
-use crate::view::cursive::SelectView;
 use crate::view::{SortOrder, ViewState};
 
 /// This trait described a field in the display so we can generically

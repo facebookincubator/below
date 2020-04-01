@@ -29,7 +29,6 @@ use crate::Advance;
 #[macro_use]
 mod util;
 mod cgroup_view;
-mod cursive;
 mod help_menu;
 mod process_view;
 mod status_bar;

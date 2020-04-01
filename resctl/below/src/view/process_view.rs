@@ -14,7 +14,7 @@
 
 use cursive::theme::Effect;
 use cursive::view::{Identifiable, Scrollable, View};
-use cursive::views::{LinearLayout, ResizedView, TextView};
+use cursive::views::{LinearLayout, ResizedView, SelectView, TextView};
 use cursive::Cursive;
 
 use std::cmp::Ordering;
@@ -22,7 +22,6 @@ use std::iter::FromIterator;
 
 use super::util::{convert_bytes, get_header, Field};
 use crate::model;
-use crate::view::cursive::SelectView;
 use crate::view::{SortOrder, ViewState};
 
 fn get_pid_rows(view_state: &ViewState) -> Vec<Vec<Field>> {
