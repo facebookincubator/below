@@ -19,7 +19,7 @@ use std::rc::Rc;
 use ::cursive::event::{Event, EventResult, EventTrigger};
 use ::cursive::theme::{BaseColor, Color, PaletteColor};
 use ::cursive::view::Identifiable;
-use ::cursive::views::{LinearLayout, OnEventView, Panel, ResizedView, StackView};
+use ::cursive::views::{LinearLayout, NamedView, OnEventView, Panel, ResizedView, StackView};
 use ::cursive::Cursive;
 use anyhow::Result;
 
@@ -76,10 +76,19 @@ pub enum SortOrder {
     Disk,
 }
 
+#[derive(Clone)]
+pub enum MainViewState {
+    Cgroup,
+    Process,
+    ProcessZoomedIntoCgroup(String),
+}
+
 pub struct ViewState {
     pub model: crate::model::Model,
     pub sort_order: SortOrder,
     pub collapsed_cgroups: HashSet<String>,
+    pub current_selected_cgroup: String,
+    pub main_view_state: MainViewState,
 }
 
 impl View {
@@ -89,6 +98,8 @@ impl View {
             model,
             sort_order: SortOrder::PID,
             collapsed_cgroups: HashSet::new(),
+            current_selected_cgroup: "<root>".to_string(),
+            main_view_state: MainViewState::Cgroup,
         });
         View { inner }
     }
@@ -169,21 +180,91 @@ impl View {
                                 ))
                                 .fullscreen_layer(ResizedView::with_full_screen(
                                     Panel::new(cgroup_view).with_name("cgroup_view_panel"),
-                                )),
+                                ))
+                                .with_name("main_view_stack"),
                         )
                         .on_pre_event_inner('p', |stack, _| {
-                            let position = stack
+                            let position = (*stack.get_mut())
                                 .find_layer_from_name("process_view_panel")
                                 .expect("Failed to find process view");
-                            stack.move_to_front(position);
-                            Some(EventResult::Consumed(None))
+                            (*stack.get_mut()).move_to_front(position);
+
+                            Some(EventResult::with_cb(|c| {
+                                let view_state = c
+                                    .user_data::<ViewState>()
+                                    .expect("No data stored in Cursive object!");
+                                view_state.main_view_state = MainViewState::Process;
+                            }))
                         })
                         .on_pre_event_inner('c', |stack, _| {
-                            let position = stack
+                            let position = (*stack.get_mut())
                                 .find_layer_from_name("cgroup_view_panel")
                                 .expect("Failed to find cgroup view");
-                            stack.move_to_front(position);
-                            Some(EventResult::Consumed(None))
+                            (*stack.get_mut()).move_to_front(position);
+
+                            Some(EventResult::with_cb(|c| {
+                                let view_state = c
+                                    .user_data::<ViewState>()
+                                    .expect("No data stored in Cursive object!");
+                                view_state.main_view_state = MainViewState::Cgroup;
+                            }))
+                        })
+                        .on_pre_event('z', |c| {
+                            let current_selection = c
+                                .user_data::<ViewState>()
+                                .expect("No data stored in Cursive object!")
+                                .current_selected_cgroup
+                                .clone();
+
+                            let current_state = c
+                                .user_data::<ViewState>()
+                                .expect("No data stored in Cursive object!")
+                                .main_view_state
+                                .clone();
+
+                            let next_state = match current_state {
+                                // Pressing 'z' in zoomed view should remove zoom
+                                // and bring user back to cgroup view
+                                MainViewState::ProcessZoomedIntoCgroup(_) => MainViewState::Cgroup,
+                                MainViewState::Cgroup => MainViewState::ProcessZoomedIntoCgroup(
+                                    current_selection.clone(),
+                                ),
+                                // Pressing 'z' in process view should do nothing
+                                MainViewState::Process => MainViewState::Process,
+                            };
+
+                            c.call_on_name(
+                                "main_view_stack",
+                                |stack: &mut NamedView<StackView>| {
+                                    match &next_state {
+                                        MainViewState::Process
+                                        | MainViewState::ProcessZoomedIntoCgroup(_) => {
+                                            // Bring process_view to front
+                                            let process_pos = (*stack.get_mut())
+                                                .find_layer_from_name("process_view_panel")
+                                                .expect("Failed to find process view");
+                                            (*stack.get_mut()).move_to_front(process_pos);
+                                        }
+                                        MainViewState::Cgroup => {
+                                            // Bring cgroup_view to front
+                                            let cgroup_pos = (*stack.get_mut())
+                                                .find_layer_from_name("cgroup_view_panel")
+                                                .expect("Failed to find cgroup view");
+                                            (*stack.get_mut()).move_to_front(cgroup_pos);
+                                        }
+                                    }
+                                },
+                            )
+                            .expect("failed to find main_view_stack");
+
+                            // Set next state
+                            c.user_data::<ViewState>()
+                                .expect("No data stored in Cursive object!")
+                                .main_view_state = next_state;
+
+                            // Redraw screen now so we don't have to wait until next tick
+                            // to get the zoomed view
+                            refresh(c);
                         })
                         .with_name("dynamic_view"),
                     ),

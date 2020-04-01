@@ -22,7 +22,7 @@ use std::iter::FromIterator;
 
 use super::util::{convert_bytes, get_header, Field};
 use crate::model;
-use crate::view::{SortOrder, ViewState};
+use crate::view::{MainViewState, SortOrder, ViewState};
 
 fn get_pid_rows(view_state: &ViewState) -> Vec<Vec<Field>> {
     let unknown = "?".to_string();
@@ -77,6 +77,20 @@ fn get_pid_rows(view_state: &ViewState) -> Vec<Vec<Field>> {
     }
     processes
         .iter()
+        .filter(|(_, spm)| {
+            // If we're in zoomed cgroup mode, only show processes belonging to
+            // our zoomed cgroup
+            match &view_state.main_view_state {
+                MainViewState::ProcessZoomedIntoCgroup(c) => {
+                    if spm.cgroup.as_ref().unwrap_or(&unknown).starts_with(c) {
+                        true
+                    } else {
+                        false
+                    }
+                }
+                _ => true,
+            }
+        })
         .map(|(pid, spm)| {
             let mut row: Vec<Field> = Vec::new();
             row.push(Field {

@@ -316,6 +316,13 @@ pub fn new(c: &mut Cursive) -> impl View {
         refresh(c);
     });
 
+    list.set_on_select(|c, cgroup: &String| {
+        let view_state = &mut c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!");
+        view_state.current_selected_cgroup = cgroup.clone();
+    });
+
     let mut header = String::new();
     for field in &CGROUP_FIELDS {
         header.push_str(&format!(
