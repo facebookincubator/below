@@ -131,6 +131,7 @@ impl View {
         theme.palette[PaletteColor::View] = Color::TerminalDefault;
         theme.palette[PaletteColor::Primary] = Color::TerminalDefault;
         theme.palette[PaletteColor::Highlight] = Color::Dark(BaseColor::Cyan);
+        theme.palette[PaletteColor::HighlightText] = Color::Dark(BaseColor::Black);
         theme.shadow = false;
 
         self.inner.set_theme(theme);
