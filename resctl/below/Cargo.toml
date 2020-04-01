@@ -17,7 +17,7 @@ stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch 
 anyhow = "1.0"
 async-trait = { version = "0.1", features = ["support_old_nightly"] }
 chrono = { version="0.4", features=["serde"] }
-cursive = "0.14.0"
+cursive = { git = "https://github.com/gyscos/cursive", rev = "750a7af6c79946ba7c87253714a6957abdd8bfd3" }
 futures = { version = "0.3", features = ["async-await", "compat"] }
 hostname = "0.3"
 humantime = "1.3"
