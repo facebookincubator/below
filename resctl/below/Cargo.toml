@@ -15,7 +15,7 @@ slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git",
 slog_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-async-trait = { version = "0.1", features = ["support_old_nightly"] }
+async-trait = "0.1.29"
 chrono = { version="0.4", features=["serde"] }
 cursive = { git = "https://github.com/gyscos/cursive", rev = "750a7af6c79946ba7c87253714a6957abdd8bfd3" }
 futures = { version = "0.3", features = ["async-await", "compat"] }
