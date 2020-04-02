@@ -18,12 +18,12 @@ use std::iter::FromIterator;
 
 use cursive::theme::Effect;
 use cursive::view::{Identifiable, Scrollable, View};
-use cursive::views::{LinearLayout, ResizedView, SelectView, TextView};
+use cursive::views::{LinearLayout, OnEventView, ResizedView, SelectView, TextView};
 use cursive::Cursive;
 
 use super::util::convert_bytes;
 use crate::model;
-use crate::view::{SortOrder, ViewState};
+use crate::view::{filter_popup, SortOrder, ViewState};
 
 /// This trait described a field in the display so we can generically
 /// display it's name and value and sort on it
@@ -211,13 +211,63 @@ const CGROUP_FIELDS: [&'static dyn Field<Model = model::CgroupModel>; 8] = [
     &WRITE_BYTES_FIELD,
 ];
 
+/// Returns a set of full cgroup paths that should be filtered out.
+///
+/// Note that this algorithm recursively whitelists parents of cgroups that are
+/// whitelisted. The reason for this is because cgroups are inherently tree-like
+/// and displaying a lone cgroup without its ancestors doesn't make much sense.
+fn calculate_filter_out_set(cgroup: &model::CgroupModel, filter: &str) -> HashSet<String> {
+    fn should_filter_out(
+        cgroup: &model::CgroupModel,
+        filter: &str,
+        set: &mut HashSet<String>,
+    ) -> bool {
+        // No children
+        if cgroup.count == 1 {
+            if !cgroup.full_path.contains(filter) {
+                set.insert(cgroup.full_path.clone());
+                return true;
+            }
+            return false;
+        }
+
+        let mut filter_cgroup = true;
+        for child in &cgroup.children {
+            if should_filter_out(&child, &filter, set) {
+                set.insert(child.full_path.clone());
+            } else {
+                // We found a child that's not filtered out. That means
+                // we have to keep this (the parent cgroup) too.
+                filter_cgroup = false;
+            }
+        }
+
+        if filter_cgroup {
+            set.insert(cgroup.full_path.clone());
+        }
+
+        filter_cgroup
+    }
+
+    let mut set = HashSet::new();
+    should_filter_out(&cgroup, &filter, &mut set);
+    set
+}
+
 fn get_cgroup_rows(view_state: &ViewState) -> Vec<(String, String)> {
     fn output_cgroup(
         cgroup: &model::CgroupModel,
         sort_order: SortOrder,
         collapsed_cgroups: &HashSet<String>,
+        filter_out_set: &Option<HashSet<String>>,
         output: &mut Vec<(String, String)>,
     ) {
+        if let Some(set) = &filter_out_set {
+            if set.contains(&cgroup.full_path) {
+                return;
+            }
+        }
+
         let collapsed = collapsed_cgroups.contains(&cgroup.full_path);
         let mut row = String::new();
         for field in &CGROUP_FIELDS {
@@ -267,8 +317,20 @@ fn get_cgroup_rows(view_state: &ViewState) -> Vec<(String, String)> {
         }
 
         for child_cgroup in &children {
-            output_cgroup(child_cgroup, sort_order, collapsed_cgroups, output);
+            output_cgroup(
+                child_cgroup,
+                sort_order,
+                collapsed_cgroups,
+                &filter_out_set,
+                output,
+            );
         }
+    };
+
+    let filter_out_set = if let Some(f) = &view_state.cgroup_filter {
+        Some(calculate_filter_out_set(&view_state.model.cgroup, &f))
+    } else {
+        None
     };
 
     let mut rows = Vec::new();
@@ -276,6 +338,7 @@ fn get_cgroup_rows(view_state: &ViewState) -> Vec<(String, String)> {
         &view_state.model.cgroup,
         view_state.sort_order,
         &view_state.collapsed_cgroups,
+        &filter_out_set,
         &mut rows,
     );
     rows
@@ -299,6 +362,20 @@ pub fn refresh(c: &mut Cursive) {
         .expect("No cgroup_view view found!");
 
     fill_content(c, &mut v);
+}
+
+fn submit_filter(c: &mut Cursive, text: &str) {
+    let view_state = &mut c
+        .user_data::<ViewState>()
+        .expect("No data stored in Cursive object!");
+
+    view_state.cgroup_filter = if text.is_empty() {
+        None
+    } else {
+        Some(text.to_string())
+    };
+
+    refresh(c);
 }
 
 pub fn new(c: &mut Cursive) -> impl View {
@@ -333,12 +410,26 @@ pub fn new(c: &mut Cursive) -> impl View {
         header.push(' ');
     }
 
-    LinearLayout::vertical()
-        .child(TextView::new(header).effect(Effect::Bold))
-        .child(ResizedView::with_full_screen(
-            list.with_name("cgroup_view").scrollable(),
-        ))
-        .scrollable()
-        .scroll_x(true)
-        .scroll_y(false)
+    OnEventView::new(
+        LinearLayout::vertical()
+            .child(TextView::new(header).effect(Effect::Bold))
+            .child(ResizedView::with_full_screen(
+                list.with_name("cgroup_view").scrollable(),
+            ))
+            .scrollable()
+            .scroll_x(true)
+            .scroll_y(false),
+    )
+    .on_event('/', |c| {
+        let initial_content = match &c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .cgroup_filter
+        {
+            Some(s) => s.clone(),
+            None => "".to_string(),
+        };
+
+        c.add_layer(filter_popup::new(initial_content.as_str(), submit_filter));
+    })
 }

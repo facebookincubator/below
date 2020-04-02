@@ -14,7 +14,7 @@
 
 use cursive::theme::Effect;
 use cursive::view::{Identifiable, Scrollable, View};
-use cursive::views::{LinearLayout, ResizedView, SelectView, TextView};
+use cursive::views::{LinearLayout, OnEventView, ResizedView, SelectView, TextView};
 use cursive::Cursive;
 
 use std::cmp::Ordering;
@@ -22,7 +22,7 @@ use std::iter::FromIterator;
 
 use super::util::{convert_bytes, get_header, Field};
 use crate::model;
-use crate::view::{MainViewState, SortOrder, ViewState};
+use crate::view::{filter_popup, MainViewState, SortOrder, ViewState};
 
 fn get_pid_rows(view_state: &ViewState) -> Vec<Vec<Field>> {
     let unknown = "?".to_string();
@@ -89,6 +89,14 @@ fn get_pid_rows(view_state: &ViewState) -> Vec<Vec<Field>> {
                     }
                 }
                 _ => true,
+            }
+        })
+        .filter(|(_, spm)| {
+            // If we're filtering by name, only show processes who pass the filter
+            if let Some(f) = &view_state.process_filter {
+                spm.comm.as_ref().unwrap_or(&unknown).contains(f)
+            } else {
+                true
             }
         })
         .map(|(pid, spm)| {
@@ -232,6 +240,20 @@ pub fn refresh(c: &mut Cursive) {
     fill_content(c, &mut v);
 }
 
+fn submit_filter(c: &mut Cursive, text: &str) {
+    let view_state = &mut c
+        .user_data::<ViewState>()
+        .expect("No data stored in Cursive object!");
+
+    view_state.process_filter = if text.is_empty() {
+        None
+    } else {
+        Some(text.to_string())
+    };
+
+    refresh(c);
+}
+
 pub fn new(c: &mut Cursive) -> impl View {
     let mut list = SelectView::new();
     fill_content(c, &mut list);
@@ -246,12 +268,26 @@ pub fn new(c: &mut Cursive) -> impl View {
         header = get_header(&rows);
     }
 
-    LinearLayout::vertical()
-        .child(TextView::new(header).effect(Effect::Bold))
-        .child(ResizedView::with_full_screen(
-            list.with_name("process_view").scrollable(),
-        ))
-        .scrollable()
-        .scroll_x(true)
-        .scroll_y(false)
+    OnEventView::new(
+        LinearLayout::vertical()
+            .child(TextView::new(header).effect(Effect::Bold))
+            .child(ResizedView::with_full_screen(
+                list.with_name("process_view").scrollable(),
+            ))
+            .scrollable()
+            .scroll_x(true)
+            .scroll_y(false),
+    )
+    .on_event('/', |c| {
+        let initial_content = match &c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .process_filter
+        {
+            Some(s) => s.clone(),
+            None => "".to_string(),
+        };
+
+        c.add_layer(filter_popup::new(initial_content.as_str(), submit_filter));
+    })
 }

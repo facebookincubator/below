@@ -37,6 +37,7 @@ fn fill_content(v: &mut LinearLayout) {
         "'M'     - sort by memory\n",
         "'D'     - sort by total disk activity\n",
         "'z'     - zoom into process view filtered by selected cgroup\n",
+        "'/'     - filter by name\n",
     ];
 
     for line in lines {

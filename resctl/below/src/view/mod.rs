@@ -29,6 +29,7 @@ use crate::Advance;
 #[macro_use]
 mod util;
 mod cgroup_view;
+mod filter_popup;
 mod help_menu;
 mod process_view;
 mod status_bar;
@@ -89,6 +90,8 @@ pub struct ViewState {
     pub collapsed_cgroups: HashSet<String>,
     pub current_selected_cgroup: String,
     pub main_view_state: MainViewState,
+    pub cgroup_filter: Option<String>,
+    pub process_filter: Option<String>,
 }
 
 impl View {
@@ -100,6 +103,8 @@ impl View {
             collapsed_cgroups: HashSet::new(),
             current_selected_cgroup: "<root>".to_string(),
             main_view_state: MainViewState::Cgroup,
+            cgroup_filter: None,
+            process_filter: None,
         });
         View { inner }
     }
