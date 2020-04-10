@@ -34,10 +34,11 @@ mod get;
 mod command;
 mod fill;
 mod print;
+mod system;
 mod tmain;
 
 pub use command::DumpCommand;
-use command::OutputFormat;
+use command::{GeneralOpt, OutputFormat, SysField};
 use fill::Dfill;
 use get::Dget;
 use print::Dprint;
@@ -113,13 +114,19 @@ fn translate_datetime(timestamp: &i64) -> String {
 }
 
 pub fn run(
-    _logger: slog::Logger,
-    _dir: PathBuf,
-    _host: Option<String>,
-    _port: Option<u16>,
+    logger: slog::Logger,
+    dir: PathBuf,
+    host: Option<String>,
+    port: Option<u16>,
     cmd: DumpCommand,
 ) -> Result<()> {
     match cmd {
+        DumpCommand::System { fields, opts } => {
+            let (time_end, advance) = get_advance(logger, dir, host, port, &opts.begin, &opts.end)?;
+            let mut sys = system::System::new(opts, advance, time_end, None);
+            sys.init(fields);
+            sys.exec()
+        }
         _ => Ok(()),
     }
 }
