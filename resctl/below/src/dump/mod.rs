@@ -34,11 +34,12 @@ mod get;
 mod command;
 mod fill;
 mod print;
+mod process;
 mod system;
 mod tmain;
 
 pub use command::DumpCommand;
-use command::{GeneralOpt, OutputFormat, SysField};
+use command::{GeneralOpt, OutputFormat, ProcField, SysField};
 use fill::Dfill;
 use get::Dget;
 use print::Dprint;
@@ -126,6 +127,16 @@ pub fn run(
             let mut sys = system::System::new(opts, advance, time_end, None);
             sys.init(fields);
             sys.exec()
+        }
+        DumpCommand::Process {
+            fields,
+            opts,
+            select,
+        } => {
+            let (time_end, advance) = get_advance(logger, dir, host, port, &opts.begin, &opts.end)?;
+            let mut process = process::Process::new(opts, advance, time_end, select);
+            process.init(fields);
+            process.exec()
         }
         _ => Ok(()),
     }
