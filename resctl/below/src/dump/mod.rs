@@ -30,14 +30,14 @@ use regex::Regex;
 use serde_json::{json, Value};
 
 #[macro_use]
-mod get;
-mod cgroup;
-mod command;
+pub mod get;
+pub mod cgroup;
+pub mod command;
 mod fill;
-mod print;
-mod process;
-mod system;
-mod tmain;
+pub mod print;
+pub mod process;
+pub mod system;
+pub mod tmain;
 
 pub use command::DumpCommand;
 use command::{CgroupField, GeneralOpt, OutputFormat, ProcField, SysField};
