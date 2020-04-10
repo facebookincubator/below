@@ -17,6 +17,8 @@ use std::time::{Duration, Instant, SystemTime};
 
 use anyhow::{anyhow, Context, Result};
 
+use crate::util::convert_bytes;
+use below_derive::BelowDecor;
 use below_thrift::types::{CgroupSample, Sample, SystemSample};
 
 /// Collects data samples and maintains the latest data
@@ -75,8 +77,9 @@ impl Model {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
 pub struct SystemModel {
+    #[bttr(title = "hostname")]
     pub hostname: String,
     pub cpu: Option<CpuModel>,
     pub mem: Option<MemoryModel>,
@@ -110,10 +113,25 @@ impl SystemModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
 pub struct CpuModel {
+    #[bttr(
+        title = "Usage",
+        width = 10,
+        title_width = 7,
+        unit = "%",
+        precision = 2
+    )]
     pub usage_pct: Option<f64>,
+    #[bttr(title = "User", width = 10, title_width = 7, unit = "%", precision = 2)]
     pub user_pct: Option<f64>,
+    #[bttr(
+        title = "System",
+        width = 10,
+        title_width = 7,
+        unit = "%",
+        precision = 2
+    )]
     pub system_pct: Option<f64>,
 }
 
@@ -198,11 +216,35 @@ impl CpuModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
 pub struct MemoryModel {
+    #[bttr(
+        title = "Total",
+        width = 10,
+        title_width = 7,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub total: Option<u64>,
+    #[bttr(
+        title = "Free",
+        width = 10,
+        title_width = 7,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub free: Option<u64>,
+    #[bttr(
+        title = "Anon",
+        width = 10,
+        title_width = 7,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub anon: Option<u64>,
+    #[bttr(
+        title = "File",
+        width = 10,
+        title_width = 7,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub file: Option<u64>,
 }
 
@@ -217,9 +259,21 @@ impl MemoryModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
 pub struct IoModel {
+    #[bttr(
+        title = "R/sec",
+        width = 10,
+        title_width = 7,
+        decorator = "convert_bytes($)"
+    )]
     pub rbytes_per_sec: Option<f64>,
+    #[bttr(
+        title = "W/sec",
+        width = 10,
+        title_width = 7,
+        decorator = "convert_bytes($)"
+    )]
     pub wbytes_per_sec: Option<f64>,
 }
 
@@ -270,11 +324,17 @@ impl ProcessModel {
     }
 }
 
+#[derive(BelowDecor, Default)]
 pub struct SingleProcessModel {
+    #[bttr(title = "Pid", width = 11)]
     pub pid: Option<i32>,
+    #[bttr(title = "Comm", width = 12)]
     pub comm: Option<String>,
+    #[bttr(title = "State", width = 11)]
     pub state: Option<procfs::PidState>,
+    #[bttr(title = "Uptime(sec)", width = 11)]
     pub uptime_secs: Option<u64>,
+    #[bttr(title = "Cgroup", width = 50)]
     pub cgroup: Option<String>,
     pub io: Option<ProcessIoModel>,
     pub mem: Option<ProcessMemoryModel>,
@@ -299,9 +359,15 @@ impl SingleProcessModel {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, BelowDecor, Default)]
 pub struct ProcessIoModel {
+    #[bttr(title = "Reads/sec", width = 11, decorator = "convert_bytes($ as f64)")]
     pub rbytes_per_sec: Option<f64>,
+    #[bttr(
+        title = "Writes/sec",
+        width = 11,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub wbytes_per_sec: Option<f64>,
 }
 
@@ -314,10 +380,13 @@ impl ProcessIoModel {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, BelowDecor, Default)]
 pub struct ProcessCpuModel {
+    #[bttr(title = "User CPU", width = 11, precision = 2, unit = "%")]
     pub user_pct: Option<f64>,
+    #[bttr(title = "Sys CPU", width = 11, precision = 2, unit = "%")]
     pub system_pct: Option<f64>,
+    #[bttr(title = "Threads", width = 11)]
     pub num_threads: Option<u64>,
 }
 
@@ -331,10 +400,18 @@ impl ProcessCpuModel {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, BelowDecor, Default)]
 pub struct ProcessMemoryModel {
+    #[bttr(title = "Minflt/sec", width = 11, precision = 2)]
     pub minorfaults_per_sec: Option<f64>,
+    #[bttr(title = "Majflt/sec", width = 11, precision = 2)]
     pub majorfaults_per_sec: Option<f64>,
+    #[bttr(
+        title = "RSS",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        cmp = true
+    )]
     pub rss_bytes: Option<u64>,
 }
 
@@ -456,9 +533,11 @@ fn collect_cgroup_sample(
     })
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, BelowDecor)]
 pub struct CgroupModel {
+    #[bttr(title = "Name", width = 50)]
     pub name: String,
+    #[bttr(title = "Full Path", width = 50)]
     pub full_path: String,
     pub depth: u32,
     pub cpu: Option<CgroupCpuModel>,
@@ -579,13 +658,19 @@ impl CgroupModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
 pub struct CgroupCpuModel {
+    #[bttr(title = "CPU", width = 15, unit = "%", precision = 2)]
     pub usage_pct: Option<f64>,
+    #[bttr(title = "CPU User", unit = "%", precision = 2)]
     pub user_pct: Option<f64>,
+    #[bttr(title = "CPU System", unit = "%", precision = 2)]
     pub system_pct: Option<f64>,
+    #[bttr(title = "Nr Period/s", unit = "/s", precision = 2)]
     pub nr_periods_per_sec: Option<f64>,
+    #[bttr(title = "Nr throttle/s", unit = "/s", precision = 2)]
     pub nr_throttled_per_sec: Option<f64>,
+    #[bttr(title = "Throttle Pct", unit = "%", precision = 2)]
     pub throttled_pct: Option<f64>,
 }
 
@@ -606,13 +691,29 @@ impl CgroupCpuModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
 pub struct CgroupIoModel {
+    #[bttr(
+        title = "Read Bytes/Sec",
+        width = 11,
+        unit = "/s",
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub rbytes_per_sec: Option<f64>,
+    #[bttr(
+        title = "Write Bytes/Sec",
+        width = 11,
+        unit = "/s",
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub wbytes_per_sec: Option<f64>,
+    #[bttr(title = "rio/s")]
     pub rios_per_sec: Option<f64>,
+    #[bttr(title = "wio/s")]
     pub wios_per_sec: Option<f64>,
+    #[bttr(title = "dbytes/s")]
     pub dbytes_per_sec: Option<f64>,
+    #[bttr(title = "dio/s")]
     pub dios_per_sec: Option<f64>,
 }
 
@@ -657,25 +758,43 @@ impl std::ops::Add<&CgroupIoModel> for CgroupIoModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
 pub struct CgroupMemoryModel {
+    #[bttr(title = "memory", width = 11, decorator = "convert_bytes($ as f64)")]
     pub total: Option<u64>,
+    #[bttr(title = "anon")]
     pub anon: Option<u64>,
+    #[bttr(title = "file")]
     pub file: Option<u64>,
+    #[bttr(title = "kernel_stack")]
     pub kernel_stack: Option<u64>,
+    #[bttr(title = "slab")]
     pub slab: Option<u64>,
+    #[bttr(title = "sock")]
     pub sock: Option<u64>,
+    #[bttr(title = "shmem")]
     pub shmem: Option<u64>,
+    #[bttr(title = "file_mapped")]
     pub file_mapped: Option<u64>,
+    #[bttr(title = "file_dirty")]
     pub file_dirty: Option<u64>,
+    #[bttr(title = "file_writeback")]
     pub file_writeback: Option<u64>,
+    #[bttr(title = "anon_thp")]
     pub anon_thp: Option<u64>,
+    #[bttr(title = "inactive_anon")]
     pub inactive_anon: Option<u64>,
+    #[bttr(title = "active_anon")]
     pub active_anon: Option<u64>,
+    #[bttr(title = "inactive_file")]
     pub inactive_file: Option<u64>,
+    #[bttr(title = "active_file")]
     pub active_file: Option<u64>,
+    #[bttr(title = "unevictable")]
     pub unevictable: Option<u64>,
+    #[bttr(title = "slab_reclaimable")]
     pub slab_reclaimable: Option<u64>,
+    #[bttr(title = "slab_unreclaimable")]
     pub slab_unreclaimable: Option<u64>,
     // TODO: memory.stat has a lot of cumulative stats that need to be
     // added
@@ -706,12 +825,17 @@ impl CgroupMemoryModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
 pub struct CgroupPressureModel {
+    #[bttr(title = "CPU Pressure", width = 15, unit = "%", precision = 2)]
     pub cpu_some_pct: Option<f64>,
+    #[bttr(title = "I/O Some Pressure")]
     pub io_some_pct: Option<f64>,
+    #[bttr(title = "I/O Pressure", width = 15, unit = "%", precision = 2)]
     pub io_full_pct: Option<f64>,
+    #[bttr(title = "Memory Some Pressure")]
     pub memory_some_pct: Option<f64>,
+    #[bttr(title = "Memory Pressure", width = 15, unit = "%", precision = 2)]
     pub memory_full_pct: Option<f64>,
 }
 

@@ -26,8 +26,6 @@ use anyhow::Result;
 use crate::store::Direction;
 use crate::Advance;
 
-#[macro_use]
-mod util;
 mod cgroup_view;
 mod filter_popup;
 mod help_menu;

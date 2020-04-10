@@ -16,73 +16,36 @@ use cursive::view::{Identifiable, View};
 use cursive::views::{LinearLayout, TextView};
 use cursive::Cursive;
 
-use super::util::convert_bytes;
 use crate::model::{CpuModel, IoModel, MemoryModel};
 use crate::view::ViewState;
 
 fn get_cpu_row(cpu: &Option<CpuModel>) -> String {
     format!(
-        "{:6.6}\t{:7.7}{:10.10}\t{:7.7}{:10.10}\t{:7.7}{:10.10}",
+        "{:6.6}\t{}",
         "Cpu",
-        "Usage",
-        cpu.as_ref().map_or("?".to_string(), |cpu| {
-            cpu.usage_pct
-                .map_or("?".to_string(), |usage| format!("{:.2}%", usage))
-        }),
-        "User",
-        cpu.as_ref().map_or("?".to_string(), |cpu| {
-            cpu.user_pct
-                .map_or("?".to_string(), |user| format!("{:.2}%", user))
-        }),
-        "System",
-        cpu.as_ref().map_or("?".to_string(), |cpu| {
-            cpu.system_pct
-                .map_or("?".to_string(), |sys| format!("{:.2}%", sys))
-        }),
+        cpu.as_ref()
+            .unwrap_or(&Default::default())
+            .get_interleave_line("", "\t")
     )
 }
 
 fn get_mem_row(mem: &Option<MemoryModel>) -> String {
     format!(
-        "{:6.6}\t{:7.7}{:10.10}\t{:7.7}{:10.10}\t{:7.7}{:10.10}\t{:7.7}{:10.10}",
+        "{:6.6}\t{}",
         "Mem",
-        "Total",
-        mem.as_ref().map_or("?".to_string(), |mem| {
-            mem.total
-                .map_or("?".to_string(), |total| convert_bytes(total as f64))
-        }),
-        "Free",
-        mem.as_ref().map_or("?".to_string(), |mem| {
-            mem.free
-                .map_or("?".to_string(), |free| convert_bytes(free as f64))
-        }),
-        "Anon",
-        mem.as_ref().map_or("?".to_string(), |mem| {
-            mem.anon
-                .map_or("?".to_string(), |anon| convert_bytes(anon as f64))
-        }),
-        "File",
-        mem.as_ref().map_or("?".to_string(), |mem| {
-            mem.file
-                .map_or("?".to_string(), |file| convert_bytes(file as f64))
-        }),
+        mem.as_ref()
+            .unwrap_or(&Default::default())
+            .get_interleave_line("", "\t")
     )
 }
 
 fn get_io_row(io: &Option<IoModel>) -> String {
     format!(
-        "{:6.6}\t{:7.7}{:10.10}\t{:7.7}{:10.10}",
+        "{:6.6}\t{}",
         "Io",
-        "R/sec",
-        io.as_ref().map_or("?".to_string(), |io| {
-            io.rbytes_per_sec
-                .map_or("?".to_string(), |r| convert_bytes(r))
-        }),
-        "W/sec",
-        io.as_ref().map_or("?".to_string(), |io| {
-            io.wbytes_per_sec
-                .map_or("?".to_string(), |w| convert_bytes(w))
-        }),
+        io.as_ref()
+            .unwrap_or(&Default::default())
+            .get_interleave_line("", "\t")
     )
 }
 

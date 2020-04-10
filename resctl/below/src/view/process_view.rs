@@ -17,64 +17,90 @@ use cursive::view::{Identifiable, Scrollable, View};
 use cursive::views::{LinearLayout, OnEventView, ResizedView, SelectView, TextView};
 use cursive::Cursive;
 
-use std::cmp::Ordering;
 use std::iter::FromIterator;
 
-use super::util::{convert_bytes, get_header, Field};
-use crate::model;
+use crate::model::SingleProcessModel;
 use crate::view::{filter_popup, MainViewState, SortOrder, ViewState};
+use below_derive::BelowDecor;
 
-fn get_pid_rows(view_state: &ViewState) -> Vec<Vec<Field>> {
+#[derive(BelowDecor, Default)]
+struct ProcessView {
+    #[blink("SingleProcessModel$get_comm")]
+    #[bttr(cmp = true)]
+    pub comm: Option<String>,
+    #[blink("SingleProcessModel$get_cgroup")]
+    pub cgroup: Option<String>,
+    #[blink("SingleProcessModel$get_pid")]
+    pub pid: Option<i32>,
+    #[blink("SingleProcessModel$get_state")]
+    pub state: Option<procfs::PidState>,
+    #[bttr(
+        title = "CPU",
+        width = 11,
+        precision = 2,
+        unit = "%",
+        aggr = "SingleProcessModel: cpu?.user_pct? + cpu?.system_pct?",
+        cmp = true
+    )]
+    pub cpu: Option<f64>,
+    #[blink("SingleProcessModel$cpu?.get_user_pct")]
+    pub cpu_user_pct: Option<f64>,
+    #[blink("SingleProcessModel$cpu?.get_system_pct")]
+    pub cpu_system_pct: Option<f64>,
+    #[blink("SingleProcessModel$mem?.get_rss_bytes")]
+    #[bttr(cmp = true)]
+    pub mem_rss_bytes: Option<u64>,
+    #[blink("SingleProcessModel$mem?.get_minorfaults_per_sec")]
+    pub mem_minorfaults_per_sec: Option<f64>,
+    #[blink("SingleProcessModel$mem?.get_majorfaults_per_sec")]
+    pub mem_majorfaults_per_sec: Option<f64>,
+    #[blink("SingleProcessModel$io?.get_rbytes_per_sec")]
+    pub io_rbytes_per_sec: Option<f64>,
+    #[blink("SingleProcessModel$io?.get_wbytes_per_sec")]
+    pub io_wbytes_per_sec: Option<f64>,
+    #[blink("SingleProcessModel$get_uptime_secs")]
+    pub uptime_secs: Option<u64>,
+    #[blink("SingleProcessModel$cpu?.get_num_threads")]
+    pub cpu_num_threads: Option<u64>,
+    #[bttr(
+        aggr = "SingleProcessModel: io?.rbytes_per_sec? + io?.wbytes_per_sec?",
+        cmp = true
+    )]
+    pub disk: Option<f64>,
+}
+
+fn get_header() -> String {
+    let spm: SingleProcessModel = Default::default();
+    let pv: ProcessView = Default::default();
+    pv.get_title_line(&spm)
+}
+
+fn get_pid_rows(view_state: &ViewState) -> Vec<String> {
     let unknown = "?".to_string();
     let mut processes = Vec::from_iter(&view_state.model.process.processes);
 
     match view_state.sort_order {
-        SortOrder::CPU => {
-            let sum_cpu = |v: &model::SingleProcessModel| {
-                v.cpu.as_ref().map_or(0.0, |o| {
-                    o.user_pct.map_or(0.0, |p| p) + o.system_pct.map_or(0.0, |p| p)
-                })
-            };
-            processes.sort_by(|lhs, rhs| {
-                sum_cpu(&rhs.1)
-                    .partial_cmp(&sum_cpu(&lhs.1))
-                    .unwrap_or(Ordering::Equal)
-            });
-        }
-        SortOrder::Memory => {
-            let sum_bytes = |v: &model::SingleProcessModel| {
-                v.mem.as_ref().map_or(0, |o| o.rss_bytes.map_or(0, |b| b))
-            };
-            processes.sort_by(|lhs, rhs| {
-                sum_bytes(&rhs.1)
-                    .partial_cmp(&sum_bytes(&lhs.1))
-                    .unwrap_or(Ordering::Equal)
-            });
-        }
-        SortOrder::Disk => {
-            let sum_bytes = |v: &model::SingleProcessModel| {
-                v.io.as_ref().map_or(0.0, |o| {
-                    o.rbytes_per_sec.map_or(0.0, |b| b) + o.wbytes_per_sec.map_or(0.0, |b| b)
-                })
-            };
-            processes.sort_by(|lhs, rhs| {
-                sum_bytes(&rhs.1)
-                    .partial_cmp(&sum_bytes(&lhs.1))
-                    .unwrap_or(Ordering::Equal)
-            });
-        }
-        SortOrder::Name => {
-            processes.sort_by(
-                |lhs, rhs| match (lhs.1.comm.as_ref(), rhs.1.comm.as_ref()) {
-                    (Some(a), Some(b)) => a.cmp(&b),
-                    (None, Some(_)) => Ordering::Less,
-                    (Some(_), None) => Ordering::Greater,
-                    _ => Ordering::Equal,
-                },
-            );
-        }
-        SortOrder::PID => {}
+        SortOrder::CPU => processes.sort_by(|lhs, rhs| {
+            ProcessView::cmp_by_cpu(&lhs.1, &rhs.1)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .reverse()
+        }),
+        SortOrder::Memory => processes.sort_by(|lhs, rhs| {
+            ProcessView::cmp_by_mem_rss_bytes(&lhs.1, &rhs.1)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .reverse()
+        }),
+        SortOrder::Disk => processes.sort_by(|lhs, rhs| {
+            ProcessView::cmp_by_disk(&lhs.1, &rhs.1)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .reverse()
+        }),
+        SortOrder::Name => processes.sort_by(|lhs, rhs| {
+            ProcessView::cmp_by_comm(&lhs.1, &rhs.1).unwrap_or(std::cmp::Ordering::Equal)
+        }),
+        SortOrder::PID => (),
     }
+    let pv: ProcessView = Default::default();
     processes
         .iter()
         .filter(|(_, spm)| {
@@ -82,11 +108,7 @@ fn get_pid_rows(view_state: &ViewState) -> Vec<Vec<Field>> {
             // our zoomed cgroup
             match &view_state.main_view_state {
                 MainViewState::ProcessZoomedIntoCgroup(c) => {
-                    if spm.cgroup.as_ref().unwrap_or(&unknown).starts_with(c) {
-                        true
-                    } else {
-                        false
-                    }
+                    spm.cgroup.as_ref().unwrap_or(&unknown).starts_with(c)
                 }
                 _ => true,
             }
@@ -99,115 +121,7 @@ fn get_pid_rows(view_state: &ViewState) -> Vec<Vec<Field>> {
                 true
             }
         })
-        .map(|(pid, spm)| {
-            let mut row: Vec<Field> = Vec::new();
-            row.push(Field {
-                name: format!("{:12.12}", "Comm"),
-                value: format!("{:12.12}", spm.comm.as_ref().unwrap_or(&unknown)),
-            });
-            row.push(Field {
-                name: format!("{:50.50}", "Cgroup"),
-                value: format!("{:50.50}", spm.cgroup.as_ref().unwrap_or(&unknown)),
-            });
-            row.push(Field {
-                name: format!("{:11.11}", "Pid"),
-                value: format!("{:11.11}", pid.to_string()),
-            });
-            row.push(Field {
-                name: format!("{:11.11}", "State"),
-                value: format!("{:11.11}", get_inner_or_default!(spm.state, unknown)),
-            });
-            row.push(Field {
-                name: format!("{:11.11}", "CPU"),
-                value: format!(
-                    "{:11.11}",
-                    spm.cpu.as_ref().map_or_else(
-                        || unknown.clone(),
-                        |cpu| {
-                            if let (Some(u), Some(s)) = (cpu.user_pct, cpu.system_pct) {
-                                return format!("{:.2}%", (u + s));
-                            }
-
-                            unknown.clone()
-                        }
-                    )
-                ),
-            });
-            row.push(Field {
-                name: format!("{:11.11}", "User CPU"),
-                value: format!(
-                    "{:11.11}",
-                    get_inner_or_default!(spm.cpu, unknown, user_pct, |i| format!("{:.2}%", i))
-                ),
-            });
-            row.push(Field {
-                name: format!("{:11.11}", "Sys CPU"),
-                value: format!(
-                    "{:11.11}",
-                    get_inner_or_default!(spm.cpu, unknown, system_pct, |i| format!("{:.2}%", i))
-                ),
-            });
-            row.push(Field {
-                name: format!("{:11.11}", "RSS"),
-                value: format!(
-                    "{:11.11}",
-                    get_inner_or_default!(spm.mem, unknown, rss_bytes, |n| {
-                        convert_bytes(n as f64)
-                    })
-                ),
-            });
-            row.push(Field {
-                name: format!("{:11.11}", "Minflt/sec"),
-                value: format!(
-                    "{:11.11}",
-                    get_inner_or_default!(spm.mem, unknown, minorfaults_per_sec, |i| format!(
-                        "{:.2}",
-                        i
-                    ))
-                ),
-            });
-            row.push(Field {
-                name: format!("{:11.11}", "Majflt/sec"),
-                value: format!(
-                    "{:11.11}",
-                    get_inner_or_default!(spm.mem, unknown, majorfaults_per_sec, |i| format!(
-                        "{:.2}",
-                        i
-                    ))
-                ),
-            });
-            row.push(Field {
-                name: format!("{:11.11}", "Reads/sec"),
-                value: format!(
-                    "{:11.11}",
-                    get_inner_or_default!(spm.io, unknown, rbytes_per_sec, |i| convert_bytes(
-                        i as f64
-                    ))
-                ),
-            });
-            row.push(Field {
-                name: format!("{:11.11}", "Writes/sec"),
-                value: format!(
-                    "{:11.11}",
-                    get_inner_or_default!(spm.io, unknown, wbytes_per_sec, |i| convert_bytes(
-                        i as f64
-                    ))
-                ),
-            });
-            row.push(Field {
-                name: format!("{:11.11}", "Uptime(sec)"),
-                value: format!("{:11.11}", get_inner_or_default!(spm.uptime_secs, unknown)),
-            });
-            row.push(Field {
-                name: format!("{:11.11}", "Threads"),
-                value: format!(
-                    "{:11.11}",
-                    get_inner_or_default!(spm.cpu, unknown, num_threads)
-                ),
-            });
-
-            row
-        })
+        .map(|(_, spm)| pv.get_field_line(&spm, &spm))
         .collect()
 }
 
@@ -219,15 +133,7 @@ fn fill_content(c: &mut Cursive, v: &mut SelectView) {
     let pos = v.selected_id().unwrap_or(0);
     v.clear();
 
-    v.add_all_str(get_pid_rows(view_state).iter().map(|row| {
-        let mut content = String::new();
-        for field in row {
-            content.push_str(&field.value);
-            content.push(' ');
-        }
-
-        content
-    }));
+    v.add_all_str(get_pid_rows(view_state));
 
     v.select_down(pos)(c);
 }
@@ -258,15 +164,7 @@ pub fn new(c: &mut Cursive) -> impl View {
     let mut list = SelectView::new();
     fill_content(c, &mut list);
 
-    let header: String;
-    {
-        let view_state = &c
-            .user_data::<ViewState>()
-            .expect("No data stored in Cursive object!");
-
-        let rows = get_pid_rows(view_state);
-        header = get_header(&rows);
-    }
+    let header = get_header();
 
     OnEventView::new(
         LinearLayout::vertical()
