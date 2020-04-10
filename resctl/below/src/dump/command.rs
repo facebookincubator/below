@@ -64,6 +64,8 @@ make_option! (SysField {
     "mem_free": MemFree,
     "mem_anon": MemAnon,
     "mem_file": MemFile,
+    "huge_page_total": HpTotal,
+    "huge_page_free": HpFree,
     "io_read": IoRead,
     "io_write": IoWrite,
 });
@@ -195,7 +197,7 @@ pub enum DumpCommand {
     ///
     /// cpu_usage, cpu_user, cpu_system
     ///
-    /// mem_total, mem_free, mem_anon, mem_file
+    /// mem_total, mem_free, mem_anon, mem_file, huge_page_total, huge_page_free
     ///
     /// io_read, io_write
     ///
@@ -203,7 +205,8 @@ pub enum DumpCommand {
     ///
     /// * cpu: includes [cpu_usage, cpu_user, cpu_system]
     ///
-    /// * mem: includes [mem_total, mem_free]. Additionally includes [mem_anon, mem_file] if --detail is specified.
+    /// * mem: includes [mem_total, mem_free]. Additionally includes [mem_anon, mem_file,
+    ///   huge_page_total, huge_page_free] if --detail is specified.
     ///
     /// * io: includes [io_read, io_write]
     ///

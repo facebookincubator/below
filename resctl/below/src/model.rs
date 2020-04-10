@@ -166,6 +166,13 @@ fn opt_add<S: Sized + std::ops::Add<T, Output = S>, T: Sized>(
     a.and_then(|x| b.map(|y| x + y))
 }
 
+fn opt_multiply<S: Sized + std::ops::Mul<T, Output = S>, T: Sized>(
+    a: Option<S>,
+    b: Option<T>,
+) -> Option<S> {
+    a.and_then(|x| b.map(|y| x * y))
+}
+
 impl CpuModel {
     fn new(begin: &procfs::CpuStat, end: &procfs::CpuStat) -> CpuModel {
         match (begin, end) {
@@ -246,6 +253,20 @@ pub struct MemoryModel {
         decorator = "convert_bytes($ as f64)"
     )]
     pub file: Option<u64>,
+    #[bttr(
+        title = "Huge total",
+        width = 10,
+        title_width = 11,
+        decorator = "convert_bytes($ as f64)"
+    )]
+    pub hugepage_total: Option<u64>,
+    #[bttr(
+        title = "Huge free",
+        width = 10,
+        title_width = 10,
+        decorator = "convert_bytes($ as f64)"
+    )]
+    pub hugepage_free: Option<u64>,
 }
 
 impl MemoryModel {
@@ -255,6 +276,10 @@ impl MemoryModel {
             free: meminfo.free.map(|v| v as u64),
             anon: opt_add(meminfo.active_anon, meminfo.inactive_anon).map(|x| x as u64),
             file: opt_add(meminfo.active_file, meminfo.inactive_file).map(|x| x as u64),
+            hugepage_total: opt_multiply(meminfo.total_huge_pages, meminfo.huge_page_size)
+                .map(|x| x as u64),
+            hugepage_free: opt_multiply(meminfo.free_huge_pages, meminfo.huge_page_size)
+                .map(|x| x as u64),
         }
     }
 }

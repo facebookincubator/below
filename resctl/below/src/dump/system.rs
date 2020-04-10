@@ -84,6 +84,22 @@ pub struct SystemData {
     #[blink("SystemModel$mem?.get_file")]
     pub mem_file: Option<u64>,
     #[bttr(
+        title = "Huge page total",
+        width = 16,
+        decorator = "convert_bytes($ as f64)",
+        tag = "SysField::HpTotal&"
+    )]
+    #[blink("SystemModel$mem?.get_hugepage_total")]
+    pub hugepage_total: Option<u64>,
+    #[bttr(
+        title = "Huge page free",
+        width = 16,
+        decorator = "convert_bytes($ as f64)",
+        tag = "SysField::HpFree&"
+    )]
+    #[blink("SystemModel$mem?.get_hugepage_free")]
+    pub hugepage_free: Option<u64>,
+    #[bttr(
         title = "IO R/sec",
         width = 11,
         decorator = "convert_bytes($ as f64)",
@@ -110,7 +126,9 @@ pub struct SystemData {
     timestamp: i64,
     #[bttr(class = "SysField$cpu_usage_pct&,cpu_user_pct&,cpu_system_pct&")]
     pub cpu: AwaysNone,
-    #[bttr(class = "SysField$mem_total&,mem_free&:mem_anon&,mem_file&")]
+    #[bttr(
+        class = "SysField$mem_total&,mem_free&:mem_anon&,mem_file&,hugepage_total&,hugepage_free&"
+    )]
     pub mem: AwaysNone,
     #[bttr(class = "SysField$io_rbytes_per_sec&,io_wbytes_per_sec&")]
     pub io: AwaysNone,

@@ -292,6 +292,9 @@ impl ProcReader {
                     "HugePages_Free:" => {
                         meminfo.free_huge_pages = parse_item!(path, items.next(), i64, line)?
                     }
+                    "Hugepagesize:" => {
+                        meminfo.huge_page_size = parse_kb!(path, items.next(), line)?
+                    }
                     _ => {}
                 }
             }

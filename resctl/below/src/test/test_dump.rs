@@ -102,8 +102,8 @@ fn test_tmain_init() {
     sys_handle.init(fields);
     assert!(sys_handle.get_opts().default);
     assert!(sys_handle.get_opts().detail);
-    assert_eq!(sys_handle.title_fns.len(), 10);
-    assert_eq!(sys_handle.field_fns.len(), 10);
+    assert_eq!(sys_handle.title_fns.len(), 12);
+    assert_eq!(sys_handle.field_fns.len(), 12);
     let mut title_iter = sys_handle.title_fns.iter();
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
@@ -136,6 +136,14 @@ fn test_tmain_init() {
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
         "Mem File"
+    );
+    assert_eq!(
+        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
+        "Huge page total"
+    );
+    assert_eq!(
+        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
+        "Huge page free"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),

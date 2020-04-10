@@ -68,9 +68,11 @@ struct MemInfo {
   28: optional i64 anon_huge_pages,
   29: optional i64 shmem_huge_pages,
   30: optional i64 file_huge_pages,
-  // These are in number of pages, not kilobytes
+  // This is in number of pages, not kilobytes
   31: optional i64 total_huge_pages,
+  // This is in number of pages, not kilobytes
   32: optional i64 free_huge_pages,
+  33: optional i64 huge_page_size,
 }
 
 struct VmStat {

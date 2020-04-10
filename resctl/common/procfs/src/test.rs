@@ -223,6 +223,7 @@ DirectMap1G:     2097152 kB
     assert_eq!(meminfo.file_huge_pages, Some(6144 * 1024));
     assert_eq!(meminfo.total_huge_pages, Some(0));
     assert_eq!(meminfo.free_huge_pages, Some(0));
+    assert_eq!(meminfo.huge_page_size, Some(2048 * 1024));
 }
 
 #[test]
