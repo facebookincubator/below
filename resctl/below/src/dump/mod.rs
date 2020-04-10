@@ -31,6 +31,7 @@ use serde_json::{json, Value};
 
 #[macro_use]
 mod get;
+mod cgroup;
 mod command;
 mod fill;
 mod print;
@@ -39,7 +40,7 @@ mod system;
 mod tmain;
 
 pub use command::DumpCommand;
-use command::{GeneralOpt, OutputFormat, ProcField, SysField};
+use command::{CgroupField, GeneralOpt, OutputFormat, ProcField, SysField};
 use fill::Dfill;
 use get::Dget;
 use print::Dprint;
@@ -138,6 +139,15 @@ pub fn run(
             process.init(fields);
             process.exec()
         }
-        _ => Ok(()),
+        DumpCommand::Cgroup {
+            fields,
+            opts,
+            select,
+        } => {
+            let (time_end, advance) = get_advance(logger, dir, host, port, &opts.begin, &opts.end)?;
+            let mut cgroup = cgroup::Cgroup::new(opts, advance, time_end, select);
+            cgroup.init(fields);
+            cgroup.exec()
+        }
     }
 }
