@@ -47,6 +47,7 @@ use crate::open_source::*;
 mod advance;
 mod below_config;
 mod dateutil;
+mod dump;
 mod logutil;
 mod model;
 mod store;
@@ -118,6 +119,17 @@ enum Command {
     Debug {
         #[structopt(subcommand)]
         cmd: DebugCommand,
+    },
+    /// Dump historical data
+    Dump {
+        /// Supply hostname to activate remote dumping
+        #[structopt(long)]
+        host: Option<String>,
+        /// Override default port to connect remote dumping to
+        #[structopt(long)]
+        port: Option<u16>,
+        #[structopt(subcommand)]
+        cmd: dump::DumpCommand,
     },
 }
 
@@ -304,6 +316,19 @@ fn real_main(init: init::InitToken) {
                 })
             }
         },
+        Command::Dump {
+            ref host,
+            ref port,
+            ref cmd,
+        } => {
+            let store_dir = below_config.store_dir.clone();
+            let host = host.clone();
+            let port = port.clone();
+            let cmd = cmd.clone();
+            run(init, opts, below_config, Service::Off, |logger, _errs| {
+                dump::run(logger, store_dir, host, port, cmd)
+            })
+        }
     };
     exit(rc);
 }

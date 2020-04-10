@@ -85,7 +85,7 @@ impl Advance {
         }
     }
 
-    fn get_next_ts(&self) -> SystemTime {
+    pub fn get_next_ts(&self) -> SystemTime {
         // timestamp for initial advance if initialize didn't setup last_sample
         if self.last_sample == None {
             return self.last_sample_time;
