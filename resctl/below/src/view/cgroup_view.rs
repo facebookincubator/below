@@ -22,7 +22,7 @@ use cursive::Cursive;
 
 use crate::model;
 use crate::model::CgroupModel;
-use crate::util::get_prefix;
+use crate::util::{fold_string, get_prefix};
 use crate::view::{filter_popup, SortOrder, ViewState};
 use below_derive::BelowDecor;
 
@@ -33,7 +33,8 @@ struct CgroupView {
         title = "Name",
         width = 50,
         depth = "self.depth * 3",
-        prefix = "get_prefix(self.collapse)"
+        prefix = "get_prefix(self.collapse)",
+        decorator = "fold_string(&$, 50 - self.depth * 3, 0, |c: char| !char::is_alphanumeric(c))"
     )]
     pub name: String,
     #[blink("CgroupModel$cpu?.get_usage_pct")]

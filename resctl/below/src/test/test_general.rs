@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use super::*;
+use crate::util::fold_string;
 
 #[test]
 fn record_replay_integration() {
@@ -300,5 +301,19 @@ fn calculate_pressure() {
             memory_some_pct: Some(90.0),
             memory_full_pct: Some(90.0),
         })
+    );
+}
+
+#[test]
+fn testing_fold_string() {
+    assert_eq!(fold_string("demacia", 0, 0, |_| true), "demacia");
+    assert_eq!(fold_string("demacia", 3, 0, |_| true), "demacia");
+    assert_eq!(fold_string("demacia", 6, 6, |_| true), "demacia");
+    assert_eq!(fold_string("demacia", 6, 20, |_| true), "demacia");
+
+    assert_eq!(fold_string("demaciaaaaaaa", 10, 0, |_| false), "dem...aaaa");
+    assert_eq!(
+        fold_string("d/emaciaaaaaa", 10, 0, |c| c == '/'),
+        "d/...aaaaa"
     );
 }

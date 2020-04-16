@@ -17,7 +17,7 @@ use std::time::{Duration, Instant, SystemTime};
 
 use anyhow::{anyhow, Context, Result};
 
-use crate::util::convert_bytes;
+use crate::util::{convert_bytes, fold_string};
 use below_derive::BelowDecor;
 use below_thrift::types::{CgroupSample, Sample, SystemSample};
 
@@ -359,7 +359,11 @@ pub struct SingleProcessModel {
     pub state: Option<procfs::PidState>,
     #[bttr(title = "Uptime(sec)", width = 11)]
     pub uptime_secs: Option<u64>,
-    #[bttr(title = "Cgroup", width = 50)]
+    #[bttr(
+        title = "Cgroup",
+        width = 50,
+        decorator = "fold_string(&$, 50, 1, |c: char| c == '/')"
+    )]
     pub cgroup: Option<String>,
     pub io: Option<ProcessIoModel>,
     pub mem: Option<ProcessMemoryModel>,
