@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod init;
-pub mod logging;
-pub mod remote_store;
-pub mod statistics;
-pub mod version;
+pub fn get_version_str() -> String {
+    String::from("");
+}

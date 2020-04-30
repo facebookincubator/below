@@ -20,6 +20,8 @@ use cursive::Cursive;
 
 use crate::view::ViewState;
 
+use crate::version::get_version_str;
+
 fn get_content(c: &mut Cursive) -> impl Into<StyledString> {
     let model = &c
         .user_data::<ViewState>()
@@ -28,6 +30,7 @@ fn get_content(c: &mut Cursive) -> impl Into<StyledString> {
     let datetime = DateTime::<Local>::from(model.timestamp);
     let mut header_str = datetime.format("%m/%d/%Y %H:%M:%S").to_string();
     header_str += format!("      {}", &model.system.hostname).as_str();
+    header_str += get_version_str().as_str();
     header_str
 }
 
