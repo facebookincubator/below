@@ -34,7 +34,7 @@ pub fn convert_bytes(val: f64) -> String {
     if val < 1_f64 {
         return format!("{:.1} B", val);
     }
-    let delimiter = 1000_f64;
+    let delimiter = 1024_f64;
     let exponent = std::cmp::min(
         (val.ln() / delimiter.ln()).floor() as i32,
         (units.len() - 1) as i32,
