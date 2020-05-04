@@ -466,7 +466,7 @@ fn get_hostname() -> Result<String> {
 pub fn collect_sample(collect_io_stat: bool) -> Result<Sample> {
     let reader = procfs::ProcReader::new();
     Ok(Sample {
-        cgroup: collect_cgroup_sample(&cgroupfs::CgroupReader::root(), collect_io_stat)?,
+        cgroup: collect_cgroup_sample(&cgroupfs::CgroupReader::root()?, collect_io_stat)?,
         processes: reader.read_all_pids()?,
         system: SystemSample {
             stat: reader.read_stat()?,

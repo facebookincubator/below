@@ -8,6 +8,7 @@ include = ["src/lib.rs"]
 
 [dependencies]
 cgroupfs-thrift = { path = "if" }
+openat = "0.1.18"
 thiserror = "1.0"
 
 [dev-dependencies]

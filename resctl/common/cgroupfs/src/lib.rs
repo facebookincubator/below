@@ -15,10 +15,10 @@
 #![deny(clippy::all)]
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
-use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
+use openat::{AsPath, Dir, SimpleType};
 use thiserror::Error;
 
 pub use cgroupfs_thrift::types::{
@@ -43,30 +43,26 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct CgroupReader {
-    root: PathBuf,
     relative_path: PathBuf,
-    path: PathBuf,
+    dir: Dir,
 }
 
 impl CgroupReader {
-    pub fn new(root: PathBuf) -> CgroupReader {
+    pub fn new(root: PathBuf) -> Result<CgroupReader> {
         CgroupReader::new_with_relative_path(root, PathBuf::from(OsStr::new("")))
     }
 
-    pub fn new_with_relative_path(root: PathBuf, relative_path: PathBuf) -> CgroupReader {
+    pub fn new_with_relative_path(root: PathBuf, relative_path: PathBuf) -> Result<CgroupReader> {
         let mut path = root.clone();
         match relative_path.strip_prefix("/") {
             Ok(p) => path.push(p),
             _ => path.push(&relative_path),
         };
-        CgroupReader {
-            root,
-            relative_path,
-            path,
-        }
+        let dir = Dir::open(&path).map_err(|e| Error::IoError(path, e))?;
+        Ok(CgroupReader { relative_path, dir })
     }
 
-    pub fn root() -> CgroupReader {
+    pub fn root() -> Result<CgroupReader> {
         CgroupReader::new(Path::new(DEFAULT_CG_ROOT).to_path_buf())
     }
 
@@ -79,41 +75,44 @@ impl CgroupReader {
     /// Read memory.current - returning current cgroup memory
     /// consumption in bytes
     pub fn read_memory_current(&self) -> Result<u64> {
-        let path = self.path.join("memory.current");
-        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
+        let file_name = "memory.current";
+        let file = self
+            .dir
+            .open_file(file_name)
+            .map_err(|e| self.io_error(file_name, e))?;
         let buf_reader = BufReader::new(file);
         for line in buf_reader.lines() {
-            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
+            let line = line.map_err(|e| self.io_error(file_name, e))?;
             return line
-                .parse()
-                .map_err(move |_| Error::UnexpectedLine(path.clone(), line));
+                .parse::<u64>()
+                .map_err(move |_| self.unexpected_line(file_name, line));
         }
-        Err(Error::InvalidFileFormat(path))
+        Err(self.invalid_file_format(file_name))
     }
 
     /// Read cpu.stat - returning assorted cpu consumption statistics
     pub fn read_cpu_stat(&self) -> Result<CpuStat> {
-        CpuStat::read(&self.path)
+        CpuStat::read(&self)
     }
 
     /// Read io.stat - returning assorted io consumption statistics
     pub fn read_io_stat(&self) -> Result<BTreeMap<String, IoStat>> {
-        IoStat::read(&self.path.join("io.stat"))
+        IoStat::read(&self, "io.stat")
     }
 
     /// Read memory.stat - returning assorted memory consumption
     /// statistics
     pub fn read_memory_stat(&self) -> Result<MemoryStat> {
-        MemoryStat::read(&self.path)
+        MemoryStat::read(&self)
     }
 
     /// Read cpu.pressure
     pub fn read_cpu_pressure(&self) -> Result<CpuPressure> {
-        let path = self.path.join("cpu.pressure");
-        let mut pressure = PressureMetrics::read(&path)?;
+        let file_name = "cpu.pressure";
+        let mut pressure = PressureMetrics::read(&self, file_name)?;
         let some_pressure = pressure
             .remove("some")
-            .ok_or_else(|| Error::InvalidFileFormat(path))?;
+            .ok_or_else(|| self.invalid_file_format(file_name))?;
 
         Ok(CpuPressure {
             some: some_pressure,
@@ -122,14 +121,14 @@ impl CgroupReader {
 
     /// Read io.pressure
     pub fn read_io_pressure(&self) -> Result<IoPressure> {
-        let path = self.path.join("io.pressure");
-        let mut pressure = PressureMetrics::read(&path)?;
+        let file_name = "io.pressure";
+        let mut pressure = PressureMetrics::read(&self, file_name)?;
         let some_pressure = pressure
             .remove("some")
-            .ok_or_else(|| Error::InvalidFileFormat(path.clone()))?;
+            .ok_or_else(|| self.invalid_file_format(file_name))?;
         let full_pressure = pressure
             .remove("full")
-            .ok_or_else(|| Error::InvalidFileFormat(path))?;
+            .ok_or_else(|| self.invalid_file_format(file_name))?;
         Ok(IoPressure {
             some: some_pressure,
             full: full_pressure,
@@ -138,14 +137,14 @@ impl CgroupReader {
 
     /// Read memory.pressure
     pub fn read_memory_pressure(&self) -> Result<MemoryPressure> {
-        let path = self.path.join("memory.pressure");
-        let mut pressure = PressureMetrics::read(&path)?;
+        let file_name = "memory.pressure";
+        let mut pressure = PressureMetrics::read(&self, file_name)?;
         let some_pressure = pressure
             .remove("some")
-            .ok_or_else(|| Error::InvalidFileFormat(path.clone()))?;
+            .ok_or_else(|| self.invalid_file_format(file_name))?;
         let full_pressure = pressure
             .remove("full")
-            .ok_or_else(|| Error::InvalidFileFormat(path))?;
+            .ok_or_else(|| self.invalid_file_format(file_name))?;
         Ok(MemoryPressure {
             some: some_pressure,
             full: full_pressure,
@@ -163,25 +162,46 @@ impl CgroupReader {
 
     /// Return an iterator over child cgroups
     pub fn child_cgroup_iter(&self) -> Result<impl Iterator<Item = CgroupReader> + '_> {
-        Ok(std::fs::read_dir(&self.path)
-            .map_err(|e| Error::IoError(self.path.clone(), e))?
-            .filter_map(move |dentry| match &dentry {
-                Ok(d) if d.path().is_dir() => {
+        Ok(self
+            .dir
+            .list_dir(".")
+            .map_err(|e| self.io_error("", e))?
+            .filter_map(move |entry| match entry {
+                Ok(entry) if entry.simple_type() == Some(SimpleType::Dir) => {
+                    let dir = match self.dir.sub_dir(entry.file_name()) {
+                        Ok(d) => d,
+                        Err(_) => return None,
+                    };
                     let mut relative_path = self.relative_path.clone();
-                    relative_path.push(d.file_name());
-                    Some(CgroupReader::new_with_relative_path(
-                        self.root.clone(),
-                        relative_path,
-                    ))
+                    relative_path.push(entry.file_name());
+                    Some(CgroupReader { relative_path, dir })
                 }
                 _ => None,
             }))
+    }
+
+    fn invalid_file_format<P: AsRef<Path>>(&self, file_name: P) -> Error {
+        let mut p = self.relative_path.clone();
+        p.push(file_name);
+        Error::InvalidFileFormat(p)
+    }
+
+    fn io_error<P: AsRef<Path>>(&self, file_name: P, e: std::io::Error) -> Error {
+        let mut p = self.relative_path.clone();
+        p.push(file_name);
+        Error::IoError(p, e)
+    }
+
+    fn unexpected_line<P: AsRef<Path>>(&self, file_name: P, line: String) -> Error {
+        let mut p = self.relative_path.clone();
+        p.push(file_name);
+        Error::UnexpectedLine(p, line)
     }
 }
 
 // Trait to add a read() method for `key value` formatted files
 trait KVRead: Sized {
-    fn read<P: AsRef<Path>>(cgroup_path: P) -> Result<Self>;
+    fn read(reader: &CgroupReader) -> Result<Self>;
 }
 
 // This macro generates the read() method for the given struct, file
@@ -191,26 +211,26 @@ trait KVRead: Sized {
 macro_rules! key_values_format {
     ($struct:ident; $file:expr; [ $( $field:ident ),+ ]) => (
         impl KVRead for $struct {
-            fn read<P: AsRef<Path>>(cgroup_path: P) -> Result<$struct> {
+            fn read(r: &CgroupReader) -> Result<$struct> {
                 let mut s = $struct::default();
-                let path = cgroup_path.as_ref().join(stringify!($file));
-                let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
+                let file_name = stringify!($file);
+                let file = r.dir.open_file(file_name).map_err(|e| r.io_error(file_name, e))?;
                 let buf_reader = BufReader::new(file);
                 for line in buf_reader.lines() {
-                    let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
+                    let line = line.map_err(|e| r.io_error(file_name, e))?;
                     let items = line.split_whitespace().collect::<Vec<_>>();
                     if items.len() != 2 {
-                        return Err(Error::UnexpectedLine(path.clone(), line));
+                        return Err(r.unexpected_line(file_name, line));
                     }
                     let key = items[0];
-                    let val = items[1].parse::<u64>().map_err(|_| Error::UnexpectedLine(path.clone(), line.clone()))? as i64;
+                    let val = items[1].parse::<u64>().map_err(|_| r.unexpected_line(file_name, line.clone()))? as i64;
                     match key.as_ref() {
                         $(stringify!($field) => s.$field = Some(val),)*
                         _ => (),
                     };
                 }
                 if s == $struct::default() {
-                    Err(Error::InvalidFileFormat(path))
+                    Err(r.invalid_file_format(file_name))
                 } else {
                     Ok(s)
                 }
@@ -264,18 +284,21 @@ key_values_format!(MemoryStat; memory.stat; [
 
 // Trait to add a read() method for `<string> key=value` formatted files
 trait NameKVRead: Sized {
-    fn read(file_path: &PathBuf) -> Result<BTreeMap<String, Self>>;
+    fn read<P: AsRef<Path> + AsPath + Clone>(
+        r: &CgroupReader,
+        file_name: P,
+    ) -> Result<BTreeMap<String, Self>>;
 }
 
 macro_rules! name_key_equal_value_format {
     ($struct:ident; $allows_empty:expr; [ $($field:ident,)+ ]) => (
         impl NameKVRead for $struct {
-            fn read(file_path: &PathBuf) -> Result<BTreeMap<String, $struct>> {
+            fn read<P: AsRef<Path> + AsPath + Clone>(r: &CgroupReader, file_name: P) -> Result<BTreeMap<String, $struct>> {
                 let mut map = BTreeMap::new();
-                let file = File::open(&file_path).map_err(|e| Error::IoError(file_path.clone(), e))?;
+                let file = r.dir.open_file(file_name.clone()).map_err(|e| r.io_error(file_name.clone(), e))?;
                 let buf_reader = BufReader::new(file);
                 for line in buf_reader.lines() {
-                    let line = line.map_err(|e| Error::IoError(file_path.clone(), e))?;
+                    let line = line.map_err(|e| r.io_error(file_name.clone(), e))?;
                     let items = line.split_whitespace().collect::<Vec<_>>();
                     // as an example, io.stat looks like:
                     // 253:0 rbytes=531745786880 wbytes=1623798909952 ...
@@ -283,23 +306,23 @@ macro_rules! name_key_equal_value_format {
                     for item in items.iter().skip(1) {
                         let kv = item.split("=").collect::<Vec<_>>();
                         if kv.len() != 2 {
-                            return Err(Error::InvalidFileFormat(file_path.clone()));
+                            return Err(r.invalid_file_format(file_name));
                         }
                         let key = kv[0];
                         match key.as_ref() {
                             $(stringify!($field) => s.$field = Some(
-                                kv[1].parse().map_err(|_| Error::UnexpectedLine(file_path.clone(), line.clone()))?
+                                kv[1].parse().map_err(|_| r.unexpected_line(file_name.clone(), line.clone()))?
                             ),)*
                             _ => (),
                         };
                     }
                     if s == $struct::default() {
-                        return Err(Error::InvalidFileFormat(file_path.clone()))
+                        return Err(r.invalid_file_format(file_name))
                     }
                     map.insert(items[0].to_string(), s);
                 }
                 if !$allows_empty && map.is_empty() {
-                     Err(Error::InvalidFileFormat(file_path.clone()))
+                     Err(r.invalid_file_format(file_name))
                 } else {
                     Ok(map)
                 }

@@ -38,7 +38,7 @@ impl TestCgroup {
     }
 
     fn get_reader(&self) -> CgroupReader {
-        CgroupReader::new(self.path().to_path_buf())
+        CgroupReader::new(self.path().to_path_buf()).expect("Failed to construct reader")
     }
 
     fn create_file_with_content<P: AsRef<Path>>(&self, p: P, content: &[u8]) {
