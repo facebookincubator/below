@@ -37,5 +37,5 @@ slog-term = "2.4.2"
 structopt = "0.3.7"
 tempdir = "0.3"
 tokio = { version = "=0.2.13", features = ["full"] }
-toml = "=0.5.5"
+toml = "=0.5.6"
 walkdir = "2.2.9"
