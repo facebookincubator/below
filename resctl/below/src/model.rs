@@ -33,8 +33,8 @@ impl Collector {
 
     /// Collect a new `Sample`, returning an updated Model
     pub fn update_model(&mut self) -> Result<Model> {
-        let sample = collect_sample(true)?;
         let now = Instant::now();
+        let sample = collect_sample(true)?;
         let last = self.last.replace((sample, now));
         let model = Model::new(
             SystemTime::now(),
@@ -46,6 +46,7 @@ impl Collector {
 }
 
 pub struct Model {
+    pub time_elapsed: Duration,
     pub timestamp: SystemTime,
     pub system: SystemModel,
     pub cgroup: CgroupModel,
@@ -58,6 +59,7 @@ impl Model {
     /// collected.
     pub fn new(timestamp: SystemTime, sample: &Sample, last: Option<(&Sample, Duration)>) -> Self {
         Model {
+            time_elapsed: last.map(|(_, d)| d).unwrap_or_default(),
             timestamp,
             system: SystemModel::new(
                 &sample.system,
