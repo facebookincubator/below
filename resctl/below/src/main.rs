@@ -106,6 +106,8 @@ enum Command {
         /// Relative: {humantime} ago, e.g. "2 days 3 hr 15m 10sec ago"
         ///
         /// Absolute: "Jan 01 23:59", "01/01/1970 11:59PM", "1970-01-01 23:59:59"
+        ///
+        /// Unix Epoch: 1589808367
         #[structopt(short, long)]
         time: String,
         /// Supply hostname to activate remote viewing
@@ -343,7 +345,18 @@ fn replay(
     let timestamp = UNIX_EPOCH
         + Duration::from_secs(
             dateutil::HgTime::parse(&time)
-                .ok_or(anyhow!("Unrecognized timestamp format"))?
+                .ok_or_else(|| {
+                    anyhow!(
+                        "Unrecognized timestamp format\n\
+                    Input: {}.\n\
+                    Examples:\n\t\
+                    Keywords: now, today, yesterday\n\t\
+                    Relative: \"{{humantime}} ago\", e.g. 2 days 3 hr 15m 10sec ago\n\t\
+                    Absolute: \"Jan 01 23:59\", \"01/01/1970 11:59PM\", \"1970-01-01 23:59:59\"\n\t\
+                    Unix Epoch: 1589808367",
+                        &time
+                    )
+                })?
                 .unixtime,
         );
 
@@ -358,7 +371,11 @@ fn replay(
     advance.initialize();
     let mut view = match advance.advance(store::Direction::Forward) {
         Some(model) => view::View::new(model),
-        None => return Err(anyhow!("No initial model could be found!")),
+        None => return Err(anyhow!(
+            "No initial model could be found!\n\
+            You may have provided a time in the future or no data was recorded during the provided time.\n\
+            Please check your input and timezone."
+        )),
     };
     view.register_advance(advance);
     logutil::set_current_log_target(logutil::TargetLog::File);

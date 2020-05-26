@@ -25,6 +25,7 @@
 
 use chrono::prelude::*;
 use chrono::Duration;
+use regex::Regex;
 use std::ops::{Add, Range, Sub};
 use std::sync::atomic::{AtomicI32, Ordering};
 
@@ -113,6 +114,22 @@ impl HgTime {
                     .parse::<humantime::Duration>()
                     .ok()
                     .map(|duration| Self::now() - duration.as_secs())
+            }
+            date if match Regex::new(r"^\d{10}$") {
+                Ok(systime_re) => systime_re.is_match(&date),
+                _ => false,
+            } =>
+            {
+                match date.parse::<u64>() {
+                    Ok(d) => Some(
+                        Self {
+                            unixtime: d,
+                            offset: 0,
+                        }
+                        .use_default_offset(),
+                    ),
+                    _ => None,
+                }
             }
             _ => Self::parse_absolute(date, default_date_lower),
         }
