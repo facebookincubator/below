@@ -551,7 +551,7 @@ impl PidStateExt for PidState {
         match c {
             'R' => Some(PidState::RUNNING),
             'S' => Some(PidState::SLEEPING),
-            'D' => Some(PidState::DISK_SLEEP),
+            'D' => Some(PidState::UNINTERRUPTIBLE_SLEEP),
             'Z' => Some(PidState::ZOMBIE),
             'T' => Some(PidState::STOPPED),
             't' => Some(PidState::TRACING_STOPPED),
@@ -566,7 +566,7 @@ impl PidStateExt for PidState {
         match *self {
             PidState::RUNNING => Some('R'),
             PidState::SLEEPING => Some('S'),
-            PidState::DISK_SLEEP => Some('D'),
+            PidState::UNINTERRUPTIBLE_SLEEP => Some('D'),
             PidState::ZOMBIE => Some('Z'),
             PidState::STOPPED => Some('T'),
             PidState::TRACING_STOPPED => Some('t'),

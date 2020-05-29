@@ -90,7 +90,7 @@ struct VmStat {
 enum PidState {
   RUNNING = 0,
   SLEEPING = 1,
-  DISK_SLEEP = 2,
+  UNINTERRUPTIBLE_SLEEP = 2,
   STOPPED = 3,
   TRACING_STOPPED = 4,
   ZOMBIE = 5,
