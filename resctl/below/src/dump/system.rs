@@ -43,7 +43,7 @@ pub struct SystemData {
     #[blink("SystemModel$cpu?.get_user_pct")]
     pub cpu_user_pct: Option<f64>,
     #[bttr(
-        title = "CPU SYS",
+        title = "CPU Sys",
         width = 11,
         unit = "%",
         precision = 2,
@@ -84,7 +84,7 @@ pub struct SystemData {
     #[blink("SystemModel$mem?.get_file")]
     pub mem_file: Option<u64>,
     #[bttr(
-        title = "Huge page total",
+        title = "Huge Page Total",
         width = 16,
         decorator = "convert_bytes($ as f64)",
         tag = "SysField::HpTotal&"
@@ -92,7 +92,7 @@ pub struct SystemData {
     #[blink("SystemModel$mem?.get_hugepage_total")]
     pub hugepage_total: Option<u64>,
     #[bttr(
-        title = "Huge page free",
+        title = "Huge Page Free",
         width = 16,
         decorator = "convert_bytes($ as f64)",
         tag = "SysField::HpFree&"
@@ -100,29 +100,31 @@ pub struct SystemData {
     #[blink("SystemModel$mem?.get_hugepage_free")]
     pub hugepage_free: Option<u64>,
     #[bttr(
-        title = "IO R/sec",
+        title = "Reads",
         width = 11,
         decorator = "convert_bytes($ as f64)",
-        tag = "SysField::IoRead&"
+        tag = "SysField::IoRead&",
+        unit = "/s"
     )]
     #[blink("SystemModel$io?.get_rbytes_per_sec")]
     pub io_rbytes_per_sec: Option<f64>,
     #[bttr(
-        title = "IO W/sec",
+        title = "Writes",
         width = 11,
         decorator = "convert_bytes($ as f64)",
-        tag = "SysField::IoWrite&"
+        tag = "SysField::IoWrite&",
+        unit = "/s"
     )]
     #[blink("SystemModel$io?.get_wbytes_per_sec")]
     pub io_wbytes_per_sec: Option<f64>,
     #[bttr(
-        title = "datetime",
+        title = "Datetime",
         width = 19,
         decorator = "translate_datetime($)",
         tag = "SysField::Datetime"
     )]
     datetime: i64,
-    #[bttr(title = "timestamp", width = 10, tag = "SysField::Timestamp")]
+    #[bttr(title = "Timestamp", width = 10, tag = "SysField::Timestamp")]
     timestamp: i64,
     #[bttr(class = "SysField$cpu_usage_pct&,cpu_user_pct&,cpu_system_pct&")]
     pub cpu: AwaysNone,

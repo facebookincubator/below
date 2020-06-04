@@ -46,9 +46,8 @@
 ///   pressure related stats including cpu_some, memory_some, memory_full, io_some, io_full.
 ///
 /// * Column names: The column names line also called title line in below_derive. It defines the table column of
-///   the following selectable view. A user press `s` to select a sortable column and sort the stats by that column.
-///   By default it will sort in decreasing order, a user can use `shift-up` or `shift-down` to toggle the sorting
-///   order.
+///   the following selectable view. A user can press `,` or `.` to switch between different columns and press `s`
+///   or `S` to sort in ascending or descending order.
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;

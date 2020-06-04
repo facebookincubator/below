@@ -22,7 +22,7 @@ use crate::view::ViewState;
 fn get_cpu_row(cpu: &Option<CpuModel>) -> String {
     format!(
         "{:6.6}\t{}",
-        "Cpu",
+        "CPU",
         cpu.as_ref()
             .unwrap_or(&Default::default())
             .get_interleave_line("", "\t")
@@ -42,7 +42,7 @@ fn get_mem_row(mem: &Option<MemoryModel>) -> String {
 fn get_io_row(io: &Option<IoModel>) -> String {
     format!(
         "{:6.6}\t{}",
-        "Io",
+        "I/O",
         io.as_ref()
             .unwrap_or(&Default::default())
             .get_interleave_line("", "\t")

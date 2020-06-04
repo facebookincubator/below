@@ -46,11 +46,11 @@ fn test_tmain_init() {
     let mut title_iter = sys_handle.title_fns.iter();
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "timestamp"
+        "Timestamp"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "datetime"
+        "Datetime"
     );
 
     // case2: when default is set
@@ -63,7 +63,7 @@ fn test_tmain_init() {
     let mut title_iter = sys_handle.title_fns.iter();
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "datetime"
+        "Datetime"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
@@ -75,7 +75,7 @@ fn test_tmain_init() {
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "CPU SYS"
+        "CPU Sys"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
@@ -87,11 +87,11 @@ fn test_tmain_init() {
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "IO R/sec"
+        "Reads"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "IO W/sec"
+        "Writes"
     );
 
     // case3: when everything is set
@@ -107,7 +107,7 @@ fn test_tmain_init() {
     let mut title_iter = sys_handle.title_fns.iter();
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "datetime"
+        "Datetime"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
@@ -119,7 +119,7 @@ fn test_tmain_init() {
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "CPU SYS"
+        "CPU Sys"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
@@ -139,19 +139,19 @@ fn test_tmain_init() {
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Huge page total"
+        "Huge Page Total"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Huge page free"
+        "Huge Page Free"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "IO R/sec"
+        "Reads"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "IO W/sec"
+        "Writes"
     );
 
     // case4: test json dedup
@@ -167,7 +167,7 @@ fn test_tmain_init() {
     let mut title_iter = sys_handle.title_fns.iter();
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "timestamp"
+        "Timestamp"
     );
 }
 
@@ -196,7 +196,7 @@ fn test_dump_sys_content() {
         .expect("Fail to get cpu from model.sys");
     assert_eq!(jval["CPU Usage"].as_str().unwrap(), cpu.get_usage_pct_str());
     assert_eq!(jval["CPU User"].as_str().unwrap(), cpu.get_user_pct_str());
-    assert_eq!(jval["CPU SYS"].as_str().unwrap(), cpu.get_system_pct_str());
+    assert_eq!(jval["CPU Sys"].as_str().unwrap(), cpu.get_system_pct_str());
 
     let mem = model
         .system
@@ -214,13 +214,10 @@ fn test_dump_sys_content() {
         .as_ref()
         .expect("Fail to get io from model.sys");
     assert_eq!(
-        jval["IO W/sec"].as_str().unwrap(),
+        jval["Writes"].as_str().unwrap(),
         io.get_wbytes_per_sec_str()
     );
-    assert_eq!(
-        jval["IO R/sec"].as_str().unwrap(),
-        io.get_rbytes_per_sec_str()
-    );
+    assert_eq!(jval["Reads"].as_str().unwrap(), io.get_rbytes_per_sec_str());
 }
 
 struct StrIo {
@@ -309,27 +306,30 @@ fn test_dump_proc_content() {
         let mem = spm.mem.as_ref().expect("SPM mem is none");
         assert_eq!(value["RSS"].as_str().unwrap(), mem.get_rss_bytes_str());
         assert_eq!(
-            value["Minflt/sec"].as_str().unwrap(),
+            value["Minflt"].as_str().unwrap(),
             mem.get_minorfaults_per_sec_str()
         );
         assert_eq!(
-            value["Majflt/sec"].as_str().unwrap(),
+            value["Majflt"].as_str().unwrap(),
             mem.get_majorfaults_per_sec_str()
         );
 
         let io = spm.io.as_ref().expect("SPM io is none");
         assert_eq!(
-            value["Reads/sec"].as_str().unwrap(),
+            value["Reads"].as_str().unwrap(),
             io.get_rbytes_per_sec_str()
         );
         assert_eq!(
-            value["Writes/sec"].as_str().unwrap(),
+            value["Writes"].as_str().unwrap(),
             io.get_wbytes_per_sec_str()
         );
         assert_eq!(
-            value["rw/sec"].as_str().unwrap(),
-            convert_bytes(
-                io.rbytes_per_sec.unwrap_or_default() + io.wbytes_per_sec.unwrap_or_default()
+            value["RW"].as_str().unwrap(),
+            format!(
+                "{}/s",
+                convert_bytes(
+                    io.rbytes_per_sec.unwrap_or_default() + io.wbytes_per_sec.unwrap_or_default()
+                )
             )
         );
         count -= 1;
@@ -422,16 +422,13 @@ fn traverse_cgroup_tree(model: &CgroupModel, jval: &mut Value) {
     if let Some(cpu) = model.cpu.as_ref() {
         assert_eq!(jval["CPU Usage"].as_str().unwrap(), cpu.get_usage_pct_str());
         assert_eq!(jval["CPU User"].as_str().unwrap(), cpu.get_user_pct_str());
+        assert_eq!(jval["CPU Sys"].as_str().unwrap(), cpu.get_system_pct_str());
         assert_eq!(
-            jval["CPU System"].as_str().unwrap(),
-            cpu.get_system_pct_str()
-        );
-        assert_eq!(
-            jval["Nr Period/s"].as_str().unwrap(),
+            jval["Nr Period"].as_str().unwrap(),
             cpu.get_nr_periods_per_sec_str()
         );
         assert_eq!(
-            jval["Nr throttle/s"].as_str().unwrap(),
+            jval["Nr Throttle"].as_str().unwrap(),
             cpu.get_nr_throttled_per_sec_str()
         );
         assert_eq!(
@@ -447,67 +444,67 @@ fn traverse_cgroup_tree(model: &CgroupModel, jval: &mut Value) {
             convert_bytes(mem.anon.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["Mem file"].as_str().unwrap(),
+            jval["Mem File"].as_str().unwrap(),
             convert_bytes(mem.file.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["kernel stack"].as_str().unwrap(),
+            jval["Kernel Stack"].as_str().unwrap(),
             convert_bytes(mem.kernel_stack.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["Mem slab"].as_str().unwrap(),
+            jval["Mem Slab"].as_str().unwrap(),
             convert_bytes(mem.slab.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["Mem sock"].as_str().unwrap(),
+            jval["Mem Sock"].as_str().unwrap(),
             convert_bytes(mem.sock.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["Mem shmem"].as_str().unwrap(),
+            jval["Mem Shmem"].as_str().unwrap(),
             convert_bytes(mem.shmem.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["file mapped"].as_str().unwrap(),
+            jval["File Mapped"].as_str().unwrap(),
             convert_bytes(mem.file_mapped.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["file dirty"].as_str().unwrap(),
+            jval["File Dirty"].as_str().unwrap(),
             convert_bytes(mem.file_dirty.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["file wb"].as_str().unwrap(),
+            jval["File WB"].as_str().unwrap(),
             convert_bytes(mem.file_writeback.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["anon thp"].as_str().unwrap(),
+            jval["Anon THP"].as_str().unwrap(),
             convert_bytes(mem.anon_thp.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["inactive anon"].as_str().unwrap(),
+            jval["Inactive Anon"].as_str().unwrap(),
             convert_bytes(mem.inactive_anon.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["active anon"].as_str().unwrap(),
+            jval["Active Anon"].as_str().unwrap(),
             convert_bytes(mem.active_anon.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["inactive file"].as_str().unwrap(),
+            jval["Inactive File"].as_str().unwrap(),
             convert_bytes(mem.inactive_file.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["active file"].as_str().unwrap(),
+            jval["Active File"].as_str().unwrap(),
             convert_bytes(mem.active_file.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["unevictable"].as_str().unwrap(),
+            jval["Unevictable"].as_str().unwrap(),
             convert_bytes(mem.unevictable.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["slab reclaimable"].as_str().unwrap(),
+            jval["Slab Reclaimable"].as_str().unwrap(),
             convert_bytes(mem.slab_reclaimable.unwrap_or_default() as f64)
         );
         assert_eq!(
-            jval["slab unreclaimable"].as_str().unwrap(),
+            jval["Slab Unreclaimable"].as_str().unwrap(),
             convert_bytes(mem.slab_unreclaimable.unwrap_or_default() as f64)
         );
     }
@@ -537,31 +534,31 @@ fn traverse_cgroup_tree(model: &CgroupModel, jval: &mut Value) {
 
     if let Some(io) = model.io_total.as_ref() {
         assert_eq!(
-            jval["Read/s"].as_str().unwrap(),
+            jval["RBytes"].as_str().unwrap(),
             io.get_rbytes_per_sec_str()
         );
         assert_eq!(
-            jval["Write/s"].as_str().unwrap(),
+            jval["WBytes"].as_str().unwrap(),
             io.get_wbytes_per_sec_str()
         );
         assert_eq!(
-            jval["rio/s"].as_str().unwrap(),
+            jval["R I/O"].as_str().unwrap(),
             format!("{}/s", convert_bytes(io.rios_per_sec.unwrap_or_default()))
         );
         assert_eq!(
-            jval["wio/s"].as_str().unwrap(),
+            jval["W I/O"].as_str().unwrap(),
             format!("{}/s", convert_bytes(io.wios_per_sec.unwrap_or_default()))
         );
         assert_eq!(
-            jval["dbytes/s"].as_str().unwrap(),
+            jval["DBytes"].as_str().unwrap(),
             format!("{}/s", convert_bytes(io.dbytes_per_sec.unwrap_or_default()))
         );
         assert_eq!(
-            jval["dio/s"].as_str().unwrap(),
+            jval["D I/O"].as_str().unwrap(),
             format!("{}/s", convert_bytes(io.dios_per_sec.unwrap_or_default()))
         );
         assert_eq!(
-            jval["RW total/s"].as_str().unwrap(),
+            jval["RW Total"].as_str().unwrap(),
             format!(
                 "{}/s",
                 convert_bytes(

@@ -89,58 +89,63 @@ pub struct ProcessData {
     #[blink("SingleProcessModel$mem?.get_rss_bytes")]
     pub mem_rss: Option<u64>,
     #[bttr(
-        title = "Minflt/sec",
+        title = "Minflt",
         width = 11,
         precision = 2,
         tag = "ProcField::MemMinor&",
-        cmp = true
+        cmp = true,
+        unit = "/s"
     )]
     #[blink("SingleProcessModel$mem?.get_minorfaults_per_sec")]
     pub mem_minorfaults: Option<f64>,
     #[bttr(
-        title = "Majflt/sec",
+        title = "Majflt",
         width = 11,
         precision = 2,
         tag = "ProcField::MemMajor&",
-        cmp = true
+        cmp = true,
+        unit = "/s"
     )]
     #[blink("SingleProcessModel$mem?.get_majorfaults_per_sec")]
     pub mem_majorfaults: Option<f64>,
     #[bttr(
-        title = "Reads/sec",
+        title = "Reads",
         width = 11,
         decorator = "convert_bytes($ as f64)",
         tag = "ProcField::IoRead&",
-        cmp = true
+        cmp = true,
+        unit = "/s"
     )]
     #[blink("SingleProcessModel$io?.get_rbytes_per_sec")]
     pub io_read: Option<f64>,
     #[bttr(
-        title = "Writes/sec",
+        title = "Writes",
         width = 11,
         decorator = "convert_bytes($ as f64)",
         tag = "ProcField::IoWrite&",
-        cmp = true
+        cmp = true,
+        unit = "/s"
     )]
     #[blink("SingleProcessModel$io?.get_wbytes_per_sec")]
     pub io_write: Option<f64>,
     #[bttr(
-        title = "rw/sec",
+        title = "RW",
         tag = "ProcField::IoTotal&",
         decorator = "convert_bytes($ as f64)",
         width = 11,
         aggr = "SingleProcessModel: io?.rbytes_per_sec? + io?.rbytes_per_sec?",
-        cmp = true
+        cmp = true,
+        unit = "/s"
     )]
     pub io_total: Option<f64>,
     #[bttr(
-        title = "datetime",
+        title = "Datetime",
         width = 19,
         decorator = "translate_datetime($)",
         tag = "ProcField::Datetime"
     )]
     datetime: i64,
-    #[bttr(title = "timestamp", width = 10, tag = "ProcField::Timestamp")]
+    #[bttr(title = "Timestamp", width = 10, tag = "ProcField::Timestamp")]
     timestamp: i64,
     #[bttr(class = "ProcField$cpu_total@:cpu_user&,cpu_sys&,cpu_num_threads&")]
     pub cpu: AwaysNone,

@@ -56,7 +56,7 @@ pub struct CgroupData {
     pub user_pct: Option<f64>,
     #[blink("CgroupModel$cpu?.get_system_pct")]
     #[bttr(
-        title = "CPU System",
+        title = "CPU Sys",
         width = 15,
         unit = "%",
         precision = 2,
@@ -66,7 +66,7 @@ pub struct CgroupData {
     pub sys_pct: Option<f64>,
     #[blink("CgroupModel$cpu?.get_nr_periods_per_sec")]
     #[bttr(
-        title = "Nr Period/s",
+        title = "Nr Period",
         width = 15,
         unit = "/s",
         precision = 2,
@@ -76,7 +76,7 @@ pub struct CgroupData {
     pub nr_periods_per_sec: Option<f64>,
     #[blink("CgroupModel$cpu?.get_nr_throttled_per_sec")]
     #[bttr(
-        title = "Nr throttle/s",
+        title = "Nr Throttle",
         width = 15,
         unit = "/s",
         precision = 2,
@@ -114,7 +114,7 @@ pub struct CgroupData {
     pub anon: Option<u64>,
     #[blink("CgroupModel$memory?.get_file")]
     #[bttr(
-        title = "Mem file",
+        title = "Mem File",
         width = 11,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemFile&",
@@ -123,7 +123,7 @@ pub struct CgroupData {
     pub file: Option<u64>,
     #[blink("CgroupModel$memory?.get_kernel_stack")]
     #[bttr(
-        title = "kernel stack",
+        title = "Kernel Stack",
         width = 12,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemKernel&",
@@ -132,7 +132,7 @@ pub struct CgroupData {
     pub kernel_stack: Option<u64>,
     #[blink("CgroupModel$memory?.get_slab")]
     #[bttr(
-        title = "Mem slab",
+        title = "Mem Slab",
         width = 11,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemSlab&",
@@ -141,7 +141,7 @@ pub struct CgroupData {
     pub slab: Option<u64>,
     #[blink("CgroupModel$memory?.get_sock")]
     #[bttr(
-        title = "Mem sock",
+        title = "Mem Sock",
         width = 11,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemSock&",
@@ -150,7 +150,7 @@ pub struct CgroupData {
     pub sock: Option<u64>,
     #[blink("CgroupModel$memory?.get_shmem")]
     #[bttr(
-        title = "Mem shmem",
+        title = "Mem Shmem",
         width = 11,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemShem&",
@@ -159,7 +159,7 @@ pub struct CgroupData {
     pub shmem: Option<u64>,
     #[blink("CgroupModel$memory?.get_file_mapped")]
     #[bttr(
-        title = "file mapped",
+        title = "File Mapped",
         width = 11,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemFileMapped&",
@@ -168,7 +168,7 @@ pub struct CgroupData {
     pub file_mapped: Option<u64>,
     #[blink("CgroupModel$memory?.get_file_dirty")]
     #[bttr(
-        title = "file dirty",
+        title = "File Dirty",
         width = 11,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemFileDirty&",
@@ -177,7 +177,7 @@ pub struct CgroupData {
     pub file_dirty: Option<u64>,
     #[blink("CgroupModel$memory?.get_file_writeback")]
     #[bttr(
-        title = "file wb",
+        title = "File WB",
         width = 11,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemFileWriteBack&",
@@ -186,7 +186,7 @@ pub struct CgroupData {
     pub file_writeback: Option<u64>,
     #[blink("CgroupModel$memory?.get_anon_thp")]
     #[bttr(
-        title = "anon thp",
+        title = "Anon THP",
         width = 11,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemAnonThp&",
@@ -195,7 +195,7 @@ pub struct CgroupData {
     pub anon_thp: Option<u64>,
     #[blink("CgroupModel$memory?.get_inactive_anon")]
     #[bttr(
-        title = "inactive anon",
+        title = "Inactive Anon",
         width = 13,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemInactiveAnon&",
@@ -204,7 +204,7 @@ pub struct CgroupData {
     pub inactive_anon: Option<u64>,
     #[blink("CgroupModel$memory?.get_active_anon")]
     #[bttr(
-        title = "active anon",
+        title = "Active Anon",
         width = 11,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemActiveAnon&",
@@ -213,7 +213,7 @@ pub struct CgroupData {
     pub active_anon: Option<u64>,
     #[blink("CgroupModel$memory?.get_inactive_file")]
     #[bttr(
-        title = "inactive file",
+        title = "Inactive File",
         width = 13,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemInactiveFile&",
@@ -222,7 +222,7 @@ pub struct CgroupData {
     pub inactive_file: Option<u64>,
     #[blink("CgroupModel$memory?.get_active_file")]
     #[bttr(
-        title = "active file",
+        title = "Active File",
         width = 11,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemActiveFile&",
@@ -231,7 +231,7 @@ pub struct CgroupData {
     pub active_file: Option<u64>,
     #[blink("CgroupModel$memory?.get_unevictable")]
     #[bttr(
-        title = "unevictable",
+        title = "Unevictable",
         width = 11,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemUnevictable&",
@@ -240,7 +240,7 @@ pub struct CgroupData {
     pub unevictable: Option<u64>,
     #[blink("CgroupModel$memory?.get_slab_reclaimable")]
     #[bttr(
-        title = "slab reclaimable",
+        title = "Slab Reclaimable",
         width = 16,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemSlabReclaimable&",
@@ -249,7 +249,7 @@ pub struct CgroupData {
     pub slab_reclaimable: Option<u64>,
     #[blink("CgroupModel$memory?.get_slab_unreclaimable")]
     #[bttr(
-        title = "slab unreclaimable",
+        title = "Slab Unreclaimable",
         width = 18,
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::MemSlabUnreclaimable&",
@@ -308,7 +308,7 @@ pub struct CgroupData {
     pub pressure_io_full_pct: Option<f64>,
     #[blink("CgroupModel$io_total?.get_rbytes_per_sec")]
     #[bttr(
-        title = "Read/s",
+        title = "RBytes",
         width = 11,
         unit = "/s",
         decorator = "convert_bytes($ as f64)",
@@ -318,7 +318,7 @@ pub struct CgroupData {
     pub rbytes_per_sec: Option<f64>,
     #[blink("CgroupModel$io_total?.get_wbytes_per_sec")]
     #[bttr(
-        title = "Write/s",
+        title = "WBytes",
         width = 11,
         unit = "/s",
         decorator = "convert_bytes($ as f64)",
@@ -328,7 +328,7 @@ pub struct CgroupData {
     pub wbytes_per_sec: Option<f64>,
     #[blink("CgroupModel$io_total?.get_rios_per_sec")]
     #[bttr(
-        title = "rio/s",
+        title = "R I/O",
         width = 11,
         unit = "/s",
         decorator = "convert_bytes($ as f64)",
@@ -338,7 +338,7 @@ pub struct CgroupData {
     pub rios_per_sec: Option<f64>,
     #[blink("CgroupModel$io_total?.get_wios_per_sec")]
     #[bttr(
-        title = "wio/s",
+        title = "W I/O",
         width = 11,
         unit = "/s",
         decorator = "convert_bytes($ as f64)",
@@ -348,7 +348,7 @@ pub struct CgroupData {
     pub wios_per_sec: Option<f64>,
     #[blink("CgroupModel$io_total?.get_dbytes_per_sec")]
     #[bttr(
-        title = "dbytes/s",
+        title = "DBytes",
         width = 11,
         unit = "/s",
         decorator = "convert_bytes($ as f64)",
@@ -358,7 +358,7 @@ pub struct CgroupData {
     pub dbytes_per_sec: Option<f64>,
     #[blink("CgroupModel$io_total?.get_dios_per_sec")]
     #[bttr(
-        title = "dio/s",
+        title = "D I/O",
         width = 11,
         unit = "/s",
         decorator = "convert_bytes($ as f64)",
@@ -372,18 +372,18 @@ pub struct CgroupData {
         unit = "/s",
         decorator = "convert_bytes($ as f64)",
         tag = "CgroupField::IoTotal&",
-        title = "RW total/s",
+        title = "RW Total",
         cmp = true
     )]
     pub rw_total: Option<f64>,
     #[bttr(
-        title = "datetime",
+        title = "Datetime",
         width = 19,
         decorator = "translate_datetime($)",
         tag = "CgroupField::Datetime"
     )]
     datetime: i64,
-    #[bttr(title = "timestamp", width = 10, tag = "CgroupField::Timestamp")]
+    #[bttr(title = "Timestamp", width = 10, tag = "CgroupField::Timestamp")]
     timestamp: i64,
     #[bttr(
         class = "CgroupField$usage_pct&:user_pct&,sys_pct&,nr_periods_per_sec&,nr_throttled_per_sec&,throttled_pct&"
