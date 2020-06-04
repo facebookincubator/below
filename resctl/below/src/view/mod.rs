@@ -67,6 +67,7 @@ mod stats_view;
 mod cgroup_view;
 mod filter_popup;
 mod help_menu;
+mod process_tabs;
 mod process_view;
 mod status_bar;
 mod system_view;
@@ -81,7 +82,7 @@ pub struct View {
 fn refresh(c: &mut Cursive) {
     status_bar::refresh(c);
     system_view::refresh(c);
-    process_view::refresh(c);
+    process_view::ProcessView::refresh(c);
     cgroup_view::refresh(c);
 }
 
@@ -97,14 +98,7 @@ macro_rules! advance {
     };
 }
 
-fn update_sort_order(c: &mut Cursive, sort_order: SortOrder) {
-    let vs = &mut c.user_data::<ViewState>().expect("No user data");
-    if vs.sort_order != sort_order {
-        vs.sort_order = sort_order;
-        refresh(c);
-    }
-}
-
+#[allow(unused)]
 #[derive(Clone, Copy, PartialEq)]
 pub enum SortOrder {
     PID,
@@ -118,7 +112,7 @@ pub enum SortOrder {
 pub enum MainViewState {
     Cgroup,
     Process,
-    ProcessZoomedIntoCgroup(String),
+    ProcessZoomedIntoCgroup,
 }
 
 pub struct ViewState {
@@ -195,23 +189,13 @@ impl View {
         self.inner.add_global_callback(Event::Refresh, |c| {
             refresh(c);
         });
-        self.inner
-            .add_global_callback('P', |c| update_sort_order(c, SortOrder::PID));
-        self.inner
-            .add_global_callback('C', |c| update_sort_order(c, SortOrder::CPU));
-        self.inner
-            .add_global_callback('N', |c| update_sort_order(c, SortOrder::Name));
-        self.inner
-            .add_global_callback('M', |c| update_sort_order(c, SortOrder::Memory));
-        self.inner
-            .add_global_callback('D', |c| update_sort_order(c, SortOrder::Disk));
 
         let status_bar = status_bar::new(&mut self.inner);
         let system_view = system_view::new(&mut self.inner);
-        let process_view = process_view::new(&mut self.inner);
+        let process_view = process_view::ProcessView::new(&mut self.inner);
         let cgroup_view = cgroup_view::new(&mut self.inner);
-        self.inner.add_fullscreen_layer(
-            StackView::new().fullscreen_layer(ResizedView::with_full_screen(
+        self.inner
+            .add_fullscreen_layer(ResizedView::with_full_screen(
                 LinearLayout::vertical()
                     .child(Panel::new(status_bar))
                     .child(Panel::new(system_view))
@@ -219,7 +203,7 @@ impl View {
                         OnEventView::new(
                             StackView::new()
                                 .fullscreen_layer(ResizedView::with_full_screen(
-                                    Panel::new(process_view).with_name("process_view_panel"),
+                                    process_view.with_name("process_view_panel"),
                                 ))
                                 .fullscreen_layer(ResizedView::with_full_screen(
                                     Panel::new(cgroup_view).with_name("cgroup_view_panel"),
@@ -268,12 +252,28 @@ impl View {
                             let next_state = match current_state {
                                 // Pressing 'z' in zoomed view should remove zoom
                                 // and bring user back to cgroup view
-                                MainViewState::ProcessZoomedIntoCgroup(_) => MainViewState::Cgroup,
-                                MainViewState::Cgroup => MainViewState::ProcessZoomedIntoCgroup(
-                                    current_selection.clone(),
-                                ),
+                                MainViewState::ProcessZoomedIntoCgroup => {
+                                    process_view::ProcessView::get_process_view(c)
+                                        .state
+                                        .borrow_mut()
+                                        .cgroup_filter = None;
+                                    MainViewState::Cgroup
+                                }
+                                MainViewState::Cgroup => {
+                                    process_view::ProcessView::get_process_view(c)
+                                        .state
+                                        .borrow_mut()
+                                        .cgroup_filter = Some(current_selection);
+                                    MainViewState::ProcessZoomedIntoCgroup
+                                }
                                 // Pressing 'z' in process view should do nothing
-                                MainViewState::Process => MainViewState::Process,
+                                MainViewState::Process => {
+                                    process_view::ProcessView::get_process_view(c)
+                                        .state
+                                        .borrow_mut()
+                                        .cgroup_filter = None;
+                                    MainViewState::Process
+                                }
                             };
 
                             c.call_on_name(
@@ -281,7 +281,7 @@ impl View {
                                 |stack: &mut NamedView<StackView>| {
                                     match &next_state {
                                         MainViewState::Process
-                                        | MainViewState::ProcessZoomedIntoCgroup(_) => {
+                                        | MainViewState::ProcessZoomedIntoCgroup => {
                                             // Bring process_view to front
                                             let process_pos = (*stack.get_mut())
                                                 .find_layer_from_name("process_view_panel")
@@ -306,13 +306,11 @@ impl View {
                                 .main_view_state = next_state;
 
                             // Redraw screen now so we don't have to wait until next tick
-                            // to get the zoomed view
-                            refresh(c);
+                            refresh(c)
                         })
                         .with_name("dynamic_view"),
                     ),
-            )),
-        );
+            ));
 
         self.inner
             .focus_name("dynamic_view")

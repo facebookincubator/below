@@ -214,7 +214,6 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         title_view.cur_length = title_view.tabs[0].len();
     }
 
-    #[allow(unused)]
     // Expose the OnEventView API.
     pub fn on_event<F, E>(mut self, trigger: E, cb: F) -> Self
     where

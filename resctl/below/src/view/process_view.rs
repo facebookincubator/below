@@ -12,181 +12,162 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use cursive::theme::Effect;
-use cursive::view::{Identifiable, Scrollable, View};
-use cursive::views::{LinearLayout, OnEventView, ResizedView, SelectView, TextView};
+use std::collections::HashMap;
+
+use cursive::view::Identifiable;
+use cursive::views::{NamedView, SelectView, ViewRef};
 use cursive::Cursive;
 
-use std::iter::FromIterator;
-
 use crate::model::SingleProcessModel;
-use crate::view::{MainViewState, SortOrder, ViewState};
-use below_derive::BelowDecor;
+use crate::view::process_tabs::{
+    ProcessCPU, ProcessGeneral, ProcessIO, ProcessMem, ProcessOrders, ProcessTab,
+};
+use crate::view::stats_view::{StateCommon, StatsView, ViewBridge};
+use crate::view::ViewState;
 
-#[derive(BelowDecor, Default)]
-struct ProcessView {
-    #[blink("SingleProcessModel$get_comm")]
-    #[bttr(cmp = true)]
-    pub comm: Option<String>,
-    #[blink("SingleProcessModel$get_cgroup")]
-    pub cgroup: Option<String>,
-    #[blink("SingleProcessModel$get_pid")]
-    pub pid: Option<i32>,
-    #[blink("SingleProcessModel$get_state")]
-    pub state: Option<procfs::PidState>,
-    #[bttr(
-        title = "CPU",
-        width = 11,
-        precision = 2,
-        unit = "%",
-        aggr = "SingleProcessModel: cpu?.user_pct? + cpu?.system_pct?",
-        cmp = true
-    )]
-    pub cpu: Option<f64>,
-    #[blink("SingleProcessModel$cpu?.get_user_pct")]
-    pub cpu_user_pct: Option<f64>,
-    #[blink("SingleProcessModel$cpu?.get_system_pct")]
-    pub cpu_system_pct: Option<f64>,
-    #[blink("SingleProcessModel$mem?.get_rss_bytes")]
-    #[bttr(cmp = true)]
-    pub mem_rss_bytes: Option<u64>,
-    #[blink("SingleProcessModel$mem?.get_minorfaults_per_sec")]
-    pub mem_minorfaults_per_sec: Option<f64>,
-    #[blink("SingleProcessModel$mem?.get_majorfaults_per_sec")]
-    pub mem_majorfaults_per_sec: Option<f64>,
-    #[blink("SingleProcessModel$io?.get_rbytes_per_sec")]
-    pub io_rbytes_per_sec: Option<f64>,
-    #[blink("SingleProcessModel$io?.get_wbytes_per_sec")]
-    pub io_wbytes_per_sec: Option<f64>,
-    #[blink("SingleProcessModel$get_uptime_secs")]
-    pub uptime_secs: Option<u64>,
-    #[blink("SingleProcessModel$cpu?.get_num_threads")]
-    pub cpu_num_threads: Option<u64>,
-    #[bttr(
-        aggr = "SingleProcessModel: io?.rbytes_per_sec? + io?.wbytes_per_sec?",
-        cmp = true
-    )]
-    pub disk: Option<f64>,
+pub type ViewType = StatsView<ProcessView>;
+
+pub struct ProcessState {
+    pub filter: Option<String>,
+    pub cgroup_filter: Option<String>,
+    pub sort_order: ProcessOrders,
+    pub sort_tags: HashMap<String, Vec<ProcessOrders>>,
+    pub reverse: bool,
 }
 
-fn get_header() -> String {
-    let spm: SingleProcessModel = Default::default();
-    let pv: ProcessView = Default::default();
-    pv.get_title_line(&spm)
-}
-
-fn get_pid_rows(view_state: &ViewState) -> Vec<String> {
-    let unknown = "?".to_string();
-    let mut processes = Vec::from_iter(&view_state.model.process.processes);
-
-    match view_state.sort_order {
-        SortOrder::CPU => processes.sort_by(|lhs, rhs| {
-            ProcessView::cmp_by_cpu(&lhs.1, &rhs.1)
-                .unwrap_or(std::cmp::Ordering::Equal)
-                .reverse()
-        }),
-        SortOrder::Memory => processes.sort_by(|lhs, rhs| {
-            ProcessView::cmp_by_mem_rss_bytes(&lhs.1, &rhs.1)
-                .unwrap_or(std::cmp::Ordering::Equal)
-                .reverse()
-        }),
-        SortOrder::Disk => processes.sort_by(|lhs, rhs| {
-            ProcessView::cmp_by_disk(&lhs.1, &rhs.1)
-                .unwrap_or(std::cmp::Ordering::Equal)
-                .reverse()
-        }),
-        SortOrder::Name => processes.sort_by(|lhs, rhs| {
-            ProcessView::cmp_by_comm(&lhs.1, &rhs.1).unwrap_or(std::cmp::Ordering::Equal)
-        }),
-        SortOrder::PID => (),
+impl StateCommon for ProcessState {
+    fn get_filter(&mut self) -> &mut Option<String> {
+        &mut self.filter
     }
-    let pv: ProcessView = Default::default();
-    processes
-        .iter()
-        .filter(|(_, spm)| {
-            // If we're in zoomed cgroup mode, only show processes belonging to
-            // our zoomed cgroup
-            match &view_state.main_view_state {
-                MainViewState::ProcessZoomedIntoCgroup(c) => {
-                    spm.cgroup.as_ref().unwrap_or(&unknown).starts_with(c)
-                }
-                _ => true,
-            }
-        })
-        .filter(|(_, spm)| {
-            // If we're filtering by name, only show processes who pass the filter
-            if let Some(f) = &view_state.process_filter {
-                spm.comm.as_ref().unwrap_or(&unknown).contains(f)
-            } else {
-                true
-            }
-        })
-        .map(|(_, spm)| pv.get_field_line(&spm, &spm))
-        .collect()
+    fn set_sort_tag(&mut self, tab: &str, idx: usize, reverse: bool) {
+        self.sort_order = self
+            .sort_tags
+            .get(tab)
+            .unwrap_or_else(|| panic!("Fail to find tab: {}", tab))
+            .get(idx)
+            .expect("Out of title scope")
+            .clone();
+        self.reverse = reverse;
+    }
 }
 
-fn fill_content(c: &mut Cursive, v: &mut SelectView) {
-    let view_state = &c
-        .user_data::<ViewState>()
-        .expect("No data stored in Cursive object!");
+impl ProcessState {
+    fn set_sort_order(&mut self, tag: ProcessOrders) {
+        self.sort_order = tag;
+    }
 
-    let pos = v.selected_id().unwrap_or(0);
-    v.clear();
-
-    v.add_all_str(get_pid_rows(view_state));
-
-    v.select_down(pos)(c);
+    fn set_reverse(&mut self, reverse: bool) {
+        self.reverse = reverse;
+    }
 }
 
-pub fn refresh(c: &mut Cursive) {
-    let mut v = c
-        .find_name::<SelectView>("process_view")
-        .expect("No process_view view found!");
-
-    fill_content(c, &mut v);
+impl Default for ProcessState {
+    fn default() -> Self {
+        let mut sort_tags = HashMap::new();
+        sort_tags.insert("General".into(), ProcessGeneral::get_sort_tag_vec());
+        sort_tags.insert("CPU".into(), ProcessCPU::get_sort_tag_vec());
+        sort_tags.insert("Mem".into(), ProcessMem::get_sort_tag_vec());
+        sort_tags.insert("I/O".into(), ProcessIO::get_sort_tag_vec());
+        Self {
+            cgroup_filter: None,
+            filter: None,
+            sort_order: ProcessOrders::Keep,
+            sort_tags,
+            reverse: false,
+        }
+    }
 }
 
-#[allow(unused)]
-fn submit_filter(c: &mut Cursive, text: &str) {
-    let view_state = &mut c
-        .user_data::<ViewState>()
-        .expect("No data stored in Cursive object!");
-
-    view_state.process_filter = if text.is_empty() {
-        None
-    } else {
-        Some(text.to_string())
-    };
-
-    refresh(c);
+pub enum ProcessView {
+    General(ProcessGeneral),
+    Cpu(ProcessCPU),
+    Mem(ProcessMem),
+    Io(ProcessIO),
 }
 
-pub fn new(c: &mut Cursive) -> impl View {
-    let mut list = SelectView::new();
-    fill_content(c, &mut list);
+impl ProcessView {
+    pub fn new(c: &mut Cursive) -> NamedView<ViewType> {
+        let list = SelectView::<String>::new();
 
-    let header = get_header();
+        let tabs = vec!["General".into(), "CPU".into(), "Mem".into(), "I/O".into()];
+        let mut tabs_map: HashMap<String, ProcessView> = HashMap::new();
+        tabs_map.insert("General".into(), ProcessView::General(Default::default()));
+        tabs_map.insert("CPU".into(), ProcessView::Cpu(Default::default()));
+        tabs_map.insert("Mem".into(), ProcessView::Mem(Default::default()));
+        tabs_map.insert("I/O".into(), ProcessView::Io(Default::default()));
+        StatsView::new("process", tabs, tabs_map, list)
+            .feed_data(c)
+            .on_event('P', |c| {
+                let mut view = Self::get_process_view(c);
+                view.state.borrow_mut().set_sort_order(ProcessOrders::Pid);
+                view.state.borrow_mut().set_reverse(false);
+                view.refresh(c)
+            })
+            .on_event('C', |c| {
+                let mut view = Self::get_process_view(c);
+                view.state
+                    .borrow_mut()
+                    .set_sort_order(ProcessOrders::CpuTotal);
+                view.state.borrow_mut().set_reverse(true);
+                view.refresh(c)
+            })
+            .on_event('N', |c| {
+                let mut view = Self::get_process_view(c);
+                view.state.borrow_mut().set_sort_order(ProcessOrders::Comm);
+                view.state.borrow_mut().set_reverse(false);
+                view.refresh(c)
+            })
+            .on_event('M', |c| {
+                let mut view = Self::get_process_view(c);
+                view.state.borrow_mut().set_sort_order(ProcessOrders::Rss);
+                view.state.borrow_mut().set_reverse(true);
+                view.refresh(c)
+            })
+            .on_event('D', |c| {
+                let mut view = Self::get_process_view(c);
+                view.state
+                    .borrow_mut()
+                    .set_sort_order(ProcessOrders::IoTotal);
+                view.state.borrow_mut().set_reverse(true);
+                view.refresh(c)
+            })
+            .with_name(Self::get_view_name())
+    }
 
-    OnEventView::new(
-        LinearLayout::vertical()
-            .child(TextView::new(header).effect(Effect::Bold))
-            .child(ResizedView::with_full_screen(
-                list.with_name("process_view").scrollable(),
-            ))
-            .scrollable()
-            .scroll_x(true)
-            .scroll_y(false),
-    )
-    .on_event('/', |c| {
-        let _initial_content = match &c
-            .user_data::<ViewState>()
-            .expect("No data stored in Cursive object!")
-            .process_filter
-        {
-            Some(s) => s.clone(),
-            None => "".to_string(),
-        };
+    pub fn get_process_view(c: &mut Cursive) -> ViewRef<ViewType> {
+        c.find_name::<ViewType>(Self::get_view_name())
+            .expect("Fail to find process_view by its name")
+    }
 
-        // c.add_layer(filter_popup::new(initial_content.as_str(), submit_filter));
-    })
+    pub fn refresh(c: &mut Cursive) {
+        Self::get_process_view(c).refresh(c);
+    }
+
+    fn get_inner(&self) -> Box<dyn ProcessTab> {
+        match self {
+            Self::General(inner) => Box::new(inner.clone()),
+            Self::Cpu(inner) => Box::new(inner.clone()),
+            Self::Mem(inner) => Box::new(inner.clone()),
+            Self::Io(inner) => Box::new(inner.clone()),
+        }
+    }
+}
+
+impl ViewBridge for ProcessView {
+    type StateType = ProcessState;
+    fn get_view_name() -> &'static str {
+        "process_view"
+    }
+    fn get_title_vec(&self) -> Vec<String> {
+        let model: SingleProcessModel = Default::default();
+        self.get_inner().get_title_vec(&model)
+    }
+
+    fn get_rows(
+        &mut self,
+        view_state: &mut ViewState,
+        state: &Self::StateType,
+    ) -> Vec<(String, String)> {
+        self.get_inner().get_rows(view_state, state)
+    }
 }
