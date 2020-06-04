@@ -49,7 +49,6 @@
 ///   the following selectable view. A user can press `,` or `.` to switch between different columns and press `s`
 ///   or `S` to sort in ascending or descending order.
 use std::cell::RefCell;
-use std::collections::HashSet;
 use std::rc::Rc;
 
 use ::cursive::event::{Event, EventResult, EventTrigger};
@@ -64,6 +63,7 @@ use crate::Advance;
 
 #[macro_use]
 mod stats_view;
+mod cgroup_tabs;
 mod cgroup_view;
 mod filter_popup;
 mod help_menu;
@@ -75,15 +75,6 @@ mod tab_view;
 
 pub struct View {
     inner: Cursive,
-}
-
-// Invoked either when the data view was explicitly advanced, or
-// periodically (during live mode)
-fn refresh(c: &mut Cursive) {
-    status_bar::refresh(c);
-    system_view::refresh(c);
-    process_view::ProcessView::refresh(c);
-    cgroup_view::refresh(c);
 }
 
 macro_rules! advance {
@@ -98,16 +89,6 @@ macro_rules! advance {
     };
 }
 
-#[allow(unused)]
-#[derive(Clone, Copy, PartialEq)]
-pub enum SortOrder {
-    PID,
-    Name,
-    CPU,
-    Memory,
-    Disk,
-}
-
 #[derive(Clone)]
 pub enum MainViewState {
     Cgroup,
@@ -115,14 +96,27 @@ pub enum MainViewState {
     ProcessZoomedIntoCgroup,
 }
 
+// Invoked either when the data view was explicitly advanced, or
+// periodically (during live mode)
+fn refresh(c: &mut Cursive) {
+    status_bar::refresh(c);
+    system_view::refresh(c);
+    let current_state = c
+        .user_data::<ViewState>()
+        .expect("No data stored in Cursive object!")
+        .main_view_state
+        .clone();
+    match current_state {
+        MainViewState::Cgroup => cgroup_view::CgroupView::refresh(c),
+        MainViewState::Process | MainViewState::ProcessZoomedIntoCgroup => {
+            process_view::ProcessView::refresh(c)
+        }
+    }
+}
+
 pub struct ViewState {
     pub model: crate::model::Model,
-    pub sort_order: SortOrder,
-    pub collapsed_cgroups: HashSet<String>,
-    pub current_selected_cgroup: String,
     pub main_view_state: MainViewState,
-    pub cgroup_filter: Option<String>,
-    pub process_filter: Option<String>,
 }
 
 impl View {
@@ -130,12 +124,7 @@ impl View {
         let mut inner = Cursive::default();
         inner.set_user_data(ViewState {
             model,
-            sort_order: SortOrder::PID,
-            collapsed_cgroups: HashSet::new(),
-            current_selected_cgroup: "<root>".to_string(),
             main_view_state: MainViewState::Cgroup,
-            cgroup_filter: None,
-            process_filter: None,
         });
         View { inner }
     }
@@ -193,7 +182,7 @@ impl View {
         let status_bar = status_bar::new(&mut self.inner);
         let system_view = system_view::new(&mut self.inner);
         let process_view = process_view::ProcessView::new(&mut self.inner);
-        let cgroup_view = cgroup_view::new(&mut self.inner);
+        let cgroup_view = cgroup_view::CgroupView::new(&mut self.inner);
         self.inner
             .add_fullscreen_layer(ResizedView::with_full_screen(
                 LinearLayout::vertical()
@@ -206,7 +195,7 @@ impl View {
                                     process_view.with_name("process_view_panel"),
                                 ))
                                 .fullscreen_layer(ResizedView::with_full_screen(
-                                    Panel::new(cgroup_view).with_name("cgroup_view_panel"),
+                                    cgroup_view.with_name("cgroup_view_panel"),
                                 ))
                                 .with_name("main_view_stack"),
                         )
@@ -237,9 +226,9 @@ impl View {
                             }))
                         })
                         .on_pre_event('z', |c| {
-                            let current_selection = c
-                                .user_data::<ViewState>()
-                                .expect("No data stored in Cursive object!")
+                            let current_selection = cgroup_view::CgroupView::get_cgroup_view(c)
+                                .state
+                                .borrow()
                                 .current_selected_cgroup
                                 .clone();
 

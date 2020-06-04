@@ -12,268 +12,197 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashSet;
-use std::iter::FromIterator;
+use std::collections::{HashMap, HashSet};
 
-use cursive::theme::Effect;
-use cursive::view::{Identifiable, Scrollable, View};
-use cursive::views::{LinearLayout, OnEventView, ResizedView, SelectView, TextView};
+use cursive::view::Identifiable;
+use cursive::views::{NamedView, SelectView, ViewRef};
 use cursive::Cursive;
 
-use crate::model;
 use crate::model::CgroupModel;
-use crate::util::{fold_string, get_prefix};
-use crate::view::{SortOrder, ViewState};
-use below_derive::BelowDecor;
+use crate::view::cgroup_tabs::{
+    CgroupCPU, CgroupGeneral, CgroupIO, CgroupMem, CgroupOrders, CgroupPressure, CgroupTab,
+};
+use crate::view::stats_view::{StateCommon, StatsView, ViewBridge};
+use crate::view::ViewState;
 
-#[derive(BelowDecor, Default)]
-struct CgroupView {
-    #[blink("CgroupModel$get_name")]
-    #[bttr(
-        title = "Name",
-        width = 50,
-        depth = "self.depth * 3",
-        prefix = "get_prefix(self.collapse)",
-        decorator = "fold_string(&$, 50 - self.depth * 3, 0, |c: char| !char::is_alphanumeric(c))"
-    )]
-    pub name: String,
-    #[blink("CgroupModel$cpu?.get_usage_pct")]
-    #[bttr(cmp = true)]
-    pub cpu_usage_pct: Option<f64>,
-    #[blink("CgroupModel$memory?.get_total")]
-    #[bttr(cmp = true)]
-    pub memory_total: Option<u64>,
-    #[blink("CgroupModel$pressure?.get_cpu_some_pct")]
-    pub pressure_cpu_some_pct: Option<f64>,
-    #[blink("CgroupModel$pressure?.get_memory_full_pct")]
-    pub pressure_memory_full_pct: Option<f64>,
-    #[blink("CgroupModel$pressure?.get_io_full_pct")]
-    pub pressure_io_full_pct: Option<f64>,
-    #[blink("CgroupModel$io_total?.get_rbytes_per_sec")]
-    pub io_total_rbytes_per_sec: Option<f64>,
-    #[blink("CgroupModel$io_total?.get_wbytes_per_sec")]
-    pub io_total_wbytes_per_sec: Option<f64>,
-    #[bttr(
-        aggr = "CgroupModel: io_total?.rbytes_per_sec? + io_total?.wbytes_per_sec?",
-        cmp = true
-    )]
-    pub disk: Option<f64>,
-    depth: usize,
-    collapse: bool,
+pub type ViewType = StatsView<CgroupView>;
+
+pub struct CgroupState {
+    pub collapsed_cgroups: HashSet<String>,
+    pub current_selected_cgroup: String,
+    pub filter: Option<String>,
+    pub sort_order: CgroupOrders,
+    pub sort_tags: HashMap<String, Vec<CgroupOrders>>,
+    pub reverse: bool,
+    pub show_full_path: bool,
+}
+
+impl StateCommon for CgroupState {
+    fn get_filter(&mut self) -> &mut Option<String> {
+        &mut self.filter
+    }
+    fn set_sort_tag(&mut self, tab: &str, idx: usize, reverse: bool) {
+        self.sort_order = self
+            .sort_tags
+            .get(tab)
+            .unwrap_or_else(|| panic!("Fail to find tab: {}", tab))
+            .get(idx)
+            .expect("Out of title scope")
+            .clone();
+        self.reverse = reverse;
+    }
+}
+
+impl Default for CgroupState {
+    fn default() -> Self {
+        let mut sort_tags = HashMap::new();
+        sort_tags.insert("General".into(), CgroupGeneral::get_sort_tag_vec());
+        sort_tags.insert("CPU".into(), CgroupCPU::get_sort_tag_vec());
+        sort_tags.insert("Mem".into(), CgroupMem::get_sort_tag_vec());
+        sort_tags.insert("I/O".into(), CgroupIO::get_sort_tag_vec());
+        sort_tags.insert("Pressure".into(), CgroupPressure::get_sort_tag_vec());
+        Self {
+            collapsed_cgroups: HashSet::new(),
+            current_selected_cgroup: "<root>".into(),
+            filter: None,
+            sort_order: CgroupOrders::Keep,
+            sort_tags,
+            reverse: false,
+            show_full_path: false,
+        }
+    }
+}
+
+impl CgroupState {
+    fn set_sort_order(&mut self, tag: CgroupOrders) {
+        self.sort_order = tag;
+    }
+
+    fn set_reverse(&mut self, reverse: bool) {
+        self.reverse = reverse;
+    }
+
+    fn toggle_show_full_path(&mut self) {
+        self.show_full_path = !self.show_full_path;
+    }
+}
+
+pub enum CgroupView {
+    General(CgroupGeneral),
+    Cpu(CgroupCPU),
+    Mem(CgroupMem),
+    Io(CgroupIO),
+    Pressure(CgroupPressure),
 }
 
 impl CgroupView {
-    fn new(depth: usize, collapse: bool) -> Self {
-        Self {
-            depth,
-            collapse,
-            ..Default::default()
-        }
-    }
-}
+    pub fn new(c: &mut Cursive) -> NamedView<ViewType> {
+        let mut list = SelectView::new();
+        list.set_on_submit(|c, cgroup: &String| {
+            let mut view = CgroupView::get_cgroup_view(c);
 
-fn get_header() -> String {
-    let cm: CgroupModel = Default::default();
-    let cv = CgroupView::new(0, true);
-    cv.get_title_line(&cm)
-}
-
-/// Returns a set of full cgroup paths that should be filtered out.
-///
-/// Note that this algorithm recursively whitelists parents of cgroups that are
-/// whitelisted. The reason for this is because cgroups are inherently tree-like
-/// and displaying a lone cgroup without its ancestors doesn't make much sense.
-fn calculate_filter_out_set(cgroup: &model::CgroupModel, filter: &str) -> HashSet<String> {
-    fn should_filter_out(
-        cgroup: &model::CgroupModel,
-        filter: &str,
-        set: &mut HashSet<String>,
-    ) -> bool {
-        // No children
-        if cgroup.count == 1 {
-            if !cgroup.full_path.contains(filter) {
-                set.insert(cgroup.full_path.clone());
-                return true;
-            }
-            return false;
-        }
-
-        let mut filter_cgroup = true;
-        for child in &cgroup.children {
-            if should_filter_out(&child, &filter, set) {
-                set.insert(child.full_path.clone());
+            if view.state.borrow().collapsed_cgroups.contains(cgroup) {
+                view.state.borrow_mut().collapsed_cgroups.remove(cgroup);
             } else {
-                // We found a child that's not filtered out. That means
-                // we have to keep this (the parent cgroup) too.
-                filter_cgroup = false;
+                view.state
+                    .borrow_mut()
+                    .collapsed_cgroups
+                    .insert(cgroup.to_string());
             }
-        }
 
-        if filter_cgroup {
-            set.insert(cgroup.full_path.clone());
-        }
+            view.refresh(c);
+        });
 
-        filter_cgroup
+        list.set_on_select(|c, cgroup: &String| {
+            c.call_on_name(Self::get_view_name(), |view: &mut ViewType| {
+                view.state.borrow_mut().current_selected_cgroup = cgroup.clone()
+            });
+        });
+
+        let tabs = vec![
+            "General".into(),
+            "CPU".into(),
+            "Mem".into(),
+            "I/O".into(),
+            "Pressure".into(),
+        ];
+        let mut tabs_map: HashMap<String, CgroupView> = HashMap::new();
+        tabs_map.insert("General".into(), CgroupView::General(Default::default()));
+        tabs_map.insert("CPU".into(), CgroupView::Cpu(Default::default()));
+        tabs_map.insert("Mem".into(), CgroupView::Mem(Default::default()));
+        tabs_map.insert("I/O".into(), CgroupView::Io(Default::default()));
+        tabs_map.insert("Pressure".into(), CgroupView::Pressure(Default::default()));
+        StatsView::new("Cgroup", tabs, tabs_map, list)
+            .feed_data(c)
+            .on_event('C', |c| {
+                let mut view = Self::get_cgroup_view(c);
+                view.state
+                    .borrow_mut()
+                    .set_sort_order(CgroupOrders::UsagePct);
+                view.state.borrow_mut().set_reverse(true);
+                view.refresh(c)
+            })
+            .on_event('M', |c| {
+                let mut view = Self::get_cgroup_view(c);
+                view.state
+                    .borrow_mut()
+                    .set_sort_order(CgroupOrders::MemoryTotal);
+                view.state.borrow_mut().set_reverse(true);
+                view.refresh(c)
+            })
+            .on_event('D', |c| {
+                let mut view = Self::get_cgroup_view(c);
+                view.state
+                    .borrow_mut()
+                    .set_sort_order(CgroupOrders::RwTotal);
+                view.state.borrow_mut().set_reverse(true);
+                view.refresh(c)
+            })
+            .on_event(' ', |c| {
+                let mut view = Self::get_cgroup_view(c);
+                view.state.borrow_mut().toggle_show_full_path();
+                view.refresh(c);
+            })
+            .with_name(Self::get_view_name())
     }
 
-    let mut set = HashSet::new();
-    should_filter_out(&cgroup, &filter, &mut set);
-    set
-}
+    pub fn get_cgroup_view(c: &mut Cursive) -> ViewRef<ViewType> {
+        c.find_name::<ViewType>(Self::get_view_name())
+            .expect("Fail to find cgroup_view by its name")
+    }
 
-fn get_cgroup_rows(view_state: &ViewState) -> Vec<(String, String)> {
-    fn output_cgroup(
-        cgroup: &model::CgroupModel,
-        sort_order: SortOrder,
-        collapsed_cgroups: &HashSet<String>,
-        filter_out_set: &Option<HashSet<String>>,
-        output: &mut Vec<(String, String)>,
-    ) {
-        if let Some(set) = &filter_out_set {
-            if set.contains(&cgroup.full_path) {
-                return;
-            }
+    pub fn refresh(c: &mut Cursive) {
+        let mut view = Self::get_cgroup_view(c);
+        view.refresh(c);
+    }
+
+    fn get_inner(&self) -> Box<dyn CgroupTab> {
+        match self {
+            Self::General(inner) => Box::new(inner.clone()),
+            Self::Cpu(inner) => Box::new(inner.clone()),
+            Self::Mem(inner) => Box::new(inner.clone()),
+            Self::Io(inner) => Box::new(inner.clone()),
+            Self::Pressure(inner) => Box::new(inner.clone()),
         }
-
-        let collapsed = collapsed_cgroups.contains(&cgroup.full_path);
-        let cv = CgroupView::new(cgroup.depth as usize, collapsed);
-        let row = cv.get_field_line(&cgroup, &cgroup);
-        // Each row is (label, value), where label is visible and value is used
-        // as identifier to correlate the row with its state in global data.
-        output.push((row, cgroup.full_path.clone()));
-        if collapsed {
-            return;
-        }
-
-        let mut children = Vec::from_iter(&cgroup.children);
-
-        // Here we map the sort order to an index (or for disk, do some custom sorting)
-        match sort_order {
-            SortOrder::CPU => children.sort_by(|lhs, rhs| {
-                CgroupView::cmp_by_cpu_usage_pct(&lhs, &rhs)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-                    .reverse()
-            }),
-            SortOrder::Memory => children.sort_by(|lhs, rhs| {
-                CgroupView::cmp_by_memory_total(&lhs, &rhs)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-                    .reverse()
-            }),
-            SortOrder::Disk => children.sort_by(|lhs, rhs| {
-                CgroupView::cmp_by_disk(&lhs, &rhs)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-                    .reverse()
-            }),
-            _ => (),
-        };
-
-        for child_cgroup in &children {
-            output_cgroup(
-                child_cgroup,
-                sort_order,
-                collapsed_cgroups,
-                &filter_out_set,
-                output,
-            );
-        }
-    };
-
-    let filter_out_set = if let Some(f) = &view_state.cgroup_filter {
-        Some(calculate_filter_out_set(&view_state.model.cgroup, &f))
-    } else {
-        None
-    };
-
-    let mut rows = Vec::new();
-    output_cgroup(
-        &view_state.model.cgroup,
-        view_state.sort_order,
-        &view_state.collapsed_cgroups,
-        &filter_out_set,
-        &mut rows,
-    );
-    rows
+    }
 }
 
-fn fill_content(c: &mut Cursive, v: &mut SelectView) {
-    let view_state = &mut c
-        .user_data::<ViewState>()
-        .expect("No data stored in Cursive object!");
+impl ViewBridge for CgroupView {
+    type StateType = CgroupState;
 
-    let pos = v.selected_id().unwrap_or(0);
-    v.clear();
+    fn get_view_name() -> &'static str {
+        "cgroup_view"
+    }
+    fn get_title_vec(&self) -> Vec<String> {
+        let model: CgroupModel = Default::default();
+        self.get_inner().get_title_vec(&model)
+    }
 
-    v.add_all(get_cgroup_rows(view_state));
-    v.select_down(pos)(c);
-}
-
-pub fn refresh(c: &mut Cursive) {
-    let mut v = c
-        .find_name::<SelectView>("cgroup_view")
-        .expect("No cgroup_view view found!");
-
-    fill_content(c, &mut v);
-}
-
-#[allow(unused)]
-fn submit_filter(c: &mut Cursive, text: &str) {
-    let view_state = &mut c
-        .user_data::<ViewState>()
-        .expect("No data stored in Cursive object!");
-
-    view_state.cgroup_filter = if text.is_empty() {
-        None
-    } else {
-        Some(text.to_string())
-    };
-
-    refresh(c);
-}
-
-pub fn new(c: &mut Cursive) -> impl View {
-    let mut list = SelectView::new();
-    fill_content(c, &mut list);
-    list.set_on_submit(|c, cgroup: &String| {
-        let view_state = &mut c
-            .user_data::<ViewState>()
-            .expect("No data stored in Cursive object!");
-        if view_state.collapsed_cgroups.contains(cgroup) {
-            view_state.collapsed_cgroups.remove(cgroup);
-        } else {
-            view_state.collapsed_cgroups.insert(cgroup.to_string());
-        }
-        refresh(c);
-    });
-
-    list.set_on_select(|c, cgroup: &String| {
-        let view_state = &mut c
-            .user_data::<ViewState>()
-            .expect("No data stored in Cursive object!");
-        view_state.current_selected_cgroup = cgroup.clone();
-    });
-
-    let header = get_header();
-
-    OnEventView::new(
-        LinearLayout::vertical()
-            .child(TextView::new(header).effect(Effect::Bold))
-            .child(ResizedView::with_full_screen(
-                list.with_name("cgroup_view").scrollable(),
-            ))
-            .scrollable()
-            .scroll_x(true)
-            .scroll_y(false),
-    )
-    .on_event('/', |c| {
-        let _initial_content = match &c
-            .user_data::<ViewState>()
-            .expect("No data stored in Cursive object!")
-            .cgroup_filter
-        {
-            Some(s) => s.clone(),
-            None => "".to_string(),
-        };
-
-        // c.add_layer(filter_popup::new(initial_content.as_str(), submit_filter));
-    })
+    fn get_rows(
+        &mut self,
+        view_state: &mut ViewState,
+        state: &Self::StateType,
+    ) -> Vec<(String, String)> {
+        self.get_inner().get_rows(view_state, state)
+    }
 }

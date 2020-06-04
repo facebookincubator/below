@@ -1,0 +1,575 @@
+// Copyright (c) Facebook, Inc. and its affiliates.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use std::collections::HashSet;
+use std::iter::FromIterator;
+
+use crate::model::CgroupModel;
+use crate::util::{calculate_filter_out_set, convert_bytes, fold_string, get_prefix};
+use crate::view::cgroup_view::CgroupState;
+use crate::view::ViewState;
+use below_derive::BelowDecor;
+
+// All available sorting tags
+#[derive(Copy, Clone)]
+pub enum CgroupOrders {
+    Keep,
+    UsagePct,
+    UserPct,
+    SysPct,
+    NrPeriodsPerSec,
+    NrThrottledPerSec,
+    ThrottledPct,
+    MemoryTotal,
+    Anon,
+    File,
+    KernelStack,
+    Slab,
+    Sock,
+    Shmem,
+    FileMapped,
+    FileDirty,
+    FileWriteback,
+    AnonThp,
+    InactiveAnon,
+    ActiveAnon,
+    InactiveFile,
+    ActiveFile,
+    Unevictable,
+    SlabReclaimable,
+    SlabUnreclaimable,
+    CpuSomePct,
+    MemorySomePct,
+    MemoryFullPct,
+    IoSomePct,
+    IoFullPct,
+    RbytesPerSec,
+    WbytesPerSec,
+    RiosPerSec,
+    WiosPerSec,
+    DbytesPerSec,
+    DiosPerSec,
+    RwTotal,
+}
+
+// Defines how to iterate through the cgroup and generate get_rows function for ViewBridge
+pub trait CgroupTab {
+    fn get_title_vec(&self, model: &CgroupModel) -> Vec<String>;
+    fn depth(&mut self) -> &mut usize;
+    fn collapse(&mut self) -> &mut bool;
+    fn get_field_line(&self, model: &CgroupModel) -> String;
+    fn sort(&self, sort_order: CgroupOrders, cgroups: &mut Vec<&CgroupModel>, reverse: bool);
+    fn output_cgroup(
+        &mut self,
+        cgroup: &CgroupModel,
+        state: &CgroupState,
+        filter_out_set: &Option<HashSet<String>>,
+        output: &mut Vec<(String, String)>,
+    ) {
+        if let Some(set) = &filter_out_set {
+            if set.contains(&cgroup.full_path) {
+                return;
+            }
+        }
+
+        let collapsed = state.collapsed_cgroups.contains(&cgroup.full_path);
+        *self.depth() = cgroup.depth as usize;
+        *self.collapse() = collapsed;
+        let row = if state.show_full_path && cgroup.full_path == state.current_selected_cgroup {
+            cgroup.full_path.clone()
+        } else {
+            self.get_field_line(&cgroup)
+        };
+        // Each row is (label, value), where label is visible and value is used
+        // as identifier to correlate the row with its state in global data.
+        output.push((row, cgroup.full_path.clone()));
+        if collapsed {
+            return;
+        }
+
+        let mut children = Vec::from_iter(&cgroup.children);
+
+        // Here we map the sort order to an index (or for disk, do some custom sorting)
+        self.sort(state.sort_order, &mut children, state.reverse);
+
+        for child_cgroup in &children {
+            self.output_cgroup(child_cgroup, state, filter_out_set, output);
+        }
+    }
+
+    fn get_rows(
+        &mut self,
+        view_state: &mut ViewState,
+        state: &CgroupState,
+    ) -> Vec<(String, String)> {
+        let filter_out_set = if let Some(f) = &state.filter {
+            Some(calculate_filter_out_set(&view_state.model.cgroup, &f))
+        } else {
+            None
+        };
+
+        let mut rows = Vec::new();
+        self.output_cgroup(&view_state.model.cgroup, state, &filter_out_set, &mut rows);
+        rows
+    }
+}
+
+// macro defines common implementation of CgroupTab.
+macro_rules! impl_cgroup_tab {
+    ($name:ident) => {
+        fn get_title_vec(&self, model: &CgroupModel) -> Vec<String> {
+            let mut res: Vec<String> = self
+                .get_title_pipe(&model)
+                .trim()
+                .split("|")
+                .map(|s| s.to_string())
+                .collect();
+            res.pop();
+            res
+        }
+
+        fn sort(&self, sort_order: CgroupOrders, cgroups: &mut Vec<&CgroupModel>, reverse: bool) {
+            self.sort(sort_order, cgroups, reverse);
+        }
+
+        fn depth(&mut self) -> &mut usize {
+            &mut self.depth
+        }
+
+        fn collapse(&mut self) -> &mut bool {
+            &mut self.collapse
+        }
+    };
+}
+
+#[derive(BelowDecor, Default, Clone)]
+pub struct CgroupGeneral {
+    #[blink("CgroupModel$get_name")]
+    #[bttr(
+        title = "Name",
+        width = 50,
+        depth = "self.depth * 3",
+        prefix = "get_prefix(self.collapse)",
+        decorator = "fold_string(&$, 50 - self.depth * 3, 0, |c: char| !char::is_alphanumeric(c))"
+    )]
+    pub name: String,
+    #[blink("CgroupModel$cpu?.get_usage_pct")]
+    #[bttr(sort_tag = "CgroupOrders::UsagePct")]
+    pub cpu_usage_pct: Option<f64>,
+    #[blink("CgroupModel$memory?.get_total")]
+    #[bttr(sort_tag = "CgroupOrders::MemoryTotal")]
+    pub memory_total: Option<u64>,
+    #[blink("CgroupModel$pressure?.get_cpu_some_pct")]
+    #[bttr(sort_tag = "CgroupOrders::CpuSomePct")]
+    pub pressure_cpu_some_pct: Option<f64>,
+    #[blink("CgroupModel$pressure?.get_memory_full_pct")]
+    #[bttr(sort_tag = "CgroupOrders::MemoryFullPct")]
+    pub pressure_memory_full_pct: Option<f64>,
+    #[blink("CgroupModel$pressure?.get_io_full_pct")]
+    #[bttr(sort_tag = "CgroupOrders::IoFullPct")]
+    pub pressure_io_full_pct: Option<f64>,
+    #[blink("CgroupModel$io_total?.get_rbytes_per_sec")]
+    #[bttr(sort_tag = "CgroupOrders::RbytesPerSec")]
+    pub io_total_rbytes_per_sec: Option<f64>,
+    #[blink("CgroupModel$io_total?.get_wbytes_per_sec")]
+    #[bttr(sort_tag = "CgroupOrders::WbytesPerSec")]
+    pub io_total_wbytes_per_sec: Option<f64>,
+    #[bttr(
+        title = "RW Total",
+        width = 10,
+        aggr = "CgroupModel: io_total?.rbytes_per_sec? + io_total?.wbytes_per_sec?",
+        sort_tag = "CgroupOrders::RwTotal",
+        decorator = "convert_bytes($ as f64)"
+    )]
+    pub disk: Option<f64>,
+    depth: usize,
+    collapse: bool,
+}
+
+impl CgroupTab for CgroupGeneral {
+    impl_cgroup_tab!(CgroupGeneral);
+
+    fn get_field_line(&self, model: &CgroupModel) -> String {
+        self.get_field_line(&model, &model)
+    }
+}
+
+#[derive(BelowDecor, Default, Clone)]
+pub struct CgroupCPU {
+    #[blink("CgroupModel$get_name")]
+    #[bttr(
+        title = "Name",
+        width = 50,
+        depth = "self.depth * 3",
+        prefix = "get_prefix(self.collapse)",
+        decorator = "fold_string(&$, 50 - self.depth * 3, 0, |c: char| !char::is_alphanumeric(c))"
+    )]
+    pub name: String,
+    #[blink("CgroupModel$cpu?.get_usage_pct")]
+    #[bttr(
+        title = "CPU Usage",
+        sort_tag = "CgroupOrders::UsagePct",
+        width = 15,
+        unit = "%",
+        precision = 2
+    )]
+    pub usage_pct: Option<f64>,
+    #[blink("CgroupModel$cpu?.get_user_pct")]
+    #[bttr(sort_tag = "CgroupOrders::UserPct")]
+    pub user_pct: Option<f64>,
+    #[blink("CgroupModel$cpu?.get_system_pct")]
+    #[bttr(sort_tag = "CgroupOrders::SysPct")]
+    pub system_pct: Option<f64>,
+    #[blink("CgroupModel$cpu?.get_nr_periods_per_sec")]
+    #[bttr(sort_tag = "CgroupOrders::NrPeriodsPerSec")]
+    pub nr_periods_per_sec: Option<f64>,
+    #[blink("CgroupModel$cpu?.get_nr_throttled_per_sec")]
+    #[bttr(sort_tag = "CgroupOrders::NrThrottledPerSec")]
+    pub nr_throttled_per_sec: Option<f64>,
+    #[blink("CgroupModel$cpu?.get_throttled_pct")]
+    #[bttr(sort_tag = "CgroupOrders::ThrottledPct")]
+    pub throttled_pct: Option<f64>,
+    depth: usize,
+    collapse: bool,
+}
+
+impl CgroupTab for CgroupCPU {
+    impl_cgroup_tab!(CgroupCPU);
+
+    fn get_field_line(&self, model: &CgroupModel) -> String {
+        self.get_field_line(&model)
+    }
+}
+
+#[derive(BelowDecor, Default, Clone)]
+pub struct CgroupMem {
+    #[blink("CgroupModel$get_name")]
+    #[bttr(
+        title = "Name",
+        width = 50,
+        depth = "self.depth * 3",
+        prefix = "get_prefix(self.collapse)",
+        decorator = "fold_string(&$, 50 - self.depth * 3, 0, |c: char| !char::is_alphanumeric(c))"
+    )]
+    pub name: String,
+    #[blink("CgroupModel$memory?.get_total")]
+    #[bttr(
+        title = "Total",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::MemoryTotal"
+    )]
+    pub memory_total: Option<u64>,
+    #[blink("CgroupModel$memory?.get_anon")]
+    #[bttr(
+        title = "Anon",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::Anon"
+    )]
+    pub anon: Option<u64>,
+    #[blink("CgroupModel$memory?.get_file")]
+    #[bttr(
+        title = "File",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::File"
+    )]
+    pub file: Option<u64>,
+    #[blink("CgroupModel$memory?.get_kernel_stack")]
+    #[bttr(
+        title = "Kernel Stack",
+        width = 12,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::KernelStack"
+    )]
+    pub kernel_stack: Option<u64>,
+    #[blink("CgroupModel$memory?.get_slab")]
+    #[bttr(
+        title = "Slab",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::Slab"
+    )]
+    pub slab: Option<u64>,
+    #[blink("CgroupModel$memory?.get_sock")]
+    #[bttr(
+        title = "Sock",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::Sock"
+    )]
+    pub sock: Option<u64>,
+    #[blink("CgroupModel$memory?.get_shmem")]
+    #[bttr(
+        title = "Shmem",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::Shmem"
+    )]
+    pub shmem: Option<u64>,
+    #[blink("CgroupModel$memory?.get_file_mapped")]
+    #[bttr(
+        title = "File Mapped",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::FileMapped"
+    )]
+    pub file_mapped: Option<u64>,
+    #[blink("CgroupModel$memory?.get_file_dirty")]
+    #[bttr(
+        title = "File Dirty",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::FileDirty"
+    )]
+    pub file_dirty: Option<u64>,
+    #[blink("CgroupModel$memory?.get_file_writeback")]
+    #[bttr(
+        title = "File WB",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::FileWriteback"
+    )]
+    pub file_writeback: Option<u64>,
+    #[blink("CgroupModel$memory?.get_anon_thp")]
+    #[bttr(
+        title = "Anon THP",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::AnonThp"
+    )]
+    pub anon_thp: Option<u64>,
+    #[blink("CgroupModel$memory?.get_inactive_anon")]
+    #[bttr(
+        title = "Inactive Anon",
+        width = 13,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::InactiveAnon"
+    )]
+    pub inactive_anon: Option<u64>,
+    #[blink("CgroupModel$memory?.get_active_anon")]
+    #[bttr(
+        title = "Active Anon",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::ActiveAnon"
+    )]
+    pub active_anon: Option<u64>,
+    #[blink("CgroupModel$memory?.get_inactive_file")]
+    #[bttr(
+        title = "Inactive File",
+        width = 13,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::InactiveFile"
+    )]
+    pub inactive_file: Option<u64>,
+    #[blink("CgroupModel$memory?.get_active_file")]
+    #[bttr(
+        title = "Active File",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::ActiveFile"
+    )]
+    pub active_file: Option<u64>,
+    #[blink("CgroupModel$memory?.get_unevictable")]
+    #[bttr(
+        title = "Unevictable",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::Unevictable"
+    )]
+    pub unevictable: Option<u64>,
+    #[blink("CgroupModel$memory?.get_slab_reclaimable")]
+    #[bttr(
+        title = "Slab Reclaimable",
+        width = 16,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::SlabReclaimable"
+    )]
+    pub slab_reclaimable: Option<u64>,
+    #[blink("CgroupModel$memory?.get_slab_unreclaimable")]
+    #[bttr(
+        title = "Slab Unreclaimable",
+        width = 18,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::SlabUnreclaimable"
+    )]
+    pub slab_unreclaimable: Option<u64>,
+    depth: usize,
+    collapse: bool,
+}
+
+impl CgroupTab for CgroupMem {
+    impl_cgroup_tab!(CgroupMem);
+
+    fn get_field_line(&self, model: &CgroupModel) -> String {
+        self.get_field_line(&model)
+    }
+}
+
+#[derive(BelowDecor, Default, Clone)]
+pub struct CgroupIO {
+    #[blink("CgroupModel$get_name")]
+    #[bttr(
+        title = "Name",
+        width = 50,
+        depth = "self.depth * 3",
+        prefix = "get_prefix(self.collapse)",
+        decorator = "fold_string(&$, 50 - self.depth * 3, 0, |c: char| !char::is_alphanumeric(c))"
+    )]
+    pub name: String,
+    #[blink("CgroupModel$io_total?.get_rbytes_per_sec")]
+    #[bttr(
+        title = "Reads",
+        width = 11,
+        unit = "/s",
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::RbytesPerSec"
+    )]
+    pub rbytes_per_sec: Option<f64>,
+    #[blink("CgroupModel$io_total?.get_wbytes_per_sec")]
+    #[bttr(
+        title = "Writes",
+        width = 11,
+        unit = "/s",
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::WbytesPerSec"
+    )]
+    pub wbytes_per_sec: Option<f64>,
+    #[blink("CgroupModel$io_total?.get_rios_per_sec")]
+    #[bttr(
+        title = "R I/O",
+        width = 11,
+        unit = "/s",
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::RiosPerSec"
+    )]
+    pub rios_per_sec: Option<f64>,
+    #[blink("CgroupModel$io_total?.get_wios_per_sec")]
+    #[bttr(
+        title = "W I/O",
+        width = 11,
+        unit = "/s",
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::WiosPerSec"
+    )]
+    pub wios_per_sec: Option<f64>,
+    #[blink("CgroupModel$io_total?.get_dbytes_per_sec")]
+    #[bttr(
+        title = "D Bytes",
+        width = 11,
+        unit = "/s",
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::DbytesPerSec"
+    )]
+    pub dbytes_per_sec: Option<f64>,
+    #[blink("CgroupModel$io_total?.get_dios_per_sec")]
+    #[bttr(
+        title = "D I/O",
+        width = 11,
+        unit = "/s",
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::DiosPerSec"
+    )]
+    pub dios_per_sec: Option<f64>,
+    #[bttr(
+        aggr = "CgroupModel: io_total?.rbytes_per_sec? + io_total?.wbytes_per_sec?",
+        width = 11,
+        unit = "/s",
+        decorator = "convert_bytes($ as f64)",
+        title = "TW Total",
+        sort_tag = "CgroupOrders::RwTotal"
+    )]
+    pub rw_total: Option<f64>,
+    depth: usize,
+    collapse: bool,
+}
+
+impl CgroupTab for CgroupIO {
+    impl_cgroup_tab!(CgroupMem);
+
+    fn get_field_line(&self, model: &CgroupModel) -> String {
+        self.get_field_line(&model, &model)
+    }
+}
+
+#[derive(BelowDecor, Default, Clone)]
+pub struct CgroupPressure {
+    #[blink("CgroupModel$get_name")]
+    #[bttr(
+        title = "Name",
+        width = 50,
+        depth = "self.depth * 3",
+        prefix = "get_prefix(self.collapse)",
+        decorator = "fold_string(&$, 50 - self.depth * 3, 0, |c: char| !char::is_alphanumeric(c))"
+    )]
+    pub name: String,
+    #[blink("CgroupModel$pressure?.get_cpu_some_pct")]
+    #[bttr(
+        title = "CPU Pressure",
+        width = 15,
+        unit = "%",
+        precision = 2,
+        sort_tag = "CgroupOrders::CpuSomePct"
+    )]
+    pub cpu_some_pct: Option<f64>,
+    #[blink("CgroupModel$pressure?.get_memory_some_pct")]
+    #[bttr(
+        title = "Mem Some Pressure",
+        width = 20,
+        unit = "%",
+        precision = 2,
+        sort_tag = "CgroupOrders::MemorySomePct"
+    )]
+    pub pressure_memory_some_pct: Option<f64>,
+    #[blink("CgroupModel$pressure?.get_memory_full_pct")]
+    #[bttr(
+        title = "Mem Pressure",
+        width = 15,
+        unit = "%",
+        precision = 2,
+        sort_tag = "CgroupOrders::MemoryFullPct"
+    )]
+    pub pressure_memory_full_pct: Option<f64>,
+    #[blink("CgroupModel$pressure?.get_io_some_pct")]
+    #[bttr(
+        title = "I/O Some Pressure",
+        width = 18,
+        unit = "%",
+        precision = 2,
+        sort_tag = "CgroupOrders::IoSomePct"
+    )]
+    pub pressure_io_some_pct: Option<f64>,
+    #[blink("CgroupModel$pressure?.get_io_full_pct")]
+    #[bttr(
+        title = "I/O Pressure",
+        width = 15,
+        unit = "%",
+        precision = 2,
+        sort_tag = "CgroupOrders::IoFullPct"
+    )]
+    pub pressure_io_full_pct: Option<f64>,
+    pub rw_total: Option<f64>,
+    depth: usize,
+    collapse: bool,
+}
+
+impl CgroupTab for CgroupPressure {
+    impl_cgroup_tab!(CgroupMem);
+
+    fn get_field_line(&self, model: &CgroupModel) -> String {
+        self.get_field_line(&model)
+    }
+}
