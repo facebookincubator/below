@@ -136,12 +136,12 @@ impl<V: 'static + ViewBridge> ViewWrapper for StatsView<V> {
                 self.reverse_sort = !self.reverse_sort;
                 EventResult::with_cb(|c| Self::refresh_myself(c))
             }
-            // Event::Char('/') => {
-            //     let state = self.state.clone();
-            //     EventResult::with_cb(move |c| {
-            //         c.add_layer(filter_popup::new(state.clone(), Self::refresh_myself));
-            //     })
-            // }
+            Event::Char('/') => {
+                let state = self.state.clone();
+                EventResult::with_cb(move |c| {
+                    c.add_layer(filter_popup::new(state.clone(), Self::refresh_myself));
+                })
+            }
             _ => self
                 .with_view_mut(|v| v.on_event(ch))
                 .unwrap_or(EventResult::Ignored),

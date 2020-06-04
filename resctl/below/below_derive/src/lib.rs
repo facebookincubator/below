@@ -90,6 +90,9 @@
 //! * `cmp_by_FIELD_NAME(left: &Self, right, &Self) -> Ordering` -- comparison funciton. If field is a link, type of left and right will be Model
 //! * `get_interleave_line(&self, sep: &str, line_sep: &str) -> String` -- Interleave title and value and output
 //!    as string. `sep` is a string between title and value, `line_sep` is a string between each pair.
+//! * `sort(&self, tag: TagType, children: &mut Vec<ModelType>, reverse: bool)` -- Sort the children array by the sorting tag. If reverse if set
+//!    this function will sort in reverse order. TagType will be an enum type that decorate the struct.
+//! * `get_sort_tag_vec() -> Vec<TagType>` -- Get all available sorting tags for current struct.
 //!
 //! # Example
 //! ```ignore
@@ -161,6 +164,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let get_csv_title = view::gen_csv_title(&members);
     let get_interleave_line = view::gen_interleave(&members);
     let get_dfill = field::gen_dfill_tag_and_class_fns(&members, &input_ident);
+    let sort_fn = field::gen_tag_sort_fn(&members);
 
     let token = quote! {
         impl #input_ident {
@@ -176,6 +180,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
             #get_csv_title
             #get_interleave_line
             #get_title_pipe
+            #sort_fn
         }
 
         #get_dfill

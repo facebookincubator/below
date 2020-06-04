@@ -276,6 +276,118 @@ pub fn gen_cmp_fns(fields: &syn::FieldsNamed) -> Tstream {
     }
 }
 
+/// Generate sorting functions
+/// For all fields that decorated by `cmp`, we will automatically generate a cmp_by_FIELD_NAME function. And for
+/// All fields that decorated by `sort_tag`, we will use the associate cmp_by_FIELD_NAME function and generate a sort
+/// function. The generated code will be something like this:
+/// ```
+/// fn sort(&self, tag: TagType, children: Vec<ModelType>, reverse: bool) {
+///     match tag {
+///         TagType::Tag1 => children.sort_by(|lhs, rhs| {
+///             if reverse {
+///                 Self::cmp_by_FIELD_NAME1(&lhs, &rhs)
+///                     .unwrap_or(std::cmp::Ordering::Equal)
+///                     .reverse()
+///             } else {
+///                 Self::#cmp_by_FIELD_NAME1(&lhs, &rhs)
+///                     .unwrap_or(std::cmp::Ordering::Equal)
+///             }
+///         }),
+///         ...
+///         _ => ()
+///     }
+/// }
+/// ```
+/// All fields without a sorting taged will automatically tagged by TagType::Keep. So when defining sorting tag,
+/// it's mandatory to have a field named Keep. Please note that all fields that are decorated by `sort_tag` will be automatically
+/// set `cmp = true`
+pub fn gen_tag_sort_fn(fields: &syn::FieldsNamed) -> Tstream {
+    let enum_type = fields
+        .named
+        .iter()
+        .map(|f| parse_attribute(&f.attrs, &f.ident.clone().unwrap()))
+        .filter(|a| a.field.is_some() && a.field.as_ref().unwrap().sort_tag.is_some())
+        .find_map(|a| {
+            let enum_val = a.field.as_ref().unwrap().sort_tag.as_ref().unwrap();
+            let enum_val_path = enum_val.split(':').collect::<Vec<&str>>();
+            Some(enum_val_path[0].to_string())
+        });
+
+    if enum_type == None {
+        return quote! {};
+    }
+
+    let model_type = fields
+        .named
+        .iter()
+        .map(|f| parse_attribute(&f.attrs, &f.ident.clone().unwrap()))
+        .filter(|a| a.field.is_some() && a.field.as_ref().unwrap().link.is_some())
+        .find_map(|a| {
+            let link = a.field.unwrap().link.unwrap();
+            let link = link.split('$').collect::<Vec<&str>>();
+            Some(link[0].to_string())
+        });
+
+    let model_type = if let Some(mt) = model_type {
+        mt.parse::<Tstream>().unwrap()
+    } else {
+        "Self".parse::<Tstream>().unwrap()
+    };
+
+    let enum_type = enum_type.unwrap().parse::<Tstream>().unwrap();
+
+    let tag_vec = iter_field_attr!(fields)
+        .filter(|(_, a)| a.field.is_some())
+        .map(|(_, a)| {
+            let enum_val = if let Some(val) = a.field.as_ref().unwrap().sort_tag.as_ref() {
+                val.to_string()
+            } else {
+                format!("{}::Keep", &enum_type)
+            };
+
+            enum_val.parse::<Tstream>().unwrap()
+        });
+
+    let match_arms = iter_field_attr!(fields)
+        .filter(|(_, a)| a.field.is_some() && a.field.as_ref().unwrap().sort_tag.is_some())
+        .map(|(f, a)| {
+            let enum_val = a
+                .field
+                .unwrap()
+                .sort_tag
+                .unwrap()
+                .parse::<Tstream>()
+                .unwrap();
+            let name = &f.ident.clone().unwrap();
+            let cmp_fn_name = format!("cmp_by_{}", name).parse::<Tstream>().unwrap();
+            quote! {
+                #enum_val => children.sort_by(|lhs, rhs| {
+                    if reverse {
+                        Self::#cmp_fn_name(&lhs, &rhs)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                            .reverse()
+                    } else {
+                        Self::#cmp_fn_name(&lhs, &rhs)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    }
+                })
+            }
+        });
+
+    quote! {
+        pub fn sort(&self, tag: #enum_type, children: &mut Vec<&#model_type>, reverse: bool) {
+            match tag {
+                #(#match_arms,)*
+                _ => (),
+            };
+        }
+
+        pub fn get_sort_tag_vec() -> Vec<#enum_type> {
+            vec![#(#tag_vec,)*]
+        }
+    }
+}
+
 fn get_dfill_field_fns(
     fields: &syn::FieldsNamed,
     suffix: &str,

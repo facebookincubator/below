@@ -30,6 +30,7 @@ pub struct BelowFieldAttr {
     pub link: Option<String>,
     pub aggr: Option<String>,
     pub tag: Option<String>,
+    pub sort_tag: Option<String>,
     pub no_show: bool,
     pub cmp: bool,
 }
@@ -120,6 +121,14 @@ pub fn parse_attribute(attrs: &[syn::Attribute], field_name: &syn::Ident) -> Bel
                         syn::Lit::Str(ls) => Some(ls.value()),
                         _ => unimplemented!("{}: title has to be a string", field_name),
                     }
+                }
+                "sort_tag" => {
+                    field_flag = true;
+                    bfttr.sort_tag = match &nv.lit {
+                        syn::Lit::Str(ls) => Some(ls.value()),
+                        _ => unimplemented!("{}: sort_tag has to be a string", field_name),
+                    };
+                    bfttr.cmp = true;
                 }
                 "aggr" => {
                     field_flag = true;

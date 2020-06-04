@@ -20,7 +20,7 @@ use cursive::Cursive;
 use std::iter::FromIterator;
 
 use crate::model::SingleProcessModel;
-use crate::view::{filter_popup, MainViewState, SortOrder, ViewState};
+use crate::view::{MainViewState, SortOrder, ViewState};
 use below_derive::BelowDecor;
 
 #[derive(BelowDecor, Default)]
@@ -146,6 +146,7 @@ pub fn refresh(c: &mut Cursive) {
     fill_content(c, &mut v);
 }
 
+#[allow(unused)]
 fn submit_filter(c: &mut Cursive, text: &str) {
     let view_state = &mut c
         .user_data::<ViewState>()
@@ -177,7 +178,7 @@ pub fn new(c: &mut Cursive) -> impl View {
             .scroll_y(false),
     )
     .on_event('/', |c| {
-        let initial_content = match &c
+        let _initial_content = match &c
             .user_data::<ViewState>()
             .expect("No data stored in Cursive object!")
             .process_filter
@@ -186,6 +187,6 @@ pub fn new(c: &mut Cursive) -> impl View {
             None => "".to_string(),
         };
 
-        c.add_layer(filter_popup::new(initial_content.as_str(), submit_filter));
+        // c.add_layer(filter_popup::new(initial_content.as_str(), submit_filter));
     })
 }

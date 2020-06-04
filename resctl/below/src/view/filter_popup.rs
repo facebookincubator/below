@@ -12,22 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use cursive::view::{Identifiable, View};
 use cursive::views::{Dialog, EditView};
 use cursive::Cursive;
 
-pub fn new<F>(initial_content: &str, cb: F) -> impl View
+use crate::view::stats_view::StateCommon;
+
+pub fn new<F>(state: Rc<RefCell<impl StateCommon + 'static>>, refresh: F) -> impl View
 where
-    F: 'static + Copy + Fn(&mut Cursive, &str),
+    F: 'static + Copy + Fn(&mut Cursive),
 {
+    let submit_state = state.clone();
     let mut editview = EditView::new()
         // Run cb and close popup when user presses "Enter"
         .on_submit(move |c, text| {
-            cb(c, text);
+            *submit_state.borrow_mut().get_filter() = Some(text.to_string());
+            refresh(c);
             c.pop_layer();
         });
 
-    editview.set_content(initial_content);
+    editview.set_content(
+        state
+            .borrow_mut()
+            .get_filter()
+            .as_ref()
+            .unwrap_or(&"".to_string()),
+    );
 
     Dialog::new()
         .title("Filter by name")
@@ -39,8 +52,8 @@ where
                 .call_on_name("filter_popup", |view: &mut EditView| view.get_content())
                 .expect("Unable to find filter_popup");
 
-            // Update state
-            cb(c, &text);
+            *state.borrow_mut().get_filter() = Some(text.to_string());
+            refresh(c);
 
             // Pop dialog
             c.pop_layer();

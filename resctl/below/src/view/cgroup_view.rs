@@ -23,7 +23,7 @@ use cursive::Cursive;
 use crate::model;
 use crate::model::CgroupModel;
 use crate::util::{fold_string, get_prefix};
-use crate::view::{filter_popup, SortOrder, ViewState};
+use crate::view::{SortOrder, ViewState};
 use below_derive::BelowDecor;
 
 #[derive(BelowDecor, Default)]
@@ -215,6 +215,7 @@ pub fn refresh(c: &mut Cursive) {
     fill_content(c, &mut v);
 }
 
+#[allow(unused)]
 fn submit_filter(c: &mut Cursive, text: &str) {
     let view_state = &mut c
         .user_data::<ViewState>()
@@ -264,7 +265,7 @@ pub fn new(c: &mut Cursive) -> impl View {
             .scroll_y(false),
     )
     .on_event('/', |c| {
-        let initial_content = match &c
+        let _initial_content = match &c
             .user_data::<ViewState>()
             .expect("No data stored in Cursive object!")
             .cgroup_filter
@@ -273,6 +274,6 @@ pub fn new(c: &mut Cursive) -> impl View {
             None => "".to_string(),
         };
 
-        c.add_layer(filter_popup::new(initial_content.as_str(), submit_filter));
+        // c.add_layer(filter_popup::new(initial_content.as_str(), submit_filter));
     })
 }
