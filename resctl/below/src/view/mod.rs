@@ -63,6 +63,8 @@ use anyhow::Result;
 use crate::store::Direction;
 use crate::Advance;
 
+#[macro_use]
+mod stats_view;
 mod cgroup_view;
 mod filter_popup;
 mod help_menu;
