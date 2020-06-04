@@ -12,6 +12,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/// View Module defines how to render below inside terminal.
+///
+/// ## High level architecture
+/// ```
+///  ------------------------------------------------------------
+/// |                      Status Bar                            |
+///  ------------------------------------------------------------
+///  ------------------------------------------------------------
+/// |                      System View                           |
+///  ------------------------------------------------------------
+///  ------------------------------------------------------------
+/// |                      Stats View                            |
+///  ------------------------------------------------------------
+/// ```
+/// * Status Bar: Displays datetime, elapsed time, hostname, and below version.
+/// * System View: Displays overall system stats including cpu, mem, io, iface, transport, and network.
+/// * Stats View: Display the detailed stats. Please check the stats view section for more details.
+///
+/// ### Stats View
+/// ```
+///  ------------------------------------------------------------
+/// |                         Tabs                               |
+/// | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+/// |                 Column name in Bold                        |
+/// |                 Selectable Stats View                      |
+///  ------------------------------------------------------------
+/// ```
+/// * Tabs: Defines the topics of stats view. Each stats view by default will show only the general stats:
+///   a combination of all important stats from each topic. User can use `tab` or `shift-tab` to switch
+///   between different tabs to see the detailed view of that topic. For example, for cgroup view, the `general` tab
+///   will only show pressure status of cpu_some, memory_full, io_full. But the `pressure` tab will show all
+///   pressure related stats including cpu_some, memory_some, memory_full, io_some, io_full.
+///
+/// * Column names: The column names line also called title line in below_derive. It defines the table column of
+///   the following selectable view. A user press `s` to select a sortable column and sort the stats by that column.
+///   By default it will sort in decreasing order, a user can use `shift-up` or `shift-down` to toggle the sorting
+///   order.
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -32,6 +69,7 @@ mod help_menu;
 mod process_view;
 mod status_bar;
 mod system_view;
+mod tab_view;
 
 pub struct View {
     inner: Cursive,

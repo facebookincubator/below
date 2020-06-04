@@ -59,7 +59,7 @@
 //!       will map to tag `FieldType::Cpu`. We use `:` to split the detail level. By default,
 //!       it will only display the item before `:`. It will display all items if a user specify
 //!       `--detail`.
-//!      
+//!
 //!
 //! ## blink - below link
 //! * `Type$call_path` -- Type is the argument type of the generated function.
@@ -81,6 +81,7 @@
 //! * `get_FIELD_NAME_title(&self) -> &'static str` -- Get raw title string. We capture a `&self` here is for chaining of link.
 //! * `get_FIELD_NAME_title_styled(&self) -> &'static str` -- Get styled title string. This function will apply width attribute.
 //! * `get_title_line(&self) -> String` -- Get all titles in a line, all style applied.
+//! * `get_title_pipe(&self) -> String` -- Get all titles in a line, separated by '|', all style applied.
 //! * `get_FIELD_NAME_str(&self) -> String` -- Get the field string, all style applied.
 //! * `get_FIELD_NAME_str_raw(&self) -> String` -- Get the field string, no style applied.
 //! * `get_field_line(&self) -> String` -- Get all fields in a line, all style applied.
@@ -153,6 +154,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let get_str_dir_field = view::gen_get_str_per_dir_field(&members);
     let get_str_link_field = view::gen_get_str_per_link_field(&members);
     let get_title_line = view::gen_title_line(&members);
+    let get_title_pipe = view::gen_title_pipe(&members);
     let get_field_line = view::gen_field_line(&members);
     let cmp_fns = field::gen_cmp_fns(&members);
     let get_csv_field = view::gen_csv_field(&members);
@@ -173,6 +175,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
             #get_csv_field
             #get_csv_title
             #get_interleave_line
+            #get_title_pipe
         }
 
         #get_dfill

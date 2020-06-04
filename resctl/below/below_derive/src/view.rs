@@ -280,6 +280,7 @@ fn unified_line_generation(fields: &syn::FieldsNamed, dformat: DFormat) -> Tstre
         });
 
     let (fn_name, ext, sep, is_title) = match dformat {
+        DFormat::Title(e, "|") => ("get_title_pipe".parse::<Tstream>().unwrap(), e, "|", true),
         DFormat::Title(e, s) => ("get_title_line".parse::<Tstream>().unwrap(), e, s, true),
         DFormat::Field(e, s) => ("get_field_line".parse::<Tstream>().unwrap(), e, s, false),
         DFormat::CSVTitle(e, s) => ("get_csv_title".parse::<Tstream>().unwrap(), e, s, true),
@@ -352,6 +353,11 @@ pub fn gen_csv_title(fields: &syn::FieldsNamed) -> Tstream {
 
 pub fn gen_csv_field(fields: &syn::FieldsNamed) -> Tstream {
     unified_line_generation(fields, DFormat::CSVField("str", ","))
+}
+
+// This function will help us easier parse title line into the TabView vector by split with '|'
+pub fn gen_title_pipe(fields: &syn::FieldsNamed) -> Tstream {
+    unified_line_generation(fields, DFormat::Title("title_styled", "|"))
 }
 
 pub fn gen_interleave(fields: &syn::FieldsNamed) -> Tstream {
