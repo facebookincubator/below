@@ -155,7 +155,17 @@ macro_rules! impl_cgroup_tab {
         }
 
         fn sort(&self, sort_order: CgroupOrders, cgroups: &mut Vec<&CgroupModel>, reverse: bool) {
-            self.sort(sort_order, cgroups, reverse);
+            if CgroupGeneral::has_tag(sort_order) {
+                CgroupGeneral::sort(sort_order, cgroups, reverse)
+            } else if CgroupCPU::has_tag(sort_order) {
+                CgroupCPU::sort(sort_order, cgroups, reverse)
+            } else if CgroupMem::has_tag(sort_order) {
+                CgroupMem::sort(sort_order, cgroups, reverse)
+            } else if CgroupIO::has_tag(sort_order) {
+                CgroupIO::sort(sort_order, cgroups, reverse)
+            } else {
+                CgroupPressure::sort(sort_order, cgroups, reverse)
+            }
         }
 
         fn depth(&mut self) -> &mut usize {

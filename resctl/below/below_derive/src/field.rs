@@ -336,7 +336,7 @@ pub fn gen_tag_sort_fn(fields: &syn::FieldsNamed) -> Tstream {
 
     let enum_type = enum_type.unwrap().parse::<Tstream>().unwrap();
 
-    let tag_vec = iter_field_attr!(fields)
+    let tag_items_vec = iter_field_attr!(fields)
         .filter(|(_, a)| a.field.is_some())
         .map(|(_, a)| {
             let enum_val = if let Some(val) = a.field.as_ref().unwrap().sort_tag.as_ref() {
@@ -347,6 +347,10 @@ pub fn gen_tag_sort_fn(fields: &syn::FieldsNamed) -> Tstream {
 
             enum_val.parse::<Tstream>().unwrap()
         });
+
+    // We clone the tag_items_vec here is because quote!{get_sort_tag_vec} will consume
+    // the iterator.
+    let tag_items_has_tag = tag_items_vec.clone();
 
     let match_arms = iter_field_attr!(fields)
         .filter(|(_, a)| a.field.is_some() && a.field.as_ref().unwrap().sort_tag.is_some())
@@ -375,15 +379,22 @@ pub fn gen_tag_sort_fn(fields: &syn::FieldsNamed) -> Tstream {
         });
 
     quote! {
-        pub fn sort(&self, tag: #enum_type, children: &mut Vec<&#model_type>, reverse: bool) {
+        pub fn sort(tag: #enum_type, children: &mut Vec<&#model_type>, reverse: bool) {
             match tag {
                 #(#match_arms,)*
                 _ => (),
             };
         }
 
+        pub fn has_tag(tag: #enum_type) -> bool {
+            match tag {
+                #(#tag_items_has_tag => true,)*
+                _ => false
+            }
+        }
+
         pub fn get_sort_tag_vec() -> Vec<#enum_type> {
-            vec![#(#tag_vec,)*]
+            vec![#(#tag_items_vec,)*]
         }
     }
 }

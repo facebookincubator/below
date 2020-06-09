@@ -108,7 +108,15 @@ macro_rules! impl_process_tab {
             processes: &mut Vec<&SingleProcessModel>,
             reverse: bool,
         ) {
-            self.sort(sort_order, processes, reverse);
+            if ProcessGeneral::has_tag(sort_order) {
+                ProcessGeneral::sort(sort_order, processes, reverse)
+            } else if ProcessCPU::has_tag(sort_order) {
+                ProcessCPU::sort(sort_order, processes, reverse)
+            } else if ProcessMem::has_tag(sort_order) {
+                ProcessMem::sort(sort_order, processes, reverse)
+            } else {
+                ProcessIO::sort(sort_order, processes, reverse)
+            }
         }
     };
 }
