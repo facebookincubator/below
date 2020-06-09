@@ -32,6 +32,7 @@ struct CgroupSample {
   4: optional cgroupfs.MemoryStat memory_stat,
   5: optional cgroupfs.Pressure pressure,
   6: optional map<string, CgroupSample> children,
+  7: optional i64 memory_swap_current,
 }
 
 struct SystemSample {

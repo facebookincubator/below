@@ -440,6 +440,10 @@ fn traverse_cgroup_tree(model: &CgroupModel, jval: &mut Value) {
     if let Some(mem) = model.memory.as_ref() {
         assert_eq!(jval["Mem Total"].as_str().unwrap(), mem.get_total_str());
         assert_eq!(
+            jval["Mem Swap"].as_str().unwrap(),
+            convert_bytes(mem.swap.unwrap_or_default() as f64)
+        );
+        assert_eq!(
             jval["Mem Anon"].as_str().unwrap(),
             convert_bytes(mem.anon.unwrap_or_default() as f64)
         );
@@ -506,6 +510,50 @@ fn traverse_cgroup_tree(model: &CgroupModel, jval: &mut Value) {
         assert_eq!(
             jval["Slab Unreclaimable"].as_str().unwrap(),
             convert_bytes(mem.slab_unreclaimable.unwrap_or_default() as f64)
+        );
+        assert_eq!(jval["Pgfault"].as_str().unwrap(), mem.get_pgfault_str());
+        assert_eq!(
+            jval["Pgmajfault"].as_str().unwrap(),
+            mem.get_pgmajfault_str()
+        );
+        assert_eq!(
+            jval["Workingset Refault"].as_str().unwrap(),
+            mem.get_workingset_refault_str()
+        );
+        assert_eq!(
+            jval["Workingset Activate"].as_str().unwrap(),
+            mem.get_workingset_activate_str()
+        );
+        assert_eq!(
+            jval["Workingset Nodereclaim"].as_str().unwrap(),
+            mem.get_workingset_nodereclaim_str()
+        );
+        assert_eq!(jval["Pgrefill"].as_str().unwrap(), mem.get_pgrefill_str());
+        assert_eq!(jval["Pgscan"].as_str().unwrap(), mem.get_pgscan_str());
+        assert_eq!(jval["Pgsteal"].as_str().unwrap(), mem.get_pgsteal_str());
+        assert_eq!(
+            jval["Pgactivate"].as_str().unwrap(),
+            mem.get_pgactivate_str()
+        );
+        assert_eq!(
+            jval["Pgdeactivate"].as_str().unwrap(),
+            mem.get_pgdeactivate_str()
+        );
+        assert_eq!(
+            jval["Pglazyfree"].as_str().unwrap(),
+            mem.get_pglazyfree_str()
+        );
+        assert_eq!(
+            jval["Pglazyfreed"].as_str().unwrap(),
+            mem.get_pglazyfreed_str()
+        );
+        assert_eq!(
+            jval["THP Fault Alloc"].as_str().unwrap(),
+            mem.get_thp_fault_alloc_str()
+        );
+        assert_eq!(
+            jval["THP Collapse Alloc"].as_str().unwrap(),
+            mem.get_thp_collapse_alloc_str()
         );
     }
 

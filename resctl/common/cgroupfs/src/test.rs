@@ -98,6 +98,18 @@ fn test_memory_current_invalid_format() {
 }
 
 #[test]
+fn test_memory_swap_current_success() {
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content("memory.swap.current", b"1234\n");
+
+    let cgroup_reader = cgroup.get_reader();
+    let val = cgroup_reader
+        .read_memory_swap_current()
+        .expect("Failed to read memory.swap.current");
+    assert_eq!(val, 1234);
+}
+
+#[test]
 fn test_memory_stat_success() {
     let cgroup = TestCgroup::new();
     cgroup.create_file_with_content("memory.stat", b"slab 1234\n");

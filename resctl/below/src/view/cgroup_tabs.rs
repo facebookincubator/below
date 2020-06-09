@@ -32,6 +32,7 @@ pub enum CgroupOrders {
     NrThrottledPerSec,
     ThrottledPct,
     MemoryTotal,
+    MemorySwap,
     Anon,
     File,
     KernelStack,
@@ -49,6 +50,20 @@ pub enum CgroupOrders {
     Unevictable,
     SlabReclaimable,
     SlabUnreclaimable,
+    Pgfault,
+    Pgmajfault,
+    WorkingsetRefault,
+    WorkingsetActivate,
+    WorkingsetNodereclaim,
+    Pgrefill,
+    Pgscan,
+    Pgsteal,
+    Pgactivate,
+    Pgdeactivate,
+    Pglazyfree,
+    Pglazyfreed,
+    THPFaultAlloc,
+    THPCollapseAlloc,
     CpuSomePct,
     MemorySomePct,
     MemoryFullPct,
@@ -271,6 +286,14 @@ pub struct CgroupMem {
         sort_tag = "CgroupOrders::MemoryTotal"
     )]
     pub memory_total: Option<u64>,
+    #[blink("CgroupModel$memory?.get_swap")]
+    #[bttr(
+        title = "Memory Swap",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        sort_tag = "CgroupOrders::MemorySwap"
+    )]
+    pub memory_swap: Option<u64>,
     #[blink("CgroupModel$memory?.get_anon")]
     #[bttr(
         title = "Anon",
@@ -407,6 +430,88 @@ pub struct CgroupMem {
         sort_tag = "CgroupOrders::SlabUnreclaimable"
     )]
     pub slab_unreclaimable: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pgfault")]
+    #[bttr(title = "Pgfault", width = 11, sort_tag = "CgroupOrders::Pgfault")]
+    pub pgfault: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pgmajfault")]
+    #[bttr(
+        title = "Pgmajfault",
+        width = 11,
+        sort_tag = "CgroupOrders::Pgmajfault"
+    )]
+    pub pgmajfault: Option<u64>,
+    #[blink("CgroupModel$memory?.get_workingset_refault")]
+    #[bttr(
+        title = "Workingset Refault",
+        width = 18,
+        sort_tag = "CgroupOrders::WorkingsetRefault"
+    )]
+    pub workingset_refault: Option<u64>,
+    #[blink("CgroupModel$memory?.get_workingset_activate")]
+    #[bttr(
+        title = "Workingset Activate",
+        width = 20,
+        sort_tag = "CgroupOrders::WorkingsetActivate"
+    )]
+    pub workingset_activate: Option<u64>,
+    #[blink("CgroupModel$memory?.get_workingset_nodereclaim")]
+    #[bttr(
+        title = "Workingset Nodereclaim",
+        width = 18,
+        sort_tag = "CgroupOrders::WorkingsetNodereclaim"
+    )]
+    pub workingset_nodereclaim: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pgrefill")]
+    #[bttr(title = "Pgrefill", width = 11, sort_tag = "CgroupOrders::Pgrefill")]
+    pub pgrefill: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pgscan")]
+    #[bttr(title = "Pgscan", width = 11, sort_tag = "CgroupOrders::Pgscan")]
+    pub pgscan: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pgsteal")]
+    #[bttr(title = "Pgsteal", width = 11, sort_tag = "CgroupOrders::Pgsteal")]
+    pub pgsteal: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pgactivate")]
+    #[bttr(
+        title = "Pgactivate",
+        width = 11,
+        sort_tag = "CgroupOrders::Pgactivate"
+    )]
+    pub pgactivate: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pgdeactivate")]
+    #[bttr(
+        title = "Pgdeactivate",
+        width = 14,
+        sort_tag = "CgroupOrders::Pgdeactivate"
+    )]
+    pub pgdeactivate: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pglazyfree")]
+    #[bttr(
+        title = "Pglazyfree",
+        width = 11,
+        sort_tag = "CgroupOrders::Pglazyfree"
+    )]
+    pub pglazyfree: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pglazyfreed")]
+    #[bttr(
+        title = "Pglazyfreed",
+        width = 18,
+        sort_tag = "CgroupOrders::Pglazyfreed"
+    )]
+    pub pglazyfreed: Option<u64>,
+    #[blink("CgroupModel$memory?.get_thp_fault_alloc")]
+    #[bttr(
+        title = "THP Fault Alloc",
+        width = 18,
+        sort_tag = "CgroupOrders::THPFaultAlloc"
+    )]
+    pub thp_fault_alloc: Option<u64>,
+    #[blink("CgroupModel$memory?.get_thp_collapse_alloc")]
+    #[bttr(
+        title = "THP Collapse Alloc",
+        width = 18,
+        sort_tag = "CgroupOrders::THPCollapseAlloc"
+    )]
+    pub thp_collapse_alloc: Option<u64>,
     depth: usize,
     collapse: bool,
 }

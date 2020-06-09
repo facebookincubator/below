@@ -103,6 +103,15 @@ pub struct CgroupData {
         cmp = true
     )]
     pub memory_total: Option<u64>,
+    #[blink("CgroupModel$memory?.get_swap")]
+    #[bttr(
+        title = "Mem Swap",
+        width = 11,
+        decorator = "convert_bytes($ as f64)",
+        tag = "CgroupField::MemSwap&",
+        cmp = true
+    )]
+    pub memory_swap: Option<u64>,
     #[blink("CgroupModel$memory?.get_anon")]
     #[bttr(
         title = "Mem Anon",
@@ -256,6 +265,118 @@ pub struct CgroupData {
         cmp = true
     )]
     pub slab_unreclaimable: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pgfault")]
+    #[bttr(
+        title = "Pgfault",
+        width = 11,
+        tag = "CgroupField::Pgfault&",
+        cmp = true
+    )]
+    pub pgfault: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pgmajfault")]
+    #[bttr(
+        title = "Pgmajfault",
+        width = 11,
+        tag = "CgroupField::MemPgmajfault&",
+        cmp = true
+    )]
+    pub pgmajfault: Option<u64>,
+    #[blink("CgroupModel$memory?.get_workingset_refault")]
+    #[bttr(
+        title = "Workingset Refault",
+        width = 18,
+        tag = "CgroupField::MemWorkingsetRefault&",
+        cmp = true
+    )]
+    pub workingset_refault: Option<u64>,
+    #[blink("CgroupModel$memory?.get_workingset_activate")]
+    #[bttr(
+        title = "Workingset Activate",
+        width = 20,
+        tag = "CgroupField::MemWorkingsetActivate&",
+        cmp = true
+    )]
+    pub workingset_activate: Option<u64>,
+    #[blink("CgroupModel$memory?.get_workingset_nodereclaim")]
+    #[bttr(
+        title = "Workingset Nodereclaim",
+        width = 18,
+        tag = "CgroupField::MemWorkingsetNodereclaim&",
+        cmp = true
+    )]
+    pub workingset_nodereclaim: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pgrefill")]
+    #[bttr(
+        title = "Pgrefill",
+        width = 11,
+        tag = "CgroupField::MemPgrefill&",
+        cmp = true
+    )]
+    pub pgrefill: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pgscan")]
+    #[bttr(
+        title = "Pgscan",
+        width = 11,
+        tag = "CgroupField::MemPgscan&",
+        cmp = true
+    )]
+    pub pgscan: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pgsteal")]
+    #[bttr(
+        title = "Pgsteal",
+        width = 11,
+        tag = "CgroupField::MemPgsteal&",
+        cmp = true
+    )]
+    pub pgsteal: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pgactivate")]
+    #[bttr(
+        title = "Pgactivate",
+        width = 11,
+        tag = "CgroupField::MemPgactivate&",
+        cmp = true
+    )]
+    pub pgactivate: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pgdeactivate")]
+    #[bttr(
+        title = "Pgdeactivate",
+        width = 14,
+        tag = "CgroupField::MemPgdeactivate&",
+        cmp = true
+    )]
+    pub pgdeactivate: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pglazyfree")]
+    #[bttr(
+        title = "Pglazyfree",
+        width = 11,
+        tag = "CgroupField::MemPglazyfree&",
+        cmp = true
+    )]
+    pub pglazyfree: Option<u64>,
+    #[blink("CgroupModel$memory?.get_pglazyfreed")]
+    #[bttr(
+        title = "Pglazyfreed",
+        width = 18,
+        tag = "CgroupField::MemPglazyfreed&",
+        cmp = true
+    )]
+    pub pglazyfreed: Option<u64>,
+    #[blink("CgroupModel$memory?.get_thp_fault_alloc")]
+    #[bttr(
+        title = "THP Fault Alloc",
+        width = 18,
+        tag = "CgroupField::MemTHPFaultAlloc&",
+        cmp = true
+    )]
+    pub thp_fault_alloc: Option<u64>,
+    #[blink("CgroupModel$memory?.get_thp_collapse_alloc")]
+    #[bttr(
+        title = "THP Collapse Alloc",
+        width = 18,
+        tag = "CgroupField::MemTHPCollapseAlloc&",
+        cmp = true
+    )]
+    pub thp_collapse_alloc: Option<u64>,
     #[blink("CgroupModel$pressure?.get_cpu_some_pct")]
     #[bttr(
         title = "CPU Pressure",
@@ -390,7 +511,7 @@ pub struct CgroupData {
     )]
     pub cpu: AwaysNone,
     #[bttr(
-        class = "CgroupField$memory_total&:anon&,file&,kernel_stack&,slab&,sock&,shmem&,file_mapped&,file_dirty&,file_writeback&,anon_thp&,inactive_anon&,active_anon&,inactive_file&,active_file&,unevictable&,slab_reclaimable&,slab_unreclaimable&"
+        class = "CgroupField$memory_total&:memory_swap&,anon&,file&,kernel_stack&,slab&,sock&,shmem&,file_mapped&,file_dirty&,file_writeback&,anon_thp&,inactive_anon&,active_anon&,inactive_file&,active_file&,unevictable&,slab_reclaimable&,slab_unreclaimable&,pgfault&,pgmajfault&,workingset_refault&,workingset_activate&,workingset_nodereclaim&,pgrefill&,pgscan&,pgsteal&,pgactivate&,pgdeactivate&,pglazyfree&,pglazyfreed&,thp_fault_alloc&,thp_collapse_alloc&"
     )]
     pub mem: AwaysNone,
     #[bttr(

@@ -95,8 +95,14 @@ impl CgroupModel {
             .pressure
             .as_ref()
             .map(|p| CgroupPressureModel::new(p));
-        let memory = match (sample.memory_current, sample.memory_stat.as_ref()) {
-            (Some(mem), Some(mem_stat)) => Some(CgroupMemoryModel::new(mem as u64, mem_stat)),
+        let memory = match (
+            sample.memory_current,
+            sample.memory_swap_current,
+            sample.memory_stat.as_ref(),
+        ) {
+            (Some(mem), Some(swap), Some(mem_stat)) => {
+                Some(CgroupMemoryModel::new(mem as u64, swap as u64, mem_stat))
+            }
             _ => None,
         };
         // recursively calculate view of children
@@ -243,6 +249,8 @@ impl std::ops::Add<&CgroupIoModel> for CgroupIoModel {
 pub struct CgroupMemoryModel {
     #[bttr(title = "Memory", width = 11, decorator = "convert_bytes($ as f64)")]
     pub total: Option<u64>,
+    #[bttr(title = "Memory Swap")]
+    pub swap: Option<u64>,
     #[bttr(title = "Anon")]
     pub anon: Option<u64>,
     #[bttr(title = "File")]
@@ -277,14 +285,41 @@ pub struct CgroupMemoryModel {
     pub slab_reclaimable: Option<u64>,
     #[bttr(title = "Slab Unreclaimable")]
     pub slab_unreclaimable: Option<u64>,
-    // TODO: memory.stat has a lot of cumulative stats that need to be
-    // added
+    #[bttr(title = "Pgfault")]
+    pub pgfault: Option<u64>,
+    #[bttr(title = "Pgmajfault")]
+    pub pgmajfault: Option<u64>,
+    #[bttr(title = "Workingset Refault")]
+    pub workingset_refault: Option<u64>,
+    #[bttr(title = "Workingset Activate")]
+    pub workingset_activate: Option<u64>,
+    #[bttr(title = "Workingset Nodereclaim")]
+    pub workingset_nodereclaim: Option<u64>,
+    #[bttr(title = "Pgrefill")]
+    pub pgrefill: Option<u64>,
+    #[bttr(title = "Pgscan")]
+    pub pgscan: Option<u64>,
+    #[bttr(title = "Pgsteal")]
+    pub pgsteal: Option<u64>,
+    #[bttr(title = "Pgactivate")]
+    pub pgactivate: Option<u64>,
+    #[bttr(title = "Pgdeactivate")]
+    pub pgdeactivate: Option<u64>,
+    #[bttr(title = "Pglazyfree")]
+    pub pglazyfree: Option<u64>,
+    #[bttr(title = "Pglazyfreed")]
+    pub pglazyfreed: Option<u64>,
+    #[bttr(title = "THP Fault Alloc")]
+    pub thp_fault_alloc: Option<u64>,
+    #[bttr(title = "THP Collapse Alloc")]
+    pub thp_collapse_alloc: Option<u64>,
 }
 
 impl CgroupMemoryModel {
-    pub fn new(current: u64, stat: &cgroupfs::MemoryStat) -> CgroupMemoryModel {
+    pub fn new(current: u64, swap: u64, stat: &cgroupfs::MemoryStat) -> CgroupMemoryModel {
         CgroupMemoryModel {
             total: Some(current),
+            swap: Some(swap),
             anon: stat.anon.map(|v| v as u64),
             file: stat.file.map(|v| v as u64),
             kernel_stack: stat.kernel_stack.map(|v| v as u64),
@@ -302,6 +337,20 @@ impl CgroupMemoryModel {
             unevictable: stat.unevictable.map(|v| v as u64),
             slab_reclaimable: stat.slab_reclaimable.map(|v| v as u64),
             slab_unreclaimable: stat.slab_unreclaimable.map(|v| v as u64),
+            pgfault: stat.pgfault.map(|v| v as u64),
+            pgmajfault: stat.pgmajfault.map(|v| v as u64),
+            workingset_refault: stat.workingset_refault.map(|v| v as u64),
+            workingset_activate: stat.workingset_activate.map(|v| v as u64),
+            workingset_nodereclaim: stat.workingset_nodereclaim.map(|v| v as u64),
+            pgrefill: stat.pgrefill.map(|v| v as u64),
+            pgscan: stat.pgscan.map(|v| v as u64),
+            pgsteal: stat.pgsteal.map(|v| v as u64),
+            pgactivate: stat.pgactivate.map(|v| v as u64),
+            pgdeactivate: stat.pgdeactivate.map(|v| v as u64),
+            pglazyfree: stat.pglazyfree.map(|v| v as u64),
+            pglazyfreed: stat.pglazyfreed.map(|v| v as u64),
+            thp_fault_alloc: stat.thp_fault_alloc.map(|v| v as u64),
+            thp_collapse_alloc: stat.thp_collapse_alloc.map(|v| v as u64),
         }
     }
 }

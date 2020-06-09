@@ -72,10 +72,8 @@ impl CgroupReader {
         &self.relative_path
     }
 
-    /// Read memory.current - returning current cgroup memory
-    /// consumption in bytes
-    pub fn read_memory_current(&self) -> Result<u64> {
-        let file_name = "memory.current";
+    /// Read a stat from a file that has a single line
+    fn read_singleline_stat_file(&self, file_name: &str) -> Result<u64> {
         let file = self
             .dir
             .open_file(file_name)
@@ -88,6 +86,18 @@ impl CgroupReader {
                 .map_err(move |_| self.unexpected_line(file_name, line));
         }
         Err(self.invalid_file_format(file_name))
+    }
+
+    /// Read memory.current - returning current cgroup memory
+    /// consumption in bytes
+    pub fn read_memory_current(&self) -> Result<u64> {
+        self.read_singleline_stat_file("memory.current")
+    }
+
+    /// Read memory.swap.current - returning current cgroup memory
+    /// swap consumption in bytes
+    pub fn read_memory_swap_current(&self) -> Result<u64> {
+        self.read_singleline_stat_file("memory.swap.current")
     }
 
     /// Read cpu.stat - returning assorted cpu consumption statistics
