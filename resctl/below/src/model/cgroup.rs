@@ -95,14 +95,12 @@ impl CgroupModel {
             .pressure
             .as_ref()
             .map(|p| CgroupPressureModel::new(p));
-        let memory = match (
-            sample.memory_current,
-            sample.memory_swap_current,
-            sample.memory_stat.as_ref(),
-        ) {
-            (Some(mem), Some(swap), Some(mem_stat)) => {
-                Some(CgroupMemoryModel::new(mem as u64, swap as u64, mem_stat))
-            }
+        let memory = match sample.memory_stat.as_ref() {
+            Some(mem_stat) => Some(CgroupMemoryModel::new(
+                sample.memory_current.map(|v| v as u64),
+                sample.memory_swap_current.map(|v| v as u64),
+                mem_stat,
+            )),
             _ => None,
         };
         // recursively calculate view of children
@@ -316,10 +314,14 @@ pub struct CgroupMemoryModel {
 }
 
 impl CgroupMemoryModel {
-    pub fn new(current: u64, swap: u64, stat: &cgroupfs::MemoryStat) -> CgroupMemoryModel {
+    pub fn new(
+        current: Option<u64>,
+        swap: Option<u64>,
+        stat: &cgroupfs::MemoryStat,
+    ) -> CgroupMemoryModel {
         CgroupMemoryModel {
-            total: Some(current),
-            swap: Some(swap),
+            total: current,
+            swap,
             anon: stat.anon.map(|v| v as u64),
             file: stat.file.map(|v| v as u64),
             kernel_stack: stat.kernel_stack.map(|v| v as u64),
