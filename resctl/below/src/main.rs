@@ -105,6 +105,8 @@ enum Command {
         ///
         /// Relative: {humantime} ago, e.g. "2 days 3 hr 15m 10sec ago"
         ///
+        /// Relative short: Mixed {time_digit}{time_unit_char} E.g. 10m, 3d2h, 5h30s. Case insensitive.
+        ///
         /// Absolute: "Jan 01 23:59", "01/01/1970 11:59PM", "1970-01-01 23:59:59"
         ///
         /// Unix Epoch: 1589808367
@@ -352,6 +354,7 @@ fn replay(
                     Examples:\n\t\
                     Keywords: now, today, yesterday\n\t\
                     Relative: \"{{humantime}} ago\", e.g. 2 days 3 hr 15m 10sec ago\n\t\
+                    Relative short: Mixed {{time_digit}}{{time_unit_char}}. E.g. 10m, 3d2H, 5h30s, 10m5h\n\t\
                     Absolute: \"Jan 01 23:59\", \"01/01/1970 11:59PM\", \"1970-01-01 23:59:59\"\n\t\
                     Unix Epoch: 1589808367",
                         &time

@@ -108,8 +108,26 @@ impl HgTime {
                 Self::from(Local::today().and_hms(0, 0, 0) - Duration::days(1))
                     .use_default_offset(),
             ),
-            date if date.ends_with(" ago") => {
-                let duration_str = &date[..date.len() - 4];
+            // Match all string ends with [dhms] or ago but not ends with pm and am. Case insensitive.
+            // We have to use two regex here is because regex crate doesn't support negative lookbehind
+            // expression.
+            date if match (
+                Regex::new(r"(?i)([dhms]|ago)$"),
+                Regex::new(r"(?i)(pm|am)$"),
+            ) {
+                (Ok(relative_re), Ok(ampm_re)) => {
+                    relative_re.is_match(&date) && !ampm_re.is_match(&date)
+                }
+                _ => false,
+            } =>
+            {
+                let date = date.to_ascii_lowercase();
+                let duration_str = if date.ends_with("ago") {
+                    &date[..date.len() - 4]
+                } else {
+                    &date
+                };
+
                 duration_str
                     .parse::<humantime::Duration>()
                     .ok()
@@ -521,6 +539,21 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_ago_short() {
+        set_default_offset(7200);
+        assert!(diff_from_now("10m", Duration::minutes(10)) < 2);
+        assert!(diff_from_now("2d", Duration::days(2)) < 2);
+        assert!(diff_from_now("10s", Duration::seconds(10)) < 2);
+        assert!(diff_from_now("10h", Duration::hours(10)) < 2);
+        assert!(diff_from_now("10h10m5s", Duration::seconds(36_605)) < 2);
+        assert!(diff_from_now("10h5s10m", Duration::seconds(36_605)) < 2);
+        assert!(diff_from_now("10H5s10M", Duration::seconds(36_605)) < 2);
+        // wrong format
+        assert_eq!(diff_from_now("10AM", Duration::minutes(10)), -1);
+        assert_eq!(diff_from_now("10hm", Duration::minutes(10)), -1);
+    }
+
+    #[test]
     fn test_parse_range() {
         set_default_offset(7200);
 
@@ -575,6 +608,21 @@ mod tests {
             }
         } else {
             "fail"
+        }
+    }
+
+    /// Compareing the date from now.
+    /// Return diff |now - date - expected|
+    /// Return negative value for parse error.
+    fn diff_from_now(date: &str, expected: Duration) -> i64 {
+        match HgTime::parse(date) {
+            Some(time) => {
+                let now = HgTime::now().unixtime as i64;
+                let before = time.unixtime as i64;
+                let expected_diff = expected.num_seconds();
+                (now - before - expected_diff).abs()
+            }
+            None => -1,
         }
     }
 }
