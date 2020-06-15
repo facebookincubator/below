@@ -87,7 +87,25 @@ pub enum ProcessView {
 
 impl ProcessView {
     pub fn new(c: &mut Cursive) -> NamedView<ViewType> {
-        let list = SelectView::<String>::new();
+        let mut list = SelectView::<String>::new();
+        list.set_on_select(|c, pid: &String| {
+            let view_state = &c
+                .user_data::<ViewState>()
+                .expect("No data stored in Cursive object!");
+
+            let cgroup = view_state
+                .model
+                .process
+                .processes
+                .get(&pid.parse::<i32>().unwrap_or(0))
+                .map_or("?".to_string(), |spm| {
+                    spm.cgroup.clone().unwrap_or_else(|| "?".to_string())
+                });
+
+            c.call_on_name(Self::get_view_name(), |view: &mut ViewType| {
+                view.get_cmd_palette().set_info(cgroup);
+            });
+        });
 
         let tabs = vec!["General".into(), "CPU".into(), "Mem".into(), "I/O".into()];
         let mut tabs_map: HashMap<String, ProcessView> = HashMap::new();

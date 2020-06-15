@@ -24,6 +24,7 @@ use cursive::views::{
 };
 use cursive::Cursive;
 
+use crate::view::command_palette::CommandPalette;
 use crate::view::tab_view::TabView;
 use crate::view::{filter_popup, ViewState};
 
@@ -83,23 +84,25 @@ pub trait ViewBridge {
 ///
 /// OnEventView
 ///    --> Panel
-///        --> ScrollView
-///          --> LinearLayout::Vertical
-///            --> Child 0: A TabView that represent the topic tab
-///            --> child 1: A TabView that represent the title header tab
-///            --> child 2: A SelectView that represents the detail stats
+///        --> LinearLayout::Vertical
+///          --> Child 0: A TabView that represent the topic tab
+///          --> child 1: ScrollView
+///            --> LinearLayout::Vertical
+///            --> child 0: A TabView that represent the title header tab
+///            --> child 1: A SelectView that represents the detail stats
+///          --> child 2: Command palette
 ///
 /// `state` defines the state of a view. Filters, sorting orders will be defined here.
 pub struct StatsView<V: 'static + ViewBridge> {
     tab_titles_map: HashMap<String, Vec<String>>,
     tab_view_map: HashMap<String, V>,
-    detailed_view: OnEventView<Panel<ScrollView<LinearLayout>>>,
+    detailed_view: OnEventView<Panel<LinearLayout>>,
     pub state: Rc<RefCell<V::StateType>>,
     reverse_sort: bool,
 }
 
 impl<V: 'static + ViewBridge> ViewWrapper for StatsView<V> {
-    cursive::wrap_impl!(self.detailed_view: OnEventView<Panel<ScrollView<LinearLayout>>>);
+    cursive::wrap_impl!(self.detailed_view: OnEventView<Panel<LinearLayout>>);
 
     // We will handle common event in this wrapper. It will comsume the
     // event if there's a match. Otherwise, it will pass the event to the
@@ -173,22 +176,26 @@ impl<V: 'static + ViewBridge> StatsView<V> {
                         .with_name(format!("{}_tab", &name)),
                 )
                 .child(
-                    TabView::new(
-                        tab_titles_map
-                            .get("General")
-                            .expect("Fail to query general tab")
-                            .clone(),
-                        " ",
-                    )
-                    .expect("Fail to construct title")
-                    .with_name(format!("{}_title", &name)),
+                    LinearLayout::vertical()
+                        .child(
+                            TabView::new(
+                                tab_titles_map
+                                    .get("General")
+                                    .expect("Fail to query general tab")
+                                    .clone(),
+                                " ",
+                            )
+                            .expect("Fail to construct title")
+                            .with_name(format!("{}_title", &name)),
+                        )
+                        .child(ResizedView::with_full_screen(
+                            list.with_name(format!("{}_detail", &name)).scrollable(),
+                        ))
+                        .scrollable()
+                        .scroll_x(true)
+                        .scroll_y(false),
                 )
-                .child(ResizedView::with_full_screen(
-                    list.with_name(format!("{}_detail", &name)).scrollable(),
-                ))
-                .scrollable()
-                .scroll_x(true)
-                .scroll_y(false),
+                .child(CommandPalette::new("<root>").with_name(format!("{}_cmd_palette", &name))),
         ));
 
         Self {
@@ -229,7 +236,6 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         let tab_panel: &mut NamedView<TabView> = self
             .detailed_view // OnEventView
             .get_inner_mut() // PanelView
-            .get_inner_mut() // ScrollView
             .get_inner_mut() // LinearLayout
             .get_child_mut(0) // NamedView
             .expect("Fail to get tab panel, StatsView may not properly init")
@@ -239,14 +245,24 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         tab_panel.get_mut()
     }
 
+    // Helping method to downcast the scroll view.
+    fn get_scroll_view(&mut self) -> &mut ScrollView<LinearLayout> {
+        self.detailed_view // OnEventView
+            .get_inner_mut() // PanelView
+            .get_inner_mut() // LinearLayout
+            .get_child_mut(1) // ScrollView
+            .expect("Fail to get stats scrollable, StatsView may not properly init")
+            .downcast_mut()
+            .expect("Fail to downcast to stats scrollable, StatsView may not properly init")
+    }
+
     // A convenience function to get the title tab view.
     pub fn get_title_view(&mut self) -> ViewRef<TabView> {
-        let title_named: &mut NamedView<TabView> = self
-            .detailed_view // OnEventView
-            .get_inner_mut() // PanelView
-            .get_inner_mut() // ScrollView
+        let scroll_view = self.get_scroll_view();
+
+        let title_named: &mut NamedView<TabView> = scroll_view
             .get_inner_mut() // LinearLayout
-            .get_child_mut(1) // NamedView
+            .get_child_mut(0) //NamedView
             .expect("Fail to get title, StatsView may not properly init")
             .downcast_mut()
             .expect("Fail to downcast to title, StatsView may not properly init");
@@ -256,12 +272,11 @@ impl<V: 'static + ViewBridge> StatsView<V> {
 
     // A convenience function to get the detail stats SelectView
     pub fn get_detail_view(&mut self) -> ViewRef<SelectView> {
-        let select_named: &mut ResizedView<ScrollView<NamedView<SelectView>>> = self
-            .detailed_view // OnEventView
-            .get_inner_mut() // PanelView
-            .get_inner_mut() // ScrollView
+        let scroll_view = self.get_scroll_view();
+
+        let select_named: &mut ResizedView<ScrollView<NamedView<SelectView>>> = scroll_view
             .get_inner_mut() // LinearLayout
-            .get_child_mut(2) // ResizedView
+            .get_child_mut(1) // ResizedView
             .expect("Fail to get title, StatsView may not properly init")
             .downcast_mut()
             .expect("Fail to downcast to title, StatsView may not properly init");
@@ -269,16 +284,28 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         select_named.get_inner_mut().get_inner_mut().get_mut()
     }
 
-    pub fn set_horizontal_offset(&mut self, x: usize) {
-        let detail_panel: &mut Panel<ScrollView<LinearLayout>> = self.detailed_view.get_inner_mut();
+    // A convenience function to get the command palette
+    pub fn get_cmd_palette(&mut self) -> ViewRef<CommandPalette> {
+        let cmd_palette: &mut NamedView<CommandPalette> = self
+            .detailed_view // OnEventView
+            .get_inner_mut() // PanelView
+            .get_inner_mut() // LinearLayout
+            .get_child_mut(2) // NamedView
+            .expect("Fail to get cmd palette, StatsView may not properly init")
+            .downcast_mut()
+            .expect("Fail to downcast to cmd palette, StatsView may not properly init");
 
-        let screen_width = detail_panel.get_inner_mut().content_viewport().width();
+        cmd_palette.get_mut()
+    }
+
+    pub fn set_horizontal_offset(&mut self, x: usize) {
+        let detail_panel = self.get_scroll_view();
+
+        let screen_width = detail_panel.content_viewport().width();
         if screen_width < x {
-            detail_panel
-                .get_inner_mut()
-                .set_offset((x - screen_width, 0));
+            detail_panel.set_offset((x - screen_width, 0));
         } else {
-            detail_panel.get_inner_mut().set_offset((0, 0));
+            detail_panel.set_offset((0, 0));
         }
     }
 

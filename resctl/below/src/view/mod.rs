@@ -38,6 +38,8 @@
 /// |                 Column name in Bold                        |
 /// |                 Selectable Stats View                      |
 ///  ------------------------------------------------------------
+/// |                 Command Palette                            |
+///  ------------------------------------------------------------
 /// ```
 /// * Tabs: Defines the topics of stats view. Each stats view by default will show only the general stats:
 ///   a combination of all important stats from each topic. User can use `tab` or `shift-tab` to switch
@@ -65,6 +67,7 @@ use crate::Advance;
 mod stats_view;
 mod cgroup_tabs;
 mod cgroup_view;
+mod command_palette;
 mod filter_popup;
 mod help_menu;
 mod process_tabs;

@@ -28,7 +28,6 @@ fn fill_content(v: &mut LinearLayout) {
         "<Enter>        - collapse/expand cgroup tree\n",
         "<Tab>          - cycle topic tabs\n",
         "<Shift><Tab>   - reverse cycle topic tabs\n",
-        "<Space>        - Toggle if to show full cgroup path of selected item (cgroup view only)\n",
         "','            - reverse cycle columns.\n",
         "'.'            - cycle columns.\n",
         "'S'            - sort by the selected title, reverse the result by hit 'S' again\n",

@@ -101,11 +101,7 @@ pub trait CgroupTab {
         let collapsed = state.collapsed_cgroups.contains(&cgroup.full_path);
         *self.depth() = cgroup.depth as usize;
         *self.collapse() = collapsed;
-        let row = if state.show_full_path && cgroup.full_path == state.current_selected_cgroup {
-            cgroup.full_path.clone()
-        } else {
-            self.get_field_line(&cgroup)
-        };
+        let row = self.get_field_line(&cgroup);
         // Each row is (label, value), where label is visible and value is used
         // as identifier to correlate the row with its state in global data.
         output.push((row, cgroup.full_path.clone()));

@@ -34,7 +34,6 @@ pub struct CgroupState {
     pub sort_order: CgroupOrders,
     pub sort_tags: HashMap<String, Vec<CgroupOrders>>,
     pub reverse: bool,
-    pub show_full_path: bool,
 }
 
 impl StateCommon for CgroupState {
@@ -68,7 +67,6 @@ impl Default for CgroupState {
             sort_order: CgroupOrders::Keep,
             sort_tags,
             reverse: false,
-            show_full_path: false,
         }
     }
 }
@@ -80,10 +78,6 @@ impl CgroupState {
 
     fn set_reverse(&mut self, reverse: bool) {
         self.reverse = reverse;
-    }
-
-    fn toggle_show_full_path(&mut self) {
-        self.show_full_path = !self.show_full_path;
     }
 }
 
@@ -115,7 +109,8 @@ impl CgroupView {
 
         list.set_on_select(|c, cgroup: &String| {
             c.call_on_name(Self::get_view_name(), |view: &mut ViewType| {
-                view.state.borrow_mut().current_selected_cgroup = cgroup.clone()
+                view.state.borrow_mut().current_selected_cgroup = cgroup.clone();
+                view.get_cmd_palette().set_info(cgroup);
             });
         });
 
@@ -157,11 +152,6 @@ impl CgroupView {
                     .set_sort_order(CgroupOrders::RwTotal);
                 view.state.borrow_mut().set_reverse(true);
                 view.refresh(c)
-            })
-            .on_event(' ', |c| {
-                let mut view = Self::get_cgroup_view(c);
-                view.state.borrow_mut().toggle_show_full_path();
-                view.refresh(c);
             })
             .with_name(Self::get_view_name())
     }
