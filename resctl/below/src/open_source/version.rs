@@ -13,5 +13,5 @@
 // limitations under the License.
 
 pub fn get_version_str() -> String {
-    String::from("");
+    String::from("")
 }
