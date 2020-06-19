@@ -13,19 +13,22 @@
 // limitations under the License.
 
 #![deny(clippy::all)]
+use openat::Dir;
+use std::collections::BTreeMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
 
 use lazy_static::lazy_static;
 use thiserror::Error;
 
-pub use procfs_thrift::types::{
-    CpuStat, MemInfo, PidInfo, PidIo, PidMap, PidStat, PidState, Stat, VmStat,
-};
+pub use procfs_thrift::types::*;
 
 #[cfg(test)]
 mod test;
+
+pub const NET_SYSFS: &str = "/sys/class/net/";
+pub const NET_PROCFS: &str = "/proc/net";
 
 lazy_static! {
     /// The number of microseconds per clock tick
@@ -74,6 +77,8 @@ pub enum Error {
         type_name: String,
         path: PathBuf,
     },
+    #[error("Unexpected line ({1}) in file: {0:?}")]
+    UnexpectedLine(PathBuf, String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -575,5 +580,436 @@ impl PidStateExt for PidState {
             PidState::PARKED => Some('P'),
             _ => None,
         }
+    }
+}
+
+macro_rules! parse_interface_stats {
+    ($net_stat:ident, $dir:ident, $cur_path: ident, $($stat:ident),*) => {
+        $($net_stat.$stat = Self::read_iface_stat(&$dir, &$cur_path, stringify!($stat))?);*
+    }
+}
+
+macro_rules! get_val_from_stats_map {
+    ($map:ident, $stat_item:ident {$($field:ident: $key:tt,)*}) => {
+        $stat_item {
+            $($field: $map.get($key).map(|v| *v as i64)),*
+        }
+    }
+}
+
+pub struct NetReader {
+    interface_dir: Dir,
+    proc_net_dir: Dir,
+}
+
+impl NetReader {
+    pub fn new() -> Result<NetReader> {
+        Self::new_with_custom_path(NET_SYSFS.into(), NET_PROCFS.into())
+    }
+
+    pub fn new_with_custom_path(
+        interface_path: PathBuf,
+        proc_net_path: PathBuf,
+    ) -> Result<NetReader> {
+        let interface_dir =
+            Dir::open(&interface_path).map_err(|e| Error::IoError(interface_path, e))?;
+        let proc_net_dir =
+            Dir::open(&proc_net_path).map_err(|e| Error::IoError(proc_net_path, e))?;
+
+        Ok(NetReader {
+            interface_dir,
+            proc_net_dir,
+        })
+    }
+
+    fn read_iface_stat(
+        interface_dir: &Dir,
+        cur_path: &PathBuf,
+        stat_item: &str,
+    ) -> Result<Option<i64>> {
+        let file = match interface_dir.open_file(stat_item) {
+            Ok(f) => f,
+            Err(e) => {
+                if e.kind() == ErrorKind::NotFound {
+                    return Ok(None);
+                } else {
+                    return Err(Error::IoError(cur_path.join(stat_item), e));
+                }
+            }
+        };
+        let buf_reader = BufReader::new(file);
+        match buf_reader.lines().next() {
+            Some(line) => {
+                let line = line.map_err(|e| Error::IoError(cur_path.join(stat_item), e))?;
+                line.parse::<u64>()
+                    .map(|v| Some(v as i64))
+                    .map_err(move |_| Error::UnexpectedLine(cur_path.join(stat_item), line))
+            }
+            None => Err(Error::InvalidFileFormat(cur_path.join(stat_item))),
+        }
+    }
+
+    fn read_all_iface_stats(&self, interface: &str, cur_path: &PathBuf) -> Result<InterfaceStat> {
+        let interface_dir = self
+            .interface_dir
+            .read_link(interface)
+            .map_err(|e| Error::IoError(cur_path.clone(), e))?;
+        let stats_dir = self
+            .interface_dir
+            .sub_dir(interface_dir.as_path())
+            .map_err(|e| Error::IoError(interface_dir, e))?
+            .sub_dir("statistics")
+            .map_err(|e| Error::IoError(cur_path.clone(), e))?;
+        let cur_path = cur_path.join(interface).join("statistics");
+        let mut net_stat: InterfaceStat = Default::default();
+        parse_interface_stats!(
+            net_stat,
+            stats_dir,
+            cur_path,
+            collisions,
+            multicast,
+            rx_bytes,
+            rx_compressed,
+            rx_crc_errors,
+            rx_dropped,
+            rx_errors,
+            rx_fifo_errors,
+            rx_frame_errors,
+            rx_length_errors,
+            rx_missed_errors,
+            rx_nohandler,
+            rx_over_errors,
+            rx_packets,
+            tx_aborted_errors,
+            tx_bytes,
+            tx_carrier_errors,
+            tx_compressed,
+            tx_dropped,
+            tx_errors,
+            tx_fifo_errors,
+            tx_heartbeat_errors,
+            tx_packets,
+            tx_window_errors
+        );
+        Ok(net_stat)
+    }
+
+    fn read_net_map(&self) -> Result<NetMap> {
+        let mut netmap: NetMap = Default::default();
+        let cur_path = self
+            .interface_dir
+            .recover_path()
+            .unwrap_or_else(|_| NET_SYSFS.into());
+
+        for entry in self
+            .interface_dir
+            .list_dir(".")
+            .map_err(|e| Error::IoError(cur_path.clone(), e))?
+            .filter_map(|entry| match entry {
+                Ok(e) => Some(e),
+                _ => None,
+            })
+        {
+            let interface = entry.file_name().to_string_lossy();
+            let netstat = self.read_all_iface_stats(&interface, &cur_path)?;
+            netmap.insert(interface.into(), netstat);
+        }
+
+        if netmap == Default::default() {
+            Err(Error::InvalidFileFormat(cur_path))
+        } else {
+            Ok(netmap)
+        }
+    }
+
+    // format like /proc/net/netstat. Key will be in "{title}_{field}" format
+    fn read_kv_diff_line(&self, stats_filename: &str) -> Result<BTreeMap<String, u64>> {
+        let cur_path = self
+            .proc_net_dir
+            .recover_path()
+            .unwrap_or_else(|_| NET_PROCFS.into())
+            .join(stats_filename);
+        let stats_file = self
+            .proc_net_dir
+            .open_file(stats_filename)
+            .map_err(|e| Error::IoError(cur_path.clone(), e))?;
+
+        let buf_reader = BufReader::new(stats_file);
+        let content: Vec<String> = buf_reader
+            .lines()
+            .filter_map(|line| match line {
+                Ok(l) => Some(l),
+                _ => None,
+            })
+            .collect();
+
+        let mut res = BTreeMap::new();
+        for topic in content.chunks(2) {
+            let fields: Vec<&str> = topic[0].split(':').collect();
+            let vals: Vec<&str> = topic[1].split(':').collect();
+
+            if fields.len() != 2 || vals.len() != 2 || fields.len() != vals.len() {
+                return Err(Error::InvalidFileFormat(cur_path));
+            }
+
+            let key_header = fields[0];
+            let keys: Vec<&str> = fields[1].split_whitespace().collect();
+            let vals: Vec<&str> = vals[1].split_whitespace().collect();
+
+            if keys.is_empty() && keys.len() != vals.len() {
+                return Err(Error::InvalidFileFormat(cur_path));
+            }
+
+            for (&k, &v) in keys.iter().zip(vals.iter()) {
+                // There's case that stats like max_conn may have -1 value that represent no max. It's
+                // safe to skip such value and keep the result as None.
+                if v.starts_with('-') {
+                    continue;
+                }
+
+                res.insert(
+                    format!("{}_{}", key_header, &k),
+                    v.parse::<u64>().map_err(|_| Error::ParseError {
+                        line: k.into(),
+                        item: v.into(),
+                        type_name: "u64".into(),
+                        path: cur_path.clone(),
+                    })?,
+                );
+            }
+        }
+
+        Ok(res)
+    }
+
+    fn read_kv_same_line(&self, stats_filename: &str) -> Result<BTreeMap<String, u64>> {
+        let cur_path = self
+            .proc_net_dir
+            .recover_path()
+            .unwrap_or_else(|_| NET_PROCFS.into())
+            .join(stats_filename);
+        let stats_file = self
+            .proc_net_dir
+            .open_file(stats_filename)
+            .map_err(|e| Error::IoError(cur_path.clone(), e))?;
+        let buf_reader = BufReader::new(stats_file);
+
+        let mut res = BTreeMap::new();
+        for line in buf_reader.lines() {
+            let line = match line {
+                Ok(l) => l,
+                _ => continue,
+            };
+
+            let kv = line.split_whitespace().collect::<Vec<&str>>();
+            if kv.len() != 2 {
+                return Err(Error::InvalidFileFormat(cur_path));
+            }
+
+            res.insert(
+                kv[0].into(),
+                kv[1].parse::<u64>().map_err(|_| Error::ParseError {
+                    line: kv[0].to_string(),
+                    item: kv[1].into(),
+                    type_name: "u64".into(),
+                    path: cur_path.clone(),
+                })?,
+            );
+        }
+
+        Ok(res)
+    }
+
+    fn read_tcp_stat(snmp_map: &BTreeMap<String, u64>) -> TcpStat {
+        get_val_from_stats_map!(
+            snmp_map,
+            TcpStat {
+                active_opens: "Tcp_ActiveOpens",
+                passive_opens: "Tcp_PassiveOpens",
+                attempt_fails: "Tcp_AttemptFails",
+                estab_resets: "Tcp_EstabResets",
+                curr_estab: "Tcp_CurrEstab",
+                in_segs: "Tcp_InSegs",
+                out_segs: "Tcp_OutSegs",
+                retrans_segs: "Tcp_RetransSegs",
+                in_errs: "Tcp_InErrs",
+                out_rsts: "Tcp_OutRsts",
+                in_csum_errors: "Tcp_InCsumErrors",
+            }
+        )
+    }
+
+    fn read_tcp_ext_stat(netstat_map: &BTreeMap<String, u64>) -> TcpExtStat {
+        get_val_from_stats_map!(
+            netstat_map,
+            TcpExtStat {
+                syncookies_sent: "TcpExt_SyncookiesSent",
+                syncookies_recv: "TcpExt_SyncookiesRecv",
+                syncookies_failed: "TcpExt_SyncookiesFailed",
+                embryonic_rsts: "TcpExt_EmbryonicRsts",
+                prune_called: "TcpExt_PruneCalled",
+                tw: "TcpExt_TW",
+                paws_estab: "TcpExt_PAWSEstab",
+                delayed_acks: "TcpExt_DelayedACKs",
+                delayed_ack_locked: "TcpExt_DelayedACKLocked",
+                delayed_ack_lost: "TcpExt_DelayedACKLost",
+                listen_overflows: "TcpExt_ListenOverflows",
+                listen_drops: "TcpExt_ListenDrops",
+                tcp_hp_hits: "TcpExt_TCPHPHits",
+                tcp_pure_acks: "TcpExt_TCPPureAcks",
+                tcp_hp_acks: "TcpExt_TCPHPAcks",
+                tcp_reno_recovery: "TcpExt_TCPRenoRecovery",
+                tcp_reno_reorder: "TcpExt_TCPRenoReorder",
+                tcp_ts_reorder: "TcpExt_TCPTSReorder",
+                tcp_full_undo: "TcpExt_TCPFullUndo",
+                tcp_partial_undo: "TcpExt_TCPPartialUndo",
+                tcp_dsack_undo: "TcpExt_TCPDSACKUndo",
+                tcp_loss_undo: "TcpExt_TCPLossUndo",
+                tcp_lost_retransmit: "TcpExt_TCPLostRetransmit",
+                tcp_reno_failures: "TcpExt_TCPRenoFailures",
+                tcp_loss_failures: "TcpExt_TCPLossFailures",
+                tcp_fast_retrans: "TcpExt_TCPFastRetrans",
+                tcp_slow_start_retrans: "TcpExt_TCPSlowStartRetrans",
+                tcp_timeouts: "TcpExt_TCPTimeouts",
+            }
+        )
+    }
+
+    fn read_ip_ext_stat(netstat_map: &BTreeMap<String, u64>) -> IpExtStat {
+        get_val_from_stats_map!(
+            netstat_map,
+            IpExtStat {
+                in_mcast_pkts: "IpExt_InMcastPkts",
+                out_mcast_pkts: "IpExt_OutMcastPkts",
+                in_bcast_pkts: "IpExt_InBcastPkts",
+                out_bcast_pkts: "IpExt_OutBcastPkts",
+                in_octets: "IpExt_InOctets",
+                out_octets: "IpExt_OutOctets",
+                in_mcast_octets: "IpExt_InMcastOctets",
+                out_mcast_octets: "IpExt_OutMcastOctets",
+                in_bcast_octets: "IpExt_InBcastOctets",
+                out_bcast_octets: "IpExt_OutBcastOctets",
+                in_no_ect_pkts: "IpExt_InNoECTPkts",
+            }
+        )
+    }
+
+    fn read_ip_stat(snmp_map: &BTreeMap<String, u64>) -> IpStat {
+        get_val_from_stats_map!(
+            snmp_map,
+            IpStat {
+                forwarding: "Ip_Forwarding",
+                in_receives: "Ip_InReceives",
+                forw_datagrams: "Ip_ForwDatagrams",
+                in_discards: "Ip_InDiscards",
+                in_delivers: "Ip_InDelivers",
+                out_requests: "Ip_OutRequests",
+                out_discards: "Ip_OutDiscards",
+                out_no_routes: "Ip_OutNoRoutes",
+            }
+        )
+    }
+
+    fn read_ip6_stat(snmp6_map: &BTreeMap<String, u64>) -> Ip6Stat {
+        get_val_from_stats_map!(
+            snmp6_map,
+            Ip6Stat {
+                in_receives: "Ip6InReceives",
+                in_hdr_errors: "Ip6InHdrErrors",
+                in_no_routes: "Ip6InNoRoutes",
+                in_addr_errors: "Ip6InAddrErrors",
+                in_discards: "Ip6InDiscards",
+                in_delivers: "Ip6InDelivers",
+                out_forw_datagrams: "Ip6OutForwDatagrams",
+                out_requests: "Ip6OutRequests",
+                out_no_routes: "Ip6OutNoRoutes",
+                in_mcast_pkts: "Ip6InMcastPkts",
+                out_mcast_pkts: "Ip6OutMcastPkts",
+                in_octets: "Ip6InOctets",
+                out_octets: "Ip6OutOctets",
+                in_mcast_octets: "Ip6InMcastOctets",
+                out_mcast_octets: "Ip6OutMcastOctets",
+                in_bcast_octets: "Ip6InBcastOctets",
+                out_bcast_octets: "Ip6OutBcastOctets",
+            }
+        )
+    }
+
+    fn read_icmp_stat(snmp_map: &BTreeMap<String, u64>) -> IcmpStat {
+        get_val_from_stats_map!(
+            snmp_map,
+            IcmpStat {
+                in_msgs: "Icmp_InMsgs",
+                in_errors: "Icmp_InErrors",
+                in_dest_unreachs: "Icmp_InDestUnreachs",
+                out_msgs: "Icmp_OutMsgs",
+                out_errors: "Icmp_OutErrors",
+                out_dest_unreachs: "Icmp_OutDestUnreachs",
+            }
+        )
+    }
+
+    fn read_icmp6_stat(snmp6_map: &BTreeMap<String, u64>) -> Icmp6Stat {
+        get_val_from_stats_map!(
+            snmp6_map,
+            Icmp6Stat {
+                in_msgs: "Icmp6InMsgs",
+                in_errors: "Icmp6InErrors",
+                out_msgs: "Icmp6OutMsgs",
+                out_errors: "Icmp6OutErrors",
+                in_dest_unreachs: "Icmp6InDestUnreachs",
+                out_dest_unreachs: "Icmp6OutDestUnreachs",
+            }
+        )
+    }
+
+    fn read_udp_stat(snmp_map: &BTreeMap<String, u64>) -> UdpStat {
+        get_val_from_stats_map!(
+            snmp_map,
+            UdpStat {
+                in_datagrams: "Udp_InDatagrams",
+                no_ports: "Udp_NoPorts",
+                in_errors: "Udp_InErrors",
+                out_datagrams: "Udp_OutDatagrams",
+                rcvbuf_errors: "Udp_RcvbufErrors",
+                sndbuf_errors: "Udp_SndbufErrors",
+                ignored_multi: "Udp_IgnoredMulti",
+            }
+        )
+    }
+
+    fn read_udp6_stat(snmp6_map: &BTreeMap<String, u64>) -> Udp6Stat {
+        get_val_from_stats_map!(
+            snmp6_map,
+            Udp6Stat {
+                in_datagrams: "Udp6InDatagrams",
+                no_ports: "Udp6NoPorts",
+                in_errors: "Udp6InErrors",
+                out_datagrams: "Udp6OutDatagrams",
+                rcvbuf_errors: "Udp6RcvbufErrors",
+                sndbuf_errors: "Udp6SndbufErrors",
+                in_csum_errors: "Udp6InCsumErrors",
+                ignored_multi: "Udp6IgnoredMulti",
+            }
+        )
+    }
+
+    pub fn read_netstat(&self) -> Result<NetStat> {
+        let netstat_map = self.read_kv_diff_line("netstat")?;
+        let snmp_map = self.read_kv_diff_line("snmp")?;
+        let snmp6_map = self.read_kv_same_line("snmp6")?;
+
+        Ok(NetStat {
+            interfaces: Some(self.read_net_map()?),
+            tcp: Some(Self::read_tcp_stat(&snmp_map)),
+            tcp_ext: Some(Self::read_tcp_ext_stat(&netstat_map)),
+            ip: Some(Self::read_ip_stat(&snmp_map)),
+            ip_ext: Some(Self::read_ip_ext_stat(&netstat_map)),
+            ip6: Some(Self::read_ip6_stat(&snmp6_map)),
+            icmp: Some(Self::read_icmp_stat(&snmp_map)),
+            icmp6: Some(Self::read_icmp6_stat(&snmp6_map)),
+            udp: Some(Self::read_udp_stat(&snmp_map)),
+            udp6: Some(Self::read_udp6_stat(&snmp6_map)),
+        })
     }
 }

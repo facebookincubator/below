@@ -14,12 +14,14 @@
 
 use std::fs::File;
 use std::io::Write;
+use std::os::unix::fs::symlink;
 use std::path::Path;
 
 use tempfile::TempDir;
 
-use procfs_thrift::types::PidState;
+use procfs_thrift::types::*;
 
+use crate::NetReader;
 use crate::ProcReader;
 use crate::PAGE_SIZE;
 
@@ -61,6 +63,48 @@ impl TestProcfs {
         }
         let path = pid_dir.join(p);
         self.create_file_with_content_full_path(path, content);
+    }
+
+    fn get_net_reader(&self) -> NetReader {
+        let iface_dir = self.path().join("iface");
+        if !iface_dir.exists() {
+            std::fs::create_dir(&iface_dir).expect("Failed to create iface dir");
+        }
+        NetReader::new_with_custom_path(iface_dir, self.path().to_path_buf())
+            .expect("Fail to construct Net Reader")
+    }
+
+    fn create_net_stat_file_with_content<P: AsRef<Path>>(
+        &self,
+        interface: &str,
+        p: P,
+        content: usize,
+    ) {
+        let interface_dir = self.path().join(interface);
+        if !interface_dir.exists() {
+            std::fs::create_dir(&interface_dir).expect("Failed to create interface dir");
+        }
+        let iface_dir = self.path().join("iface");
+        if !iface_dir.exists() {
+            std::fs::create_dir(&iface_dir).expect("Failed to create iface dir");
+        }
+        let iface_link = iface_dir.join(interface);
+        if !iface_link.exists() {
+            symlink(&interface_dir, &iface_link).unwrap_or_else(|e| {
+                panic!(
+                    "Fail to create symlink {} -> {}: {}",
+                    interface_dir.to_string_lossy(),
+                    iface_link.to_string_lossy(),
+                    e
+                )
+            });
+        }
+        let interface_dir = interface_dir.join("statistics");
+        if !interface_dir.exists() {
+            std::fs::create_dir(&interface_dir).expect("Failed to create statistics dir");
+        }
+        let path = interface_dir.join(p);
+        self.create_file_with_content_full_path(path, content.to_string().as_bytes());
     }
 }
 
@@ -478,4 +522,361 @@ cancelled_write_bytes: 5431947264
         pidmap[&1025].cgroup,
         "/user.slice/user-119756.slice/session-3.scope".to_string()
     );
+}
+
+fn write_net_map(netsysfs: &TestProcfs) {
+    for interface in &["enp1s0", "enp2s0"] {
+        netsysfs.create_net_stat_file_with_content(interface, "collisions", 1);
+        netsysfs.create_net_stat_file_with_content(interface, "multicast", 2);
+        netsysfs.create_net_stat_file_with_content(interface, "rx_bytes", 2_087_593_014_826);
+        netsysfs.create_net_stat_file_with_content(interface, "rx_compressed", 4);
+        netsysfs.create_net_stat_file_with_content(interface, "rx_crc_errors", 5);
+        netsysfs.create_net_stat_file_with_content(interface, "rx_dropped", 6);
+        netsysfs.create_net_stat_file_with_content(interface, "rx_errors", 7);
+        netsysfs.create_net_stat_file_with_content(interface, "rx_fifo_errors", 8);
+        netsysfs.create_net_stat_file_with_content(interface, "rx_frame_errors", 9);
+        netsysfs.create_net_stat_file_with_content(interface, "rx_length_errors", 10);
+        netsysfs.create_net_stat_file_with_content(interface, "rx_missed_errors", 11);
+        netsysfs.create_net_stat_file_with_content(interface, "rx_nohandler", 12);
+        netsysfs.create_net_stat_file_with_content(interface, "rx_over_errors", 13);
+        netsysfs.create_net_stat_file_with_content(interface, "rx_packets", 14);
+        netsysfs.create_net_stat_file_with_content(interface, "tx_aborted_errors", 15);
+        netsysfs.create_net_stat_file_with_content(interface, "tx_bytes", 1_401_221_862_430);
+        netsysfs.create_net_stat_file_with_content(interface, "tx_carrier_errors", 17);
+        netsysfs.create_net_stat_file_with_content(interface, "tx_compressed", 18);
+        netsysfs.create_net_stat_file_with_content(interface, "tx_dropped", 19);
+        netsysfs.create_net_stat_file_with_content(interface, "tx_errors", 20);
+        netsysfs.create_net_stat_file_with_content(interface, "tx_fifo_errors", 21);
+        netsysfs.create_net_stat_file_with_content(interface, "tx_heartbeat_errors", 22);
+        netsysfs.create_net_stat_file_with_content(interface, "tx_packets", 23);
+        netsysfs.create_net_stat_file_with_content(interface, "tx_window_errors", 24);
+    }
+}
+
+fn write_net_snmp(netsysfs: &TestProcfs) {
+    let snmp = b"Ip: Forwarding DefaultTTL InReceives InHdrErrors InAddrErrors ForwDatagrams InUnknownProtos InDiscards InDelivers OutRequests OutDiscards OutNoRoutes ReasmTimeout ReasmReqds ReasmOKs ReasmFails FragOKs FragFails FragCreates
+Ip: 2 96 630036507 0 0 0 0 0 629963239 630016831 0 186411 0 0 0 0 0 0 0
+Icmp: InMsgs InErrors InCsumErrors InDestUnreachs InTimeExcds InParmProbs InSrcQuenchs InRedirects InEchos InEchoReps InTimestamps InTimestampReps InAddrMasks InAddrMaskReps OutMsgs OutErrors OutDestUnreachs OutTimeExcds OutParmProbs OutSrcQuenchs OutRedirects OutEchos OutEchoReps OutTimestamps OutTimestampReps OutAddrMasks OutAddrMaskReps
+Icmp: 31 31 0 31 0 0 0 0 0 0 0 0 0 0 31 0 31 0 0 0 0 0 0 0 0 0 0
+IcmpMsg: InType3 OutType3
+IcmpMsg: 31 31
+Tcp: RtoAlgorithm RtoMin RtoMax MaxConn ActiveOpens PassiveOpens AttemptFails EstabResets CurrEstab InSegs OutSegs RetransSegs InErrs OutRsts InCsumErrors
+Tcp: 1 200 120000 -1 54858563 40737307 4734320 5454512 820 2041813239 3258286962 2341081 955 16078320 39
+Udp: InDatagrams NoPorts InErrors OutDatagrams RcvbufErrors SndbufErrors InCsumErrors IgnoredMulti
+Udp: 51051 31 84 116484 84 0 0 19384
+UdpLite: InDatagrams NoPorts InErrors OutDatagrams RcvbufErrors SndbufErrors InCsumErrors IgnoredMulti
+UdpLite: 0 0 0 0 0 0 0 0";
+    netsysfs.create_file_with_content("snmp", snmp);
+}
+
+fn write_net_snmp6(netsysfs: &TestProcfs) {
+    let snmp6 = b"Ip6InReceives                   	1594971243
+Ip6InHdrErrors                  	17032537
+Ip6InTooBigErrors               	0
+Ip6InNoRoutes                   	95
+Ip6InAddrErrors                 	1333
+Ip6InUnknownProtos              	0
+Ip6InTruncatedPkts              	0
+Ip6InDiscards                   	0
+Ip6InDelivers                   	1500587362
+Ip6OutForwDatagrams             	0
+Ip6OutRequests                  	1495881793
+Ip6OutDiscards                  	0
+Ip6OutNoRoutes                  	626
+Ip6ReasmTimeout                 	0
+Ip6ReasmReqds                   	0
+Ip6ReasmOKs                     	0
+Ip6ReasmFails                   	0
+Ip6FragOKs                      	0
+Ip6FragFails                    	0
+Ip6FragCreates                  	0
+Ip6InMcastPkts                  	155122808
+Ip6OutMcastPkts                 	1591270
+Ip6InOctets                     	4493023649370
+Ip6OutOctets                    	3622952718119
+Ip6InMcastOctets                	19936651296
+Ip6OutMcastOctets               	206033131
+Ip6InBcastOctets                	0
+Ip6OutBcastOctets               	0
+Ip6InNoECTPkts                  	1594929854
+Ip6InECT1Pkts                   	0
+Ip6InECT0Pkts                   	207855
+Ip6InCEPkts                     	0
+Icmp6InMsgs                     	8121791
+Icmp6InErrors                   	462
+Icmp6OutMsgs                    	7763670
+Icmp6OutErrors                  	0
+Icmp6InCsumErrors               	0
+Icmp6InDestUnreachs             	1251
+Icmp6InPktTooBigs               	156
+Icmp6InTimeExcds                	2
+Icmp6InParmProblems             	0
+Icmp6InEchos                    	24443
+Icmp6InEchoReplies              	31691
+Icmp6InGroupMembQueries         	0
+Icmp6InGroupMembResponses       	0
+Icmp6InGroupMembReductions      	0
+Icmp6InRouterSolicits           	0
+Icmp6InRouterAdvertisements     	549895
+Icmp6InNeighborSolicits         	3742942
+Icmp6InNeighborAdvertisements   	3771411
+Icmp6InRedirects                	0
+Icmp6InMLDv2Reports             	0
+Icmp6OutDestUnreachs            	1266
+Icmp6OutPktTooBigs              	0
+Icmp6OutTimeExcds               	0
+Icmp6OutParmProblems            	0
+Icmp6OutEchos                   	31691
+Icmp6OutEchoReplies             	24443
+Icmp6OutGroupMembQueries        	0
+Icmp6OutGroupMembResponses      	0
+Icmp6OutGroupMembReductions     	0
+Icmp6OutRouterSolicits          	1
+Icmp6OutRouterAdvertisements    	0
+Icmp6OutNeighborSolicits        	3963540
+Icmp6OutNeighborAdvertisements  	3742708
+Icmp6OutRedirects               	0
+Icmp6OutMLDv2Reports            	21
+Icmp6InType1                    	1251
+Icmp6InType2                    	156
+Icmp6InType3                    	2
+Icmp6InType128                  	24443
+Icmp6InType129                  	31691
+Icmp6InType134                  	549895
+Icmp6InType135                  	3742942
+Icmp6InType136                  	3771411
+Icmp6OutType1                   	1266
+Icmp6OutType128                 	31691
+Icmp6OutType129                 	24443
+Icmp6OutType133                 	1
+Icmp6OutType135                 	3963540
+Icmp6OutType136                 	3742708
+Icmp6OutType143                 	21
+Udp6InDatagrams                 	159518170
+Udp6NoPorts                     	47
+Udp6InErrors                    	2163583
+Udp6OutDatagrams                	3106145
+Udp6RcvbufErrors                	2163583
+Udp6SndbufErrors                	0
+Udp6InCsumErrors                	0
+Udp6IgnoredMulti                	0
+UdpLite6InDatagrams             	0
+UdpLite6NoPorts                 	0
+UdpLite6InErrors                	0
+UdpLite6OutDatagrams            	0
+UdpLite6RcvbufErrors            	0
+UdpLite6SndbufErrors            	0
+UdpLite6InCsumErrors            	0";
+
+    netsysfs.create_file_with_content("snmp6", snmp6);
+}
+
+fn write_net_netstat(netsysfs: &TestProcfs) {
+    let netstat = b"TcpExt: SyncookiesSent SyncookiesRecv SyncookiesFailed EmbryonicRsts PruneCalled RcvPruned OfoPruned OutOfWindowIcmps LockDroppedIcmps ArpFilter TW TWRecycled TWKilled PAWSActive PAWSEstab DelayedACKs DelayedACKLocked DelayedACKLost ListenOverflows ListenDrops TCPHPHits TCPPureAcks TCPHPAcks TCPRenoRecovery TCPSackRecovery TCPSACKReneging TCPSACKReorder TCPRenoReorder TCPTSReorder TCPFullUndo TCPPartialUndo TCPDSACKUndo TCPLossUndo TCPLostRetransmit TCPRenoFailures TCPSackFailures TCPLossFailures TCPFastRetrans TCPSlowStartRetrans TCPTimeouts TCPLossProbes TCPLossProbeRecovery TCPRenoRecoveryFail TCPSackRecoveryFail TCPRcvCollapsed TCPBacklogCoalesce TCPDSACKOldSent TCPDSACKOfoSent TCPDSACKRecv TCPDSACKOfoRecv TCPAbortOnData TCPAbortOnClose TCPAbortOnMemory TCPAbortOnTimeout TCPAbortOnLinger TCPAbortFailed TCPMemoryPressures TCPMemoryPressuresChrono TCPSACKDiscard TCPDSACKIgnoredOld TCPDSACKIgnoredNoUndo TCPSpuriousRTOs TCPMD5NotFound TCPMD5Unexpected TCPMD5Failure TCPSackShifted TCPSackMerged TCPSackShiftFallback TCPBacklogDrop PFMemallocDrop TCPMinTTLDrop TCPDeferAcceptDrop IPReversePathFilter TCPTimeWaitOverflow TCPReqQFullDoCookies TCPReqQFullDrop TCPRetransFail TCPRcvCoalesce TCPOFOQueue TCPOFODrop TCPOFOMerge TCPChallengeACK TCPSYNChallenge TCPFastOpenActive TCPFastOpenActiveFail TCPFastOpenPassive TCPFastOpenPassiveFail TCPFastOpenListenOverflow TCPFastOpenCookieReqd TCPFastOpenBlackhole TCPSpuriousRtxHostQueues BusyPollRxPackets TCPAutoCorking TCPFromZeroWindowAdv TCPToZeroWindowAdv TCPWantZeroWindowAdv TCPSynRetrans TCPOrigDataSent TCPHystartTrainDetect TCPHystartTrainCwnd TCPHystartDelayDetect TCPHystartDelayCwnd TCPACKSkippedSynRecv TCPACKSkippedPAWS TCPACKSkippedSeq TCPACKSkippedFinWait2 TCPACKSkippedTimeWait TCPACKSkippedChallenge TCPWinProbe TCPKeepAlive TCPMTUPFail TCPMTUPSuccess TCPDelivered TCPDeliveredCE TCPAckCompressed TCPZeroWindowDrop TCPRcvQDrop TCPWqueueTooBig
+TcpExt: 734 734 72186 207 32430 0 0 0 0 0 44799169 718071 0 0 477 13818919 85426 82837 36278 36278 648162608 229195403 644151467 5678 0 0 0 241 25 16 20 1 56568 56306 6714 0 9590 68973 1260322 424264 0 0 2979 0 0 10960020 0 0 0 0 4857068 1755828 0 129 0 0 0 0 0 0 0 1433 0 0 0 0 0 0 1 0 0 0 0 0 734 0 0 113000427 329930 0 49 2829 917 8328485 589326 0 0 0 0 965 956 0 26637 2478340 2478376 8121684 56007 2362573793 123903 4672843 604 50392 140 42 1981 0 36 53 17509 21875 0 136 2403045772 0 0 0 0 0
+IpExt: InNoRoutes InTruncatedPkts InMcastPkts OutMcastPkts InBcastPkts OutBcastPkts InOctets OutOctets InMcastOctets OutMcastOctets InBcastOctets OutBcastOctets InCsumErrors InNoECTPkts InECT1Pkts InECT0Pkts InCEPkts ReasmOverlaps
+IpExt: 0 0 72982 72982 26227 6841 3021953584043 3021942373821 11953543 11953543 12283455 1121095 0 630134902 0 0 0 0";
+
+    netsysfs.create_file_with_content("netstat", netstat);
+}
+
+#[test]
+fn test_read_net_stat() {
+    let netsysfs = TestProcfs::new();
+    write_net_snmp(&netsysfs);
+    write_net_snmp6(&netsysfs);
+    write_net_netstat(&netsysfs);
+    write_net_map(&netsysfs);
+    let netstat = netsysfs
+        .get_net_reader()
+        .read_netstat()
+        .expect("Fail to get NetStat");
+    verify_tcp(&netstat);
+    verify_tcp_ext(&netstat);
+    verify_ip(&netstat);
+    verify_ip_ext(&netstat);
+    verify_ip6(&netstat);
+    verify_icmp(&netstat);
+    verify_icmp6(&netstat);
+    verify_udp(&netstat);
+    verify_udp6(&netstat);
+    verify_interfaces(&netstat);
+}
+
+fn verify_tcp(netstat: &NetStat) {
+    let tcp = netstat.tcp.as_ref().expect("Fail to collect tcp stats");
+    assert_eq!(tcp.active_opens, Some(54_858_563));
+    assert_eq!(tcp.passive_opens, Some(40_737_307));
+    assert_eq!(tcp.attempt_fails, Some(4_734_320));
+    assert_eq!(tcp.estab_resets, Some(5_454_512));
+    assert_eq!(tcp.curr_estab, Some(820));
+    assert_eq!(tcp.in_segs, Some(2_041_813_239));
+    assert_eq!(tcp.out_segs, Some(3_258_286_962));
+    assert_eq!(tcp.retrans_segs, Some(2_341_081));
+    assert_eq!(tcp.in_errs, Some(955));
+    assert_eq!(tcp.out_rsts, Some(16_078_320));
+    assert_eq!(tcp.in_csum_errors, Some(39));
+}
+
+fn verify_tcp_ext(netstat: &NetStat) {
+    let tcp_ext = netstat
+        .tcp_ext
+        .as_ref()
+        .expect("Fail to collect TcpExt stats");
+    assert_eq!(tcp_ext.syncookies_sent, Some(734));
+    assert_eq!(tcp_ext.syncookies_recv, Some(734));
+    assert_eq!(tcp_ext.syncookies_failed, Some(72186));
+    assert_eq!(tcp_ext.embryonic_rsts, Some(207));
+    assert_eq!(tcp_ext.prune_called, Some(32430));
+    assert_eq!(tcp_ext.tw, Some(44_799_169));
+    assert_eq!(tcp_ext.paws_estab, Some(477));
+    assert_eq!(tcp_ext.delayed_acks, Some(13_818_919));
+    assert_eq!(tcp_ext.delayed_ack_locked, Some(85426));
+    assert_eq!(tcp_ext.delayed_ack_lost, Some(82837));
+    assert_eq!(tcp_ext.listen_overflows, Some(36278));
+    assert_eq!(tcp_ext.listen_drops, Some(36278));
+    assert_eq!(tcp_ext.tcp_hp_hits, Some(648_162_608));
+    assert_eq!(tcp_ext.tcp_pure_acks, Some(229_195_403));
+    assert_eq!(tcp_ext.tcp_hp_acks, Some(644_151_467));
+    assert_eq!(tcp_ext.tcp_reno_recovery, Some(5678));
+    assert_eq!(tcp_ext.tcp_reno_reorder, Some(241));
+    assert_eq!(tcp_ext.tcp_ts_reorder, Some(25));
+    assert_eq!(tcp_ext.tcp_full_undo, Some(16));
+    assert_eq!(tcp_ext.tcp_partial_undo, Some(20));
+    assert_eq!(tcp_ext.tcp_dsack_undo, Some(1));
+    assert_eq!(tcp_ext.tcp_loss_undo, Some(56568));
+    assert_eq!(tcp_ext.tcp_lost_retransmit, Some(56306));
+    assert_eq!(tcp_ext.tcp_reno_failures, Some(6714));
+    assert_eq!(tcp_ext.tcp_loss_failures, Some(9590));
+    assert_eq!(tcp_ext.tcp_fast_retrans, Some(68973));
+    assert_eq!(tcp_ext.tcp_slow_start_retrans, Some(1_260_322));
+    assert_eq!(tcp_ext.tcp_timeouts, Some(424_264));
+}
+
+fn verify_ip(netstat: &NetStat) {
+    let ip = netstat.ip.as_ref().expect("Fail to collect ip stats");
+    assert_eq!(ip.forwarding, Some(2));
+    assert_eq!(ip.in_receives, Some(630_036_507));
+    assert_eq!(ip.forw_datagrams, Some(0));
+    assert_eq!(ip.in_discards, Some(0));
+    assert_eq!(ip.in_delivers, Some(629_963_239));
+    assert_eq!(ip.out_requests, Some(630_016_831));
+    assert_eq!(ip.out_discards, Some(0));
+    assert_eq!(ip.out_no_routes, Some(186_411));
+}
+
+fn verify_ip_ext(netstat: &NetStat) {
+    let ip_ext = netstat
+        .ip_ext
+        .as_ref()
+        .expect("Fail to collect IpExt stats");
+    assert_eq!(ip_ext.in_mcast_pkts, Some(72982));
+    assert_eq!(ip_ext.out_mcast_pkts, Some(72982));
+    assert_eq!(ip_ext.in_bcast_pkts, Some(26227));
+    assert_eq!(ip_ext.out_bcast_pkts, Some(6841));
+    assert_eq!(ip_ext.in_octets, Some(3_021_953_584_043));
+    assert_eq!(ip_ext.out_octets, Some(3_021_942_373_821));
+    assert_eq!(ip_ext.in_mcast_octets, Some(11_953_543));
+    assert_eq!(ip_ext.out_mcast_octets, Some(11_953_543));
+    assert_eq!(ip_ext.in_bcast_octets, Some(12_283_455));
+    assert_eq!(ip_ext.out_bcast_octets, Some(1_121_095));
+    assert_eq!(ip_ext.in_no_ect_pkts, Some(630_134_902));
+}
+
+fn verify_ip6(netstat: &NetStat) {
+    let ip6 = netstat.ip6.as_ref().expect("Fail to collect ip6 stats");
+    assert_eq!(ip6.in_receives, Some(1_594_971_243));
+    assert_eq!(ip6.in_hdr_errors, Some(17_032_537));
+    assert_eq!(ip6.in_no_routes, Some(95));
+    assert_eq!(ip6.in_addr_errors, Some(1333));
+    assert_eq!(ip6.in_discards, Some(0));
+    assert_eq!(ip6.in_delivers, Some(1_500_587_362));
+    assert_eq!(ip6.out_forw_datagrams, Some(0));
+    assert_eq!(ip6.out_requests, Some(1_495_881_793));
+    assert_eq!(ip6.out_no_routes, Some(626));
+    assert_eq!(ip6.in_mcast_pkts, Some(155_122_808));
+    assert_eq!(ip6.out_mcast_pkts, Some(1_591_270));
+    assert_eq!(ip6.in_octets, Some(4_493_023_649_370));
+    assert_eq!(ip6.out_octets, Some(3_622_952_718_119));
+    assert_eq!(ip6.in_mcast_octets, Some(19_936_651_296));
+    assert_eq!(ip6.out_mcast_octets, Some(206_033_131));
+    assert_eq!(ip6.in_bcast_octets, Some(0));
+    assert_eq!(ip6.out_bcast_octets, Some(0));
+}
+
+fn verify_icmp(netstat: &NetStat) {
+    let icmp = netstat.icmp.as_ref().expect("Fail to collect icmp stats");
+    assert_eq!(icmp.in_msgs, Some(31));
+    assert_eq!(icmp.in_errors, Some(31));
+    assert_eq!(icmp.in_dest_unreachs, Some(31));
+    assert_eq!(icmp.out_msgs, Some(31));
+    assert_eq!(icmp.out_errors, Some(0));
+    assert_eq!(icmp.out_dest_unreachs, Some(31));
+}
+
+fn verify_icmp6(netstat: &NetStat) {
+    let icmp6 = netstat.icmp6.as_ref().expect("Fail to collect icmp6 stats");
+    assert_eq!(icmp6.in_msgs, Some(812_1791));
+    assert_eq!(icmp6.in_errors, Some(462));
+    assert_eq!(icmp6.out_msgs, Some(7_763_670));
+    assert_eq!(icmp6.out_errors, Some(0));
+    assert_eq!(icmp6.in_dest_unreachs, Some(1251));
+    assert_eq!(icmp6.out_dest_unreachs, Some(1266));
+}
+
+fn verify_udp(netstat: &NetStat) {
+    let udp = netstat.udp.as_ref().expect("Fail to collect udp stats");
+    assert_eq!(udp.in_datagrams, Some(51051));
+    assert_eq!(udp.no_ports, Some(31));
+    assert_eq!(udp.in_errors, Some(84));
+    assert_eq!(udp.out_datagrams, Some(116_484));
+    assert_eq!(udp.rcvbuf_errors, Some(84));
+    assert_eq!(udp.sndbuf_errors, Some(0));
+    assert_eq!(udp.ignored_multi, Some(19384));
+}
+
+fn verify_udp6(netstat: &NetStat) {
+    let udp6 = netstat.udp6.as_ref().expect("Fail to collect udp6 stats");
+    assert_eq!(udp6.in_datagrams, Some(159_518_170));
+    assert_eq!(udp6.no_ports, Some(47));
+    assert_eq!(udp6.in_errors, Some(2_163_583));
+    assert_eq!(udp6.out_datagrams, Some(3_106_145));
+    assert_eq!(udp6.rcvbuf_errors, Some(2_163_583));
+    assert_eq!(udp6.sndbuf_errors, Some(0));
+    assert_eq!(udp6.in_csum_errors, Some(0));
+    assert_eq!(udp6.ignored_multi, Some(0));
+}
+
+fn verify_interfaces(netstat: &NetStat) {
+    let netmap = netstat
+        .interfaces
+        .as_ref()
+        .expect("Fail to collect interfaces stats");
+    for interface in &["enp1s0", "enp2s0"] {
+        let netstat = netmap.get(*interface).expect("Fail to find interface");
+        assert_eq!(netstat.collisions, Some(1));
+        assert_eq!(netstat.multicast, Some(2));
+        assert_eq!(netstat.rx_bytes, Some(2_087_593_014_826 as i64));
+        assert_eq!(netstat.rx_compressed, Some(4));
+        assert_eq!(netstat.rx_crc_errors, Some(5));
+        assert_eq!(netstat.rx_dropped, Some(6));
+        assert_eq!(netstat.rx_errors, Some(7));
+        assert_eq!(netstat.rx_fifo_errors, Some(8));
+        assert_eq!(netstat.rx_frame_errors, Some(9));
+        assert_eq!(netstat.rx_length_errors, Some(10));
+        assert_eq!(netstat.rx_missed_errors, Some(11));
+        assert_eq!(netstat.rx_nohandler, Some(12));
+        assert_eq!(netstat.rx_over_errors, Some(13));
+        assert_eq!(netstat.rx_packets, Some(14));
+        assert_eq!(netstat.tx_aborted_errors, Some(15));
+        assert_eq!(netstat.tx_bytes, Some(1_401_221_862_430 as i64));
+        assert_eq!(netstat.tx_carrier_errors, Some(17));
+        assert_eq!(netstat.tx_compressed, Some(18));
+        assert_eq!(netstat.tx_dropped, Some(19));
+        assert_eq!(netstat.tx_errors, Some(20));
+        assert_eq!(netstat.tx_fifo_errors, Some(21));
+        assert_eq!(netstat.tx_heartbeat_errors, Some(22));
+        assert_eq!(netstat.tx_packets, Some(23));
+        assert_eq!(netstat.tx_window_errors, Some(24));
+    }
 }

@@ -11,6 +11,7 @@ procfs-thrift = { path = "if" }
 backtrace = "0.3"
 lazy_static = "1.0"
 libc = "0.2"
+openat = "0.1.18"
 thiserror = "1.0"
 
 [dev-dependencies]
