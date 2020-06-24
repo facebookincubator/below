@@ -30,9 +30,10 @@ use serde_json::Value;
 fn test_tmain_init() {
     let mut opts: GeneralOpt = Default::default();
     let time = SystemTime::now();
-    let advance = Advance::new(get_logger(), PathBuf::new(), time);
+    let logger = get_logger();
+    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
     let mut collector = Collector::new();
-    let model = collector.update_model().expect("Fail to get model");
+    let model = collector.update_model(&logger).expect("Fail to get model");
 
     // Since we are using the same function for field and title generation,
     // testing title should be enough if we don't care about the content.
@@ -175,9 +176,10 @@ fn test_tmain_init() {
 // Test correctness of system decoration
 fn test_dump_sys_content() {
     let mut collector = Collector::new();
-    collector.update_model().expect("Fail to get model");
+    let logger = get_logger();
+    collector.update_model(&logger).expect("Fail to get model");
     let time = SystemTime::now();
-    let advance = Advance::new(get_logger(), PathBuf::new(), time);
+    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
 
     let mut opts: GeneralOpt = Default::default();
     opts.everything = true;
@@ -186,7 +188,7 @@ fn test_dump_sys_content() {
     sys_handle.init(None);
 
     // update model again to populate cpu and io data
-    let model = collector.update_model().expect("Fail to get model");
+    let model = collector.update_model(&logger).expect("Fail to get model");
     let jval = sys_handle.do_print_json(&model.system);
 
     let cpu = model
@@ -249,9 +251,10 @@ impl io::Write for StrIo {
 // This test will also test JSON correctness.
 fn test_dump_proc_content() {
     let mut collector = Collector::new();
-    collector.update_model().expect("Fail to get model");
+    let logger = get_logger();
+    collector.update_model(&logger).expect("Fail to get model");
     let time = SystemTime::now();
-    let advance = Advance::new(get_logger(), PathBuf::new(), time);
+    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
 
     let mut opts: GeneralOpt = Default::default();
     opts.everything = true;
@@ -260,7 +263,7 @@ fn test_dump_proc_content() {
     proc_handle.init(None);
 
     // update model again to populate cpu and io data
-    let model = collector.update_model().expect("Fail to get model");
+    let model = collector.update_model(&logger).expect("Fail to get model");
     let mut proc_content = StrIo::new();
     let mut round = 0;
     proc_handle
@@ -342,9 +345,10 @@ fn test_dump_proc_content() {
 #[test]
 fn test_dump_proc_select() {
     let mut collector = Collector::new();
-    collector.update_model().expect("Fail to get model");
+    let logger = get_logger();
+    collector.update_model(&logger).expect("Fail to get model");
     let time = SystemTime::now();
-    let advance = Advance::new(get_logger(), PathBuf::new(), time);
+    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
 
     let mut opts: GeneralOpt = Default::default();
     opts.everything = true;
@@ -353,7 +357,7 @@ fn test_dump_proc_select() {
     proc_handle.init(None);
 
     // update model again to populate cpu and io data
-    let model = collector.update_model().expect("Fail to get model");
+    let model = collector.update_model(&logger).expect("Fail to get model");
     proc_handle.get_opts_mut().filter =
         Some(model.process.processes.iter().last().unwrap().0.to_string());
     let mut proc_content = StrIo::new();
@@ -630,9 +634,10 @@ fn traverse_cgroup_tree(model: &CgroupModel, jval: &mut Value) {
 #[test]
 fn test_dump_cgroup_content() {
     let mut collector = Collector::new();
-    collector.update_model().expect("Fail to get model");
+    let logger = get_logger();
+    collector.update_model(&logger).expect("Fail to get model");
     let time = SystemTime::now();
-    let advance = Advance::new(get_logger(), PathBuf::new(), time);
+    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
 
     let mut opts: GeneralOpt = Default::default();
     opts.everything = true;
@@ -641,7 +646,7 @@ fn test_dump_cgroup_content() {
     cgroup_handle.init(None);
 
     // update model again to populate cpu and io data
-    let model = collector.update_model().expect("Fail to get model");
+    let model = collector.update_model(&logger).expect("Fail to get model");
     let mut cgroup_content = StrIo::new();
     let mut round = 0;
     cgroup_handle

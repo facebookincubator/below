@@ -23,6 +23,7 @@ struct Sample {
   1: CgroupSample cgroup,
   2: procfs.PidMap processes,
   3: SystemSample system,
+  4: procfs.NetStat netstats,
 }
 
 struct CgroupSample {

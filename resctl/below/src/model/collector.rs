@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use super::*;
+use slog::{self, error};
 
 /// Collects data samples and maintains the latest data
 pub struct Collector {
@@ -25,9 +26,9 @@ impl Collector {
     }
 
     /// Collect a new `Sample`, returning an updated Model
-    pub fn update_model(&mut self) -> Result<Model> {
+    pub fn update_model(&mut self, logger: &slog::Logger) -> Result<Model> {
         let now = Instant::now();
-        let sample = collect_sample(true)?;
+        let sample = collect_sample(true, logger)?;
         let last = self.last.replace((sample, now));
         let model = Model::new(
             SystemTime::now(),
@@ -61,11 +62,18 @@ pub fn get_hostname() -> Result<String> {
     Err(anyhow!("Could not get hostname"))
 }
 
-pub fn collect_sample(collect_io_stat: bool) -> Result<Sample> {
+pub fn collect_sample(collect_io_stat: bool, logger: &slog::Logger) -> Result<Sample> {
     let reader = procfs::ProcReader::new();
     Ok(Sample {
         cgroup: collect_cgroup_sample(&cgroupfs::CgroupReader::root()?, collect_io_stat)?,
         processes: reader.read_all_pids()?,
+        netstats: match procfs::NetReader::new().and_then(|v| v.read_netstat()) {
+            Ok(ns) => ns,
+            Err(e) => {
+                error!(logger, "{}", e);
+                Default::default()
+            }
+        },
         system: SystemSample {
             stat: reader.read_stat()?,
             meminfo: reader.read_meminfo()?,

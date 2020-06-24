@@ -21,7 +21,8 @@ fn record_replay_integration() {
     let mut store = store::StoreWriter::new(&dir).expect("Failed to create store");
 
     // Collect a sample
-    let sample = collect_sample(true).expect("failed to collect sample");
+    let logger = get_logger();
+    let sample = collect_sample(true, &logger).expect("failed to collect sample");
 
     // Validate some data in the sample
     assert!(
@@ -109,7 +110,8 @@ fn advance_forward_and_reverse() {
     // Collect and store the same sample 3 times
     let timestamp = 554433;
     let unix_ts = UNIX_EPOCH + Duration::from_secs(timestamp);
-    let sample = collect_sample(true).expect("failed to collect sample");
+    let logger = get_logger();
+    let sample = collect_sample(true, &logger).expect("failed to collect sample");
     for i in 0..3 {
         let df = DataFrame {
             sample: sample.clone(),
@@ -119,7 +121,7 @@ fn advance_forward_and_reverse() {
             .expect("failed to store sample");
     }
 
-    let mut advance = Advance::new(get_logger(), dir.as_ref().to_path_buf(), unix_ts);
+    let mut advance = Advance::new(logger, dir.as_ref().to_path_buf(), unix_ts);
 
     // Basic sanity check that backstep then forward step time works
     for i in 0..3 {
@@ -153,7 +155,8 @@ fn advance_forward_and_reverse() {
 
 #[test]
 fn disable_io_stat() {
-    let sample = collect_sample(false).expect("Failed to collect sample");
+    let logger = get_logger();
+    let sample = collect_sample(false, &logger).expect("failed to collect sample");
 
     assert_eq!(sample.cgroup.io_stat, None);
 }

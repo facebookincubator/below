@@ -408,7 +408,7 @@ fn record(
         };
 
         let collect_instant = Instant::now();
-        let collected_sample = collect_sample(collect_io_stat);
+        let collected_sample = collect_sample(collect_io_stat, &logger);
         let post_collect_sys_time = SystemTime::now();
         let post_collect_instant = Instant::now();
 
@@ -451,14 +451,14 @@ fn record(
 /// Live mode - gather data and display but do not record
 fn live(logger: slog::Logger, interval: Duration) -> Result<()> {
     let mut collector = model::Collector::new();
-    let mut view = view::View::new(collector.update_model()?);
+    let mut view = view::View::new(collector.update_model(&logger)?);
 
     let sink = view.cb_sink().clone();
 
     thread::spawn(move || {
         loop {
             thread::sleep(interval);
-            let res = collector.update_model();
+            let res = collector.update_model(&logger);
             match res {
                 Ok(model) => {
                     // Error only happens if the other side disconnected - just terminate the thread

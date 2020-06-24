@@ -24,11 +24,13 @@ use below_thrift::types::{CgroupSample, Sample, SystemSample};
 #[macro_use]
 pub mod collector;
 pub mod cgroup;
+pub mod network;
 pub mod process;
 pub mod system;
 
 pub use cgroup::*;
 pub use collector::*;
+pub use network::*;
 pub use process::*;
 pub use system::*;
 
@@ -38,6 +40,7 @@ pub struct Model {
     pub system: SystemModel,
     pub cgroup: CgroupModel,
     pub process: ProcessModel,
+    pub network: NetworkModel,
 }
 
 impl Model {
@@ -62,6 +65,7 @@ impl Model {
                 last.map(|(s, d)| (&s.cgroup, d)),
             ),
             process: ProcessModel::new(&sample.processes, last.map(|(s, d)| (&s.processes, d))),
+            network: NetworkModel::new(&sample.netstats, last.map(|(s, d)| (&s.netstats, d))),
         }
     }
 }
