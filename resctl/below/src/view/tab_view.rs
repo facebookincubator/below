@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use cursive::theme::{Color, ColorStyle};
+use cursive::theme::Effect;
 use cursive::vec::Vec2;
 use cursive::Printer;
 use cursive::View;
@@ -41,15 +41,9 @@ impl View for TabView {
 
             if idx == self.current_selected {
                 let trimed = &content.trim_end();
-                printer.with_color(
-                    ColorStyle::new(
-                        Color::low_res(0, 0, 0).unwrap(),
-                        Color::low_res(0, 3, 0).unwrap(),
-                    ),
-                    |printer| {
-                        printer.print((current_offset, 0), trimed);
-                    },
-                );
+                printer.with_effects(Effect::Bold | Effect::Underline, |printer| {
+                    printer.print((current_offset, 0), trimed);
+                });
                 printer.print_hline(
                     (current_offset + trimed.len(), 0),
                     content.len() - trimed.len(),
