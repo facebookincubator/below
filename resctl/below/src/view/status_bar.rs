@@ -30,7 +30,7 @@ fn get_content(c: &mut Cursive) -> impl Into<StyledString> {
     let datetime = DateTime::<Local>::from(model.timestamp);
     let mut header_str = datetime.format("%m/%d/%Y %H:%M:%S\t").to_string();
     header_str += format!(
-        "Elapsed: {} s\t{}\t",
+        "Elapsed: {}s\t{}\t",
         model.time_elapsed.as_secs(),
         &model.system.hostname
     )
