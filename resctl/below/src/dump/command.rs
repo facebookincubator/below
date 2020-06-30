@@ -77,6 +77,7 @@ make_option! (ProcField {
     "mem": Mem,
     "cpu": Cpu,
     "pid": Pid,
+    "ppid": Ppid,
     "comm": Comm,
     "state": State,
     "uptime": Uptime,
@@ -243,7 +244,7 @@ pub enum DumpCommand {
     ///
     /// ********************** Available fields **********************
     ///
-    /// timestamp, datetime, pid, comm, state, uptime, cgroup
+    /// timestamp, datetime, pid, ppid, comm, state, uptime, cgroup
     ///
     /// cpu_user, cpu_sys, cpu_threads, cpu_total
     ///

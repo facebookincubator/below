@@ -286,6 +286,7 @@ fn test_dump_proc_content() {
             .expect("Json pid and spm pid not match");
 
         assert_eq!(value["Pid"].as_str().unwrap(), spm.get_pid_str());
+        assert_eq!(value["Ppid"].as_str().unwrap(), spm.get_ppid_str());
         assert_eq!(value["Comm"].as_str().unwrap(), spm.get_comm_str());
         assert_eq!(value["State"].as_str().unwrap(), spm.get_state_str());
         assert_eq!(

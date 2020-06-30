@@ -24,6 +24,9 @@ pub struct ProcessData {
     #[bttr(title = "Pid", width = 11, tag = "ProcField::Pid&", cmp = true)]
     #[blink("SingleProcessModel$get_pid")]
     pub pid: Option<i32>,
+    #[bttr(title = "Ppid", width = 11, tag = "ProcField::Ppid&", cmp = true)]
+    #[blink("SingleProcessModel$get_ppid")]
+    pub ppid: Option<i32>,
     #[bttr(title = "Comm", width = 12, tag = "ProcField::Comm&", cmp = true)]
     #[blink("SingleProcessModel$get_comm")]
     pub comm: Option<String>,
@@ -178,6 +181,7 @@ make_dget!(
     Process,
     ProcField::Datetime,
     ProcField::Pid,
+    ProcField::Ppid,
     ProcField::Comm,
     ProcField::State,
     ProcField::Cpu,
