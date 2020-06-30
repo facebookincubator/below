@@ -40,6 +40,8 @@ impl ProcessModel {
 pub struct SingleProcessModel {
     #[bttr(title = "Pid", width = 11)]
     pub pid: Option<i32>,
+    #[bttr(title = "Ppid", width = 11)]
+    pub ppid: Option<i32>,
     #[bttr(title = "Comm", width = 12)]
     pub comm: Option<String>,
     #[bttr(title = "State", width = 11)]
@@ -64,6 +66,7 @@ impl SingleProcessModel {
     ) -> SingleProcessModel {
         SingleProcessModel {
             pid: sample.stat.pid,
+            ppid: sample.stat.ppid,
             comm: sample.stat.comm.clone(),
             state: sample.stat.state.clone(),
             uptime_secs: sample.stat.running_secs.map(|s| s as u64),

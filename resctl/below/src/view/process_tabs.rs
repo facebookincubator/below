@@ -23,6 +23,7 @@ use below_derive::BelowDecor;
 pub enum ProcessOrders {
     Keep,
     Pid,
+    Ppid,
     Comm,
     State,
     UptimeSecs,
@@ -132,6 +133,9 @@ pub struct ProcessGeneral {
     #[blink("SingleProcessModel$get_pid")]
     #[bttr(sort_tag = "ProcessOrders::Pid")]
     pub pid: Option<i32>,
+    #[blink("SingleProcessModel$get_ppid")]
+    #[bttr(sort_tag = "ProcessOrders::Ppid")]
+    pub ppid: Option<i32>,
     #[blink("SingleProcessModel$get_state")]
     #[bttr(sort_tag = "ProcessOrders::State")]
     pub state: Option<procfs::PidState>,
