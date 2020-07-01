@@ -561,7 +561,7 @@ pub struct CgroupIO {
     pub wbytes_per_sec: Option<f64>,
     #[blink("CgroupModel$io_total?.get_rios_per_sec")]
     #[bttr(
-        title = "R I/O",
+        title = "Read I/O",
         width = 11,
         unit = "/s",
         decorator = "convert_bytes($ as f64)",
@@ -570,7 +570,7 @@ pub struct CgroupIO {
     pub rios_per_sec: Option<f64>,
     #[blink("CgroupModel$io_total?.get_wios_per_sec")]
     #[bttr(
-        title = "W I/O",
+        title = "Write I/O",
         width = 11,
         unit = "/s",
         decorator = "convert_bytes($ as f64)",
@@ -579,8 +579,8 @@ pub struct CgroupIO {
     pub wios_per_sec: Option<f64>,
     #[blink("CgroupModel$io_total?.get_dbytes_per_sec")]
     #[bttr(
-        title = "D Bytes",
-        width = 11,
+        title = "Discards",
+        width = 14,
         unit = "/s",
         decorator = "convert_bytes($ as f64)",
         sort_tag = "CgroupOrders::DbytesPerSec"
@@ -588,8 +588,8 @@ pub struct CgroupIO {
     pub dbytes_per_sec: Option<f64>,
     #[blink("CgroupModel$io_total?.get_dios_per_sec")]
     #[bttr(
-        title = "D I/O",
-        width = 11,
+        title = "Discard I/O",
+        width = 12,
         unit = "/s",
         decorator = "convert_bytes($ as f64)",
         sort_tag = "CgroupOrders::DiosPerSec"
@@ -597,10 +597,10 @@ pub struct CgroupIO {
     pub dios_per_sec: Option<f64>,
     #[bttr(
         aggr = "CgroupModel: io_total?.rbytes_per_sec? + io_total?.wbytes_per_sec?",
-        width = 11,
+        width = 16,
         unit = "/s",
         decorator = "convert_bytes($ as f64)",
-        title = "TW Total",
+        title = "Read/Write Total",
         sort_tag = "CgroupOrders::RwTotal"
     )]
     pub rw_total: Option<f64>,
