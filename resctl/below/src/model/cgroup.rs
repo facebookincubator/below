@@ -179,14 +179,14 @@ impl CgroupCpuModel {
 #[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
 pub struct CgroupIoModel {
     #[bttr(
-        title = "RBytes",
+        title = "Reads",
         width = 11,
         unit = "/s",
         decorator = "convert_bytes($ as f64)"
     )]
     pub rbytes_per_sec: Option<f64>,
     #[bttr(
-        title = "WBytes",
+        title = "Writes",
         width = 11,
         unit = "/s",
         decorator = "convert_bytes($ as f64)"
