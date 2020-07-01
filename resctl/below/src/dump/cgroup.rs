@@ -588,7 +588,8 @@ impl Dump for Cgroup {
         model: &model::Model,
         output: &mut T,
         round: &mut usize,
-    ) -> Result<()> {
+        comma_flag: bool,
+    ) -> Result<IterExecResult> {
         fn output_cgroup<T: Write>(
             handle: &Cgroup,
             model: &CgroupModel,
@@ -649,14 +650,15 @@ impl Dump for Cgroup {
 
             Ok(())
         };
-
         let json = self.get_opts().output_format == Some(OutputFormat::Json);
         let mut jval = json!({});
         output_cgroup(&self, &model.cgroup, output, round, json, &mut jval)?;
-        if json {
-            write!(output, "{}", jval)?;
-        }
+        match (json, comma_flag) {
+            (true, true) => write!(output, ",{}", jval)?,
+            (true, false) => write!(output, "{}", jval)?,
+            _ => (),
+        };
 
-        Ok(())
+        Ok(IterExecResult::Success)
     }
 }

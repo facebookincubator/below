@@ -191,19 +191,24 @@ impl Dump for System {
         model: &model::Model,
         output: &mut T,
         round: &mut usize,
-    ) -> Result<()> {
+        comma_flag: bool,
+    ) -> Result<IterExecResult> {
         match self.opts.output_format {
             Some(OutputFormat::Raw) | None => self.do_print_raw(&model.system, output, *round)?,
             Some(OutputFormat::Csv) => self.do_print_csv(&model.system, output, *round)?,
             Some(OutputFormat::KeyVal) => self.do_print_kv(&model.system, output)?,
             Some(OutputFormat::Json) => {
                 let par = self.do_print_json(&model.system);
-                write!(output, "{}", par.to_string())?;
+                if comma_flag {
+                    write!(output, ",{}", par.to_string())?;
+                } else {
+                    write!(output, "{}", par.to_string())?;
+                }
             }
         };
 
         *round += 1;
 
-        Ok(())
+        Ok(IterExecResult::Success)
     }
 }

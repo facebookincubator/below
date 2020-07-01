@@ -44,7 +44,7 @@ use command::{CgroupField, GeneralOpt, OutputFormat, ProcField, SysField};
 use fill::Dfill;
 use get::Dget;
 use print::Dprint;
-use tmain::Dump;
+use tmain::{Dump, IterExecResult};
 
 // I put concrete type for other `blink` fields is because the proc
 // macro will use that to infer the underlying type of a field.

@@ -46,6 +46,13 @@ use super::*;
 //
 // Dump:
 // Dump trait is the central of everything. It is our main event loop.
+
+#[derive(PartialEq)]
+pub enum IterExecResult {
+    Success,
+    Skip,
+}
+
 pub trait Dump
 where
     Self: DumpType + Dget + Dprint + Dfill,
@@ -70,7 +77,11 @@ where
         model: &model::Model,
         output: &mut T,
         count: &mut usize,
-    ) -> Result<()>;
+        //  comma_flag is for JSON output, if it set to true, we will have a "," before the output JSON.
+        // This is because in case of filter and delete empty val, we have no idea if the current
+        // value is the LAST value.
+        comma_flag: bool,
+    ) -> Result<IterExecResult>;
 
     // Init function is responsible for calling the dfill build_* functions to build the fn vec.
     fn init(&mut self, fields: Option<Vec<Self::FieldsType>>) {
@@ -130,11 +141,9 @@ where
         loop {
             self.advance_timestamp(&model)?;
 
-            self.iterate_exec(&model, output, &mut round)?;
-
-            if !csv {
-                write!(output, "\n")?;
-            }
+            // Base on the exec result, we will determine if we need to generate the line breaker, etc
+            let comma_flag = round != 0;
+            let exec_res = self.iterate_exec(&model, output, &mut round, comma_flag)?;
 
             if self.get_advance().get_next_ts() > *self.get_time_end() {
                 break;
@@ -144,8 +153,13 @@ where
                 Some(m) => m,
                 None => break,
             };
-            if json {
-                write!(output, ",")?;
+
+            if exec_res == IterExecResult::Skip {
+                continue;
+            }
+
+            if !csv {
+                write!(output, "\n")?;
             }
         }
 

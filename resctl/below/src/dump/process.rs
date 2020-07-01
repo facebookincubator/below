@@ -226,7 +226,8 @@ impl Dump for Process {
         model: &model::Model,
         output: &mut T,
         round: &mut usize,
-    ) -> Result<()> {
+        comma_flag: bool,
+    ) -> Result<IterExecResult> {
         let mut processes: Vec<&SingleProcessModel> = model
             .process
             .processes
@@ -242,6 +243,11 @@ impl Dump for Process {
                 _ => Some(spm),
             })
             .collect();
+
+        // Return if we filtered everything.
+        if processes.is_empty() {
+            return Ok(IterExecResult::Skip);
+        }
 
         if let Some(tag) = self.select {
             if self.opts.sort {
@@ -281,12 +287,12 @@ impl Dump for Process {
             bail!("Io failure: {}", e);
         }
 
-        if json {
-            write!(output, "{}", json_output.to_string())?;
-        } else {
-            write!(output, "\n")?;
-        }
+        match (json, comma_flag) {
+            (true, true) => write!(output, ",{}", json_output)?,
+            (true, false) => write!(output, "{}", json_output)?,
+            _ => write!(output, "\n")?,
+        };
 
-        Ok(())
+        Ok(IterExecResult::Success)
     }
 }

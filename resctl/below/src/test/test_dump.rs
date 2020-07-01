@@ -267,7 +267,7 @@ fn test_dump_proc_content() {
     let mut proc_content = StrIo::new();
     let mut round = 0;
     proc_handle
-        .iterate_exec(&model, &mut proc_content, &mut round)
+        .iterate_exec(&model, &mut proc_content, &mut round, false)
         .expect("Fail to get json from iterate_exec");
 
     // verify json correctness
@@ -366,7 +366,7 @@ fn test_dump_proc_select() {
     let mut proc_content = StrIo::new();
     let mut round = 0;
     proc_handle
-        .iterate_exec(&model, &mut proc_content, &mut round)
+        .iterate_exec(&model, &mut proc_content, &mut round, false)
         .expect("Fail to get json from iterate_exec");
 
     // test select filter
@@ -382,7 +382,7 @@ fn test_dump_proc_select() {
     proc_content.content = String::new();
     round = 0;
     proc_handle
-        .iterate_exec(&model, &mut proc_content, &mut round)
+        .iterate_exec(&model, &mut proc_content, &mut round, false)
         .expect("Fail to get json from iterate_exec");
 
     assert_eq!(round, 5);
@@ -405,7 +405,7 @@ fn test_dump_proc_select() {
     proc_content.content = String::new();
     round = 0;
     proc_handle
-        .iterate_exec(&model, &mut proc_content, &mut round)
+        .iterate_exec(&model, &mut proc_content, &mut round, false)
         .expect("Fail to get json from iterate_exec");
 
     assert_eq!(round, 5);
@@ -653,7 +653,7 @@ fn test_dump_cgroup_content() {
     let mut cgroup_content = StrIo::new();
     let mut round = 0;
     cgroup_handle
-        .iterate_exec(&model, &mut cgroup_content, &mut round)
+        .iterate_exec(&model, &mut cgroup_content, &mut round, false)
         .expect("Fail to get json from iterate_exec");
 
     // verify json correctness
