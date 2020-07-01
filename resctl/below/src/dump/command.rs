@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use anyhow::{bail, Error, Result};
+use regex::Regex;
 use std::str::FromStr;
 use structopt::StructOpt;
 
@@ -182,7 +183,7 @@ pub struct GeneralOpt {
     pub end: Option<String>,
     /// Take a regex and apply to --select selected field. See command level doc for example.
     #[structopt(long, short = "F")]
-    pub filter: Option<String>,
+    pub filter: Option<Regex>,
     /// Sort (lower to higher) by --select selected field. See command level doc for example.
     #[structopt(long)]
     pub sort: bool,

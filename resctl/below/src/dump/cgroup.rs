@@ -599,7 +599,7 @@ impl Dump for Cgroup {
         ) -> Result<()> {
             //filter
             let should_print = match (handle.select, handle.opts.filter.as_ref()) {
-                (Some(tag), Some(re)) => handle.filter_by(model, &tag, &Regex::new(re)?),
+                (Some(tag), Some(filter)) => handle.filter_by(model, &tag, &filter),
                 _ => true,
             };
 

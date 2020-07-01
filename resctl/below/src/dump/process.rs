@@ -232,9 +232,8 @@ impl Dump for Process {
             .processes
             .iter()
             .filter_map(|(_, spm)| match (self.select, self.opts.filter.as_ref()) {
-                (Some(tag), Some(re)) => {
-                    let re = Regex::new(re).expect("Fail to construct regex");
-                    if self.filter_by(spm, &tag, &re) {
+                (Some(tag), Some(filter)) => {
+                    if self.filter_by(spm, &tag, &filter) {
                         Some(spm)
                     } else {
                         None

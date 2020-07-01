@@ -359,8 +359,10 @@ fn test_dump_proc_select() {
 
     // update model again to populate cpu and io data
     let model = collector.update_model(&logger).expect("Fail to get model");
-    proc_handle.get_opts_mut().filter =
-        Some(model.process.processes.iter().last().unwrap().0.to_string());
+    proc_handle.get_opts_mut().filter = Some(
+        regex::Regex::new(&model.process.processes.iter().last().unwrap().0.to_string())
+            .expect("Fail to construct regex"),
+    );
     let mut proc_content = StrIo::new();
     let mut round = 0;
     proc_handle
