@@ -119,12 +119,12 @@ enum Command {
         #[structopt(long)]
         port: Option<u16>,
     },
-    /// Debugging facilities
+    /// Debugging facilities (for development use)
     Debug {
         #[structopt(subcommand)]
         cmd: DebugCommand,
     },
-    /// Dump historical data
+    /// Dump historical data into parseable text format
     Dump {
         /// Supply hostname to activate remote dumping
         #[structopt(long)]
