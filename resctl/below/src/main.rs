@@ -210,7 +210,7 @@ fn create_log_dir(path: &PathBuf) -> Result<()> {
 
 fn run<F>(
     init: init::InitToken,
-    opts: Opt,
+    debug: bool,
     below_config: BelowConfig,
     service: Service,
     command: F,
@@ -227,7 +227,7 @@ where
         return 1;
     }
 
-    let logger = logging::setup(init, log_dir, opts.debug);
+    let logger = logging::setup(init, log_dir, debug);
     setup_log_on_panic(logger.clone());
     #[cfg(fbcode_build)]
     facebook::init(
@@ -270,6 +270,7 @@ fn main() {
 
 fn real_main(init: init::InitToken) {
     let opts = Opt::from_args();
+    let debug = opts.debug;
     let below_config = match BelowConfig::load(&opts.config) {
         Ok(c) => c,
         Err(e) => {
@@ -280,8 +281,8 @@ fn real_main(init: init::InitToken) {
 
     let rc = match opts.cmd {
         Command::Live { interval_s } => {
-            run(init, opts, below_config, Service::Off, |logger, _errs| {
-                live(logger, Duration::from_secs(interval_s as u64))
+            run(init, debug, below_config, Service::Off, |logger, _errs| {
+                live(logger, Duration::from_secs(interval_s as u64), debug)
             })
         }
         Command::Record {
@@ -295,7 +296,7 @@ fn real_main(init: init::InitToken) {
             let store_dir = below_config.store_dir.clone();
             run(
                 init,
-                opts,
+                debug,
                 below_config,
                 Service::On(port),
                 |logger, errs| {
@@ -307,6 +308,7 @@ fn real_main(init: init::InitToken) {
                         retain_for_s.map(|r| Duration::from_secs(r as u64)),
                         collect_io_stat,
                         Duration::from_millis(skew_detection_threshold_ms),
+                        debug,
                     )
                 },
             )
@@ -320,7 +322,7 @@ fn real_main(init: init::InitToken) {
             let time = time.clone();
             let host = host.clone();
             let port = port.clone();
-            run(init, opts, below_config, Service::Off, |logger, _errs| {
+            run(init, debug, below_config, Service::Off, |logger, _errs| {
                 replay(logger, time, store_dir, host, port)
             })
         }
@@ -329,7 +331,7 @@ fn real_main(init: init::InitToken) {
                 let time = time.clone();
                 let json = json.clone();
                 let store_dir = below_config.store_dir.clone();
-                run(init, opts, below_config, Service::Off, |logger, _errs| {
+                run(init, debug, below_config, Service::Off, |logger, _errs| {
                     dump_store(logger, time, store_dir, json)
                 })
             }
@@ -343,7 +345,7 @@ fn real_main(init: init::InitToken) {
             let host = host.clone();
             let port = port.clone();
             let cmd = cmd.clone();
-            run(init, opts, below_config, Service::Off, |logger, _errs| {
+            run(init, debug, below_config, Service::Off, |logger, _errs| {
                 dump::run(logger, store_dir, host, port, cmd)
             })
         }
@@ -407,6 +409,7 @@ fn record(
     retain: Option<Duration>,
     collect_io_stat: bool,
     skew_detection_threshold: Duration,
+    debug: bool,
 ) -> Result<()> {
     debug!(logger, "Starting up!");
 
@@ -464,8 +467,7 @@ fn record(
     }
 }
 
-/// Live mode - gather data and display but do not record
-fn live(logger: slog::Logger, interval: Duration) -> Result<()> {
+fn live(logger: slog::Logger, interval: Duration, debug: bool) -> Result<()> {
     bump_memlock_rlimit()?;
 
     let mut collector = model::Collector::new();
