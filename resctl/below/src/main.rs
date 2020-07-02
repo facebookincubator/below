@@ -71,12 +71,12 @@ struct Opt {
     #[structopt(short, long)]
     debug: bool,
     #[structopt(subcommand)]
-    cmd: Command,
+    cmd: Option<Command>,
 }
 
 #[derive(Debug, StructOpt)]
 enum Command {
-    /// Display live system data (interactive)
+    /// Display live system data (interactive) (default)
     Live {
         #[structopt(short, long, default_value = "5")]
         interval_s: u64,
@@ -279,18 +279,23 @@ fn real_main(init: init::InitToken) {
         }
     };
 
-    let rc = match opts.cmd {
-        Command::Live { interval_s } => {
+    // Use live mode as default
+    let cmd = opts
+        .cmd
+        .as_ref()
+        .unwrap_or(&Command::Live { interval_s: 5 });
+    let rc = match cmd {
+        Command::Live { ref interval_s } => {
             run(init, debug, below_config, Service::Off, |logger, _errs| {
-                live(logger, Duration::from_secs(interval_s as u64), debug)
+                live(logger, Duration::from_secs(*interval_s as u64), debug)
             })
         }
         Command::Record {
-            interval_s,
-            retain_for_s,
-            collect_io_stat,
-            port,
-            skew_detection_threshold_ms,
+            ref interval_s,
+            ref retain_for_s,
+            ref collect_io_stat,
+            ref port,
+            ref skew_detection_threshold_ms,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
             let store_dir = below_config.store_dir.clone();
@@ -298,16 +303,16 @@ fn real_main(init: init::InitToken) {
                 init,
                 debug,
                 below_config,
-                Service::On(port),
+                Service::On(*port),
                 |logger, errs| {
                     record(
                         logger,
                         errs,
-                        Duration::from_secs(interval_s as u64),
+                        Duration::from_secs(*interval_s as u64),
                         store_dir,
                         retain_for_s.map(|r| Duration::from_secs(r as u64)),
-                        collect_io_stat,
-                        Duration::from_millis(skew_detection_threshold_ms),
+                        *collect_io_stat,
+                        Duration::from_millis(*skew_detection_threshold_ms),
                         debug,
                     )
                 },
