@@ -507,7 +507,13 @@ fn record(
 }
 
 fn live(logger: slog::Logger, interval: Duration, debug: bool) -> Result<()> {
-    bump_memlock_rlimit()?;
+    // TODO Raise warning popup on error here: T69437919
+    match bump_memlock_rlimit() {
+        Err(e) => {
+            error!(logger, "{}", e);
+        }
+        _ => (),
+    };
 
     let (exit_buffer, bpf_errs) = start_exitstat(logger.clone(), debug);
 
