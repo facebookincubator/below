@@ -143,7 +143,18 @@ where
 
             // Base on the exec result, we will determine if we need to generate the line breaker, etc
             let comma_flag = round != 0;
-            let exec_res = self.iterate_exec(&model, output, &mut round, comma_flag)?;
+            let exec_res = match self.iterate_exec(&model, output, &mut round, comma_flag) {
+                Ok(res) => res,
+                // Swallow BrokenPipe error for write. Rust runtime will ignore SIGPIPE by default and
+                // propagating EPIPE upwards to the application in the form of an IoError::BrokenPipe.
+                Err(e)
+                    if e.downcast_ref::<std::io::Error>()
+                        .map_or_else(|| false, |e| e.kind() == std::io::ErrorKind::BrokenPipe) =>
+                {
+                    return Ok(())
+                }
+                Err(e) => return Err(e),
+            };
 
             if self.get_advance().get_next_ts() > *self.get_time_end() {
                 break;

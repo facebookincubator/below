@@ -265,7 +265,7 @@ impl Dump for Process {
         let json = self.get_opts().output_format == Some(OutputFormat::Json);
         let mut json_output = json!([]);
 
-        let res: Result<Vec<_>> = processes
+        processes
             .iter()
             .map(|spm| {
                 let ret = match self.opts.output_format {
@@ -281,11 +281,7 @@ impl Dump for Process {
                 *round += 1;
                 ret
             })
-            .collect();
-
-        if let Err(e) = res {
-            bail!("Io failure: {}", e);
-        }
+            .collect::<Result<Vec<_>>>()?;
 
         match (json, comma_flag) {
             (true, true) => write!(output, ",{}", json_output)?,
