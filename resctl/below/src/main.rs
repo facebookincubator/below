@@ -156,6 +156,19 @@ pub enum Service {
     Off,
 }
 
+fn bump_memlock_rlimit() -> Result<()> {
+    let rlimit = libc::rlimit {
+        rlim_cur: 128 << 20,
+        rlim_max: 128 << 20,
+    };
+
+    if unsafe { libc::setrlimit(libc::RLIMIT_MEMLOCK, &rlimit) } != 0 {
+        bail!("Failed to increase rlimit");
+    }
+
+    Ok(())
+}
+
 fn create_log_dir(path: &PathBuf) -> Result<()> {
     if path.exists() && !path.is_dir() {
         bail!("{} exists and is not a directory", path.to_string_lossy());
@@ -396,6 +409,8 @@ fn record(
 ) -> Result<()> {
     debug!(logger, "Starting up!");
 
+    bump_memlock_rlimit()?;
+
     let mut store = store::StoreWriter::new(&dir)?;
     let mut stats = statistics::Statistics::new();
 
@@ -450,6 +465,8 @@ fn record(
 
 /// Live mode - gather data and display but do not record
 fn live(logger: slog::Logger, interval: Duration) -> Result<()> {
+    bump_memlock_rlimit()?;
+
     let mut collector = model::Collector::new();
     let mut view = view::View::new(collector.update_model(&logger)?);
 
