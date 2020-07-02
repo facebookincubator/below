@@ -22,6 +22,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::mpsc::{channel, Receiver, TryRecvError};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -206,6 +207,35 @@ fn create_log_dir(path: &PathBuf) -> Result<()> {
     }
 
     Ok(())
+}
+
+// Exitstat runs a bpf program that hooks into process exit events. This allows below to keep
+// track of processes whose lifetimes are shorter than polling interval.
+fn start_exitstat(
+    logger: slog::Logger,
+    debug: bool,
+) -> (Arc<Mutex<procfs::PidMap>>, Receiver<Error>) {
+    let mut exit_driver = bpf::exitstat::ExitstatDriver::new(logger, debug);
+    let exit_buffer = exit_driver.get_buffer();
+    let (bpf_err_send, bpf_err_recv) = channel();
+    thread::spawn(move || {
+        match exit_driver.drive() {
+            Ok(_) => (),
+            Err(e) => bpf_err_send.send(e).unwrap(),
+        };
+    });
+
+    (exit_buffer, bpf_err_recv)
+}
+
+fn check_for_exitstat_errors(logger: &slog::Logger, receiver: &Receiver<Error>) {
+    // Print an error but don't exit on bpf issues. Do this b/c we can't always
+    // be sure what kind of kernel we're running on and if it's new enough.
+    match receiver.try_recv() {
+        Ok(e) => error!(logger, "{}", e),
+        Err(TryRecvError::Empty) => (),
+        Err(TryRecvError::Disconnected) => error!(logger, "bpf error channel disconnected"),
+    };
 }
 
 fn run<F>(
@@ -423,6 +453,8 @@ fn record(
     let mut store = store::StoreWriter::new(&dir)?;
     let mut stats = statistics::Statistics::new();
 
+    let (exit_buffer, bpf_errs) = start_exitstat(logger.clone(), debug);
+
     loop {
         // Anything that comes over the error channel is an error
         match errs.try_recv() {
@@ -431,8 +463,10 @@ fn record(
             Err(TryRecvError::Disconnected) => bail!("error channel disconnected"),
         };
 
+        check_for_exitstat_errors(&logger, &bpf_errs);
+
         let collect_instant = Instant::now();
-        let collected_sample = collect_sample(collect_io_stat, &logger);
+        let collected_sample = collect_sample(&exit_buffer, collect_io_stat, &logger);
         let post_collect_sys_time = SystemTime::now();
         let post_collect_instant = Instant::now();
 
@@ -475,13 +509,17 @@ fn record(
 fn live(logger: slog::Logger, interval: Duration, debug: bool) -> Result<()> {
     bump_memlock_rlimit()?;
 
-    let mut collector = model::Collector::new();
+    let (exit_buffer, bpf_errs) = start_exitstat(logger.clone(), debug);
+
+    let mut collector = model::Collector::new(exit_buffer);
     let mut view = view::View::new(collector.update_model(&logger)?);
 
     let sink = view.cb_sink().clone();
 
     thread::spawn(move || {
         loop {
+            check_for_exitstat_errors(&logger, &bpf_errs);
+
             thread::sleep(interval);
             let res = collector.update_model(&logger);
             match res {

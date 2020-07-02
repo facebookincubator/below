@@ -16,6 +16,7 @@ use std::collections::BTreeMap;
 use std::io;
 use std::io::prelude::*;
 use std::sync::mpsc::{channel, Sender};
+use std::sync::Mutex;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -41,4 +42,8 @@ mod test_general;
 pub fn get_logger() -> slog::Logger {
     let plain = slog_term::PlainSyncDecorator::new(std::io::stderr());
     slog::Logger::root(slog_term::FullFormat::new(plain).build().fuse(), slog::o!())
+}
+
+fn get_dummy_exit_data() -> Arc<Mutex<procfs::PidMap>> {
+    Arc::new(Mutex::new(procfs::PidMap::default()))
 }

@@ -22,7 +22,8 @@ fn record_replay_integration() {
 
     // Collect a sample
     let logger = get_logger();
-    let sample = collect_sample(true, &logger).expect("failed to collect sample");
+    let sample =
+        collect_sample(&get_dummy_exit_data(), true, &logger).expect("failed to collect sample");
 
     // Validate some data in the sample
     assert!(
@@ -111,7 +112,8 @@ fn advance_forward_and_reverse() {
     let timestamp = 554433;
     let unix_ts = UNIX_EPOCH + Duration::from_secs(timestamp);
     let logger = get_logger();
-    let sample = collect_sample(true, &logger).expect("failed to collect sample");
+    let sample =
+        collect_sample(&get_dummy_exit_data(), true, &logger).expect("failed to collect sample");
     for i in 0..3 {
         let df = DataFrame {
             sample: sample.clone(),
@@ -156,7 +158,8 @@ fn advance_forward_and_reverse() {
 #[test]
 fn disable_io_stat() {
     let logger = get_logger();
-    let sample = collect_sample(false, &logger).expect("failed to collect sample");
+    let sample =
+        collect_sample(&get_dummy_exit_data(), false, &logger).expect("failed to collect sample");
 
     assert_eq!(sample.cgroup.io_stat, None);
 }

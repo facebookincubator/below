@@ -12,23 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::{Arc, Mutex};
+
 use super::*;
 use slog::{self, error};
 
 /// Collects data samples and maintains the latest data
 pub struct Collector {
     last: Option<(Sample, Instant)>,
+    exit_data: Arc<Mutex<procfs::PidMap>>,
 }
 
 impl Collector {
-    pub fn new() -> Collector {
-        Collector { last: None }
+    pub fn new(exit_data: Arc<Mutex<procfs::PidMap>>) -> Collector {
+        Collector {
+            last: None,
+            exit_data,
+        }
     }
 
     /// Collect a new `Sample`, returning an updated Model
     pub fn update_model(&mut self, logger: &slog::Logger) -> Result<Model> {
         let now = Instant::now();
-        let sample = collect_sample(true, logger)?;
+        let sample = collect_sample(&self.exit_data, true, logger)?;
         let last = self.last.replace((sample, now));
         let model = Model::new(
             SystemTime::now(),
@@ -62,11 +68,37 @@ pub fn get_hostname() -> Result<String> {
     Err(anyhow!("Could not get hostname"))
 }
 
-pub fn collect_sample(collect_io_stat: bool, logger: &slog::Logger) -> Result<Sample> {
+fn merge_procfs_and_exit_data(
+    mut procfs_data: procfs::PidMap,
+    exit_data: &Arc<Mutex<procfs::PidMap>>,
+) -> procfs::PidMap {
+    // Take mutex, then take all values out of shared map and replace with default map
+    let exit_pidmap =
+        std::mem::take(&mut *exit_data.lock().expect("tried to acquire poisoned lock"));
+
+    exit_pidmap
+        .iter()
+        // If `procfs_data` already has the pid, then we use the procfs data because the time delta
+        // between the two collection points is negligible and procfs collected data is more
+        // complete.
+        .for_each(|entry| {
+            if !procfs_data.contains_key(entry.0) {
+                procfs_data.insert(*entry.0, entry.1.clone());
+            }
+        });
+
+    procfs_data
+}
+
+pub fn collect_sample(
+    exit_data: &Arc<Mutex<procfs::PidMap>>,
+    collect_io_stat: bool,
+    logger: &slog::Logger,
+) -> Result<Sample> {
     let reader = procfs::ProcReader::new();
     Ok(Sample {
         cgroup: collect_cgroup_sample(&cgroupfs::CgroupReader::root()?, collect_io_stat)?,
-        processes: reader.read_all_pids()?,
+        processes: merge_procfs_and_exit_data(reader.read_all_pids()?, exit_data),
         netstats: match procfs::NetReader::new().and_then(|v| v.read_netstat()) {
             Ok(ns) => ns,
             Err(e) => {

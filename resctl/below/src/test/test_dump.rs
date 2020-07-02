@@ -32,7 +32,7 @@ fn test_tmain_init() {
     let time = SystemTime::now();
     let logger = get_logger();
     let advance = Advance::new(logger.clone(), PathBuf::new(), time);
-    let mut collector = Collector::new();
+    let mut collector = Collector::new(get_dummy_exit_data());
     let model = collector.update_model(&logger).expect("Fail to get model");
 
     // Since we are using the same function for field and title generation,
@@ -175,7 +175,7 @@ fn test_tmain_init() {
 #[test]
 // Test correctness of system decoration
 fn test_dump_sys_content() {
-    let mut collector = Collector::new();
+    let mut collector = Collector::new(get_dummy_exit_data());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
     let time = SystemTime::now();
@@ -250,7 +250,7 @@ impl io::Write for StrIo {
 // Test correctness of process decoration
 // This test will also test JSON correctness.
 fn test_dump_proc_content() {
-    let mut collector = Collector::new();
+    let mut collector = Collector::new(get_dummy_exit_data());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
     let time = SystemTime::now();
@@ -345,7 +345,7 @@ fn test_dump_proc_content() {
 
 #[test]
 fn test_dump_proc_select() {
-    let mut collector = Collector::new();
+    let mut collector = Collector::new(get_dummy_exit_data());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
     let time = SystemTime::now();
@@ -636,7 +636,7 @@ fn traverse_cgroup_tree(model: &CgroupModel, jval: &mut Value) {
 
 #[test]
 fn test_dump_cgroup_content() {
-    let mut collector = Collector::new();
+    let mut collector = Collector::new(get_dummy_exit_data());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
     let time = SystemTime::now();
