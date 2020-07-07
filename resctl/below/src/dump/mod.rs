@@ -34,13 +34,14 @@ pub mod get;
 pub mod cgroup;
 pub mod command;
 mod fill;
+pub mod iface;
 pub mod print;
 pub mod process;
 pub mod system;
 pub mod tmain;
 
 pub use command::DumpCommand;
-use command::{CgroupField, GeneralOpt, OutputFormat, ProcField, SysField};
+use command::{CgroupField, GeneralOpt, IfaceField, OutputFormat, ProcField, SysField};
 use fill::Dfill;
 use get::Dget;
 use print::Dprint;
@@ -148,6 +149,16 @@ pub fn run(
             let mut cgroup = cgroup::Cgroup::new(opts, advance, time_end, select);
             cgroup.init(fields);
             cgroup.exec()
+        }
+        DumpCommand::Iface {
+            fields,
+            opts,
+            select,
+        } => {
+            let (time_end, advance) = get_advance(logger, dir, host, port, &opts.begin, &opts.end)?;
+            let mut iface = iface::Iface::new(opts, advance, time_end, select);
+            iface.init(fields);
+            iface.exec()
         }
     }
 }

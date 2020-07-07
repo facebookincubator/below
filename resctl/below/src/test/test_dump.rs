@@ -662,3 +662,159 @@ fn test_dump_cgroup_content() {
         serde_json::from_str(&cgroup_content.content).expect("Fail parse json of process dump");
     traverse_cgroup_tree(&model.cgroup, &mut jval);
 }
+
+#[test]
+// Test correctness of network decoration
+// This test will also test JSON correctness.
+fn test_dump_network_content() {
+    let mut collector = Collector::new(get_dummy_exit_data());
+    let logger = get_logger();
+    collector.update_model(&logger).expect("Fail to get model");
+    let time = SystemTime::now();
+    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
+
+    let mut opts: GeneralOpt = Default::default();
+    opts.everything = true;
+    opts.output_format = Some(OutputFormat::Json);
+    let mut iface_handle = iface::Iface::new(opts, advance, time, None);
+    iface_handle.init(None);
+
+    // update model again to populate net data
+    let model = collector.update_model(&logger).expect("Fail to get model");
+    let mut iface_content = StrIo::new();
+    let mut round = 0;
+    iface_handle
+        .iterate_exec(&model, &mut iface_content, &mut round, false)
+        .expect("Fail to get json from iterate_exec");
+
+    // verify json correctness
+    assert!(!iface_content.content.is_empty());
+    let jval: Value =
+        serde_json::from_str(&iface_content.content).expect("Fail parse json of network dump");
+
+    // verify content correctness, test first 5 should be enough
+    let mut count = 5;
+    for value in jval.as_array().unwrap() {
+        let iface = value["interface"].as_str().unwrap();
+        let snm = model
+            .network
+            .interfaces
+            .get(iface)
+            .expect("Json iface and snm iface not match");
+
+        assert_eq!(
+            value["RX Bytes/s"].as_str().unwrap(),
+            snm.get_rx_bytes_per_sec_str()
+        );
+        assert_eq!(
+            value["TX Bytes/s"].as_str().unwrap(),
+            snm.get_tx_bytes_per_sec_str()
+        );
+        assert_eq!(
+            value["I/O Bytes/s"].as_str().unwrap(),
+            snm.get_throughput_per_sec_str()
+        );
+        assert_eq!(
+            value["RX pkts/s"].as_str().unwrap(),
+            snm.get_rx_packets_per_sec_str()
+        );
+        assert_eq!(
+            value["TX pkts/s"].as_str().unwrap(),
+            snm.get_tx_packets_per_sec_str()
+        );
+        assert_eq!(
+            value["Collisions"].as_str().unwrap(),
+            snm.get_collisions_str()
+        );
+        assert_eq!(
+            value["Multicast"].as_str().unwrap(),
+            snm.get_multicast_str()
+        );
+        assert_eq!(value["RX Bytes"].as_str().unwrap(), snm.get_rx_bytes_str());
+        assert_eq!(
+            value["RX Compressed"].as_str().unwrap(),
+            snm.get_rx_compressed_str()
+        );
+        assert_eq!(
+            value["RX CRC Errors"].as_str().unwrap(),
+            snm.get_rx_crc_errors_str()
+        );
+        assert_eq!(
+            value["RX Dropped"].as_str().unwrap(),
+            snm.get_rx_dropped_str()
+        );
+        assert_eq!(
+            value["RX Errors"].as_str().unwrap(),
+            snm.get_rx_errors_str()
+        );
+        assert_eq!(
+            value["RX Fifo Errors"].as_str().unwrap(),
+            snm.get_rx_fifo_errors_str()
+        );
+        assert_eq!(
+            value["RX Frame Errors"].as_str().unwrap(),
+            snm.get_rx_frame_errors_str()
+        );
+        assert_eq!(
+            value["RX Length Errors"].as_str().unwrap(),
+            snm.get_rx_length_errors_str()
+        );
+        assert_eq!(
+            value["RX Missed Errors"].as_str().unwrap(),
+            snm.get_rx_missed_errors_str()
+        );
+        assert_eq!(
+            value["RX Nohandler"].as_str().unwrap(),
+            snm.get_rx_nohandler_str()
+        );
+        assert_eq!(
+            value["RX Over Errors"].as_str().unwrap(),
+            snm.get_rx_over_errors_str()
+        );
+        assert_eq!(
+            value["RX Packets"].as_str().unwrap(),
+            snm.get_rx_packets_str()
+        );
+        assert_eq!(
+            value["TX Aborted Errors"].as_str().unwrap(),
+            snm.get_tx_aborted_errors_str()
+        );
+        assert_eq!(value["TX Bytes"].as_str().unwrap(), snm.get_tx_bytes_str());
+        assert_eq!(
+            value["TX Carrier Errors"].as_str().unwrap(),
+            snm.get_tx_carrier_errors_str()
+        );
+        assert_eq!(
+            value["TX Compressed"].as_str().unwrap(),
+            snm.get_tx_compressed_str()
+        );
+        assert_eq!(
+            value["TX Dropped"].as_str().unwrap(),
+            snm.get_tx_dropped_str()
+        );
+        assert_eq!(
+            value["TX Errors"].as_str().unwrap(),
+            snm.get_tx_errors_str()
+        );
+        assert_eq!(
+            value["TX Fifo Errors"].as_str().unwrap(),
+            snm.get_tx_fifo_errors_str()
+        );
+        assert_eq!(
+            value["TX Heartbeat Errors"].as_str().unwrap(),
+            snm.get_tx_heartbeat_errors_str()
+        );
+        assert_eq!(
+            value["TX Packets"].as_str().unwrap(),
+            snm.get_tx_packets_str()
+        );
+        assert_eq!(
+            value["TX Window Errors"].as_str().unwrap(),
+            snm.get_tx_window_errors_str()
+        );
+        count -= 1;
+        if count == 0 {
+            break;
+        }
+    }
+}
