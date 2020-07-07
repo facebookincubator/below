@@ -195,6 +195,83 @@ make_option! (IfaceField {
     "tx_window_errors": TxWindowErr,
 });
 
+make_option! (NetworkField {
+    "timestamp": Timestamp,
+    "datetime": Datetime,
+    "ip": Ip,
+    "ip6": Ip6,
+    "icmp": Icmp,
+    "Icmp6": Icmp6,
+    "ip_forwarding": ForwPkts,
+    "ip_in_receives": InRecvPkts,
+    "ip_forw_datagrams": ForwDgrm,
+    "ip_in_discards": InDiscards,
+    "ip_in_delivers": InDelivers,
+    "ip_out_requests": OutRequests,
+    "ip_out_discards": OutDiscards,
+    "ip_out_no_routes": OutNoRoutes,
+    "ip_in_mcast": InMcast,
+    "ip_out_mcast": OutMcast,
+    "ip_in_bcast": InBcast,
+    "ip_out_bcast": OutBcast,
+    "ip6_in_receives": InRecvPkts6,
+    "ip6_forw_datagrams": ForwDgrm6,
+    "ip6_in_discards": InDiscards6,
+    "ip6_in_delivers": InDelivers6,
+    "ip6_out_requests": OutRequests6,
+    "ip6_in_no_routes": InNoRoutes6,
+    "ip6_out_no_routes": OutNoRoutes6,
+    "ip6_in_hdr_err": InHdrErr6,
+    "ip6_in_addr_err": InAddrErr6,
+    "ip6_in_mcast": InMcast6,
+    "ip6_out_mcast": OutMcast6,
+    "ip6_in_bcast": InBcast6,
+    "ip6_out_bcast": OutBcast6,
+    "icmp_in_msgs": InMsg,
+    "icmp_in_errs": InErrs,
+    "icmp_in_dest_unreachs": InDestUnreachs,
+    "icmp_out_msg": OutMsg,
+    "icmp_out_errs": OutErrs,
+    "icmp_out_dest_unreachs": OutDestUnreachs,
+    "icmp6_in_msgs": InMsg6,
+    "icmp6_in_errs": InErrs6,
+    "icmp6_in_dest_unreachs": InDestUnreachs6,
+    "icmp6_out_msg": OutMsg6,
+    "icmp6_out_errs": OutErrs6,
+    "icmp6_out_dest_unreachs": OutDestUnreachs6,
+});
+
+make_option!(TransportField {
+    "timestamp": Timestamp,
+    "datetime": Datetime,
+    "tcp_active_opens": ActiveOpens,
+    "tcp_passive_opens": PassiveOpens,
+    "tcp_attempt_fails": AttemptFailed,
+    "tcp_estab_reset": EstabReset,
+    "tcp_curr_estab": CurrEstab,
+    "tcp_in_segs": InSegs,
+    "tcp_out_segs": OutSegs,
+    "tcp_retrans_segs_per_sec": RetransSegsPS,
+    "tcp_retrans_segs": RetransSegs,
+    "tcp_in_errs": TcpInErrs,
+    "tcp_out_rsts": OutRsts,
+    "tcp_in_csum_errs": InCsumErrs,
+    "udp_in_datagrams": InDgrms,
+    "udp_no_ports": NoPorts,
+    "udp_in_errs": UdpInErrs,
+    "udp_out_datagrams": OutDgrms,
+    "udp_recv_buf_errs": RecvBufErrs,
+    "udp_snd_buf_errs": SndBufErrs,
+    "udp_ignored_multi": IgnoredMulti,
+    "udp6_in_datagrams": InDgrms6,
+    "udp6_no_ports": NoPorts6,
+    "udp6_in_errs": UdpInErrs6,
+    "udp6_out_datagrams": OutDgrms6,
+    "udp6_recv_buf_errs": RecvBufErrs6,
+    "udp6_snd_buf_errs": SndBufErrs6,
+    "udp6_ignored_multi": IgnoredMulti6,
+});
+
 make_option! (OutputFormat {
     "raw": Raw,
     "csv": Csv,
@@ -423,5 +500,49 @@ pub enum DumpCommand {
         /// Select field for operation, use with --filter
         #[structopt(long, short)]
         select: Option<IfaceField>,
+    },
+    /// Dump the network layer stats including ip and icmp
+    ///
+    /// ********************** Available fields **********************
+    ///
+    /// timestamp, datetime
+    ///
+    /// ip_forwarding, ip_in_receives, ip_forw_datagrams, ip_in_discards, ip_in_delivers, ip_out_requests,
+    /// ip_out_discards, ip_out_no_routes, ip_in_mcast, ip_out_mcast, ip_in_bcast, ip_out_bcast
+    ///
+    /// ip6_in_receives, ip6_forw_datagrams, ip6_in_discards, ip6_in_delivers, ip6_out_requests, ip6_in_no_routes,
+    /// ip6_out_no_routes, ip6_in_hdr_err, ip6_in_addr_err, ip6_in_mcast, ip6_out_mcast, ip6_in_bcast, ip6_in_bcast
+    ///
+    /// icmp_in_msgs, icmp_in_errs, icmp_in_dest_unreachs, icmp_out_msg, icmp_out_errs, icmp_out_dest_unreachs
+    ///
+    /// icmp6_in_msgs, icmp6_in_errs, icmp6_in_dest_unreachs, icmp6_out_msg, icmp6_out_errs, icmp6_out_dest_unreachs
+    ///
+    /// ********************** Aggregated fields **********************
+    ///
+    /// * ip: includes [ip_*].
+    ///
+    /// * ip6: includes [ip6_*].
+    ///
+    /// * icmp: includes [icmp_*].
+    ///
+    /// * icmp6: includes [icmp6_*].
+    ///
+    /// --default will have all of [ip, ip6, icmp, icmp6].
+    ///
+    /// ********************** Example Commands **********************
+    ///
+    /// Example:
+    ///
+    /// $ below dump network -b "08:30:00" -e "08:30:30" -f ip ip6 -O json
+    ///
+    Network {
+        /// Select which fields to display and in what order.
+        #[structopt(short, long)]
+        fields: Option<Vec<NetworkField>>,
+        #[structopt(flatten)]
+        opts: GeneralOpt,
+        /// Select field for operation, use with --filter
+        #[structopt(long, short)]
+        select: Option<NetworkField>,
     },
 }
