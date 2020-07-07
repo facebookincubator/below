@@ -417,15 +417,15 @@ impl Udp6Model {
 pub struct SingleNetModel {
     #[bttr(title = "Interface", width = 20)]
     pub interface: String,
-    #[bttr(title = "Rx Bytes/s", width = 20, decorator = "convert_bytes($)")]
+    #[bttr(title = "RX Bytes/s", width = 20, decorator = "convert_bytes($)")]
     pub rx_bytes_per_sec: Option<f64>,
-    #[bttr(title = "Tx Bytes/s", width = 20, decorator = "convert_bytes($)")]
+    #[bttr(title = "TX Bytes/s", width = 20, decorator = "convert_bytes($)")]
     pub tx_bytes_per_sec: Option<f64>,
-    #[bttr(title = "Io Bytes/s", width = 20, decorator = "convert_bytes($)")]
+    #[bttr(title = "I/O Bytes/s", width = 20, decorator = "convert_bytes($)")]
     pub throughput_per_sec: Option<f64>,
-    #[bttr(title = "Rx Pkts/s", width = 20)]
+    #[bttr(title = "RX Pkts/s", width = 20)]
     pub rx_packets_per_sec: Option<u64>,
-    #[bttr(title = "Tx Pkts/s", width = 20)]
+    #[bttr(title = "TX Pkts/s", width = 20)]
     pub tx_packets_per_sec: Option<u64>,
     #[bttr(title = "Collision", width = 20)]
     pub collisions: Option<u64>,

@@ -63,8 +63,8 @@ pub fn gen_get_function_for_direct_field(fields: &syn::FieldsNamed) -> Tstream {
 }
 
 /// Generate title for each field
-/// This function will generate both syled and unstyled title. It will evaluate `width` and
-/// `title_width` attribute. `title_width` will override `width`.
+/// This function will generate both styled and unstyled title. It will evaluate `width`,
+/// `title_width`, `title_depth`, and `title_prefix` attributes. `title_width` will override `width`.
 ///
 /// For linked fields, title within current field will always override the destination. The
 /// generation function will try to follow the link and use the first title it sees.
@@ -82,7 +82,9 @@ pub fn gen_get_title_per_field(fields: &syn::FieldsNamed) -> Tstream {
             let width = aview
                 .title_width
                 .unwrap_or_else(|| aview.width.unwrap_or_else(|| title.len()));
-            let title_styled = format!("{:w$.w$}", &title, w = width);
+            let prefix = aview.title_prefix.clone().unwrap_or_else(|| "".into());
+            let depth = aview.title_depth.unwrap_or(0);
+            let title_styled = format!("{:>d$.d$}{:w$.w$}", prefix, &title, d = depth, w = width);
             let args = if a.field.as_ref().unwrap().aggr.is_some() {
                 quote! {}
             } else {
@@ -168,7 +170,7 @@ pub fn gen_get_title_per_field(fields: &syn::FieldsNamed) -> Tstream {
 }
 
 /// Generate get function for linked field.
-/// The get function will call the get function of the detination or next hop.
+/// The get function will call the get function of the destination or next hop.
 pub fn gen_get_function_for_linked_field(fields: &syn::FieldsNamed) -> Tstream {
     let per_field_get = iter_field_attr!(fields)
         .filter(|(_, a)| a.field.is_some() && a.field.as_ref().unwrap().link.is_some())
@@ -214,7 +216,7 @@ pub fn gen_get_function_for_linked_field(fields: &syn::FieldsNamed) -> Tstream {
 
 /// Generate comparison functions
 /// Nothing but a partial compare on direct field. For linked field,
-/// the argument will take two model and compate base on the get function.
+/// the argument will take two model and compare base on the get function.
 pub fn gen_cmp_fns(fields: &syn::FieldsNamed) -> Tstream {
     let per_field_cmp = iter_field_attr!(fields)
         .filter(|(_, a)| a.field.is_some() && a.field.as_ref().unwrap().cmp)
@@ -298,7 +300,7 @@ pub fn gen_cmp_fns(fields: &syn::FieldsNamed) -> Tstream {
 ///     }
 /// }
 /// ```
-/// All fields without a sorting taged will automatically tagged by TagType::Keep. So when defining sorting tag,
+/// All fields without a sorting tag will automatically tagged by TagType::Keep. So when defining sorting tag,
 /// it's mandatory to have a field named Keep. Please note that all fields that are decorated by `sort_tag` will be automatically
 /// set `cmp = true`
 pub fn gen_tag_sort_fn(fields: &syn::FieldsNamed) -> Tstream {

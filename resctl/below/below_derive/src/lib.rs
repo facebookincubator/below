@@ -35,6 +35,10 @@
 //!       both title and field.
 //!     * title_width: usize -- Defines the width of title, will override
 //!       width for title.
+//!     * title_depth: usize -- Defines the heading indentation of title,
+//!       default to 0.
+//!     * title_prefix: String -- A String that represents the title prefix
+//!       symbol.
 //!     * none_mark: String -- Default to '?', defines what need show
 //!       if the field is None.
 //!     * decorator: TokenStream -- Field decorator, apply a function
@@ -68,7 +72,7 @@
 //! * Limitation: All link from same struct should have a same starting point, aka, model.
 //!
 //! ## Special characters
-//! * `&` --> Means the marked field is a link, it will tell the proc macro to generage link
+//! * `&` --> Means the marked field is a link, it will tell the proc macro to generate link
 //!   related code. Use with `aggr`, `blink`, `class`, and `tag`
 //! * `?` --> Means the marked field is an option, it will tell the macro to unwrap a
 //!   reference of the field, if the option is None, it will auto use the default value.
@@ -87,7 +91,7 @@
 //! * `get_field_line(&self) -> String` -- Get all fields in a line, all style applied.
 //! * `get_csv_field(&self) -> String` -- Get all fields in a line, only apply decorator function. Comma separated.
 //! * `get_csv_title(&self) -> String` -- Get all title in a line, comma separated.
-//! * `cmp_by_FIELD_NAME(left: &Self, right, &Self) -> Ordering` -- comparison funciton. If field is a link, type of left and right will be Model
+//! * `cmp_by_FIELD_NAME(left: &Self, right, &Self) -> Ordering` -- comparison function. If field is a link, type of left and right will be Model
 //! * `get_interleave_line(&self, sep: &str, line_sep: &str) -> String` -- Interleave title and value and output
 //!    as string. `sep` is a string between title and value, `line_sep` is a string between each pair.
 //! * `sort(&self, tag: TagType, children: &mut Vec<ModelType>, reverse: bool)` -- Sort the children array by the sorting tag. If reverse if set

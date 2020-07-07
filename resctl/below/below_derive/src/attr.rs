@@ -19,6 +19,8 @@ pub struct BelowViewAttr {
     pub prefix: Option<proc_macro2::TokenStream>,
     pub width: Option<usize>,
     pub title_width: Option<usize>,
+    pub title_depth: Option<usize>,
+    pub title_prefix: Option<String>,
     pub none_mark: String,
     pub decorator: Option<String>,
     pub precision: Option<usize>,
@@ -50,6 +52,8 @@ impl std::default::Default for BelowViewAttr {
             prefix: None,
             width: None,
             title_width: None,
+            title_depth: None,
+            title_prefix: None,
             none_mark: "?".into(),
             decorator: None,
             precision: None,
@@ -195,6 +199,23 @@ pub fn parse_attribute(attrs: &[syn::Attribute], field_name: &syn::Ident) -> Bel
                                 .expect("Fail to parse title_width"),
                         ),
                         _ => unimplemented!("{}: width has to be a integer", field_name),
+                    }
+                }
+                "title_depth" => {
+                    view_flag = true;
+                    bvttr.title_depth = match &nv.lit {
+                        syn::Lit::Int(li) => Some(
+                            li.base10_parse::<usize>()
+                                .expect("Fail to parse title_depth"),
+                        ),
+                        _ => unimplemented!("{}: title_depth has to be a integer", field_name),
+                    }
+                }
+                "title_prefix" => {
+                    view_flag = true;
+                    bvttr.title_prefix = match &nv.lit {
+                        syn::Lit::Str(ls) => Some(ls.value()),
+                        _ => unimplemented!("{}: title_prefix has to be a string", field_name),
                     }
                 }
                 "precision" => {

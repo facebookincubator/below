@@ -35,7 +35,6 @@ fn fill_content(v: &mut LinearLayout) {
         "'T'            - show previous sample (replay mode)\n",
         "'c'            - show cgroup view\n",
         "'p'            - show process view\n",
-        "'n'            - show network view\n",
         "'q'            - quit or exit help\n",
         "'P'            - sort by pid (process view only)\n",
         "'N'            - sort by name (process view only)\n",
