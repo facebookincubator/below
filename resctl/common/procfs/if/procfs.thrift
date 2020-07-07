@@ -73,6 +73,14 @@ struct MemInfo {
   // This is in number of pages, not kilobytes
   32: optional i64 free_huge_pages,
   33: optional i64 huge_page_size,
+  34: optional i64 cma_total,
+  35: optional i64 cma_free,
+  36: optional i64 vmalloc_total,
+  37: optional i64 vmalloc_used,
+  38: optional i64 vmalloc_chunk,
+  39: optional i64 direct_map_4k,
+  40: optional i64 direct_map_2m,
+  41: optional i64 direct_map_1g,
 }
 
 struct InterfaceStat {
@@ -243,6 +251,24 @@ struct VmStat {
   9: optional i64 oom_kill,
 }
 
+struct DiskStat {
+  1: optional i64 major,
+  2: optional i64 minor,
+  3: optional string name,
+  4: optional i64 read_completed,
+  5: optional i64 read_merged,
+  6: optional i64 read_sectors,
+  7: optional i64 time_spend_read_ms,
+  8: optional i64 write_completed,
+  9: optional i64 write_merged,
+  10: optional i64 write_sectors,
+  11: optional i64 time_spend_write_ms,
+  12: optional i64 discard_completed,
+  13: optional i64 discard_merged,
+  14: optional i64 discard_sectors,
+  15: optional i64 time_spend_discard_ms,
+}
+
 enum PidState {
   RUNNING = 0,
   SLEEPING = 1,
@@ -285,6 +311,7 @@ struct PidInfo {
 
 typedef map<i32, PidInfo> PidMap
 typedef map<string, InterfaceStat> NetMap
+typedef map<string, DiskStat> DiskMap
 
 struct NetStat {
   1: optional NetMap interfaces,

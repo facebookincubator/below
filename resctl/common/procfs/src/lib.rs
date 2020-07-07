@@ -300,6 +300,14 @@ impl ProcReader {
                     "Hugepagesize:" => {
                         meminfo.huge_page_size = parse_kb!(path, items.next(), line)?
                     }
+                    "CmaTotal:" => meminfo.cma_total = parse_kb!(path, items.next(), line)?,
+                    "CmaFree:" => meminfo.cma_free = parse_kb!(path, items.next(), line)?,
+                    "VmallocTotal:" => meminfo.vmalloc_total = parse_kb!(path, items.next(), line)?,
+                    "VmallocUsed:" => meminfo.vmalloc_used = parse_kb!(path, items.next(), line)?,
+                    "VmallocChunk:" => meminfo.vmalloc_chunk = parse_kb!(path, items.next(), line)?,
+                    "DirectMap4k:" => meminfo.direct_map_4k = parse_kb!(path, items.next(), line)?,
+                    "DirectMap2M:" => meminfo.direct_map_2m = parse_kb!(path, items.next(), line)?,
+                    "DirectMap1G:" => meminfo.direct_map_1g = parse_kb!(path, items.next(), line)?,
                     _ => {}
                 }
             }
@@ -323,23 +331,30 @@ impl ProcReader {
             let mut items = line.split_whitespace();
             if let Some(item) = items.next() {
                 match item {
-                    "pgpgin" => vmstat.pgpgin = parse_item!(path, items.next(), i64, line)?,
-                    "pgpgout" => vmstat.pgpgout = parse_item!(path, items.next(), i64, line)?,
-                    "pswpin" => vmstat.pswpin = parse_item!(path, items.next(), i64, line)?,
-                    "pswpout" => vmstat.pswpout = parse_item!(path, items.next(), i64, line)?,
+                    "pgpgin" => vmstat.pgpgin = parse_kb!(path, items.next(), line)?,
+                    "pgpgout" => vmstat.pgpgout = parse_kb!(path, items.next(), line)?,
+                    "pswpin" => vmstat.pswpin = parse_kb!(path, items.next(), line)?,
+                    "pswpout" => vmstat.pswpout = parse_kb!(path, items.next(), line)?,
                     "pgsteal_kswapd" => {
-                        vmstat.pgsteal_kswapd = parse_item!(path, items.next(), i64, line)?
+                        vmstat.pgsteal_kswapd =
+                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
                     }
                     "pgsteal_direct" => {
-                        vmstat.pgsteal_direct = parse_item!(path, items.next(), i64, line)?
+                        vmstat.pgsteal_direct =
+                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
                     }
                     "pgscan_kswapd" => {
-                        vmstat.pgscan_kswapd = parse_item!(path, items.next(), i64, line)?
+                        vmstat.pgscan_kswapd =
+                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
                     }
                     "pgscan_direct" => {
-                        vmstat.pgscan_direct = parse_item!(path, items.next(), i64, line)?
+                        vmstat.pgscan_direct =
+                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
                     }
-                    "oom_kill" => vmstat.oom_kill = parse_item!(path, items.next(), i64, line)?,
+                    "oom_kill" => {
+                        vmstat.oom_kill =
+                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
+                    }
                     _ => {}
                 }
             }
@@ -349,6 +364,66 @@ impl ProcReader {
             Err(Error::InvalidFileFormat(path))
         } else {
             Ok(vmstat)
+        }
+    }
+
+    pub fn read_disk_stats(&self) -> Result<DiskMap> {
+        let path = self.path.join("diskstats");
+        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
+        let buf_reader = BufReader::new(file);
+        let mut disk_map: DiskMap = Default::default();
+
+        for line in buf_reader.lines() {
+            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
+
+            let stats_vec: Vec<&str> = line.split(' ').filter(|item| !item.is_empty()).collect();
+            let mut stats_iter = stats_vec.iter();
+            let mut disk_stat: DiskStat = Default::default();
+            disk_stat.major =
+                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            if disk_stat.major.is_none() {
+                continue;
+            }
+            disk_stat.minor =
+                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+
+            disk_stat.name = parse_item!(path, stats_iter.next(), String, line)?;
+
+            let disk_name = disk_stat.name.as_ref().unwrap().to_string();
+
+            disk_stat.read_completed =
+                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            disk_stat.read_merged =
+                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            disk_stat.read_sectors =
+                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            disk_stat.time_spend_read_ms =
+                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            disk_stat.write_completed =
+                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            disk_stat.write_merged =
+                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            disk_stat.write_sectors =
+                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            disk_stat.time_spend_write_ms =
+                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            let mut stats_iter = stats_iter.skip(3);
+            disk_stat.discard_completed =
+                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            disk_stat.discard_merged =
+                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            disk_stat.discard_sectors =
+                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            disk_stat.time_spend_discard_ms =
+                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+
+            disk_map.insert(disk_name, disk_stat);
+        }
+
+        if disk_map.is_empty() {
+            Err(Error::InvalidFileFormat(path))
+        } else {
+            Ok(disk_map)
         }
     }
 

@@ -268,6 +268,14 @@ DirectMap1G:     2097152 kB
     assert_eq!(meminfo.total_huge_pages, Some(0));
     assert_eq!(meminfo.free_huge_pages, Some(0));
     assert_eq!(meminfo.huge_page_size, Some(2048 * 1024));
+    assert_eq!(meminfo.cma_total, Some(0));
+    assert_eq!(meminfo.cma_free, Some(0));
+    assert_eq!(meminfo.vmalloc_total, Some(34_359_738_367 * 1024));
+    assert_eq!(meminfo.vmalloc_used, Some(229_472 * 1024));
+    assert_eq!(meminfo.vmalloc_chunk, Some(0));
+    assert_eq!(meminfo.direct_map_4k, Some(19_445_616 * 1024));
+    assert_eq!(meminfo.direct_map_2m, Some(40_323_072 * 1024));
+    assert_eq!(meminfo.direct_map_1g, Some(2_097_152 * 1024));
 }
 
 #[test]
@@ -411,15 +419,234 @@ swap_ra_hit 139012
     let reader = procfs.get_reader();
     let vmstat = reader.read_vmstat().expect("Failed to read vmstat file");
 
-    assert_eq!(vmstat.pgpgin, Some(5245063123));
-    assert_eq!(vmstat.pgpgout, Some(13772335013));
-    assert_eq!(vmstat.pswpin, Some(2090956));
-    assert_eq!(vmstat.pswpout, Some(3637759));
-    assert_eq!(vmstat.pgsteal_kswapd, Some(1709049230));
-    assert_eq!(vmstat.pgsteal_direct, Some(5652651));
-    assert_eq!(vmstat.pgscan_kswapd, Some(1743683511));
-    assert_eq!(vmstat.pgscan_direct, Some(5877901));
+    assert_eq!(vmstat.pgpgin, Some(5_245_063_123 * 1024));
+    assert_eq!(vmstat.pgpgout, Some(13_772_335_013 * 1024));
+    assert_eq!(vmstat.pswpin, Some(2_090_956 * 1024));
+    assert_eq!(vmstat.pswpout, Some(3_637_759 * 1024));
+    assert_eq!(vmstat.pgsteal_kswapd, Some(1_709_049_230));
+    assert_eq!(vmstat.pgsteal_direct, Some(5_652_651));
+    assert_eq!(vmstat.pgscan_kswapd, Some(1_743_683_511));
+    assert_eq!(vmstat.pgscan_direct, Some(5_877_901));
     assert_eq!(vmstat.oom_kill, Some(0));
+}
+
+#[test]
+fn test_disk_stat() {
+    let diskstats = b"   1       0 ram0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1       1 ram1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1       2 ram2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1       3 ram3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1       4 ram4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1       5 ram5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1       6 ram6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1       7 ram7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1       8 ram8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1       9 ram9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1      10 ram10 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1      11 ram11 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1      12 ram12 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1      13 ram13 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1      14 ram14 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    1      15 ram15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+  253       0 vda 187110061 6006969 23225661674 128112391 136557913 12023946 28151760010 615065070 0 107730702 623152538 1 2 3 4
+  253       1 vda1 15333 522 288946 4125 1707 2227 253642 3073 0 5343 3060 0 0 0 0
+  253       2 vda2 1183986 94095 10301816 266679 2457101 1248583 29645480 3253603 0 1556514 2531673 0 0 0 0
+  253       3 vda3 185910515 5912352 23215062392 127841533 132254952 10773136 28121859920 611595170 0 106665419 620613687 0 0 0 0
+    7       0 loop0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7       1 loop1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7       2 loop2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7       3 loop3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7       4 loop4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7       5 loop5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7       6 loop6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7       7 loop7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7       8 loop8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7       9 loop9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      10 loop10 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      11 loop11 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      12 loop12 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      13 loop13 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      14 loop14 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      15 loop15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      16 loop16 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      17 loop17 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      18 loop18 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      19 loop19 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      20 loop20 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      21 loop21 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      22 loop22 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      23 loop23 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      24 loop24 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      25 loop25 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      26 loop26 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      27 loop27 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      28 loop28 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      29 loop29 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      30 loop30 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      31 loop31 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      32 loop32 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      33 loop33 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      34 loop34 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      35 loop35 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      36 loop36 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      37 loop37 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      38 loop38 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      39 loop39 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      40 loop40 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      41 loop41 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      42 loop42 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      43 loop43 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      44 loop44 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      45 loop45 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      46 loop46 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      47 loop47 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      48 loop48 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      49 loop49 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      50 loop50 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      51 loop51 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      52 loop52 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      53 loop53 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      54 loop54 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      55 loop55 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      56 loop56 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      57 loop57 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      58 loop58 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      59 loop59 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      60 loop60 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      61 loop61 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      62 loop62 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      63 loop63 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      64 loop64 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      65 loop65 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      66 loop66 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      67 loop67 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      68 loop68 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      69 loop69 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      70 loop70 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      71 loop71 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      72 loop72 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      73 loop73 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      74 loop74 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      75 loop75 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      76 loop76 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      77 loop77 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      78 loop78 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      79 loop79 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      80 loop80 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      81 loop81 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      82 loop82 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      83 loop83 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      84 loop84 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      85 loop85 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      86 loop86 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      87 loop87 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      88 loop88 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      89 loop89 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      90 loop90 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      91 loop91 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      92 loop92 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      93 loop93 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      94 loop94 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      95 loop95 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      96 loop96 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      97 loop97 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      98 loop98 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7      99 loop99 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     100 loop100 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     101 loop101 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     102 loop102 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     103 loop103 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     104 loop104 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     105 loop105 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     106 loop106 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     107 loop107 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     108 loop108 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     109 loop109 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     110 loop110 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     111 loop111 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     112 loop112 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     113 loop113 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     114 loop114 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     115 loop115 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     116 loop116 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     117 loop117 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     118 loop118 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     119 loop119 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     120 loop120 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     121 loop121 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     122 loop122 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     123 loop123 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     124 loop124 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     125 loop125 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     126 loop126 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    7     127 loop127 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
+
+    let procfs = TestProcfs::new();
+    procfs.create_file_with_content("diskstats", diskstats);
+    let reader = procfs.get_reader();
+    let diskmap = reader
+        .read_disk_stats()
+        .expect("Failed to read diskstats file");
+    assert_eq!(diskmap.len(), 4);
+    let vda_stat = diskmap.get("vda").expect("Fail to get vda");
+    assert_eq!(vda_stat.name, Some("vda".into()));
+    assert_eq!(vda_stat.read_completed, Some(187_110_061));
+    assert_eq!(vda_stat.read_merged, Some(6_006_969));
+    assert_eq!(vda_stat.read_sectors, Some(23_225_661_674));
+    assert_eq!(vda_stat.time_spend_read_ms, Some(128_112_391));
+    assert_eq!(vda_stat.write_completed, Some(136_557_913));
+    assert_eq!(vda_stat.write_merged, Some(12_023_946));
+    assert_eq!(vda_stat.write_sectors, Some(28_151_760_010));
+    assert_eq!(vda_stat.time_spend_write_ms, Some(615_065_070));
+    assert_eq!(vda_stat.discard_completed, Some(1));
+    assert_eq!(vda_stat.discard_merged, Some(2));
+    assert_eq!(vda_stat.discard_sectors, Some(3));
+    assert_eq!(vda_stat.time_spend_discard_ms, Some(4));
+
+    let vda_stat = diskmap.get("vda1").expect("Fail to get vda1");
+    assert_eq!(vda_stat.name, Some("vda1".into()));
+    assert_eq!(vda_stat.read_completed, Some(15333));
+    assert_eq!(vda_stat.read_merged, Some(522));
+    assert_eq!(vda_stat.read_sectors, Some(288_946));
+    assert_eq!(vda_stat.time_spend_read_ms, Some(4125));
+    assert_eq!(vda_stat.write_completed, Some(1707));
+    assert_eq!(vda_stat.write_merged, Some(2227));
+    assert_eq!(vda_stat.write_sectors, Some(253_642));
+    assert_eq!(vda_stat.time_spend_write_ms, Some(3073));
+    assert_eq!(vda_stat.discard_completed, Some(0));
+    assert_eq!(vda_stat.discard_merged, Some(0));
+    assert_eq!(vda_stat.discard_sectors, Some(0));
+    assert_eq!(vda_stat.time_spend_discard_ms, Some(0));
+
+    let vda_stat = diskmap.get("vda2").expect("Fail to get vda2");
+    assert_eq!(vda_stat.name, Some("vda2".into()));
+    assert_eq!(vda_stat.read_completed, Some(1_183_986));
+    assert_eq!(vda_stat.read_merged, Some(94095));
+    assert_eq!(vda_stat.read_sectors, Some(10_301_816));
+    assert_eq!(vda_stat.time_spend_read_ms, Some(266_679));
+    assert_eq!(vda_stat.write_completed, Some(2_457_101));
+    assert_eq!(vda_stat.write_merged, Some(1_248_583));
+    assert_eq!(vda_stat.write_sectors, Some(29_645_480));
+    assert_eq!(vda_stat.time_spend_write_ms, Some(3_253_603));
+    assert_eq!(vda_stat.discard_completed, Some(0));
+    assert_eq!(vda_stat.discard_merged, Some(0));
+    assert_eq!(vda_stat.discard_sectors, Some(0));
+    assert_eq!(vda_stat.time_spend_discard_ms, Some(0));
+
+    let vda_stat = diskmap.get("vda3").expect("Fail to get vda3");
+    assert_eq!(vda_stat.name, Some("vda3".into()));
+    assert_eq!(vda_stat.read_completed, Some(185_910_515));
+    assert_eq!(vda_stat.read_merged, Some(5_912_352));
+    assert_eq!(vda_stat.read_sectors, Some(23_215_062_392));
+    assert_eq!(vda_stat.time_spend_read_ms, Some(127_841_533));
+    assert_eq!(vda_stat.write_completed, Some(132_254_952));
+    assert_eq!(vda_stat.write_merged, Some(10_773_136));
+    assert_eq!(vda_stat.write_sectors, Some(28_121_859_920));
+    assert_eq!(vda_stat.time_spend_write_ms, Some(611_595_170));
+    assert_eq!(vda_stat.discard_completed, Some(0));
+    assert_eq!(vda_stat.discard_merged, Some(0));
+    assert_eq!(vda_stat.discard_sectors, Some(0));
+    assert_eq!(vda_stat.time_spend_discard_ms, Some(0));
 }
 
 #[test]
