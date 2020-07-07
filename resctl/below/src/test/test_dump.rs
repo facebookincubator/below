@@ -664,7 +664,7 @@ fn test_dump_cgroup_content() {
 }
 
 #[test]
-// Test correctness of link decoration
+// Test correctness of iface decoration
 // This test will also test JSON correctness.
 fn test_dump_iface_content() {
     let mut collector = Collector::new(get_dummy_exit_data());
@@ -1004,6 +1004,156 @@ fn test_dump_network_content() {
             value["Icmp6OutDestUnreachs"].as_str().unwrap(),
             nm.icmp6.get_out_dest_unreachs_str()
         );
+        count -= 1;
+        if count == 0 {
+            break;
+        }
+    }
+}
+
+#[test]
+// Test correctness of transport decoration
+// This test will also test JSON correctness.
+fn test_dump_transport_content() {
+    let mut collector = Collector::new(get_dummy_exit_data());
+    let logger = get_logger();
+    collector.update_model(&logger).expect("Fail to get model");
+    let time = SystemTime::now();
+    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
+
+    let mut opts: GeneralOpt = Default::default();
+    opts.everything = true;
+    opts.output_format = Some(OutputFormat::Json);
+    let mut transport_handle = transport::Transport::new(opts, advance, time, None);
+    transport_handle.init(None);
+
+    // update model again to populate net data
+    let model = collector.update_model(&logger).expect("Fail to get model");
+    let mut transport_content = StrIo::new();
+    let mut round = 0;
+    transport_handle
+        .iterate_exec(&model, &mut transport_content, &mut round, false)
+        .expect("Fail to get json from iterate_exec");
+
+    // verify json correctness
+    assert!(!transport_content.content.is_empty());
+    let jval: Value =
+        serde_json::from_str(&transport_content.content).expect("Fail parse json of network dump");
+
+    // verify content correctness, test first 5 should be enough
+    let mut count = 5;
+    let nm = model.network;
+    for value in jval.as_array().unwrap() {
+        // ip
+        assert_eq!(
+            value["TcpActiveOpens/s"].as_str().unwrap(),
+            nm.tcp.get_active_opens_per_sec_str()
+        );
+        assert_eq!(
+            value["TcpPassiveOpens/s"].as_str().unwrap(),
+            nm.tcp.get_passive_opens_per_sec_str()
+        );
+        assert_eq!(
+            value["TcpAttemptFails/s"].as_str().unwrap(),
+            nm.tcp.get_attempt_fails_per_sec_str()
+        );
+        assert_eq!(
+            value["TcpEstabResets/s"].as_str().unwrap(),
+            nm.tcp.get_estab_resets_per_sec_str()
+        );
+        assert_eq!(
+            value["CurEstabConn"].as_str().unwrap(),
+            nm.tcp.get_curr_estab_conn_str()
+        );
+        assert_eq!(
+            value["TcpInSegs/s"].as_str().unwrap(),
+            nm.tcp.get_in_segs_per_sec_str()
+        );
+        assert_eq!(
+            value["TcpOutSegs/s"].as_str().unwrap(),
+            nm.tcp.get_out_segs_per_sec_str()
+        );
+        assert_eq!(
+            value["TcpRetransSegs/s"].as_str().unwrap(),
+            nm.tcp.get_retrans_segs_per_sec_str()
+        );
+        assert_eq!(
+            value["TcpRetransSegs"].as_str().unwrap(),
+            nm.tcp.get_retrans_segs_str()
+        );
+        assert_eq!(
+            value["TcpInErrors"].as_str().unwrap(),
+            nm.tcp.get_in_errs_str()
+        );
+        assert_eq!(
+            value["TcpOutRsts/s"].as_str().unwrap(),
+            nm.tcp.get_out_rsts_per_sec_str()
+        );
+        assert_eq!(
+            value["TcpInCsumErrors"].as_str().unwrap(),
+            nm.tcp.get_in_csum_errors_str()
+        );
+        assert_eq!(
+            value["UdpInPkts/s"].as_str().unwrap(),
+            nm.udp.get_in_datagrams_pkts_per_sec_str()
+        );
+        assert_eq!(
+            value["UdpNoPorts"].as_str().unwrap(),
+            nm.udp.get_no_ports_str()
+        );
+        assert_eq!(
+            value["UdpInErrs"].as_str().unwrap(),
+            nm.udp.get_in_errors_str()
+        );
+        assert_eq!(
+            value["UdpOutPkts/s"].as_str().unwrap(),
+            nm.udp.get_out_datagrams_pkts_per_sec_str()
+        );
+        assert_eq!(
+            value["UdpRcvbufErrs"].as_str().unwrap(),
+            nm.udp.get_rcvbuf_errors_str()
+        );
+        assert_eq!(
+            value["UdpSndBufErrs"].as_str().unwrap(),
+            nm.udp.get_sndbuf_errors_str()
+        );
+        assert_eq!(
+            value["UdpIgnoredMulti"].as_str().unwrap(),
+            nm.udp.get_ignored_multi_str()
+        );
+        assert_eq!(
+            value["Udp6InPkts/s"].as_str().unwrap(),
+            nm.udp6.get_in_datagrams_pkts_per_sec_str()
+        );
+        assert_eq!(
+            value["Udp6NoPorts"].as_str().unwrap(),
+            nm.udp6.get_no_ports_str()
+        );
+        assert_eq!(
+            value["Udp6InErrs"].as_str().unwrap(),
+            nm.udp6.get_in_errors_str()
+        );
+        assert_eq!(
+            value["Udp6OutPkts/s"].as_str().unwrap(),
+            nm.udp6.get_out_datagrams_pkts_per_sec_str()
+        );
+        assert_eq!(
+            value["Udp6RcvbufErrs"].as_str().unwrap(),
+            nm.udp6.get_rcvbuf_errors_str()
+        );
+        assert_eq!(
+            value["Udp6SndBufErrs"].as_str().unwrap(),
+            nm.udp6.get_sndbuf_errors_str()
+        );
+        assert_eq!(
+            value["Udp6InCsumErrs"].as_str().unwrap(),
+            nm.udp6.get_in_csum_errors_str()
+        );
+        assert_eq!(
+            value["Udp6IgnoredMulti"].as_str().unwrap(),
+            nm.udp6.get_ignored_multi_str()
+        );
+
         count -= 1;
         if count == 0 {
             break;

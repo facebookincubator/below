@@ -40,10 +40,12 @@ pub mod print;
 pub mod process;
 pub mod system;
 pub mod tmain;
+pub mod transport;
 
 pub use command::DumpCommand;
 use command::{
     CgroupField, GeneralOpt, IfaceField, NetworkField, OutputFormat, ProcField, SysField,
+    TransportField,
 };
 use fill::Dfill;
 use get::Dget;
@@ -172,6 +174,16 @@ pub fn run(
             let mut network = network::Network::new(opts, advance, time_end, select);
             network.init(fields);
             network.exec()
+        }
+        DumpCommand::Transport {
+            fields,
+            opts,
+            select,
+        } => {
+            let (time_end, advance) = get_advance(logger, dir, host, port, &opts.begin, &opts.end)?;
+            let mut transport = transport::Transport::new(opts, advance, time_end, select);
+            transport.init(fields);
+            transport.exec()
         }
     }
 }

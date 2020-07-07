@@ -244,6 +244,9 @@ make_option! (NetworkField {
 make_option!(TransportField {
     "timestamp": Timestamp,
     "datetime": Datetime,
+    "tcp": Tcp,
+    "udp": Udp,
+    "udp6": Udp6,
     "tcp_active_opens": ActiveOpens,
     "tcp_passive_opens": PassiveOpens,
     "tcp_attempt_fails": AttemptFailed,
@@ -269,6 +272,7 @@ make_option!(TransportField {
     "udp6_out_datagrams": OutDgrms6,
     "udp6_recv_buf_errs": RecvBufErrs6,
     "udp6_snd_buf_errs": SndBufErrs6,
+    "udp6_in_csum_errs": InCsumErrs6,
     "udp6_ignored_multi": IgnoredMulti6,
 });
 
@@ -544,5 +548,45 @@ pub enum DumpCommand {
         /// Select field for operation, use with --filter
         #[structopt(long, short)]
         select: Option<NetworkField>,
+    },
+    /// Dump the transport layer stats including tcp and udp
+    ///
+    /// ********************** Available fields **********************
+    ///
+    /// timestamp, datetime
+    ///
+    /// tcp_active_opens, tcp_passive_opens, tcp_attempt_fails, tcp_estab_reset, tcp_curr_estab, tcp_in_segs,
+    /// tcp_out_segs, tcp_retrans_segs_per_sec, tcp_retrans_segs, tcp_in_errs, tcp_out_rsts, tcp_in_csum_errs
+    ///
+    /// udp_in_datagrams, udp_no_ports, udp_in_errs, udp_out_datagrams, udp_recv_buf_errs, udp_snd_buf_errs, udp_ignored_multi
+    ///
+    /// udp6_in_datagrams, udp6_no_ports, udp6_in_errs, udp6_out_datagrams, udp6_recv_buf_errs, udp6_snd_buf_errs
+    /// udp6_ignored_multi
+    ///
+    /// ********************** Aggregated fields **********************
+    ///
+    /// * tcp: includes [tcp_*].
+    ///
+    /// * udp: includes [udp_*].
+    ///
+    /// * udp6: includes [udo6_*].
+    ///
+    /// --default will have all of [tcp, udp, udp6].
+    ///
+    /// ********************** Example Commands **********************
+    ///
+    /// Example:
+    ///
+    /// $ below dump transport -b "08:30:00" -e "08:30:30" -f tcp udp -O json
+    ///
+    Transport {
+        /// Select which fields to display and in what order.
+        #[structopt(short, long)]
+        fields: Option<Vec<TransportField>>,
+        #[structopt(flatten)]
+        opts: GeneralOpt,
+        /// Select field for operation, use with --filter
+        #[structopt(long, short)]
+        select: Option<TransportField>,
     },
 }
