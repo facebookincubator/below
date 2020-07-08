@@ -60,7 +60,7 @@ impl CgroupModel {
         sample: &CgroupSample,
         last: Option<(&CgroupSample, Duration)>,
     ) -> CgroupModel {
-        let (cpu, io, io_total) = if let Some((last, delta)) = last {
+        let (cpu, io, io_total, memory) = if let Some((last, delta)) = last {
             // We have cumulative data, create cpu, io models
             let cpu = match (last.cpu_stat.as_ref(), sample.cpu_stat.as_ref()) {
                 (Some(begin), Some(end)) => Some(CgroupCpuModel::new(begin, end, delta)),
@@ -86,23 +86,28 @@ impl CgroupModel {
                     .iter()
                     .fold(CgroupIoModel::empty(), |acc, (_, model)| acc + model)
             });
-            (cpu, io, io_total)
+
+            let memory = match (last.memory_stat.as_ref(), sample.memory_stat.as_ref()) {
+                (Some(begin), Some(end)) => Some(CgroupMemoryModel::new(
+                    sample.memory_current.map(|v| v as u64),
+                    sample.memory_swap_current.map(|v| v as u64),
+                    begin,
+                    end,
+                    delta,
+                )),
+                _ => None,
+            };
+
+            (cpu, io, io_total, memory)
         } else {
             // No cumulative data
-            (None, None, None)
+            (None, None, None, None)
         };
         let pressure = sample
             .pressure
             .as_ref()
             .map(|p| CgroupPressureModel::new(p));
-        let memory = match sample.memory_stat.as_ref() {
-            Some(mem_stat) => Some(CgroupMemoryModel::new(
-                sample.memory_current.map(|v| v as u64),
-                sample.memory_swap_current.map(|v| v as u64),
-                mem_stat,
-            )),
-            _ => None,
-        };
+
         // recursively calculate view of children
         // `children` is optional, but we treat it the same as an empty map
         let empty = BTreeMap::new();
@@ -317,42 +322,59 @@ impl CgroupMemoryModel {
     pub fn new(
         current: Option<u64>,
         swap: Option<u64>,
-        stat: &cgroupfs::MemoryStat,
+        begin: &cgroupfs::MemoryStat,
+        end: &cgroupfs::MemoryStat,
+        delta: Duration,
     ) -> CgroupMemoryModel {
         CgroupMemoryModel {
             total: current,
             swap,
-            anon: stat.anon.map(|v| v as u64),
-            file: stat.file.map(|v| v as u64),
-            kernel_stack: stat.kernel_stack.map(|v| v as u64),
-            slab: stat.slab.map(|v| v as u64),
-            sock: stat.sock.map(|v| v as u64),
-            shmem: stat.shmem.map(|v| v as u64),
-            file_mapped: stat.file_mapped.map(|v| v as u64),
-            file_dirty: stat.file_dirty.map(|v| v as u64),
-            file_writeback: stat.file_writeback.map(|v| v as u64),
-            anon_thp: stat.anon_thp.map(|v| v as u64),
-            inactive_anon: stat.inactive_anon.map(|v| v as u64),
-            active_anon: stat.active_anon.map(|v| v as u64),
-            inactive_file: stat.inactive_file.map(|v| v as u64),
-            active_file: stat.active_file.map(|v| v as u64),
-            unevictable: stat.unevictable.map(|v| v as u64),
-            slab_reclaimable: stat.slab_reclaimable.map(|v| v as u64),
-            slab_unreclaimable: stat.slab_unreclaimable.map(|v| v as u64),
-            pgfault: stat.pgfault.map(|v| v as u64),
-            pgmajfault: stat.pgmajfault.map(|v| v as u64),
-            workingset_refault: stat.workingset_refault.map(|v| v as u64),
-            workingset_activate: stat.workingset_activate.map(|v| v as u64),
-            workingset_nodereclaim: stat.workingset_nodereclaim.map(|v| v as u64),
-            pgrefill: stat.pgrefill.map(|v| v as u64),
-            pgscan: stat.pgscan.map(|v| v as u64),
-            pgsteal: stat.pgsteal.map(|v| v as u64),
-            pgactivate: stat.pgactivate.map(|v| v as u64),
-            pgdeactivate: stat.pgdeactivate.map(|v| v as u64),
-            pglazyfree: stat.pglazyfree.map(|v| v as u64),
-            pglazyfreed: stat.pglazyfreed.map(|v| v as u64),
-            thp_fault_alloc: stat.thp_fault_alloc.map(|v| v as u64),
-            thp_collapse_alloc: stat.thp_collapse_alloc.map(|v| v as u64),
+            anon: end.anon.map(|v| v as u64),
+            file: end.file.map(|v| v as u64),
+            kernel_stack: end.kernel_stack.map(|v| v as u64),
+            slab: end.slab.map(|v| v as u64),
+            sock: end.sock.map(|v| v as u64),
+            shmem: end.shmem.map(|v| v as u64),
+            file_mapped: end.file_mapped.map(|v| v as u64),
+            file_dirty: end.file_dirty.map(|v| v as u64),
+            file_writeback: end.file_writeback.map(|v| v as u64),
+            anon_thp: end.anon_thp.map(|v| v as u64),
+            inactive_anon: end.inactive_anon.map(|v| v as u64),
+            active_anon: end.active_anon.map(|v| v as u64),
+            inactive_file: end.inactive_file.map(|v| v as u64),
+            active_file: end.active_file.map(|v| v as u64),
+            unevictable: end.unevictable.map(|v| v as u64),
+            slab_reclaimable: end.slab_reclaimable.map(|v| v as u64),
+            slab_unreclaimable: end.slab_unreclaimable.map(|v| v as u64),
+            pgfault: count_per_sec!(begin.pgfault, end.pgfault, delta, u64),
+            pgmajfault: count_per_sec!(begin.pgmajfault, end.pgmajfault, delta, u64),
+            workingset_refault: count_per_sec!(
+                begin.workingset_refault,
+                end.workingset_refault,
+                delta,
+                u64
+            ),
+            workingset_activate: count_per_sec!(
+                begin.workingset_activate,
+                end.workingset_activate,
+                delta,
+                u64
+            ),
+            workingset_nodereclaim: count_per_sec!(
+                begin.workingset_nodereclaim,
+                end.workingset_nodereclaim,
+                delta,
+                u64
+            ),
+            pgrefill: count_per_sec!(begin.pgrefill, end.pgrefill, delta, u64),
+            pgscan: count_per_sec!(begin.pgscan, end.pgscan, delta, u64),
+            pgsteal: count_per_sec!(begin.pgsteal, end.pgsteal, delta, u64),
+            pgactivate: count_per_sec!(begin.pgactivate, end.pgactivate, delta, u64),
+            pgdeactivate: count_per_sec!(begin.pgdeactivate, end.pgdeactivate, delta, u64),
+            pglazyfree: count_per_sec!(begin.pglazyfree, end.pglazyfree, delta, u64),
+            pglazyfreed: count_per_sec!(begin.pglazyfreed, end.pglazyfreed, delta, u64),
+            thp_fault_alloc: end.thp_fault_alloc.map(|v| v as u64),
+            thp_collapse_alloc: end.thp_collapse_alloc.map(|v| v as u64),
         }
     }
 }

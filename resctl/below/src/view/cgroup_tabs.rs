@@ -297,7 +297,7 @@ pub struct CgroupMem {
     #[blink("CgroupModel$memory?.get_swap")]
     #[bttr(
         title = "Memory Swap",
-        width = 11,
+        width = 13,
         decorator = "convert_bytes($ as f64)",
         sort_tag = "CgroupOrders::MemorySwap"
     )]
@@ -321,7 +321,7 @@ pub struct CgroupMem {
     #[blink("CgroupModel$memory?.get_kernel_stack")]
     #[bttr(
         title = "Kernel Stack",
-        width = 12,
+        width = 14,
         decorator = "convert_bytes($ as f64)",
         sort_tag = "CgroupOrders::KernelStack"
     )]
@@ -353,7 +353,7 @@ pub struct CgroupMem {
     #[blink("CgroupModel$memory?.get_file_mapped")]
     #[bttr(
         title = "File Mapped",
-        width = 11,
+        width = 13,
         decorator = "convert_bytes($ as f64)",
         sort_tag = "CgroupOrders::FileMapped"
     )]
@@ -361,7 +361,7 @@ pub struct CgroupMem {
     #[blink("CgroupModel$memory?.get_file_dirty")]
     #[bttr(
         title = "File Dirty",
-        width = 11,
+        width = 13,
         decorator = "convert_bytes($ as f64)",
         sort_tag = "CgroupOrders::FileDirty"
     )]
@@ -385,7 +385,7 @@ pub struct CgroupMem {
     #[blink("CgroupModel$memory?.get_inactive_anon")]
     #[bttr(
         title = "Inactive Anon",
-        width = 13,
+        width = 15,
         decorator = "convert_bytes($ as f64)",
         sort_tag = "CgroupOrders::InactiveAnon"
     )]
@@ -393,7 +393,7 @@ pub struct CgroupMem {
     #[blink("CgroupModel$memory?.get_active_anon")]
     #[bttr(
         title = "Active Anon",
-        width = 11,
+        width = 13,
         decorator = "convert_bytes($ as f64)",
         sort_tag = "CgroupOrders::ActiveAnon"
     )]
@@ -401,7 +401,7 @@ pub struct CgroupMem {
     #[blink("CgroupModel$memory?.get_inactive_file")]
     #[bttr(
         title = "Inactive File",
-        width = 13,
+        width = 15,
         decorator = "convert_bytes($ as f64)",
         sort_tag = "CgroupOrders::InactiveFile"
     )]
@@ -409,7 +409,7 @@ pub struct CgroupMem {
     #[blink("CgroupModel$memory?.get_active_file")]
     #[bttr(
         title = "Active File",
-        width = 11,
+        width = 13,
         decorator = "convert_bytes($ as f64)",
         sort_tag = "CgroupOrders::ActiveFile"
     )]
@@ -417,7 +417,7 @@ pub struct CgroupMem {
     #[blink("CgroupModel$memory?.get_unevictable")]
     #[bttr(
         title = "Unevictable",
-        width = 11,
+        width = 13,
         decorator = "convert_bytes($ as f64)",
         sort_tag = "CgroupOrders::Unevictable"
     )]
@@ -425,7 +425,7 @@ pub struct CgroupMem {
     #[blink("CgroupModel$memory?.get_slab_reclaimable")]
     #[bttr(
         title = "Slab Reclaimable",
-        width = 16,
+        width = 18,
         decorator = "convert_bytes($ as f64)",
         sort_tag = "CgroupOrders::SlabReclaimable"
     )]
@@ -433,75 +433,75 @@ pub struct CgroupMem {
     #[blink("CgroupModel$memory?.get_slab_unreclaimable")]
     #[bttr(
         title = "Slab Unreclaimable",
-        width = 18,
+        width = 20,
         decorator = "convert_bytes($ as f64)",
         sort_tag = "CgroupOrders::SlabUnreclaimable"
     )]
     pub slab_unreclaimable: Option<u64>,
     #[blink("CgroupModel$memory?.get_pgfault")]
-    #[bttr(title = "Pgfault", width = 11, sort_tag = "CgroupOrders::Pgfault")]
+    #[bttr(title = "Pgfault/s", width = 11, sort_tag = "CgroupOrders::Pgfault")]
     pub pgfault: Option<u64>,
     #[blink("CgroupModel$memory?.get_pgmajfault")]
     #[bttr(
-        title = "Pgmajfault",
-        width = 11,
+        title = "Pgmajfault/s",
+        width = 15,
         sort_tag = "CgroupOrders::Pgmajfault"
     )]
     pub pgmajfault: Option<u64>,
     #[blink("CgroupModel$memory?.get_workingset_refault")]
     #[bttr(
-        title = "Workingset Refault",
-        width = 18,
+        title = "Workingset Refault/s",
+        width = 23,
         sort_tag = "CgroupOrders::WorkingsetRefault"
     )]
     pub workingset_refault: Option<u64>,
     #[blink("CgroupModel$memory?.get_workingset_activate")]
     #[bttr(
-        title = "Workingset Activate",
-        width = 20,
+        title = "Workingset Activate/s",
+        width = 25,
         sort_tag = "CgroupOrders::WorkingsetActivate"
     )]
     pub workingset_activate: Option<u64>,
     #[blink("CgroupModel$memory?.get_workingset_nodereclaim")]
     #[bttr(
-        title = "Workingset Nodereclaim",
-        width = 18,
+        title = "Workingset Nodereclaim/s",
+        width = 25,
         sort_tag = "CgroupOrders::WorkingsetNodereclaim"
     )]
     pub workingset_nodereclaim: Option<u64>,
     #[blink("CgroupModel$memory?.get_pgrefill")]
-    #[bttr(title = "Pgrefill", width = 11, sort_tag = "CgroupOrders::Pgrefill")]
+    #[bttr(title = "Pgrefill/s", width = 11, sort_tag = "CgroupOrders::Pgrefill")]
     pub pgrefill: Option<u64>,
     #[blink("CgroupModel$memory?.get_pgscan")]
-    #[bttr(title = "Pgscan", width = 11, sort_tag = "CgroupOrders::Pgscan")]
+    #[bttr(title = "Pgscan/s", width = 11, sort_tag = "CgroupOrders::Pgscan")]
     pub pgscan: Option<u64>,
     #[blink("CgroupModel$memory?.get_pgsteal")]
-    #[bttr(title = "Pgsteal", width = 11, sort_tag = "CgroupOrders::Pgsteal")]
+    #[bttr(title = "Pgsteal/s", width = 13, sort_tag = "CgroupOrders::Pgsteal")]
     pub pgsteal: Option<u64>,
     #[blink("CgroupModel$memory?.get_pgactivate")]
     #[bttr(
-        title = "Pgactivate",
-        width = 11,
+        title = "Pgactivate/s",
+        width = 15,
         sort_tag = "CgroupOrders::Pgactivate"
     )]
     pub pgactivate: Option<u64>,
     #[blink("CgroupModel$memory?.get_pgdeactivate")]
     #[bttr(
-        title = "Pgdeactivate",
-        width = 14,
+        title = "Pgdeactivate/s",
+        width = 17,
         sort_tag = "CgroupOrders::Pgdeactivate"
     )]
     pub pgdeactivate: Option<u64>,
     #[blink("CgroupModel$memory?.get_pglazyfree")]
     #[bttr(
-        title = "Pglazyfree",
-        width = 11,
+        title = "Pglazyfree/s",
+        width = 15,
         sort_tag = "CgroupOrders::Pglazyfree"
     )]
     pub pglazyfree: Option<u64>,
     #[blink("CgroupModel$memory?.get_pglazyfreed")]
     #[bttr(
-        title = "Pglazyfreed",
+        title = "Pglazyfreed/s",
         width = 18,
         sort_tag = "CgroupOrders::Pglazyfreed"
     )]
