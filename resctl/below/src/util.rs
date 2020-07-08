@@ -13,6 +13,7 @@
 // limitations under the License.
 
 /// This file contains various helpers
+use chrono::prelude::*;
 use std::collections::HashSet;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -37,7 +38,7 @@ pub fn convert_bytes(val: f64) -> String {
     if val < 1_f64 {
         return format!("{:.1} B", val);
     }
-    let delimiter = 1000_f64;
+    let delimiter = 1024_f64;
     let exponent = std::cmp::min(
         (val.ln() / delimiter.ln()).floor() as i32,
         (units.len() - 1) as i32,
@@ -128,4 +129,14 @@ pub fn calculate_filter_out_set(cgroup: &CgroupModel, filter: &str) -> HashSet<S
     let mut set = HashSet::new();
     should_filter_out(&cgroup, &filter, &mut set);
     set
+}
+
+/// Convert system time to human readable datetime.
+pub fn translate_datetime(timestamp: &i64) -> String {
+    let naive = NaiveDateTime::from_timestamp(timestamp.clone(), 0);
+    let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+    datetime
+        .with_timezone(&Local)
+        .format("%Y-%m-%d %H:%M:%S")
+        .to_string()
 }

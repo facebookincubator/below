@@ -68,6 +68,8 @@ mod stats_view;
 mod cgroup_tabs;
 mod cgroup_view;
 mod command_palette;
+mod core_tabs;
+mod core_view;
 mod filter_popup;
 mod help_menu;
 mod process_tabs;
@@ -97,6 +99,7 @@ pub enum MainViewState {
     Cgroup,
     Process,
     ProcessZoomedIntoCgroup,
+    Core,
 }
 
 // Invoked either when the data view was explicitly advanced, or
@@ -114,6 +117,7 @@ fn refresh(c: &mut Cursive) {
         MainViewState::Process | MainViewState::ProcessZoomedIntoCgroup => {
             process_view::ProcessView::refresh(c)
         }
+        MainViewState::Core => core_view::CoreView::refresh(c),
     }
 }
 
@@ -186,6 +190,7 @@ impl View {
         let system_view = system_view::new(&mut self.inner);
         let process_view = process_view::ProcessView::new(&mut self.inner);
         let cgroup_view = cgroup_view::CgroupView::new(&mut self.inner);
+        let core_view = core_view::CoreView::new(&mut self.inner);
         self.inner
             .add_fullscreen_layer(ResizedView::with_full_screen(
                 LinearLayout::vertical()
@@ -194,6 +199,9 @@ impl View {
                     .child(
                         OnEventView::new(
                             StackView::new()
+                                .fullscreen_layer(ResizedView::with_full_screen(
+                                    core_view.with_name("core_view_panel"),
+                                ))
                                 .fullscreen_layer(ResizedView::with_full_screen(
                                     process_view.with_name("process_view_panel"),
                                 ))
@@ -226,6 +234,19 @@ impl View {
                                     .user_data::<ViewState>()
                                     .expect("No data stored in Cursive object!");
                                 view_state.main_view_state = MainViewState::Cgroup;
+                            }))
+                        })
+                        .on_pre_event_inner('s', |stack, _| {
+                            let position = (*stack.get_mut())
+                                .find_layer_from_name("core_view_panel")
+                                .expect("Failed to find core view");
+                            (*stack.get_mut()).move_to_front(position);
+
+                            Some(EventResult::with_cb(|c| {
+                                let view_state = c
+                                    .user_data::<ViewState>()
+                                    .expect("No data stored in Cursive object!");
+                                view_state.main_view_state = MainViewState::Core;
                             }))
                         })
                         .on_pre_event('z', |c| {
@@ -266,6 +287,7 @@ impl View {
                                         .cgroup_filter = None;
                                     MainViewState::Process
                                 }
+                                _ => return,
                             };
 
                             c.call_on_name(
@@ -287,6 +309,7 @@ impl View {
                                                 .expect("Failed to find cgroup view");
                                             (*stack.get_mut()).move_to_front(cgroup_pos);
                                         }
+                                        MainViewState::Core => (),
                                     }
                                 },
                             )

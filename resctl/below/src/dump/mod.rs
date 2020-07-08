@@ -16,6 +16,7 @@ use crate::advance::Advance;
 use crate::dateutil;
 use crate::model;
 use crate::store::Direction;
+use crate::util::translate_datetime;
 
 use std::collections::HashSet;
 use std::fs::File;
@@ -25,7 +26,6 @@ use std::path::PathBuf;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, Result};
-use chrono::prelude::*;
 use regex::Regex;
 use serde_json::{json, Value};
 
@@ -110,15 +110,6 @@ fn get_advance(
     advance.initialize();
 
     Ok((time_end, advance))
-}
-
-fn translate_datetime(timestamp: &i64) -> String {
-    let naive = NaiveDateTime::from_timestamp(timestamp.clone(), 0);
-    let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-    datetime
-        .with_timezone(&Local)
-        .format("%Y-%m-%d %H:%M:%S")
-        .to_string()
 }
 
 pub fn run(

@@ -168,6 +168,8 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             tab_titles_map.insert(tab.into(), title_vec);
         }
 
+        let default_tab = tabs[0].clone();
+
         let detailed_view = OnEventView::new(Panel::new(
             LinearLayout::vertical()
                 .child(
@@ -180,7 +182,7 @@ impl<V: 'static + ViewBridge> StatsView<V> {
                         .child(
                             TabView::new(
                                 tab_titles_map
-                                    .get("General")
+                                    .get(&default_tab)
                                     .expect("Fail to query general tab")
                                     .clone(),
                                 " ",
