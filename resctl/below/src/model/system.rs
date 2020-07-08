@@ -459,13 +459,13 @@ pub struct VmModel {
         unit = "/s"
     )]
     pub pswpout_per_sec: Option<f64>,
-    #[bttr(title = "Pgsteal Kswapd", width = 20, unit = " pages")]
+    #[bttr(title = "Pgsteal Kswapd", width = 20, unit = " pages/s")]
     pub pgsteal_kswapd: Option<u64>,
-    #[bttr(title = "Pgsteal Direct", width = 20, unit = " pages")]
+    #[bttr(title = "Pgsteal Direct", width = 20, unit = " pages/s")]
     pub pgsteal_direct: Option<u64>,
-    #[bttr(title = "Pgscan Kswapd", width = 20, unit = " pages")]
+    #[bttr(title = "Pgscan Kswapd", width = 20, unit = " pages/s")]
     pub pgscan_kswapd: Option<u64>,
-    #[bttr(title = "Pgscan Direct", width = 20, unit = " pages")]
+    #[bttr(title = "Pgscan Direct", width = 20, unit = " pages/s")]
     pub pgscan_direct: Option<u64>,
     #[bttr(title = "OOM Kills", width = 20)]
     pub oom_kill: Option<u64>,
@@ -478,10 +478,10 @@ impl VmModel {
             pgpgout_per_sec: count_per_sec!(begin.pgpgout, end.pgpgout, duration),
             pswpin_per_sec: count_per_sec!(begin.pswpin, end.pswpin, duration),
             pswpout_per_sec: count_per_sec!(begin.pswpout, end.pswpout, duration),
-            pgsteal_kswapd: end.pgsteal_kswapd.map(|v| v as u64),
-            pgsteal_direct: end.pgsteal_direct.map(|v| v as u64),
-            pgscan_kswapd: end.pgscan_kswapd.map(|v| v as u64),
-            pgscan_direct: end.pgscan_direct.map(|v| v as u64),
+            pgsteal_kswapd: count_per_sec!(begin.pgsteal_kswapd, end.pgsteal_kswapd, duration, u64),
+            pgsteal_direct: count_per_sec!(begin.pgsteal_direct, end.pgsteal_direct, duration, u64),
+            pgscan_kswapd: count_per_sec!(begin.pgscan_kswapd, end.pgscan_kswapd, duration, u64),
+            pgscan_direct: count_per_sec!(begin.pgscan_direct, end.pgscan_direct, duration, u64),
             oom_kill: end.oom_kill.map(|v| v as u64),
         }
     }

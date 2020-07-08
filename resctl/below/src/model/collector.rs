@@ -259,6 +259,15 @@ macro_rules! count_per_sec {
         }
         ret
     }};
+    ($a_opt:expr, $b_opt:expr, $delta:expr, $target_type:ty) => {{
+        let mut ret = None;
+        if let (Some(a), Some(b)) = ($a_opt, $b_opt) {
+            if a <= b {
+                ret = Some(((b - a) as f64 / $delta.as_secs_f64()).ceil() as $target_type);
+            }
+        }
+        ret
+    }};
 }
 
 #[allow(unused)]
