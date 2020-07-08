@@ -14,14 +14,14 @@
 
 use crate::model::system::*;
 use crate::view::core_view::CoreState;
-use crate::view::ViewState;
+use crate::view::stats_view::StateCommon;
 
 pub trait CoreTab {
     fn get_title_vec(&self, _: &SystemModel) -> Vec<String> {
         vec![format!("{:<20.20}", "Field"), format!("{:<20.20}", "Value")]
     }
 
-    fn get_rows(&mut self, view_state: &mut ViewState, state: &CoreState) -> Vec<(String, String)>;
+    fn get_rows(&mut self, state: &CoreState) -> Vec<(String, String)>;
 }
 
 #[derive(Default, Clone)]
@@ -42,10 +42,11 @@ impl CoreTab for CoreCpu {
         res
     }
 
-    fn get_rows(&mut self, view_state: &mut ViewState, state: &CoreState) -> Vec<(String, String)> {
-        let model = &view_state.model.system.cpu;
+    fn get_rows(&mut self, state: &CoreState) -> Vec<(String, String)> {
+        let model = state.get_model();
 
         let mut res: Vec<(String, String)> = model
+            .cpu
             .cpus
             .as_ref()
             .unwrap_or(&vec![])
@@ -62,6 +63,7 @@ impl CoreTab for CoreCpu {
 
         res.push((
             model
+                .cpu
                 .total_cpu
                 .as_ref()
                 .unwrap_or(&SingleCpuModel {
@@ -79,10 +81,11 @@ impl CoreTab for CoreCpu {
 pub struct CoreMem;
 
 impl CoreTab for CoreMem {
-    fn get_rows(&mut self, view_state: &mut ViewState, state: &CoreState) -> Vec<(String, String)> {
-        let model = &view_state.model.system.mem;
+    fn get_rows(&mut self, state: &CoreState) -> Vec<(String, String)> {
+        let model = state.get_model();
 
         model
+            .mem
             .get_interleave_line(" ", "|")
             .split('|')
             .filter(|s| {
@@ -101,10 +104,11 @@ impl CoreTab for CoreMem {
 pub struct CoreVm;
 
 impl CoreTab for CoreVm {
-    fn get_rows(&mut self, view_state: &mut ViewState, state: &CoreState) -> Vec<(String, String)> {
-        let model = &view_state.model.system.vm;
+    fn get_rows(&mut self, state: &CoreState) -> Vec<(String, String)> {
+        let model = state.get_model();
 
         model
+            .vm
             .get_interleave_line(" ", "|")
             .split('|')
             .filter(|s| {
@@ -137,10 +141,9 @@ impl CoreTab for CoreDisk {
         res
     }
 
-    fn get_rows(&mut self, view_state: &mut ViewState, state: &CoreState) -> Vec<(String, String)> {
-        view_state
-            .model
-            .system
+    fn get_rows(&mut self, state: &CoreState) -> Vec<(String, String)> {
+        state
+            .get_model_mut()
             .disks
             .iter_mut()
             .map(|(dn, sdm)| {

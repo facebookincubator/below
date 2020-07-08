@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use cursive::view::Identifiable;
 use cursive::views::{NamedView, SelectView, ViewRef};
 use cursive::Cursive;
 
-use crate::model::SingleProcessModel;
+use crate::model::{ProcessModel, SingleProcessModel};
 use crate::view::process_tabs::{
     ProcessCPU, ProcessGeneral, ProcessIO, ProcessMem, ProcessOrders, ProcessTab,
 };
@@ -27,18 +29,22 @@ use crate::view::ViewState;
 
 pub type ViewType = StatsView<ProcessView>;
 
+#[derive(Default)]
 pub struct ProcessState {
     pub filter: Option<String>,
     pub cgroup_filter: Option<String>,
     pub sort_order: ProcessOrders,
     pub sort_tags: HashMap<String, Vec<ProcessOrders>>,
     pub reverse: bool,
+    pub model: Rc<RefCell<ProcessModel>>,
 }
 
 impl StateCommon for ProcessState {
+    type ModelType = ProcessModel;
     fn get_filter(&mut self) -> &mut Option<String> {
         &mut self.filter
     }
+
     fn set_sort_tag(&mut self, tab: &str, idx: usize, reverse: bool) {
         self.sort_order = self
             .sort_tags
@@ -49,20 +55,16 @@ impl StateCommon for ProcessState {
             .clone();
         self.reverse = reverse;
     }
-}
 
-impl ProcessState {
-    fn set_sort_order(&mut self, tag: ProcessOrders) {
-        self.sort_order = tag;
+    fn get_model(&self) -> Ref<Self::ModelType> {
+        self.model.borrow()
     }
 
-    fn set_reverse(&mut self, reverse: bool) {
-        self.reverse = reverse;
+    fn get_model_mut(&self) -> RefMut<Self::ModelType> {
+        self.model.borrow_mut()
     }
-}
 
-impl Default for ProcessState {
-    fn default() -> Self {
+    fn new(model: Rc<RefCell<Self::ModelType>>) -> Self {
         let mut sort_tags = HashMap::new();
         sort_tags.insert("General".into(), ProcessGeneral::get_sort_tag_vec());
         sort_tags.insert("CPU".into(), ProcessCPU::get_sort_tag_vec());
@@ -74,7 +76,18 @@ impl Default for ProcessState {
             sort_order: ProcessOrders::Keep,
             sort_tags,
             reverse: false,
+            model,
         }
+    }
+}
+
+impl ProcessState {
+    fn set_sort_order(&mut self, tag: ProcessOrders) {
+        self.sort_order = tag;
+    }
+
+    fn set_reverse(&mut self, reverse: bool) {
+        self.reverse = reverse;
     }
 }
 
@@ -89,20 +102,16 @@ impl ProcessView {
     pub fn new(c: &mut Cursive) -> NamedView<ViewType> {
         let mut list = SelectView::<String>::new();
         list.set_on_select(|c, pid: &String| {
-            let view_state = &c
-                .user_data::<ViewState>()
-                .expect("No data stored in Cursive object!");
-
-            let cgroup = view_state
-                .model
-                .process
-                .processes
-                .get(&pid.parse::<i32>().unwrap_or(0))
-                .map_or("?".to_string(), |spm| {
-                    spm.cgroup.clone().unwrap_or_else(|| "?".to_string())
-                });
-
             c.call_on_name(Self::get_view_name(), |view: &mut ViewType| {
+                let cgroup = view
+                    .state
+                    .borrow()
+                    .get_model()
+                    .processes
+                    .get(&pid.parse::<i32>().unwrap_or(0))
+                    .map_or("?".to_string(), |spm| {
+                        spm.cgroup.clone().unwrap_or_else(|| "?".to_string())
+                    });
                 view.get_cmd_palette().set_info(cgroup);
             });
         });
@@ -113,43 +122,54 @@ impl ProcessView {
         tabs_map.insert("CPU".into(), ProcessView::Cpu(Default::default()));
         tabs_map.insert("Mem".into(), ProcessView::Mem(Default::default()));
         tabs_map.insert("I/O".into(), ProcessView::Io(Default::default()));
-        StatsView::new("process", tabs, tabs_map, list)
-            .feed_data(c)
-            .on_event('P', |c| {
-                let mut view = Self::get_process_view(c);
-                view.state.borrow_mut().set_sort_order(ProcessOrders::Pid);
-                view.state.borrow_mut().set_reverse(false);
-                view.refresh(c)
-            })
-            .on_event('C', |c| {
-                let mut view = Self::get_process_view(c);
-                view.state
-                    .borrow_mut()
-                    .set_sort_order(ProcessOrders::CpuTotal);
-                view.state.borrow_mut().set_reverse(true);
-                view.refresh(c)
-            })
-            .on_event('N', |c| {
-                let mut view = Self::get_process_view(c);
-                view.state.borrow_mut().set_sort_order(ProcessOrders::Comm);
-                view.state.borrow_mut().set_reverse(false);
-                view.refresh(c)
-            })
-            .on_event('M', |c| {
-                let mut view = Self::get_process_view(c);
-                view.state.borrow_mut().set_sort_order(ProcessOrders::Rss);
-                view.state.borrow_mut().set_reverse(true);
-                view.refresh(c)
-            })
-            .on_event('D', |c| {
-                let mut view = Self::get_process_view(c);
-                view.state
-                    .borrow_mut()
-                    .set_sort_order(ProcessOrders::IoTotal);
-                view.state.borrow_mut().set_reverse(true);
-                view.refresh(c)
-            })
-            .with_name(Self::get_view_name())
+        StatsView::new(
+            "process",
+            tabs,
+            tabs_map,
+            list,
+            ProcessState::new(
+                c.user_data::<ViewState>()
+                    .expect("No data stored in Cursive Object!")
+                    .process
+                    .clone(),
+            ),
+        )
+        .feed_data(c)
+        .on_event('P', |c| {
+            let mut view = Self::get_process_view(c);
+            view.state.borrow_mut().set_sort_order(ProcessOrders::Pid);
+            view.state.borrow_mut().set_reverse(false);
+            view.refresh(c)
+        })
+        .on_event('C', |c| {
+            let mut view = Self::get_process_view(c);
+            view.state
+                .borrow_mut()
+                .set_sort_order(ProcessOrders::CpuTotal);
+            view.state.borrow_mut().set_reverse(true);
+            view.refresh(c)
+        })
+        .on_event('N', |c| {
+            let mut view = Self::get_process_view(c);
+            view.state.borrow_mut().set_sort_order(ProcessOrders::Comm);
+            view.state.borrow_mut().set_reverse(false);
+            view.refresh(c)
+        })
+        .on_event('M', |c| {
+            let mut view = Self::get_process_view(c);
+            view.state.borrow_mut().set_sort_order(ProcessOrders::Rss);
+            view.state.borrow_mut().set_reverse(true);
+            view.refresh(c)
+        })
+        .on_event('D', |c| {
+            let mut view = Self::get_process_view(c);
+            view.state
+                .borrow_mut()
+                .set_sort_order(ProcessOrders::IoTotal);
+            view.state.borrow_mut().set_reverse(true);
+            view.refresh(c)
+        })
+        .with_name(Self::get_view_name())
     }
 
     pub fn get_process_view(c: &mut Cursive) -> ViewRef<ViewType> {
@@ -181,11 +201,7 @@ impl ViewBridge for ProcessView {
         self.get_inner().get_title_vec(&model)
     }
 
-    fn get_rows(
-        &mut self,
-        view_state: &mut ViewState,
-        state: &Self::StateType,
-    ) -> Vec<(String, String)> {
-        self.get_inner().get_rows(view_state, state)
+    fn get_rows(&mut self, state: &Self::StateType) -> Vec<(String, String)> {
+        self.get_inner().get_rows(state)
     }
 }

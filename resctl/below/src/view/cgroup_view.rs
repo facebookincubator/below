@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
 use cursive::view::Identifiable;
 use cursive::views::{NamedView, SelectView, ViewRef};
@@ -27,6 +29,7 @@ use crate::view::ViewState;
 
 pub type ViewType = StatsView<CgroupView>;
 
+#[derive(Default)]
 pub struct CgroupState {
     pub collapsed_cgroups: HashSet<String>,
     pub current_selected_cgroup: String,
@@ -34,12 +37,15 @@ pub struct CgroupState {
     pub sort_order: CgroupOrders,
     pub sort_tags: HashMap<String, Vec<CgroupOrders>>,
     pub reverse: bool,
+    pub model: Rc<RefCell<CgroupModel>>,
 }
 
 impl StateCommon for CgroupState {
+    type ModelType = CgroupModel;
     fn get_filter(&mut self) -> &mut Option<String> {
         &mut self.filter
     }
+
     fn set_sort_tag(&mut self, tab: &str, idx: usize, reverse: bool) {
         self.sort_order = self
             .sort_tags
@@ -50,10 +56,16 @@ impl StateCommon for CgroupState {
             .clone();
         self.reverse = reverse;
     }
-}
 
-impl Default for CgroupState {
-    fn default() -> Self {
+    fn get_model(&self) -> Ref<Self::ModelType> {
+        self.model.borrow()
+    }
+
+    fn get_model_mut(&self) -> RefMut<Self::ModelType> {
+        self.model.borrow_mut()
+    }
+
+    fn new(model: Rc<RefCell<Self::ModelType>>) -> Self {
         let mut sort_tags = HashMap::new();
         sort_tags.insert("General".into(), CgroupGeneral::get_sort_tag_vec());
         sort_tags.insert("CPU".into(), CgroupCPU::get_sort_tag_vec());
@@ -67,6 +79,7 @@ impl Default for CgroupState {
             sort_order: CgroupOrders::Keep,
             sort_tags,
             reverse: false,
+            model,
         }
     }
 }
@@ -127,33 +140,44 @@ impl CgroupView {
         tabs_map.insert("Mem".into(), CgroupView::Mem(Default::default()));
         tabs_map.insert("I/O".into(), CgroupView::Io(Default::default()));
         tabs_map.insert("Pressure".into(), CgroupView::Pressure(Default::default()));
-        StatsView::new("Cgroup", tabs, tabs_map, list)
-            .feed_data(c)
-            .on_event('C', |c| {
-                let mut view = Self::get_cgroup_view(c);
-                view.state
-                    .borrow_mut()
-                    .set_sort_order(CgroupOrders::UsagePct);
-                view.state.borrow_mut().set_reverse(true);
-                view.refresh(c)
-            })
-            .on_event('M', |c| {
-                let mut view = Self::get_cgroup_view(c);
-                view.state
-                    .borrow_mut()
-                    .set_sort_order(CgroupOrders::MemoryTotal);
-                view.state.borrow_mut().set_reverse(true);
-                view.refresh(c)
-            })
-            .on_event('D', |c| {
-                let mut view = Self::get_cgroup_view(c);
-                view.state
-                    .borrow_mut()
-                    .set_sort_order(CgroupOrders::RwTotal);
-                view.state.borrow_mut().set_reverse(true);
-                view.refresh(c)
-            })
-            .with_name(Self::get_view_name())
+        StatsView::new(
+            "Cgroup",
+            tabs,
+            tabs_map,
+            list,
+            CgroupState::new(
+                c.user_data::<ViewState>()
+                    .expect("No data stored in Cursive Object!")
+                    .cgroup
+                    .clone(),
+            ),
+        )
+        .feed_data(c)
+        .on_event('C', |c| {
+            let mut view = Self::get_cgroup_view(c);
+            view.state
+                .borrow_mut()
+                .set_sort_order(CgroupOrders::UsagePct);
+            view.state.borrow_mut().set_reverse(true);
+            view.refresh(c)
+        })
+        .on_event('M', |c| {
+            let mut view = Self::get_cgroup_view(c);
+            view.state
+                .borrow_mut()
+                .set_sort_order(CgroupOrders::MemoryTotal);
+            view.state.borrow_mut().set_reverse(true);
+            view.refresh(c)
+        })
+        .on_event('D', |c| {
+            let mut view = Self::get_cgroup_view(c);
+            view.state
+                .borrow_mut()
+                .set_sort_order(CgroupOrders::RwTotal);
+            view.state.borrow_mut().set_reverse(true);
+            view.refresh(c)
+        })
+        .with_name(Self::get_view_name())
     }
 
     pub fn get_cgroup_view(c: &mut Cursive) -> ViewRef<ViewType> {
@@ -188,11 +212,7 @@ impl ViewBridge for CgroupView {
         self.get_inner().get_title_vec(&model)
     }
 
-    fn get_rows(
-        &mut self,
-        view_state: &mut ViewState,
-        state: &Self::StateType,
-    ) -> Vec<(String, String)> {
-        self.get_inner().get_rows(view_state, state)
+    fn get_rows(&mut self, state: &Self::StateType) -> Vec<(String, String)> {
+        self.get_inner().get_rows(state)
     }
 }

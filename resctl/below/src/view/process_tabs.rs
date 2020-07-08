@@ -15,7 +15,7 @@
 use crate::model::SingleProcessModel;
 use crate::util::convert_bytes;
 use crate::view::process_view::ProcessState;
-use crate::view::ViewState;
+use crate::view::stats_view::StateCommon;
 use below_derive::BelowDecor;
 
 // All available sorting tags
@@ -40,6 +40,12 @@ pub enum ProcessOrders {
     IoTotal,
 }
 
+impl Default for ProcessOrders {
+    fn default() -> Self {
+        ProcessOrders::Keep
+    }
+}
+
 // Defines how to iterate through the process stats and generate get_rows for ViewBridge
 pub trait ProcessTab {
     fn get_title_vec(&self, model: &SingleProcessModel) -> Vec<String>;
@@ -51,19 +57,11 @@ pub trait ProcessTab {
         reverse: bool,
     );
 
-    fn get_rows(
-        &mut self,
-        view_state: &mut ViewState,
-        state: &ProcessState,
-    ) -> Vec<(String, String)> {
+    fn get_rows(&mut self, state: &ProcessState) -> Vec<(String, String)> {
         let unknown = "?".to_string();
-        let mut processes: Vec<&SingleProcessModel> = view_state
-            .model
-            .process
-            .processes
-            .iter()
-            .map(|(_, spm)| spm)
-            .collect();
+        let process_model = state.get_model();
+        let mut processes: Vec<&SingleProcessModel> =
+            process_model.processes.iter().map(|(_, spm)| spm).collect();
 
         self.sort(state.sort_order, &mut processes, state.reverse);
         processes

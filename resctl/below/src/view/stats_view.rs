@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -25,8 +25,8 @@ use cursive::views::{
 use cursive::Cursive;
 
 use crate::view::command_palette::CommandPalette;
+use crate::view::filter_popup;
 use crate::view::tab_view::TabView;
-use crate::view::{filter_popup, ViewState};
 
 /// A trait that defines common state data querying or event handling.
 ///
@@ -34,9 +34,13 @@ use crate::view::{filter_popup, ViewState};
 /// state data to the StatsView for common behavior. On the other hand, it force
 /// a view to have required data in order to fit itself inside the StatsView.
 pub trait StateCommon {
+    type ModelType;
     /// Expose the filter data for StatsView to implement common '/' fitlering.
     fn get_filter(&mut self) -> &mut Option<String>;
     fn set_sort_tag(&mut self, tab: &str, idx: usize, reverse: bool);
+    fn get_model(&self) -> Ref<Self::ModelType>;
+    fn get_model_mut(&self) -> RefMut<Self::ModelType>;
+    fn new(model: Rc<RefCell<Self::ModelType>>) -> Self;
 }
 
 /// ViewBridge defines how a ConcreteView will relate to StatsView
@@ -54,11 +58,7 @@ pub trait ViewBridge {
     /// The essential function that defines how a StatsView should fill
     /// the data. This function will iterate through the data, apply filter and sorting,
     /// return a Vec of (Stats String Line, Key) tuple.
-    fn get_rows(
-        &mut self,
-        view_state: &mut ViewState,
-        state: &Self::StateType,
-    ) -> Vec<(String, String)>;
+    fn get_rows(&mut self, state: &Self::StateType) -> Vec<(String, String)>;
 }
 
 /// StatsView is a view wrapper that wraps tabs, titles, and list of stats.
@@ -159,6 +159,7 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         tabs: Vec<String>,
         tab_view_map: HashMap<String, V>,
         list: impl View,
+        state: V::StateType,
     ) -> Self {
         let mut tab_titles_map = HashMap::new();
         // Generating titles. The get_title_vec will call BelowDerive's get_title_pipe()
@@ -204,7 +205,7 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             tab_titles_map,
             tab_view_map,
             detailed_view,
-            state: Rc::new(RefCell::new(Default::default())),
+            state: Rc::new(RefCell::new(state)),
             reverse_sort: false,
         }
     }
@@ -315,9 +316,6 @@ impl<V: 'static + ViewBridge> StatsView<V> {
     // A potential optimize here is put the model of the cursive view_state as Rc<RefCell>
     // member of StatsView. In that case, we don't need to borrow the cursive object here.
     pub fn refresh(&mut self, c: &mut Cursive) {
-        let mut view_state = &mut c
-            .user_data::<ViewState>()
-            .expect("No data stored in Cursive object!");
         let cur_tab = self.get_tab_view().get_cur_selected().to_string();
         let mut select_view = self.get_detail_view();
 
@@ -328,7 +326,7 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             .tab_view_map
             .get_mut(&cur_tab)
             .unwrap_or_else(|| panic!("Fail to query data from tab {}", cur_tab));
-        select_view.add_all(tab_detail.get_rows(&mut view_state, &self.state.borrow()));
+        select_view.add_all(tab_detail.get_rows(&self.state.borrow()));
         select_view.select_down(pos)(c);
     }
 

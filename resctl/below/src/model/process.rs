@@ -14,6 +14,7 @@
 
 use super::*;
 
+#[derive(Default)]
 pub struct ProcessModel {
     pub processes: BTreeMap<i32, SingleProcessModel>,
 }

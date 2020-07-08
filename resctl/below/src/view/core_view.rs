@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::rc::Rc;
 
 use cursive::view::Identifiable;
 use cursive::views::{NamedView, SelectView, ViewRef};
@@ -26,23 +28,33 @@ use crate::view::ViewState;
 
 pub type ViewType = StatsView<CoreView>;
 
+#[derive(Default)]
 pub struct CoreState {
     pub filter: Option<String>,
     pub collapsed_disk: HashSet<String>,
+    pub model: Rc<RefCell<SystemModel>>,
 }
 
 impl StateCommon for CoreState {
+    type ModelType = SystemModel;
     fn get_filter(&mut self) -> &mut Option<String> {
         &mut self.filter
     }
-    fn set_sort_tag(&mut self, _tab: &str, _idx: usize, _reverse: bool) {}
-}
 
-impl Default for CoreState {
-    fn default() -> Self {
+    fn set_sort_tag(&mut self, _tab: &str, _idx: usize, _reverse: bool) {}
+
+    fn get_model(&self) -> Ref<Self::ModelType> {
+        self.model.borrow()
+    }
+
+    fn get_model_mut(&self) -> RefMut<Self::ModelType> {
+        self.model.borrow_mut()
+    }
+
+    fn new(model: Rc<RefCell<Self::ModelType>>) -> Self {
         Self {
-            collapsed_disk: HashSet::new(),
-            filter: None,
+            model,
+            ..Default::default()
         }
     }
 }
@@ -81,9 +93,20 @@ impl CoreView {
         tabs_map.insert("Vm".into(), CoreView::Vm(Default::default()));
         tabs_map.insert("Disk".into(), CoreView::Disk(Default::default()));
 
-        StatsView::new("core", tabs, tabs_map, list)
-            .feed_data(c)
-            .with_name(Self::get_view_name())
+        StatsView::new(
+            "core",
+            tabs,
+            tabs_map,
+            list,
+            CoreState::new(
+                c.user_data::<ViewState>()
+                    .expect("No data stored in Cursive Object!")
+                    .system
+                    .clone(),
+            ),
+        )
+        .feed_data(c)
+        .with_name(Self::get_view_name())
     }
 
     pub fn get_core_view(c: &mut Cursive) -> ViewRef<ViewType> {
@@ -115,11 +138,7 @@ impl ViewBridge for CoreView {
         self.get_inner().get_title_vec(&model)
     }
 
-    fn get_rows(
-        &mut self,
-        view_state: &mut ViewState,
-        state: &Self::StateType,
-    ) -> Vec<(String, String)> {
-        self.get_inner().get_rows(view_state, state)
+    fn get_rows(&mut self, state: &Self::StateType) -> Vec<(String, String)> {
+        self.get_inner().get_rows(state)
     }
 }

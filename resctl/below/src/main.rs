@@ -27,6 +27,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, Context, Error, Result};
+use cursive::Cursive;
 use slog::{self, debug, error, warn};
 use structopt::StructOpt;
 
@@ -538,9 +539,12 @@ fn live(logger: slog::Logger, interval: Duration, debug: bool) -> Result<()> {
             match res {
                 Ok(model) => {
                     // Error only happens if the other side disconnected - just terminate the thread
-                    if let Err(_) = sink.send(Box::new(move |s| {
-                        s.user_data::<ViewState>().expect("user data not set").model = model;
-                    })) {
+                    let data_plane = Box::new(move |s: &mut Cursive| {
+                        s.user_data::<ViewState>()
+                            .expect("user data not set")
+                            .update(model);
+                    });
+                    if sink.send(data_plane).is_err() {
                         return;
                     }
                 }

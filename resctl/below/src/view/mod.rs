@@ -52,6 +52,7 @@
 ///   or `S` to sort in ascending or descending order.
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::{Duration, SystemTime};
 
 use ::cursive::event::{Event, EventResult, EventTrigger};
 use ::cursive::theme::{BaseColor, Color, PaletteColor};
@@ -60,6 +61,7 @@ use ::cursive::views::{LinearLayout, NamedView, OnEventView, Panel, ResizedView,
 use ::cursive::Cursive;
 use anyhow::Result;
 
+use crate::model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
 use crate::store::Direction;
 use crate::Advance;
 
@@ -86,7 +88,9 @@ macro_rules! advance {
     ($c:ident, $adv:ident, $dir:expr) => {
         match $adv.advance($dir) {
             Some(data) => {
-                $c.user_data::<ViewState>().expect("No user data set").model = data;
+                $c.user_data::<ViewState>()
+                    .expect("No user data set")
+                    .update(data);
                 refresh($c);
             }
             None => (),
@@ -122,17 +126,42 @@ fn refresh(c: &mut Cursive) {
 }
 
 pub struct ViewState {
-    pub model: crate::model::Model,
+    pub time_elapsed: Duration,
+    pub timestamp: SystemTime,
+    pub system: Rc<RefCell<SystemModel>>,
+    pub cgroup: Rc<RefCell<CgroupModel>>,
+    pub process: Rc<RefCell<ProcessModel>>,
+    pub network: Rc<RefCell<NetworkModel>>,
     pub main_view_state: MainViewState,
+}
+
+impl ViewState {
+    pub fn update(&mut self, model: Model) {
+        self.time_elapsed = model.time_elapsed;
+        self.timestamp = model.timestamp;
+        self.system.replace(model.system);
+        self.cgroup.replace(model.cgroup);
+        self.process.replace(model.process);
+        self.network.replace(model.network);
+    }
+
+    pub fn new(main_view_state: MainViewState, model: Model) -> Self {
+        Self {
+            time_elapsed: model.time_elapsed,
+            timestamp: model.timestamp,
+            system: Rc::new(RefCell::new(model.system)),
+            cgroup: Rc::new(RefCell::new(model.cgroup)),
+            process: Rc::new(RefCell::new(model.process)),
+            network: Rc::new(RefCell::new(model.network)),
+            main_view_state,
+        }
+    }
 }
 
 impl View {
     pub fn new(model: crate::model::Model) -> View {
         let mut inner = Cursive::default();
-        inner.set_user_data(ViewState {
-            model,
-            main_view_state: MainViewState::Cgroup,
-        });
+        inner.set_user_data(ViewState::new(MainViewState::Cgroup, model));
         View { inner }
     }
 

@@ -148,16 +148,16 @@ impl SysIface {
 }
 
 fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
-    let model = &c
+    let view_state = &c
         .user_data::<ViewState>()
-        .expect("No data stored in Cursive object!")
-        .model;
+        .expect("No data stored in Cursive object!");
 
-    let system_model = &model.system;
+    let system_model = view_state.system.borrow();
+    let network_model = view_state.network.borrow();
     let cpu_row = SysCpu::get_row(&system_model.cpu);
     let mem_row = SysMem::get_row(&system_model.mem);
     let io_row = SysIo::get_row(&system_model.disks);
-    let iface_row = SysIface::get_row(&model.network);
+    let iface_row = SysIface::get_row(&network_model);
 
     let mut view = LinearLayout::vertical();
     view.add_child(TextView::new(cpu_row));

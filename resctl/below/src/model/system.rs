@@ -267,7 +267,7 @@ pub struct MemoryModel {
         decorator = "convert_bytes($ as f64)"
     )]
     pub anon_pages: Option<u64>,
-    #[bttr(title = "Mappedn", width = 20, decorator = "convert_bytes($ as f64)")]
+    #[bttr(title = "Mapped", width = 20, decorator = "convert_bytes($ as f64)")]
     pub mapped: Option<u64>,
     #[bttr(title = "Shmem", width = 20, decorator = "convert_bytes($ as f64)")]
     pub shmem: Option<u64>,

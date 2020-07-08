@@ -18,7 +18,7 @@ use std::iter::FromIterator;
 use crate::model::CgroupModel;
 use crate::util::{calculate_filter_out_set, convert_bytes, fold_string, get_prefix};
 use crate::view::cgroup_view::CgroupState;
-use crate::view::ViewState;
+use crate::view::stats_view::StateCommon;
 use below_derive::BelowDecor;
 
 // All available sorting tags
@@ -78,6 +78,12 @@ pub enum CgroupOrders {
     RwTotal,
 }
 
+impl Default for CgroupOrders {
+    fn default() -> Self {
+        CgroupOrders::Keep
+    }
+}
+
 // Defines how to iterate through the cgroup and generate get_rows function for ViewBridge
 pub trait CgroupTab {
     fn get_title_vec(&self, model: &CgroupModel) -> Vec<String>;
@@ -119,19 +125,15 @@ pub trait CgroupTab {
         }
     }
 
-    fn get_rows(
-        &mut self,
-        view_state: &mut ViewState,
-        state: &CgroupState,
-    ) -> Vec<(String, String)> {
+    fn get_rows(&mut self, state: &CgroupState) -> Vec<(String, String)> {
         let filter_out_set = if let Some(f) = &state.filter {
-            Some(calculate_filter_out_set(&view_state.model.cgroup, &f))
+            Some(calculate_filter_out_set(&state.get_model(), &f))
         } else {
             None
         };
 
         let mut rows = Vec::new();
-        self.output_cgroup(&view_state.model.cgroup, state, &filter_out_set, &mut rows);
+        self.output_cgroup(&state.get_model(), state, &filter_out_set, &mut rows);
         rows
     }
 }
