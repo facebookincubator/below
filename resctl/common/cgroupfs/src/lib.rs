@@ -15,7 +15,7 @@
 #![deny(clippy::all)]
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
 
 use openat::{AsPath, Dir, SimpleType};
@@ -92,6 +92,18 @@ impl CgroupReader {
     /// consumption in bytes
     pub fn read_memory_current(&self) -> Result<u64> {
         self.read_singleline_stat_file("memory.current")
+    }
+
+    /// Read memory.high - returning memory.high consumption in bytes
+    /// Will return -1 if the content is max
+    /// Will return None if the file is missing
+    pub fn read_memory_high(&self) -> Result<Option<i64>> {
+        match self.read_singleline_stat_file("memory.high") {
+            Ok(v) => Ok(Some(v as i64)),
+            Err(Error::IoError(_, e)) if e.kind() == ErrorKind::NotFound => Ok(None),
+            Err(Error::UnexpectedLine(_, line)) if line.starts_with("max") => Ok(Some(-1)),
+            Err(e) => Err(e),
+        }
     }
 
     /// Read memory.swap.current - returning current cgroup memory

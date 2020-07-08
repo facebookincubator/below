@@ -110,6 +110,46 @@ fn test_memory_swap_current_success() {
 }
 
 #[test]
+fn test_memory_high_success() {
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content("memory.high", b"1234\n");
+
+    let cgroup_reader = cgroup.get_reader();
+    let val = cgroup_reader
+        .read_memory_high()
+        .expect("Failed to read memory.high")
+        .expect("memory.high should not be none in this case.");
+    assert_eq!(val, 1234);
+}
+
+#[test]
+fn test_memory_high_max_success() {
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content("memory.high", b"max\n");
+
+    let cgroup_reader = cgroup.get_reader();
+    let val = cgroup_reader
+        .read_memory_high()
+        .expect("Failed to read memory.high")
+        .expect("memory.high should not be none in this case.");
+    assert_eq!(val, -1);
+}
+
+#[test]
+fn test_memory_high_failure() {
+    let cgroup = TestCgroup::new();
+    let cgroup_reader = cgroup.get_reader();
+    let val = cgroup_reader
+        .read_memory_high()
+        .expect("Failed to read memory.high");
+    assert_eq!(val, None);
+
+    cgroup.create_file_with_content("memory.high", b"-1\n");
+    let val = cgroup_reader.read_memory_high();
+    assert!(val.is_err());
+}
+
+#[test]
 fn test_memory_stat_success() {
     let cgroup = TestCgroup::new();
     cgroup.create_file_with_content("memory.stat", b"slab 1234\n");
