@@ -68,17 +68,17 @@ impl SystemModel {
 pub struct CpuModel {
     pub total_cpu: Option<SingleCpuModel>,
     pub cpus: Option<Vec<SingleCpuModel>>,
-    #[bttr(title = "Total Interrupts")]
+    #[bttr(title = "Total Interrupts", width = 20)]
     pub total_interrupt_ct: Option<i64>,
-    #[bttr(title = "Context Switches")]
+    #[bttr(title = "Context Switches", width = 20)]
     pub context_switches: Option<i64>,
-    #[bttr(title = "Boot Time Epoch")]
+    #[bttr(title = "Boot Time Epoch", width = 20)]
     pub boot_time_epoch_secs: Option<i64>,
-    #[bttr(title = "Total Procs")]
+    #[bttr(title = "Total Procs", width = 20)]
     pub total_processes: Option<i64>,
-    #[bttr(title = "Running Procs")]
+    #[bttr(title = "Running Procs", width = 20)]
     pub running_processes: Option<i32>,
-    #[bttr(title = "Blocked Procs")]
+    #[bttr(title = "Blocked Procs", width = 20)]
     pub blocked_processes: Option<i32>,
 }
 

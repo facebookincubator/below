@@ -416,23 +416,26 @@ fn get_dfill_field_fns(
             let fn_name = format!("get_{}_{}", name, suffix)
                 .parse::<Tstream>()
                 .unwrap();
+            // If such field does not have a title, we will treat it as a pure link field and
+            // generate link related functions.
+            // TODO: Put all tag and sort_tag into independent struct of attribute. This will
+            // reduce the decorator size a lot. Because we can reuse the original view attr instead
+            // of writing new one.T67969117
+            let link_title = a.field.as_ref().unwrap().title.is_none();
             if match_arm.ends_with('&') {
                 match_arm.pop();
                 let match_arm = match_arm.parse::<Tstream>().unwrap();
-                if title && !aggr {
-                    quote! {
-                        #match_arm => self.#fn_type.push(Box::new(|data, _| data.#fn_name())),
-                    }
-                } else if aggr && title {
-                    quote! {
+                match (title, link_title, aggr) {
+                    (true, false, true) => quote! {
                         #match_arm => self.#fn_type.push(Box::new(|_, model| Self::DataType::#fn_name())),
-                    }
-                } else if aggr {
-                    quote! {
+                    },
+                    (true, false, false) => quote! {
+                        #match_arm => self.#fn_type.push(Box::new(|data, _| data.#fn_name())),
+                    },
+                    (_, _, true) => quote! {
                         #match_arm => self.#fn_type.push(Box::new(|_, model| Self::DataType::#fn_name(model))),
-                    }
-                } else {
-                    quote! {
+                    },
+                    _ => quote! {
                         #match_arm => self.#fn_type.push(Box::new(|data, model| data.#fn_name(model))),
                     }
                 }
@@ -452,28 +455,30 @@ fn get_dfill_field_fns(
 fn get_dfill_class_field(field: &str, suffix: &str, fn_type: &Tstream, title: bool) -> Tstream {
     let aggr = field.ends_with('@');
     let link = field.ends_with('&');
+    // We use additional "&" to mark the title link. With T67969117 we can get rid of it.
+    let link_title = field.ends_with("&&") || field.ends_with("&@");
     if aggr || link {
         let mut field = field.to_string();
         field.pop();
+        if link_title {
+            field.pop();
+        }
         let fn_name = format!("get_{}_{}", field, suffix)
             .parse::<Tstream>()
             .unwrap();
-        if title && !aggr {
-            quote! {
-                self.#fn_type.push(Box::new(|data, model| data.#fn_name()));
-            }
-        } else if aggr && title {
-            quote! {
+        match (title, link_title, aggr) {
+            (true, false, true) => quote! {
                 self.#fn_type.push(Box::new(|_, model| Self::DataType::#fn_name()));
-            }
-        } else if aggr {
-            quote! {
+            },
+            (true, false, false) => quote! {
+                self.#fn_type.push(Box::new(|data, model| data.#fn_name()));
+            },
+            (_, _, true) => quote! {
                 self.#fn_type.push(Box::new(|_, model| Self::DataType::#fn_name(model)));
-            }
-        } else {
-            quote! {
+            },
+            _ => quote! {
                 self.#fn_type.push(Box::new(|data, model| data.#fn_name(model)));
-            }
+            },
         }
     } else {
         let fn_name = format!("get_{}_{}", field, suffix)

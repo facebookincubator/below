@@ -59,42 +59,37 @@ fn test_tmain_init() {
     sys_handle.field_fns.clear();
     sys_handle.get_opts_mut().default = true;
     sys_handle.init(fields.clone());
-    assert_eq!(sys_handle.title_fns.len(), 6);
-    assert_eq!(sys_handle.field_fns.len(), 6);
+    assert_eq!(sys_handle.title_fns.len(), 23);
+    assert_eq!(sys_handle.field_fns.len(), 23);
     let mut title_iter = sys_handle.title_fns.iter();
+    assert_eq!(
+        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
+        "Hostname"
+    );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
         "Datetime"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "CPU Usage"
+        "Usage"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "CPU User"
+        "User"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "CPU Sys"
+        "System"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Mem Total"
+        "Total"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Mem Free"
+        "Free"
     );
-    //TODO Add Diskstat title
-    // assert_eq!(
-    //     title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-    //     "Reads"
-    // );
-    // assert_eq!(
-    //     title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-    //     "Writes"
-    // );
 
     // case3: when everything is set
     sys_handle.title_fns.clear();
@@ -104,58 +99,69 @@ fn test_tmain_init() {
     sys_handle.init(fields);
     assert!(sys_handle.get_opts().default);
     assert!(sys_handle.get_opts().detail);
-    assert_eq!(sys_handle.title_fns.len(), 10);
-    assert_eq!(sys_handle.field_fns.len(), 10);
+    assert_eq!(sys_handle.title_fns.len(), 68);
+    assert_eq!(sys_handle.field_fns.len(), 68);
     let mut title_iter = sys_handle.title_fns.iter();
+    assert_eq!(
+        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
+        "Hostname"
+    );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
         "Datetime"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "CPU Usage"
+        "Usage"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "CPU User"
+        "User"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "CPU Sys"
+        "System"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Mem Total"
+        "Idle"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Mem Free"
+        "Nice"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Mem Anon"
+        "IOWait"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Mem File"
+        "Irq"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Huge Page Total"
+        "SoftIrq"
     );
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Huge Page Free"
+        "Stolen"
     );
-    //TODO Add Diskstat title
-    // assert_eq!(
-    //     title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-    //     "Reads"
-    // );
-    // assert_eq!(
-    //     title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-    //     "Writes"
-    // );
+    assert_eq!(
+        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
+        "Guest"
+    );
+    assert_eq!(
+        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
+        "Guest Nice"
+    );
+    assert_eq!(
+        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
+        "Total"
+    );
+    assert_eq!(
+        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
+        "Free"
+    );
 
     // case4: test json dedup
     sys_handle.title_fns.clear();
@@ -199,27 +205,159 @@ fn test_dump_sys_content() {
         .total_cpu
         .as_ref()
         .expect("Fail to get cpu from model.sys");
-    assert_eq!(jval["CPU Usage"].as_str().unwrap(), cpu.get_usage_pct_str());
-    assert_eq!(jval["CPU User"].as_str().unwrap(), cpu.get_user_pct_str());
-    assert_eq!(jval["CPU Sys"].as_str().unwrap(), cpu.get_system_pct_str());
+    assert_eq!(jval["Usage"].as_str().unwrap(), cpu.get_usage_pct_str());
+    assert_eq!(jval["User"].as_str().unwrap(), cpu.get_user_pct_str());
+    assert_eq!(jval["Idle"].as_str().unwrap(), cpu.get_idle_pct_str());
+    assert_eq!(jval["System"].as_str().unwrap(), cpu.get_system_pct_str());
+    assert_eq!(jval["Nice"].as_str().unwrap(), cpu.get_nice_pct_str());
+    assert_eq!(jval["IOWait"].as_str().unwrap(), cpu.get_iowait_pct_str());
+    assert_eq!(jval["Irq"].as_str().unwrap(), cpu.get_irq_pct_str());
+    assert_eq!(jval["SoftIrq"].as_str().unwrap(), cpu.get_softirq_pct_str());
+    assert_eq!(jval["Stolen"].as_str().unwrap(), cpu.get_stolen_pct_str());
+    assert_eq!(jval["Guest"].as_str().unwrap(), cpu.get_guest_pct_str());
+    assert_eq!(
+        jval["Guest Nice"].as_str().unwrap(),
+        cpu.get_guest_nice_pct_str()
+    );
 
     let mem = model.system.mem;
-    assert_eq!(jval["Mem Total"].as_str().unwrap(), mem.get_total_str());
-    assert_eq!(jval["Mem Free"].as_str().unwrap(), mem.get_free_str());
-    assert_eq!(jval["Mem Anon"].as_str().unwrap(), mem.get_anon_str());
-    assert_eq!(jval["Mem File"].as_str().unwrap(), mem.get_file_str());
+    assert_eq!(jval["Total"].as_str().unwrap(), mem.get_total_str());
+    assert_eq!(jval["Free"].as_str().unwrap(), mem.get_free_str());
+    assert_eq!(jval["Available"].as_str().unwrap(), mem.get_available_str());
+    assert_eq!(jval["Buffers"].as_str().unwrap(), mem.get_buffers_str());
+    assert_eq!(jval["Cached"].as_str().unwrap(), mem.get_cached_str());
+    assert_eq!(
+        jval["Swap Cached"].as_str().unwrap(),
+        mem.get_swap_cached_str()
+    );
+    assert_eq!(jval["Active"].as_str().unwrap(), mem.get_active_str());
+    assert_eq!(jval["Inactive"].as_str().unwrap(), mem.get_inactive_str());
+    assert_eq!(jval["Anon"].as_str().unwrap(), mem.get_anon_str());
+    assert_eq!(jval["File"].as_str().unwrap(), mem.get_file_str());
+    assert_eq!(
+        jval["Unevictable"].as_str().unwrap(),
+        mem.get_unevictable_str()
+    );
+    assert_eq!(jval["Mlocked"].as_str().unwrap(), mem.get_mlocked_str());
+    assert_eq!(
+        jval["Swap Total"].as_str().unwrap(),
+        mem.get_swap_total_str()
+    );
+    assert_eq!(jval["Swap Free"].as_str().unwrap(), mem.get_swap_free_str());
+    assert_eq!(jval["Dirty"].as_str().unwrap(), mem.get_dirty_str());
+    assert_eq!(jval["Writeback"].as_str().unwrap(), mem.get_writeback_str());
+    assert_eq!(
+        jval["Anon Pages"].as_str().unwrap(),
+        mem.get_anon_pages_str()
+    );
+    assert_eq!(jval["Mapped"].as_str().unwrap(), mem.get_mapped_str());
+    assert_eq!(jval["Shmem"].as_str().unwrap(), mem.get_shmem_str());
+    assert_eq!(
+        jval["Kreclaimable"].as_str().unwrap(),
+        mem.get_kreclaimable_str()
+    );
+    assert_eq!(jval["Slab"].as_str().unwrap(), mem.get_slab_str());
+    assert_eq!(
+        jval["Slab Reclaimable"].as_str().unwrap(),
+        mem.get_slab_reclaimable_str()
+    );
+    assert_eq!(
+        jval["Slab Unreclaimable"].as_str().unwrap(),
+        mem.get_slab_unreclaimable_str()
+    );
+    assert_eq!(
+        jval["Kernel Stack"].as_str().unwrap(),
+        mem.get_kernel_stack_str()
+    );
+    assert_eq!(
+        jval["Page Tables"].as_str().unwrap(),
+        mem.get_page_tables_str()
+    );
+    assert_eq!(
+        jval["Anon Huge Pages"].as_str().unwrap(),
+        mem.get_anon_huge_pages_bytes_str()
+    );
+    assert_eq!(
+        jval["Shmem Huge Pages"].as_str().unwrap(),
+        mem.get_shmem_huge_pages_bytes_str()
+    );
+    assert_eq!(
+        jval["File Huge Pages"].as_str().unwrap(),
+        mem.get_file_huge_pages_bytes_str()
+    );
+    assert_eq!(
+        jval["Total Huge Pages"].as_str().unwrap(),
+        mem.get_total_huge_pages_bytes_str()
+    );
+    assert_eq!(
+        jval["Free Huge Pages"].as_str().unwrap(),
+        mem.get_free_huge_pages_bytes_str()
+    );
+    assert_eq!(
+        jval["Huge Page Size"].as_str().unwrap(),
+        mem.get_huge_page_size_str()
+    );
+    assert_eq!(jval["Cma Total"].as_str().unwrap(), mem.get_cma_total_str());
+    assert_eq!(jval["Cma Free"].as_str().unwrap(), mem.get_cma_free_str());
+    assert_eq!(
+        jval["Vmalloc Total"].as_str().unwrap(),
+        mem.get_vmalloc_total_str()
+    );
+    assert_eq!(
+        jval["Vmalloc Used"].as_str().unwrap(),
+        mem.get_vmalloc_used_str()
+    );
+    assert_eq!(
+        jval["Vmalloc Chunk"].as_str().unwrap(),
+        mem.get_vmalloc_chunk_str()
+    );
+    assert_eq!(
+        jval["Direct Map 4K"].as_str().unwrap(),
+        mem.get_direct_map_4k_str()
+    );
+    assert_eq!(
+        jval["Direct Map 2M"].as_str().unwrap(),
+        mem.get_direct_map_2m_str()
+    );
+    assert_eq!(
+        jval["Direct Map 1G"].as_str().unwrap(),
+        mem.get_direct_map_1g_str()
+    );
 
-    //TODO disk stat test.
-    // let io = model
-    //     .system
-    //     .io
-    //     .as_ref()
-    //     .expect("Fail to get io from model.sys");
-    // assert_eq!(
-    //     jval["Writes"].as_str().unwrap(),
-    //     io.get_wbytes_per_sec_str()
-    // );
-    // assert_eq!(jval["Reads"].as_str().unwrap(), io.get_rbytes_per_sec_str());
+    let vm = model.system.vm;
+    assert_eq!(
+        jval["Page In"].as_str().unwrap(),
+        vm.get_pgpgin_per_sec_str()
+    );
+    assert_eq!(
+        jval["Page Out"].as_str().unwrap(),
+        vm.get_pgpgout_per_sec_str()
+    );
+    assert_eq!(
+        jval["Swap In"].as_str().unwrap(),
+        vm.get_pswpin_per_sec_str()
+    );
+    assert_eq!(
+        jval["Swap Out"].as_str().unwrap(),
+        vm.get_pswpout_per_sec_str()
+    );
+    assert_eq!(
+        jval["Pgsteal Kswapd"].as_str().unwrap(),
+        vm.get_pgsteal_kswapd_str()
+    );
+    assert_eq!(
+        jval["Pgsteal Direct"].as_str().unwrap(),
+        vm.get_pgsteal_direct_str()
+    );
+    assert_eq!(
+        jval["Pgscan Kswapd"].as_str().unwrap(),
+        vm.get_pgscan_kswapd_str()
+    );
+    assert_eq!(
+        jval["Pgscan Direct"].as_str().unwrap(),
+        vm.get_pgscan_direct_str()
+    );
+    assert_eq!(jval["OOM Kills"].as_str().unwrap(), vm.get_oom_kill_str());
 }
 
 struct StrIo {

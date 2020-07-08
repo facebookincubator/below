@@ -201,6 +201,7 @@ make_dget!(
     IfaceField::Rate,
     IfaceField::Rx,
     IfaceField::Tx,
+    IfaceField::Timestamp,
 );
 
 impl Dprint for Iface {}

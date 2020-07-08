@@ -189,6 +189,7 @@ make_dget!(
     ProcField::Io,
     ProcField::Uptime,
     ProcField::Cgroup,
+    ProcField::Timestamp,
 );
 
 impl Dprint for Process {}

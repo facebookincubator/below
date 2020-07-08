@@ -54,21 +54,76 @@ macro_rules! make_option {
 make_option! (SysField {
     "timestamp": Timestamp,
     "datetime": Datetime,
+    "stat": Stat,
     "cpu": Cpu,
     "mem": Mem,
-    // "io": Io,
+    "vm": Vm,
     "hostname": Hostname,
+    "total_interrupt_ct": TotalInterruptCt,
+    "context_switches": ContextSwitches,
+    "boot_time_epoch_secs": BootTimeEpochSecs,
+    "total_procs": TotalProcs,
+    "running_procs": RunningProcs,
+    "blocked_procs": BlockedProcs,
     "cpu_usage": CpuUsagePct,
     "cpu_user": CpuUserPct,
+    "cpu_idle": CpuIdlePct,
     "cpu_system": CpuSystemPct,
+    "cpu_nice": CpuNicePct,
+    "cpu_iowait": CpuIowaitPct,
+    "cpu_irq": CpuIrq,
+    "cpu_softirq": CpuSoftIrq,
+    "cpu_stolen": CpuStolen,
+    "cpu_guest": CpuGuest,
+    "cpu_guest_nice": CpuGuestNice,
     "mem_total": MemTotal,
     "mem_free": MemFree,
+    "mem_available": MemAvailable,
+    "mem_buffers": MemBuffers,
+    "mem_cached": MemCached,
+    "mem_swap_cached": MemSwapCached,
+    "mem_active": MemActive,
+    "mem_inactive": MemInactive,
     "mem_anon": MemAnon,
     "mem_file": MemFile,
-    "huge_page_total": HpTotal,
-    "huge_page_free": HpFree,
-    // "io_read": IoRead,
-    // "io_write": IoWrite,
+    "mem_unevictable": MemUnevictable,
+    "mem_mlocked": MemMlocked,
+    "mem_swap_total": MemSwapTotal,
+    "mem_swap_free": MemSwapFree,
+    "mem_dirty": MemDirty,
+    "mem_writeback": MemWriteback,
+    "mem_anon_pages": MemAnonPages,
+    "mem_mapped": MemMapped,
+    "mem_shmem": MemShmem,
+    "mem_kreclaimable": MemKreclaimable,
+    "mem_slab": MemSlab,
+    "mem_slab_reclaimable": MemSlabReclaimable,
+    "mem_slab_unreclaimable": MemSlabUnreclaimable,
+    "mem_kernel_stack": MemKernelStack,
+    "mem_page_tables": MemPageTables,
+    "mem_anon_huge_pages": MemAnonHugePages,
+    "mem_shmem_huge_pages": MemShmemHugePages,
+    "mem_file_huge_pages": MemFileHugePages,
+    "mem_total_huge_pages": MemTotalHugePages,
+    "mem_free_huge_pages": MemFreeHugePages,
+    "mem_huge_page_size": MemHugePageSize,
+    "mem_cma_total": MemCmaTotal,
+    "mem_cma_free": MemCmaFree,
+    "mem_vmalloc_total": MemVmallocTotal,
+    "mem_vmalloc_used": MemVmallocUsed,
+    "mem_vmalloc_chunk": MemVmallocChunk,
+    "mem_direct_map_4k": MemDirectMap4k,
+    "mem_direct_map_2m": MemDirectMap2m,
+    "mem_direct_map_1g": MemDirectMap1g,
+    "vm_pgpgin": VmPgpgin,
+    "vm_pgpgout": VmPgpgout,
+    "vm_pswpin": VmPswpin,
+    "vm_pswpout": VmPswpout,
+    "vm_psteal_kswapd": VmPstealKswapd,
+    "vm_psteal_direct": VmPstealDirect,
+    "vm_pscan_kswapd": VmPscanKswapd,
+    "vm_pscan_direct": VmPscanDirect,
+    "vm_oom_kill": VmOomKill,
 });
 
 make_option! (ProcField {
@@ -329,30 +384,37 @@ pub enum DumpCommand {
     ///
     /// ********************** Available fields **********************
     ///
-    /// timestamp, datetime, hostname
+    /// timestamp, datetime, hostname, total_interrupt_ct, context_switches, boot_time_epoch_secs,
+    /// total_procs, running_procs, blocked_procs
     ///
-    /// cpu_usage, cpu_user, cpu_system
+    /// cpu_usage, cpu_user, cpu_idle, cpu_system, cpu_nice, cpu_iowait, cpu_irq, cpu_softirq, cpu_stolen,
+    /// cpu_guest, cpu_guest_nice
     ///
-    /// mem_total, mem_free, mem_anon, mem_file, huge_page_total, huge_page_free
+    /// mem_total, mem_free, mem_available, mem_buffers, mem_cached, mem_swap_cached, mem_anon, mem_file,
+    /// mem_active, mem_inactive, mem_unevictable, mem_mlocked, mem_swap_total, mem_swap_free, mem_dirty, mem_writeback,
+    /// mem_anon_pages, mem_mapped, mem_shmem, mem_kreclaimable, mem_slab, mem_slab_reclaimable, mem_slab_unreclaimable,
+    /// mem_kernel_stack, mem_page_tables, mem_anon_huge_pages, mem_shmem_huge_pages, mem_file_huge_pages,
+    /// mem_total_huge_pages, mem_free_huge_pages, mem_huge_page_size, mem_cma_total, mem_cma_free, mem_vmalloc_total,
+    /// mem_vmalloc_used, mem_vmalloc_chunk, mem_direct_map_4k, mem_direct_map_2m, mem_direct_map_1g
     ///
-    /// io_read, io_write
+    /// vm_pgpgin, vm_pgpgout, vm_pswpin, vm_pswpout, vm_psteal_kswapd, vm_psteal_direct, vm_pscan_kswapd, vm_pscan_direct,
+    /// vm_oom_kill
     ///
     /// ********************** Aggregated fields **********************
     ///
-    /// * cpu: includes [cpu_usage, cpu_user, cpu_system]
+    /// * cpu: includes [cpu_usage, cpu_user, cpu_system]. Additionally includes [cpu_*] if --detail is specified.
     ///
-    /// * mem: includes [mem_total, mem_free]. Additionally includes [mem_anon, mem_file,
-    ///   huge_page_total, huge_page_free] if --detail is specified.
+    /// * mem: includes [mem_total, mem_free]. Additionally includes [mem_*] if --detail is specified.
     ///
-    /// * io: includes [io_read, io_write]
+    /// * vm: includes [vm_*].
     ///
-    /// --default will have all of [cpu, mem, io]. To display everything, use --everything.
+    /// --default will have all of [hostname, cpu, mem, vm]. To display everything, use --everything.
     ///
     /// ********************** Example Commands **********************
     ///
     /// $ below dump system -b "08:30:00" -e "08:30:30" -f datetime io hostname -O csv
     ///
-    /// $ below dump system -b "08:30:00" -e "08:30:30" -f datetime -O csv -f hostname -f io
+    /// $ below dump system -b "08:30:00" -e "08:30:30" -f datetime -O csv -f hostname -f vm
     System {
         /// Select which fields to display and in what order.
         #[structopt(short, long)]

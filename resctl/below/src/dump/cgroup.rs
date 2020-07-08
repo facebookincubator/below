@@ -551,6 +551,7 @@ make_dget!(
     CgroupField::Mem,
     CgroupField::Io,
     CgroupField::Pressure,
+    CgroupField::Timestamp,
 );
 
 impl Dprint for Cgroup {}

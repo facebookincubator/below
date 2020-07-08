@@ -332,6 +332,7 @@ make_dget!(
     NetworkField::Ip6,
     NetworkField::Icmp,
     NetworkField::Icmp6,
+    NetworkField::Timestamp,
 );
 
 impl Dprint for Network {}

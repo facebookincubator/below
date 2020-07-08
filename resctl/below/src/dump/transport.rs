@@ -236,6 +236,7 @@ make_dget!(
     TransportField::Tcp,
     TransportField::Udp,
     TransportField::Udp6,
+    TransportField::Timestamp,
 );
 
 impl Dprint for Transport {}
