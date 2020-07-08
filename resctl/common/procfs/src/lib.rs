@@ -518,10 +518,20 @@ impl ProcReader {
         let path = path.as_ref().join("cgroup");
         let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
         let buf_reader = BufReader::new(file);
-        for line in buf_reader.lines() {
-            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
-            if line.len() > 3 && line.starts_with("0::") {
-                return Ok(line[3..].to_string());
+        let pid_line = buf_reader.lines().next().map_or_else(
+            || Err(Error::InvalidFileFormat(path.clone())),
+            |line| line.map_err(|e| Error::IoError(path.clone(), e)),
+        )?;
+
+        // cgroup V2
+        if pid_line.len() > 3 && pid_line.starts_with("0::") {
+            return Ok(pid_line[3..].to_string());
+        }
+
+        // legacy cgroup will have multiple lines with the first line of [0-9]+:pids:PATH
+        if let Some(pid_idx) = pid_line.find(":pids:") {
+            if pid_idx + 6 < pid_line.len() {
+                return Ok(pid_line[pid_idx + 6..].to_string());
             }
         }
 

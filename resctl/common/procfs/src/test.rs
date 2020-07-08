@@ -700,7 +700,7 @@ cancelled_write_bytes: 5431947264
 }
 
 #[test]
-fn test_pid_cgroup() {
+fn test_pid_cgroupv2() {
     let cgroup = b"0::/user.slice/user-119756.slice/session-3.scope
 ";
 
@@ -712,6 +712,30 @@ fn test_pid_cgroup() {
         .expect("Failed to read pid cgroup file");
 
     assert_eq!(cgroup, "/user.slice/user-119756.slice/session-3.scope");
+}
+
+#[test]
+fn test_pid_cgroupv1() {
+    let cgroup = b"11:pids:/init.scope
+10:perf_event:/
+9:hugetlb:/
+8:cpu,cpuacct:/init.scope
+7:blkio:/init.scope
+6:freezer:/
+5:cpuset:/
+4:memory:/init.scope
+3:devices:/init.scope
+2:net_cls,net_prio:/
+1:name=systemd:/init.scope";
+
+    let procfs = TestProcfs::new();
+    procfs.create_pid_file_with_content(1024, "cgroup", cgroup);
+    let reader = procfs.get_reader();
+    let cgroup = reader
+        .read_pid_cgroup(1024)
+        .expect("Failed to read pid cgroup file");
+
+    assert_eq!(cgroup, "/init.scope");
 }
 
 #[test]
