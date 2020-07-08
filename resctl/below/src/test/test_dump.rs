@@ -700,6 +700,15 @@ fn traverse_cgroup_tree(model: &CgroupModel, jval: &mut Value) {
             jval["THP Collapse Alloc"].as_str().unwrap(),
             mem.get_thp_collapse_alloc_str()
         );
+
+        if *mem.get_memory_high() == Some(-1) {
+            assert_eq!(jval["Memory.High"].as_str().unwrap(), "max");
+        } else {
+            assert_eq!(
+                jval["Memory.High"].as_str().unwrap(),
+                mem.get_memory_high_str()
+            );
+        }
     }
 
     if let Some(pressure) = model.pressure.as_ref() {

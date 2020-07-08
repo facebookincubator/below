@@ -225,6 +225,7 @@ make_option! (CgroupField {
     "mem_pglazyfreed": MemPglazyfreed,
     "mem_thp_fault_alloc": MemTHPFaultAlloc,
     "mem_thp_collapse_alloc": MemTHPCollapseAlloc,
+    "mem_high": MemHigh,
     "io_read": IoRead,
     "io_write": IoWrite,
     "io_rios": IoRiops,
@@ -550,7 +551,7 @@ pub enum DumpCommand {
     /// mem_total, mem_anon, mem_file, mem_kernel, mem_slab, mem_sock, mem_shem,
     /// mem_file_mapped, mem_file_dirty, mem_file_writeback, mem_anon_thp, mem_inactive_anon,
     /// mem_active_anon, mem_inactive_file, mem_active_file, mem_unevictable, mem_slab_reclaimable,
-    /// mem_slab_unreclaimable
+    /// mem_slab_unreclaimable, mem_high
     ///
     /// io_read, io_write, io_wios, io_rios, io_dbps, io_diops, io_total
     ///
@@ -578,7 +579,7 @@ pub enum DumpCommand {
     /// Output stats for all cgroups matching pattern "below*" for time slices
     /// from 08:30:00 to 08:30:30:
     ///
-    /// $ below dump cgroup -b "08:30:00" -e "08:30:30" -s comm -F below* -O json
+    /// $ below dump cgroup -b "08:30:00" -e "08:30:30" -s name -F below* -O json
     ///
     /// Output stats for top 5 CPU intense cgroups for each time slice
     /// from 08:30:00 to 08:30:30 recursively:

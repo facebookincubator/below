@@ -377,6 +377,15 @@ pub struct CgroupData {
         cmp = true
     )]
     pub thp_collapse_alloc: Option<u64>,
+    #[blink("CgroupModel$memory?.get_memory_high")]
+    #[bttr(
+        title = "Memory.High",
+        width = 18,
+        tag = "CgroupField::MemHigh&",
+        cmp = true,
+        decorator = "if $ == -1 { \"max\".to_string() } else { convert_bytes($ as f64) }"
+    )]
+    pub mem_high: Option<i64>,
     #[blink("CgroupModel$pressure?.get_cpu_some_pct")]
     #[bttr(
         title = "CPU Pressure",
@@ -511,7 +520,7 @@ pub struct CgroupData {
     )]
     pub cpu: AwaysNone,
     #[bttr(
-        class = "CgroupField$memory_total&:memory_swap&,anon&,file&,kernel_stack&,slab&,sock&,shmem&,file_mapped&,file_dirty&,file_writeback&,anon_thp&,inactive_anon&,active_anon&,inactive_file&,active_file&,unevictable&,slab_reclaimable&,slab_unreclaimable&,pgfault&,pgmajfault&,workingset_refault&,workingset_activate&,workingset_nodereclaim&,pgrefill&,pgscan&,pgsteal&,pgactivate&,pgdeactivate&,pglazyfree&,pglazyfreed&,thp_fault_alloc&,thp_collapse_alloc&"
+        class = "CgroupField$memory_total&:memory_swap&,anon&,file&,kernel_stack&,slab&,sock&,shmem&,file_mapped&,file_dirty&,file_writeback&,anon_thp&,inactive_anon&,active_anon&,inactive_file&,active_file&,unevictable&,slab_reclaimable&,slab_unreclaimable&,pgfault&,pgmajfault&,workingset_refault&,workingset_activate&,workingset_nodereclaim&,pgrefill&,pgscan&,pgsteal&,pgactivate&,pgdeactivate&,pglazyfree&,pglazyfreed&,thp_fault_alloc&,thp_collapse_alloc&,mem_high&"
     )]
     pub mem: AwaysNone,
     #[bttr(

@@ -91,6 +91,7 @@ impl CgroupModel {
                 (Some(begin), Some(end)) => Some(CgroupMemoryModel::new(
                     sample.memory_current.map(|v| v as u64),
                     sample.memory_swap_current.map(|v| v as u64),
+                    sample.memory_high,
                     begin,
                     end,
                     delta,
@@ -316,12 +317,15 @@ pub struct CgroupMemoryModel {
     pub thp_fault_alloc: Option<u64>,
     #[bttr(title = "THP Collapse Alloc")]
     pub thp_collapse_alloc: Option<u64>,
+    #[bttr(title = "Memory.High")]
+    pub memory_high: Option<i64>,
 }
 
 impl CgroupMemoryModel {
     pub fn new(
         current: Option<u64>,
         swap: Option<u64>,
+        memory_high: Option<i64>,
         begin: &cgroupfs::MemoryStat,
         end: &cgroupfs::MemoryStat,
         delta: Duration,
@@ -375,6 +379,7 @@ impl CgroupMemoryModel {
             pglazyfreed: count_per_sec!(begin.pglazyfreed, end.pglazyfreed, delta, u64),
             thp_fault_alloc: end.thp_fault_alloc.map(|v| v as u64),
             thp_collapse_alloc: end.thp_collapse_alloc.map(|v| v as u64),
+            memory_high,
         }
     }
 }
