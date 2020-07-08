@@ -126,6 +126,33 @@ make_option! (SysField {
     "vm_oom_kill": VmOomKill,
 });
 
+make_option! (DiskField {
+    "timestamp": Timestamp,
+    "datetime": Datetime,
+    "read": Read,
+    "write": Write,
+    "discard": Discard,
+    "name": Name,
+    "total": TotalBytes,
+    "read_bytes": ReadBytes,
+    "write_bytes": WriteBytes,
+    "discard_bytes": DiscardBytes,
+    "read_completed": ReadComplated,
+    "read_merged": ReadMerged,
+    "read_sectors": ReadSectors,
+    "time_spend_read": TimeSpendRead,
+    "write_completed": WriteCompleted,
+    "write_merged": WriteMerged,
+    "write_sectors": WriteSectors,
+    "time_spend_write": TimeSpendWrite,
+    "discard_completed": DiscardCompleted,
+    "discard_merged": DiscardMerged,
+    "discard_sectors": DiscardSectors,
+    "time_spend_discard": TimeSpendDiscard,
+    "major": Major,
+    "minor": Minor,
+});
+
 make_option! (ProcField {
     "timestamp": Timestamp,
     "datetime": Datetime,
@@ -421,6 +448,51 @@ pub enum DumpCommand {
         fields: Option<Vec<SysField>>,
         #[structopt(flatten)]
         opts: GeneralOpt,
+    },
+    /// Dump disk stats
+    ///
+    /// ********************** Available fields **********************
+    ///
+    /// timestamp, datetime, name, total, major, minor
+    ///
+    /// read_bytes, read_completed, read_merged, read_sectors, time_spend_read
+    ///
+    /// write_bytes, write_completed, write_merged, write_sectors, time_spend_write
+    ///
+    /// discard_bytes, discard_completed, discard_merged, discard_sectors, time_spend_discard
+    ///
+    /// ********************** Aggregated fields **********************
+    ///
+    /// * read: includes [read*]
+    ///
+    /// * write: includes [write*]
+    ///
+    /// * discard: includes [discard*]
+    ///
+    /// --default will have all of [name, total, major, minor, read, write, discard]. To display everything, use --everything.
+    ///
+    /// ********************** Example Commands **********************
+    ///
+    /// Simple example:
+    ///
+    /// $ below dump disk -b "08:30:00" -e "08:30:30" -f read write discard -O csv
+    ///
+    /// Output stats for all "nvme0*" matched disk from 08:30:00 to 08:30:30:
+    ///
+    /// $ below dump process -b "08:30:00" -e "08:30:30" -s read -F nvme0* -O json
+    ///
+    /// Output stats for top 5 read partitions for each time slice from 08:30:00 to 08:30:30:
+    ///
+    /// $ below dump process -b "08:30:00" -e "08:30:30" -s read_bytes --rsort --top 5
+    Disk {
+        /// Select which fields to display and in what order.
+        #[structopt(short, long)]
+        fields: Option<Vec<DiskField>>,
+        #[structopt(flatten)]
+        opts: GeneralOpt,
+        /// Select field for operation, use with --sort, --rsort, --filter, --top
+        #[structopt(long, short)]
+        select: Option<DiskField>,
     },
     /// Dump process stats
     ///

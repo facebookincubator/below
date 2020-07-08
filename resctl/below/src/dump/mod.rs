@@ -33,6 +33,7 @@ use serde_json::{json, Value};
 pub mod get;
 pub mod cgroup;
 pub mod command;
+pub mod disk;
 mod fill;
 pub mod iface;
 pub mod network;
@@ -44,8 +45,8 @@ pub mod transport;
 
 pub use command::DumpCommand;
 use command::{
-    CgroupField, GeneralOpt, IfaceField, NetworkField, OutputFormat, ProcField, SysField,
-    TransportField,
+    CgroupField, DiskField, GeneralOpt, IfaceField, NetworkField, OutputFormat, ProcField,
+    SysField, TransportField,
 };
 use fill::Dfill;
 use get::Dget;
@@ -125,6 +126,16 @@ pub fn run(
             let mut sys = system::System::new(opts, advance, time_end, None);
             sys.init(fields);
             sys.exec()
+        }
+        DumpCommand::Disk {
+            fields,
+            opts,
+            select,
+        } => {
+            let (time_end, advance) = get_advance(logger, dir, host, port, &opts.begin, &opts.end)?;
+            let mut disk = disk::Disk::new(opts, advance, time_end, select);
+            disk.init(fields);
+            disk.exec()
         }
         DumpCommand::Process {
             fields,

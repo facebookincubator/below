@@ -1298,3 +1298,116 @@ fn test_dump_transport_content() {
         }
     }
 }
+
+#[test]
+// Test correctness of disk decoration
+// This test will also test JSON correctness.
+fn test_dump_disk_content() {
+    let mut collector = Collector::new(get_dummy_exit_data());
+    let logger = get_logger();
+    collector.update_model(&logger).expect("Fail to get model");
+    let time = SystemTime::now();
+    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
+
+    let mut opts: GeneralOpt = Default::default();
+    opts.everything = true;
+    opts.output_format = Some(OutputFormat::Json);
+    let mut disk_handle = disk::Disk::new(opts, advance, time, None);
+    disk_handle.init(None);
+
+    // update model again to populate cpu and io data
+    let model = collector.update_model(&logger).expect("Fail to get model");
+    let mut disk_content = StrIo::new();
+    let mut round = 0;
+    disk_handle
+        .iterate_exec(&model, &mut disk_content, &mut round, false)
+        .expect("Fail to get json from iterate_exec");
+
+    // verify json correctness
+    assert!(!disk_content.content.is_empty());
+    let jval: Value =
+        serde_json::from_str(&disk_content.content).expect("Fail parse json of disk dump");
+
+    // verify content correctness, test first 5 should be enough
+    let mut count = 5;
+    for value in jval.as_array().unwrap() {
+        let name = value["Name"].as_str().unwrap();
+        let sdm = model
+            .system
+            .disks
+            .get(name)
+            .expect("Json pid and sdm pid not match");
+
+        assert_eq!(value["Name"].as_str().unwrap(), sdm.get_name_str());
+        assert_eq!(
+            value["Read"].as_str().unwrap(),
+            sdm.get_read_bytes_per_sec_str()
+        );
+        assert_eq!(
+            value["Write"].as_str().unwrap(),
+            sdm.get_write_bytes_per_sec_str()
+        );
+        assert_eq!(
+            value["Discard"].as_str().unwrap(),
+            sdm.get_discard_bytes_per_sec_str()
+        );
+        assert_eq!(
+            value["Disk"].as_str().unwrap(),
+            sdm.get_disk_total_bytes_per_sec_str()
+        );
+        assert_eq!(
+            value["Read Completed"].as_str().unwrap(),
+            sdm.get_read_completed_str()
+        );
+        assert_eq!(
+            value["Read Merged"].as_str().unwrap(),
+            sdm.get_read_merged_str()
+        );
+        assert_eq!(
+            value["Read Sectors"].as_str().unwrap(),
+            sdm.get_read_sectors_str()
+        );
+        assert_eq!(
+            value["Time Spend Read"].as_str().unwrap(),
+            sdm.get_time_spend_read_ms_str()
+        );
+        assert_eq!(
+            value["Write Completed"].as_str().unwrap(),
+            sdm.get_write_completed_str()
+        );
+        assert_eq!(
+            value["Write Merged"].as_str().unwrap(),
+            sdm.get_write_merged_str()
+        );
+        assert_eq!(
+            value["Write Sectors"].as_str().unwrap(),
+            sdm.get_write_sectors_str()
+        );
+        assert_eq!(
+            value["Time Spend Write"].as_str().unwrap(),
+            sdm.get_time_spend_write_ms_str()
+        );
+        assert_eq!(
+            value["Discard Completed"].as_str().unwrap(),
+            sdm.get_discard_completed_str()
+        );
+        assert_eq!(
+            value["Discard Merged"].as_str().unwrap(),
+            sdm.get_discard_merged_str()
+        );
+        assert_eq!(
+            value["Discard Sectors"].as_str().unwrap(),
+            sdm.get_discard_sectors_str()
+        );
+        assert_eq!(
+            value["Time Spend Discard"].as_str().unwrap(),
+            sdm.get_time_spend_discard_ms_str()
+        );
+        assert_eq!(value["Major"].as_str().unwrap(), sdm.get_major_str());
+        assert_eq!(value["Minor"].as_str().unwrap(), sdm.get_minor_str());
+        count -= 1;
+        if count == 0 {
+            break;
+        }
+    }
+}

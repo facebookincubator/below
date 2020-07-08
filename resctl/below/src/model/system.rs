@@ -493,20 +493,23 @@ pub struct SingleDiskModel {
         title = "Name",
         width = 15,
         depth = "self.depth * 3",
-        prefix = "get_prefix(self.collapse)"
+        prefix = "get_prefix(self.collapse)",
+        cmp = true
     )]
     pub name: Option<String>,
     #[bttr(
         title = "Read",
         width = 10,
         decorator = "convert_bytes($ as f64)",
-        unit = "/s"
+        unit = "/s",
+        cmp = true
     )]
     pub read_bytes_per_sec: Option<f64>,
     #[bttr(
         title = "Write",
         width = 10,
         decorator = "convert_bytes($ as f64)",
+        cmp = true,
         unit = "/s"
     )]
     pub write_bytes_per_sec: Option<f64>,
@@ -514,6 +517,7 @@ pub struct SingleDiskModel {
         title = "Discard",
         width = 10,
         decorator = "convert_bytes($ as f64)",
+        cmp = true,
         unit = "/s"
     )]
     pub discard_bytes_per_sec: Option<f64>,
@@ -521,36 +525,37 @@ pub struct SingleDiskModel {
         title = "Disk",
         width = 10,
         decorator = "convert_bytes($ as f64)",
+        cmp = true,
         unit = "/s"
     )]
     pub disk_total_bytes_per_sec: Option<f64>,
-    #[bttr(title = "Read Completed", width = 15)]
+    #[bttr(title = "Read Completed", width = 15, cmp = true)]
     pub read_completed: Option<u64>,
-    #[bttr(title = "Read Merged", width = 15)]
+    #[bttr(title = "Read Merged", width = 15, cmp = true)]
     pub read_merged: Option<u64>,
-    #[bttr(title = "Read Sectors", width = 15)]
+    #[bttr(title = "Read Sectors", width = 15, cmp = true)]
     pub read_sectors: Option<u64>,
-    #[bttr(title = "Time Spend Read", width = 15, unit = " ms")]
+    #[bttr(title = "Time Spend Read", width = 15, unit = " ms", cmp = true)]
     pub time_spend_read_ms: Option<u64>,
-    #[bttr(title = "Write Completed", width = 15)]
+    #[bttr(title = "Write Completed", width = 15, cmp = true)]
     pub write_completed: Option<u64>,
-    #[bttr(title = "Write Merged", width = 15)]
+    #[bttr(title = "Write Merged", width = 15, cmp = true)]
     pub write_merged: Option<u64>,
-    #[bttr(title = "Write Sectors", width = 15)]
+    #[bttr(title = "Write Sectors", width = 15, cmp = true)]
     pub write_sectors: Option<u64>,
-    #[bttr(title = "Time Spend Write", width = 15, unit = " ms")]
+    #[bttr(title = "Time Spend Write", width = 15, unit = " ms", cmp = true)]
     pub time_spend_write_ms: Option<u64>,
-    #[bttr(title = "Discard Completed", width = 15)]
+    #[bttr(title = "Discard Completed", width = 15, cmp = true)]
     pub discard_completed: Option<u64>,
-    #[bttr(title = "Discard Merged", width = 15)]
+    #[bttr(title = "Discard Merged", width = 15, cmp = true)]
     pub discard_merged: Option<u64>,
-    #[bttr(title = "Discard Sectors", width = 15)]
+    #[bttr(title = "Discard Sectors", width = 15, cmp = true)]
     pub discard_sectors: Option<u64>,
-    #[bttr(title = "Time Spend Discard", width = 15, unit = " ms")]
+    #[bttr(title = "Time Spend Discard", width = 15, unit = " ms", cmp = true)]
     pub time_spend_discard_ms: Option<u64>,
-    #[bttr(title = "Major", width = 7)]
+    #[bttr(title = "Major", width = 7, cmp = true)]
     pub major: Option<u64>,
-    #[bttr(title = "Minor", width = 7)]
+    #[bttr(title = "Minor", width = 7, cmp = true)]
     pub minor: Option<u64>,
     pub collapse: bool,
     pub depth: usize,
