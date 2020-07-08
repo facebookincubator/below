@@ -59,8 +59,8 @@ fn test_tmain_init() {
     sys_handle.field_fns.clear();
     sys_handle.get_opts_mut().default = true;
     sys_handle.init(fields.clone());
-    assert_eq!(sys_handle.title_fns.len(), 8);
-    assert_eq!(sys_handle.field_fns.len(), 8);
+    assert_eq!(sys_handle.title_fns.len(), 6);
+    assert_eq!(sys_handle.field_fns.len(), 6);
     let mut title_iter = sys_handle.title_fns.iter();
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
@@ -86,14 +86,15 @@ fn test_tmain_init() {
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
         "Mem Free"
     );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Reads"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Writes"
-    );
+    //TODO Add Diskstat title
+    // assert_eq!(
+    //     title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
+    //     "Reads"
+    // );
+    // assert_eq!(
+    //     title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
+    //     "Writes"
+    // );
 
     // case3: when everything is set
     sys_handle.title_fns.clear();
@@ -103,8 +104,8 @@ fn test_tmain_init() {
     sys_handle.init(fields);
     assert!(sys_handle.get_opts().default);
     assert!(sys_handle.get_opts().detail);
-    assert_eq!(sys_handle.title_fns.len(), 12);
-    assert_eq!(sys_handle.field_fns.len(), 12);
+    assert_eq!(sys_handle.title_fns.len(), 10);
+    assert_eq!(sys_handle.field_fns.len(), 10);
     let mut title_iter = sys_handle.title_fns.iter();
     assert_eq!(
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
@@ -146,14 +147,15 @@ fn test_tmain_init() {
         title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
         "Huge Page Free"
     );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Reads"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Writes"
-    );
+    //TODO Add Diskstat title
+    // assert_eq!(
+    //     title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
+    //     "Reads"
+    // );
+    // assert_eq!(
+    //     title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
+    //     "Writes"
+    // );
 
     // case4: test json dedup
     sys_handle.title_fns.clear();
@@ -194,32 +196,30 @@ fn test_dump_sys_content() {
     let cpu = model
         .system
         .cpu
+        .total_cpu
         .as_ref()
         .expect("Fail to get cpu from model.sys");
     assert_eq!(jval["CPU Usage"].as_str().unwrap(), cpu.get_usage_pct_str());
     assert_eq!(jval["CPU User"].as_str().unwrap(), cpu.get_user_pct_str());
     assert_eq!(jval["CPU Sys"].as_str().unwrap(), cpu.get_system_pct_str());
 
-    let mem = model
-        .system
-        .mem
-        .as_ref()
-        .expect("Fail to get mem from model.sys");
+    let mem = model.system.mem;
     assert_eq!(jval["Mem Total"].as_str().unwrap(), mem.get_total_str());
     assert_eq!(jval["Mem Free"].as_str().unwrap(), mem.get_free_str());
     assert_eq!(jval["Mem Anon"].as_str().unwrap(), mem.get_anon_str());
     assert_eq!(jval["Mem File"].as_str().unwrap(), mem.get_file_str());
 
-    let io = model
-        .system
-        .io
-        .as_ref()
-        .expect("Fail to get io from model.sys");
-    assert_eq!(
-        jval["Writes"].as_str().unwrap(),
-        io.get_wbytes_per_sec_str()
-    );
-    assert_eq!(jval["Reads"].as_str().unwrap(), io.get_rbytes_per_sec_str());
+    //TODO disk stat test.
+    // let io = model
+    //     .system
+    //     .io
+    //     .as_ref()
+    //     .expect("Fail to get io from model.sys");
+    // assert_eq!(
+    //     jval["Writes"].as_str().unwrap(),
+    //     io.get_wbytes_per_sec_str()
+    // );
+    // assert_eq!(jval["Reads"].as_str().unwrap(), io.get_rbytes_per_sec_str());
 }
 
 struct StrIo {

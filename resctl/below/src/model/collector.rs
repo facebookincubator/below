@@ -15,6 +15,7 @@
 use std::sync::{Arc, Mutex};
 
 use super::*;
+use procfs::DiskStat;
 use slog::{self, error};
 
 /// Collects data samples and maintains the latest data
@@ -34,7 +35,7 @@ impl Collector {
     /// Collect a new `Sample`, returning an updated Model
     pub fn update_model(&mut self, logger: &slog::Logger) -> Result<Model> {
         let now = Instant::now();
-        let sample = collect_sample(&self.exit_data, true, logger)?;
+        let sample = collect_sample(&self.exit_data, true, logger, false)?;
         let last = self.last.replace((sample, now));
         let model = Model::new(
             SystemTime::now(),
@@ -90,10 +91,28 @@ fn merge_procfs_and_exit_data(
     procfs_data
 }
 
+/// This function will test if all field of DiskStat are zero, if so we will need to skip
+/// this sample inside collector.
+fn is_all_zero_disk_stats(disk_stats: &DiskStat) -> bool {
+    disk_stats.read_completed == Some(0)
+        && disk_stats.write_completed == Some(0)
+        && disk_stats.discard_completed == Some(0)
+        && disk_stats.read_merged == Some(0)
+        && disk_stats.read_sectors == Some(0)
+        && disk_stats.time_spend_read_ms == Some(0)
+        && disk_stats.write_merged == Some(0)
+        && disk_stats.write_sectors == Some(0)
+        && disk_stats.time_spend_write_ms == Some(0)
+        && disk_stats.discard_merged == Some(0)
+        && disk_stats.discard_sectors == Some(0)
+        && disk_stats.time_spend_discard_ms == Some(0)
+}
+
 pub fn collect_sample(
     exit_data: &Arc<Mutex<procfs::PidMap>>,
     collect_io_stat: bool,
     logger: &slog::Logger,
+    disable_disk_stat: bool,
 ) -> Result<Sample> {
     let reader = procfs::ProcReader::new();
     Ok(Sample {
@@ -111,6 +130,23 @@ pub fn collect_sample(
             meminfo: reader.read_meminfo()?,
             vmstat: reader.read_vmstat()?,
             hostname: get_hostname()?,
+            disks: match (disable_disk_stat, reader.read_disk_stats()) {
+                (false, Ok(disks)) => disks
+                    .into_iter()
+                    .filter(|(disk_name, disk_stat)| {
+                        if disk_name.starts_with("ram") || disk_name.starts_with("loop") {
+                            return false;
+                        }
+
+                        !is_all_zero_disk_stats(&disk_stat)
+                    })
+                    .collect(),
+                (false, Err(e)) => {
+                    error!(logger, "{}", e);
+                    Default::default()
+                }
+                (true, _) => Default::default(),
+            },
         },
     })
 }

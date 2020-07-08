@@ -31,7 +31,7 @@ pub struct SystemData {
         precision = 2,
         tag = "SysField::CpuUsagePct&"
     )]
-    #[blink("SystemModel$cpu?.get_usage_pct")]
+    #[blink("SystemModel$cpu.total_cpu?.get_usage_pct")]
     pub cpu_usage_pct: Option<f64>,
     #[bttr(
         title = "CPU User",
@@ -40,7 +40,7 @@ pub struct SystemData {
         precision = 2,
         tag = "SysField::CpuUserPct&"
     )]
-    #[blink("SystemModel$cpu?.get_user_pct")]
+    #[blink("SystemModel$cpu.total_cpu?.get_user_pct")]
     pub cpu_user_pct: Option<f64>,
     #[bttr(
         title = "CPU Sys",
@@ -49,7 +49,7 @@ pub struct SystemData {
         precision = 2,
         tag = "SysField::CpuSystemPct&"
     )]
-    #[blink("SystemModel$cpu?.get_system_pct")]
+    #[blink("SystemModel$cpu.total_cpu?.get_system_pct")]
     pub cpu_system_pct: Option<f64>,
     #[bttr(
         title = "Mem Total",
@@ -57,7 +57,7 @@ pub struct SystemData {
         decorator = "convert_bytes($ as f64)",
         tag = "SysField::MemTotal&"
     )]
-    #[blink("SystemModel$mem?.get_total")]
+    #[blink("SystemModel$mem.get_total")]
     pub mem_total: Option<u64>,
     #[bttr(
         title = "Mem Free",
@@ -65,7 +65,7 @@ pub struct SystemData {
         decorator = "convert_bytes($ as f64)",
         tag = "SysField::MemFree&"
     )]
-    #[blink("SystemModel$mem?.get_free")]
+    #[blink("SystemModel$mem.get_free")]
     pub mem_free: Option<u64>,
     #[bttr(
         title = "Mem Anon",
@@ -73,7 +73,7 @@ pub struct SystemData {
         decorator = "convert_bytes($ as f64)",
         tag = "SysField::MemAnon&"
     )]
-    #[blink("SystemModel$mem?.get_anon")]
+    #[blink("SystemModel$mem.get_anon")]
     pub mem_anon: Option<u64>,
     #[bttr(
         title = "Mem File",
@@ -81,7 +81,7 @@ pub struct SystemData {
         decorator = "convert_bytes($ as f64)",
         tag = "SysField::MemFile&"
     )]
-    #[blink("SystemModel$mem?.get_file")]
+    #[blink("SystemModel$mem.get_file")]
     pub mem_file: Option<u64>,
     #[bttr(
         title = "Huge Page Total",
@@ -89,7 +89,7 @@ pub struct SystemData {
         decorator = "convert_bytes($ as f64)",
         tag = "SysField::HpTotal&"
     )]
-    #[blink("SystemModel$mem?.get_hugepage_total")]
+    #[blink("SystemModel$mem.get_total_huge_pages_bytes")]
     pub hugepage_total: Option<u64>,
     #[bttr(
         title = "Huge Page Free",
@@ -97,26 +97,8 @@ pub struct SystemData {
         decorator = "convert_bytes($ as f64)",
         tag = "SysField::HpFree&"
     )]
-    #[blink("SystemModel$mem?.get_hugepage_free")]
+    #[blink("SystemModel$mem.get_free_huge_pages_bytes")]
     pub hugepage_free: Option<u64>,
-    #[bttr(
-        title = "Reads",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "SysField::IoRead&",
-        unit = "/s"
-    )]
-    #[blink("SystemModel$io?.get_rbytes_per_sec")]
-    pub io_rbytes_per_sec: Option<f64>,
-    #[bttr(
-        title = "Writes",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "SysField::IoWrite&",
-        unit = "/s"
-    )]
-    #[blink("SystemModel$io?.get_wbytes_per_sec")]
-    pub io_wbytes_per_sec: Option<f64>,
     #[bttr(
         title = "Datetime",
         width = 19,
@@ -132,8 +114,6 @@ pub struct SystemData {
         class = "SysField$mem_total&,mem_free&:mem_anon&,mem_file&,hugepage_total&,hugepage_free&"
     )]
     pub mem: AwaysNone,
-    #[bttr(class = "SysField$io_rbytes_per_sec&,io_wbytes_per_sec&")]
-    pub io: AwaysNone,
 }
 
 type TitleFtype = Box<dyn Fn(&SystemData, &SystemModel) -> &'static str>;
@@ -154,13 +134,7 @@ impl DumpType for System {
     type DataType = SystemData;
 }
 
-make_dget!(
-    System,
-    SysField::Datetime,
-    SysField::Cpu,
-    SysField::Mem,
-    SysField::Io,
-);
+make_dget!(System, SysField::Datetime, SysField::Cpu, SysField::Mem,);
 
 impl Dprint for System {}
 

@@ -56,7 +56,7 @@ make_option! (SysField {
     "datetime": Datetime,
     "cpu": Cpu,
     "mem": Mem,
-    "io": Io,
+    // "io": Io,
     "hostname": Hostname,
     "cpu_usage": CpuUsagePct,
     "cpu_user": CpuUserPct,
@@ -67,8 +67,8 @@ make_option! (SysField {
     "mem_file": MemFile,
     "huge_page_total": HpTotal,
     "huge_page_free": HpFree,
-    "io_read": IoRead,
-    "io_write": IoWrite,
+    // "io_read": IoRead,
+    // "io_write": IoWrite,
 });
 
 make_option! (ProcField {

@@ -98,6 +98,9 @@ enum Command {
         /// Threshold for hold long data collection takes to trigger warnings.
         #[structopt(long, default_value = "500")]
         skew_detection_threshold_ms: u64,
+        /// Flag to disable disk_stat collection.
+        #[structopt(long)]
+        disable_disk_stat: bool,
     },
     /// Replay historical data (interactive)
     Replay {
@@ -326,6 +329,7 @@ fn real_main(init: init::InitToken) {
             ref collect_io_stat,
             ref port,
             ref skew_detection_threshold_ms,
+            ref disable_disk_stat,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
             let store_dir = below_config.store_dir.clone();
@@ -344,6 +348,7 @@ fn real_main(init: init::InitToken) {
                         *collect_io_stat,
                         Duration::from_millis(*skew_detection_threshold_ms),
                         debug,
+                        *disable_disk_stat,
                     )
                 },
             )
@@ -445,6 +450,7 @@ fn record(
     collect_io_stat: bool,
     skew_detection_threshold: Duration,
     debug: bool,
+    disable_disk_stat: bool,
 ) -> Result<()> {
     debug!(logger, "Starting up!");
 
@@ -466,7 +472,8 @@ fn record(
         check_for_exitstat_errors(&logger, &bpf_errs);
 
         let collect_instant = Instant::now();
-        let collected_sample = collect_sample(&exit_buffer, collect_io_stat, &logger);
+        let collected_sample =
+            collect_sample(&exit_buffer, collect_io_stat, &logger, disable_disk_stat);
         let post_collect_sys_time = SystemTime::now();
         let post_collect_instant = Instant::now();
 

@@ -587,7 +587,6 @@ fn test_disk_stat() {
     let diskmap = reader
         .read_disk_stats()
         .expect("Failed to read diskstats file");
-    assert_eq!(diskmap.len(), 4);
     let vda_stat = diskmap.get("vda").expect("Fail to get vda");
     assert_eq!(vda_stat.name, Some("vda".into()));
     assert_eq!(vda_stat.read_completed, Some(187_110_061));

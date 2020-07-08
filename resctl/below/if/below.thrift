@@ -41,4 +41,5 @@ struct SystemSample {
   2: procfs.MemInfo meminfo,
   3: procfs.VmStat vmstat
   4: string hostname,
+  5: procfs.DiskMap disks,
 }

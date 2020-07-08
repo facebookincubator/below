@@ -17,7 +17,7 @@ use std::time::{Duration, Instant, SystemTime};
 
 use anyhow::{anyhow, Context, Result};
 
-use crate::util::{convert_bytes, fold_string};
+use crate::util::{convert_bytes, fold_string, get_prefix};
 use below_derive::BelowDecor;
 use below_thrift::types::{CgroupSample, Sample, SystemSample};
 
@@ -51,12 +51,7 @@ impl Model {
         Model {
             time_elapsed: last.map(|(_, d)| d).unwrap_or_default(),
             timestamp,
-            system: SystemModel::new(
-                &sample.system,
-                last.map(|(s, d)| (&s.system, d)),
-                &sample.processes,
-                last.map(|(s, d)| (&s.processes, d)),
-            ),
+            system: SystemModel::new(&sample.system, last.map(|(s, d)| (&s.system, d))),
             cgroup: CgroupModel::new(
                 "<root>".to_string(),
                 String::new(),

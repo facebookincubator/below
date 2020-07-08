@@ -11,12 +11,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use std::collections::BTreeMap;
 
 use cursive::view::{Identifiable, View};
 use cursive::views::{LinearLayout, TextView};
 use cursive::Cursive;
 
-use crate::model::{CpuModel, IoModel, MemoryModel, NetworkModel};
+use crate::model::{CpuModel, MemoryModel, NetworkModel, SingleDiskModel};
+use crate::util::convert_bytes;
 use crate::view::ViewState;
 
 use below_derive::BelowDecor;
@@ -44,11 +46,26 @@ macro_rules! gen_row_impl {
 
 #[derive(BelowDecor, Default)]
 struct SysCpu {
-    #[blink("CpuModel$get_usage_pct")]
+    #[bttr(
+        title = "Usage",
+        unit = "%",
+        width = 10,
+        title_width = 7,
+        precision = 2
+    )]
+    #[blink("CpuModel$total_cpu?.get_usage_pct")]
     pub usage_pct: Option<f64>,
-    #[blink("CpuModel$get_user_pct")]
+    #[bttr(title = "User", unit = "%", width = 10, title_width = 7, precision = 2)]
+    #[blink("CpuModel$total_cpu?.get_user_pct")]
     pub user_pct: Option<f64>,
-    #[blink("CpuModel$get_system_pct")]
+    #[bttr(
+        title = "System",
+        unit = "%",
+        width = 10,
+        title_width = 7,
+        precision = 2
+    )]
+    #[blink("CpuModel$total_cpu?.get_system_pct")]
     pub sys_pct: Option<f64>,
 }
 
@@ -56,27 +73,62 @@ gen_row_impl!(SysCpu, CpuModel, "CPU");
 
 #[derive(BelowDecor, Default)]
 struct SysMem {
+    #[bttr(
+        title = "Total",
+        decorator = "convert_bytes($ as f64)",
+        width = 10,
+        title_width = 7
+    )]
     #[blink("MemoryModel$get_total")]
     pub total: Option<u64>,
+    #[bttr(
+        title = "Free",
+        decorator = "convert_bytes($ as f64)",
+        width = 10,
+        title_width = 7
+    )]
     #[blink("MemoryModel$get_free")]
     pub free: Option<u64>,
+    #[bttr(
+        title = "Anon",
+        decorator = "convert_bytes($ as f64)",
+        width = 10,
+        title_width = 7
+    )]
     #[blink("MemoryModel$get_anon")]
     pub anon: Option<u64>,
+    #[bttr(
+        title = "File",
+        decorator = "convert_bytes($ as f64)",
+        width = 10,
+        title_width = 7
+    )]
     #[blink("MemoryModel$get_file")]
     pub file: Option<u64>,
 }
 
 gen_row_impl!(SysMem, MemoryModel, "Mem");
 
-#[derive(BelowDecor, Default)]
-struct SysIo {
-    #[blink("IoModel$get_rbytes_per_sec")]
-    pub rbytes_per_sec: Option<f64>,
-    #[blink("IoModel$get_wbytes_per_sec")]
-    pub wbytes_per_sec: Option<f64>,
-}
+struct SysIo;
 
-gen_row_impl!(SysIo, IoModel, "I/O");
+impl SysIo {
+    fn get_row(disks: &BTreeMap<String, SingleDiskModel>) -> String {
+        let mut disk_stat = format!("{:8.8}\t", "I/O");
+
+        disks
+            .iter()
+            .filter(|(disk_name, _)| !disk_name.chars().last().unwrap().is_digit(10))
+            .for_each(|(disk_name, sdm)| {
+                disk_stat.push_str(&format!(
+                    "{:7.7}{:<10.10}\t",
+                    disk_name,
+                    sdm.get_disk_total_bytes_per_sec_str(),
+                ))
+            });
+
+        disk_stat
+    }
+}
 
 struct SysIface;
 
@@ -102,9 +154,9 @@ fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
         .model;
 
     let system_model = &model.system;
-    let cpu_row = SysCpu::get_row(system_model.cpu.as_ref().unwrap_or(&Default::default()));
-    let mem_row = SysMem::get_row(system_model.mem.as_ref().unwrap_or(&Default::default()));
-    let io_row = SysIo::get_row(system_model.io.as_ref().unwrap_or(&Default::default()));
+    let cpu_row = SysCpu::get_row(&system_model.cpu);
+    let mem_row = SysMem::get_row(&system_model.mem);
+    let io_row = SysIo::get_row(&system_model.disks);
     let iface_row = SysIface::get_row(&model.network);
 
     let mut view = LinearLayout::vertical();

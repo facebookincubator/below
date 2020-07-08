@@ -26,7 +26,7 @@ use tempdir::TempDir;
 
 use crate::below_config::BelowConfig;
 use crate::logutil;
-use crate::model::{collect_sample, CgroupModel, CgroupPressureModel, Collector, CpuModel, Model};
+use crate::model::{collect_sample, CgroupModel, CgroupPressureModel, Collector, Model};
 use crate::store;
 use crate::Advance;
 
