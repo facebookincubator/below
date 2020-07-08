@@ -51,6 +51,7 @@
 ///   the following selectable view. A user can press `,` or `.` to switch between different columns and press `s`
 ///   or `S` to sort in ascending or descending order.
 use std::cell::RefCell;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime};
 
@@ -106,6 +107,13 @@ pub enum MainViewState {
     Core,
 }
 
+#[derive(Clone)]
+pub enum VieMode {
+    Live,
+    Pause(Rc<RefCell<Advance>>),
+    Replay(Rc<RefCell<Advance>>),
+}
+
 // Invoked either when the data view was explicitly advanced, or
 // periodically (during live mode)
 fn refresh(c: &mut Cursive) {
@@ -133,6 +141,7 @@ pub struct ViewState {
     pub process: Rc<RefCell<ProcessModel>>,
     pub network: Rc<RefCell<NetworkModel>>,
     pub main_view_state: MainViewState,
+    pub mode: VieMode,
 }
 
 impl ViewState {
@@ -154,6 +163,24 @@ impl ViewState {
             process: Rc::new(RefCell::new(model.process)),
             network: Rc::new(RefCell::new(model.network)),
             main_view_state,
+            mode: VieMode::Live,
+        }
+    }
+
+    pub fn new_with_advance(
+        main_view_state: MainViewState,
+        model: Model,
+        advance: Advance,
+    ) -> Self {
+        let mut view_state = ViewState::new(main_view_state, model);
+        view_state.mode = VieMode::Replay(Rc::new(RefCell::new(advance)));
+        view_state
+    }
+
+    pub fn is_paused(&self) -> bool {
+        match self.mode {
+            VieMode::Pause(_) => true,
+            _ => false,
         }
     }
 }
@@ -165,25 +192,61 @@ impl View {
         View { inner }
     }
 
+    pub fn new_with_advance(model: crate::model::Model, advance: Advance) -> View {
+        let mut inner = Cursive::default();
+        inner.set_user_data(ViewState::new_with_advance(
+            MainViewState::Cgroup,
+            model,
+            advance,
+        ));
+        View { inner }
+    }
+
     pub fn cb_sink(&mut self) -> &::cursive::CbSink {
         self.inner.set_fps(4);
         self.inner.cb_sink()
     }
 
-    pub fn register_advance(&mut self, advance: Advance) {
-        let rc = Rc::new(RefCell::new(advance));
-
-        let forward_rc = rc.clone();
-        self.inner.add_global_callback('t', move |c| {
-            let mut adv = forward_rc.borrow_mut();
-            advance!(c, adv, Direction::Forward);
+    pub fn register_replay_event(&mut self) {
+        // Move sample forward
+        self.inner.add_global_callback('t', |c| {
+            let view_state = c.user_data::<ViewState>().expect("user data not set");
+            match view_state.mode.clone() {
+                VieMode::Pause(adv) | VieMode::Replay(adv) => {
+                    let mut adv = adv.borrow_mut();
+                    advance!(c, adv, Direction::Forward);
+                }
+                _ => (),
+            }
         });
 
-        let reverse_rc = rc.clone();
+        // Move sample backward
         self.inner.add_global_callback('T', move |c| {
-            let mut adv = reverse_rc.borrow_mut();
-            advance!(c, adv, Direction::Reverse);
+            let view_state = c.user_data::<ViewState>().expect("user data not set");
+            match view_state.mode.clone() {
+                VieMode::Pause(adv) | VieMode::Replay(adv) => {
+                    let mut adv = adv.borrow_mut();
+                    advance!(c, adv, Direction::Reverse);
+                }
+                _ => (),
+            }
         });
+    }
+
+    pub fn register_live_event(&mut self, logger: slog::Logger, dir: PathBuf) {
+        // Pause/Resume the sample collection by setting/unset the "advance" in ViewState
+        self.inner.add_global_callback(Event::Char(' '), move |c| {
+            let mut view_state = c.user_data::<ViewState>().expect("user data not set");
+            if view_state.is_paused() {
+                view_state.mode = VieMode::Live;
+            } else {
+                let mut adv = Advance::new(logger.clone(), dir.clone(), SystemTime::now());
+                adv.initialize();
+                view_state.mode = VieMode::Pause(Rc::new(RefCell::new(adv)));
+            }
+            refresh(c);
+        });
+        self.register_replay_event();
     }
 
     pub fn run(&mut self) -> Result<()> {

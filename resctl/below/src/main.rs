@@ -320,8 +320,14 @@ fn real_main(init: init::InitToken) {
         .unwrap_or(&Command::Live { interval_s: 5 });
     let rc = match cmd {
         Command::Live { ref interval_s } => {
+            let store_dir = below_config.store_dir.clone();
             run(init, debug, below_config, Service::Off, |logger, _errs| {
-                live(logger, Duration::from_secs(*interval_s as u64), debug)
+                live(
+                    logger,
+                    Duration::from_secs(*interval_s as u64),
+                    debug,
+                    store_dir,
+                )
             })
         }
         Command::Record {
@@ -430,14 +436,14 @@ fn replay(
     // this should have no effect.
     advance.initialize();
     let mut view = match advance.advance(store::Direction::Forward) {
-        Some(model) => view::View::new(model),
+        Some(model) => view::View::new_with_advance(model, advance),
         None => return Err(anyhow!(
             "No initial model could be found!\n\
             You may have provided a time in the future or no data was recorded during the provided time.\n\
             Please check your input and timezone."
         )),
     };
-    view.register_advance(advance);
+    view.register_replay_event();
     logutil::set_current_log_target(logutil::TargetLog::File);
     view.run()
 }
@@ -514,7 +520,7 @@ fn record(
     }
 }
 
-fn live(logger: slog::Logger, interval: Duration, debug: bool) -> Result<()> {
+fn live(logger: slog::Logger, interval: Duration, debug: bool, dir: PathBuf) -> Result<()> {
     // TODO Raise warning popup on error here: T69437919
     match bump_memlock_rlimit() {
         Err(e) => {
@@ -527,6 +533,7 @@ fn live(logger: slog::Logger, interval: Duration, debug: bool) -> Result<()> {
 
     let mut collector = model::Collector::new(exit_buffer);
     let mut view = view::View::new(collector.update_model(&logger)?);
+    view.register_live_event(logger.clone(), dir);
 
     let sink = view.cb_sink().clone();
 
@@ -540,9 +547,12 @@ fn live(logger: slog::Logger, interval: Duration, debug: bool) -> Result<()> {
                 Ok(model) => {
                     // Error only happens if the other side disconnected - just terminate the thread
                     let data_plane = Box::new(move |s: &mut Cursive| {
-                        s.user_data::<ViewState>()
-                            .expect("user data not set")
-                            .update(model);
+                        let view_state = s.user_data::<ViewState>().expect("user data not set");
+
+                        // When paused, no need to update model
+                        if !view_state.is_paused() {
+                            view_state.update(model);
+                        }
                     });
                     if sink.send(data_plane).is_err() {
                         return;

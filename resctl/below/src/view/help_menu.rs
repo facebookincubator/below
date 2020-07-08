@@ -28,6 +28,7 @@ fn fill_content(v: &mut LinearLayout) {
         "<Enter>        - collapse/expand cgroup tree\n",
         "<Tab>          - cycle topic tabs\n",
         "<Shift><Tab>   - reverse cycle topic tabs\n",
+        "<Space>        - pause/resume the live mode. While pausing, use t/T to iterate sample forward and backward",
         "','            - reverse cycle columns.\n",
         "'.'            - cycle columns.\n",
         "'S'            - sort by the selected title, reverse the result by hit 'S' again(cgroup view and process view only)\n",
