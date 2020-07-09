@@ -232,14 +232,20 @@ fn start_exitstat(
     (exit_buffer, bpf_err_recv)
 }
 
-fn check_for_exitstat_errors(logger: &slog::Logger, receiver: &Receiver<Error>) {
+/// Returns true if other end disconnected, false otherwise
+fn check_for_exitstat_errors(logger: &slog::Logger, receiver: &Receiver<Error>) -> bool {
     // Print an error but don't exit on bpf issues. Do this b/c we can't always
     // be sure what kind of kernel we're running on and if it's new enough.
     match receiver.try_recv() {
         Ok(e) => error!(logger, "{}", e),
         Err(TryRecvError::Empty) => (),
-        Err(TryRecvError::Disconnected) => error!(logger, "bpf error channel disconnected"),
+        Err(TryRecvError::Disconnected) => {
+            warn!(logger, "bpf error channel disconnected");
+            return true;
+        }
     };
+
+    false
 }
 
 fn run<F>(
@@ -467,6 +473,7 @@ fn record(
     let mut stats = statistics::Statistics::new();
 
     let (exit_buffer, bpf_errs) = start_exitstat(logger.clone(), debug);
+    let mut bpf_err_warned = false;
 
     loop {
         // Anything that comes over the error channel is an error
@@ -476,7 +483,9 @@ fn record(
             Err(TryRecvError::Disconnected) => bail!("error channel disconnected"),
         };
 
-        check_for_exitstat_errors(&logger, &bpf_errs);
+        if !bpf_err_warned {
+            bpf_err_warned = check_for_exitstat_errors(&logger, &bpf_errs);
+        }
 
         let collect_instant = Instant::now();
         let collected_sample =
@@ -530,6 +539,7 @@ fn live(logger: slog::Logger, interval: Duration, debug: bool, dir: PathBuf) -> 
     };
 
     let (exit_buffer, bpf_errs) = start_exitstat(logger.clone(), debug);
+    let mut bpf_err_warned = false;
 
     let mut collector = model::Collector::new(exit_buffer);
     let mut view = view::View::new(collector.update_model(&logger)?);
@@ -539,7 +549,9 @@ fn live(logger: slog::Logger, interval: Duration, debug: bool, dir: PathBuf) -> 
 
     thread::spawn(move || {
         loop {
-            check_for_exitstat_errors(&logger, &bpf_errs);
+            if !bpf_err_warned {
+                bpf_err_warned = check_for_exitstat_errors(&logger, &bpf_errs);
+            }
 
             thread::sleep(interval);
             let res = collector.update_model(&logger);
