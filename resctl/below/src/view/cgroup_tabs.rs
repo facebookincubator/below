@@ -104,7 +104,7 @@ pub trait CgroupTab {
             }
         }
 
-        let collapsed = state.collapsed_cgroups.contains(&cgroup.full_path);
+        let collapsed = state.collapsed_cgroups.borrow().contains(&cgroup.full_path);
         *self.depth() = cgroup.depth as usize;
         *self.collapse() = collapsed;
         let row = self.get_field_line(&cgroup);
@@ -120,7 +120,22 @@ pub trait CgroupTab {
         // Here we map the sort order to an index (or for disk, do some custom sorting)
         self.sort(state.sort_order, &mut children, state.reverse);
 
+        // collapse_flag if set, we will insert all direct children to the collapsed_cgroups.
+        // In that case, we will stop at next level.
+        let collapse_flag =
+            if state.collapsed_cgroups.borrow().is_empty() && state.collapse_all_top_level_cgroup {
+                true
+            } else {
+                false
+            };
+
         for child_cgroup in &children {
+            if collapse_flag {
+                state
+                    .collapsed_cgroups
+                    .borrow_mut()
+                    .insert(child_cgroup.full_path.to_string());
+            }
             self.output_cgroup(child_cgroup, state, filter_out_set, output);
         }
     }

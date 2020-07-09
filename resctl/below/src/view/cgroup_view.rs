@@ -31,13 +31,17 @@ pub type ViewType = StatsView<CgroupView>;
 
 #[derive(Default)]
 pub struct CgroupState {
-    pub collapsed_cgroups: HashSet<String>,
+    // Rc::RefCell is necessaray here since we will need to change the collapsed_cgroups
+    // when we traverse the cgroup tree recursively. And we can not pass the CgroupState as
+    // mutable.
+    pub collapsed_cgroups: Rc<RefCell<HashSet<String>>>,
     pub current_selected_cgroup: String,
     pub filter: Option<String>,
     pub sort_order: CgroupOrders,
     pub sort_tags: HashMap<String, Vec<CgroupOrders>>,
     pub reverse: bool,
     pub model: Rc<RefCell<CgroupModel>>,
+    pub collapse_all_top_level_cgroup: bool,
 }
 
 impl StateCommon for CgroupState {
@@ -73,13 +77,14 @@ impl StateCommon for CgroupState {
         sort_tags.insert("I/O".into(), CgroupIO::get_sort_tag_vec());
         sort_tags.insert("Pressure".into(), CgroupPressure::get_sort_tag_vec());
         Self {
-            collapsed_cgroups: HashSet::new(),
+            collapsed_cgroups: Rc::new(RefCell::new(HashSet::new())),
             current_selected_cgroup: "<root>".into(),
             filter: None,
             sort_order: CgroupOrders::Keep,
             sort_tags,
             reverse: false,
             model,
+            collapse_all_top_level_cgroup: false,
         }
     }
 }
@@ -91,6 +96,10 @@ impl CgroupState {
 
     fn set_reverse(&mut self, reverse: bool) {
         self.reverse = reverse;
+    }
+
+    fn toggle_collapse_root_flag(&mut self) {
+        self.collapse_all_top_level_cgroup = !self.collapse_all_top_level_cgroup;
     }
 }
 
@@ -108,12 +117,36 @@ impl CgroupView {
         list.set_on_submit(|c, cgroup: &String| {
             let mut view = CgroupView::get_cgroup_view(c);
 
-            if view.state.borrow().collapsed_cgroups.contains(cgroup) {
-                view.state.borrow_mut().collapsed_cgroups.remove(cgroup);
+            // Select root will collapse or uncollapse all top level cgroup
+            if cgroup.is_empty() {
+                view.state.borrow_mut().toggle_collapse_root_flag();
+                view.state
+                    .borrow_mut()
+                    .collapsed_cgroups
+                    .borrow_mut()
+                    .clear();
+                return view.refresh(c);
+            } else if view.state.borrow().collapse_all_top_level_cgroup {
+                view.state.borrow_mut().toggle_collapse_root_flag();
+            }
+
+            if view
+                .state
+                .borrow()
+                .collapsed_cgroups
+                .borrow()
+                .contains(cgroup)
+            {
+                view.state
+                    .borrow_mut()
+                    .collapsed_cgroups
+                    .borrow_mut()
+                    .remove(cgroup);
             } else {
                 view.state
                     .borrow_mut()
                     .collapsed_cgroups
+                    .borrow_mut()
                     .insert(cgroup.to_string());
             }
 
