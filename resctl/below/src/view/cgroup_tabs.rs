@@ -228,7 +228,8 @@ pub struct CgroupGeneral {
         width = 10,
         aggr = "CgroupModel: io_total?.rbytes_per_sec? + io_total?.wbytes_per_sec?",
         sort_tag = "CgroupOrders::RwTotal",
-        decorator = "convert_bytes($ as f64)"
+        decorator = "convert_bytes($ as f64)",
+        unit = "/s"
     )]
     pub disk: Option<f64>,
     depth: usize,

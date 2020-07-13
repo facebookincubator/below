@@ -178,7 +178,8 @@ pub struct ProcessGeneral {
         width = 10,
         aggr = "SingleProcessModel: io?.rbytes_per_sec? + io?.wbytes_per_sec?",
         sort_tag = "ProcessOrders::IoTotal",
-        decorator = "convert_bytes($ as f64)"
+        decorator = "convert_bytes($ as f64)",
+        unit = "/s"
     )]
     pub disk: Option<f64>,
 }
