@@ -108,8 +108,9 @@ pub enum MainViewState {
 }
 
 #[derive(Clone)]
-pub enum VieMode {
+pub enum ViewMode {
     Live,
+    LiveRemote(Rc<RefCell<Advance>>),
     Pause(Rc<RefCell<Advance>>),
     Replay(Rc<RefCell<Advance>>),
 }
@@ -141,7 +142,7 @@ pub struct ViewState {
     pub process: Rc<RefCell<ProcessModel>>,
     pub network: Rc<RefCell<NetworkModel>>,
     pub main_view_state: MainViewState,
-    pub mode: VieMode,
+    pub mode: ViewMode,
 }
 
 impl ViewState {
@@ -163,23 +164,19 @@ impl ViewState {
             process: Rc::new(RefCell::new(model.process)),
             network: Rc::new(RefCell::new(model.network)),
             main_view_state,
-            mode: VieMode::Live,
+            mode: ViewMode::Live,
         }
     }
 
-    pub fn new_with_advance(
-        main_view_state: MainViewState,
-        model: Model,
-        advance: Advance,
-    ) -> Self {
+    pub fn new_with_advance(main_view_state: MainViewState, model: Model, mode: ViewMode) -> Self {
         let mut view_state = ViewState::new(main_view_state, model);
-        view_state.mode = VieMode::Replay(Rc::new(RefCell::new(advance)));
+        view_state.mode = mode;
         view_state
     }
 
     pub fn is_paused(&self) -> bool {
         match self.mode {
-            VieMode::Pause(_) => true,
+            ViewMode::Pause(_) => true,
             _ => false,
         }
     }
@@ -192,12 +189,12 @@ impl View {
         View { inner }
     }
 
-    pub fn new_with_advance(model: crate::model::Model, advance: Advance) -> View {
+    pub fn new_with_advance(model: crate::model::Model, mode: ViewMode) -> View {
         let mut inner = Cursive::default();
         inner.set_user_data(ViewState::new_with_advance(
             MainViewState::Cgroup,
             model,
-            advance,
+            mode,
         ));
         View { inner }
     }
@@ -212,7 +209,7 @@ impl View {
         self.inner.add_global_callback('t', |c| {
             let view_state = c.user_data::<ViewState>().expect("user data not set");
             match view_state.mode.clone() {
-                VieMode::Pause(adv) | VieMode::Replay(adv) => {
+                ViewMode::Pause(adv) | ViewMode::Replay(adv) => {
                     let mut adv = adv.borrow_mut();
                     advance!(c, adv, Direction::Forward);
                 }
@@ -224,7 +221,7 @@ impl View {
         self.inner.add_global_callback('T', move |c| {
             let view_state = c.user_data::<ViewState>().expect("user data not set");
             match view_state.mode.clone() {
-                VieMode::Pause(adv) | VieMode::Replay(adv) => {
+                ViewMode::Pause(adv) | ViewMode::Replay(adv) => {
                     let mut adv = adv.borrow_mut();
                     advance!(c, adv, Direction::Reverse);
                 }
@@ -233,16 +230,33 @@ impl View {
         });
     }
 
-    pub fn register_live_event(&mut self, logger: slog::Logger, dir: PathBuf) {
-        // Pause/Resume the sample collection by setting/unset the "advance" in ViewState
+    pub fn register_live_local_event(&mut self, logger: slog::Logger, dir: PathBuf) {
         self.inner.add_global_callback(Event::Char(' '), move |c| {
             let mut view_state = c.user_data::<ViewState>().expect("user data not set");
             if view_state.is_paused() {
-                view_state.mode = VieMode::Live;
+                view_state.mode = ViewMode::Live;
             } else {
                 let mut adv = Advance::new(logger.clone(), dir.clone(), SystemTime::now());
                 adv.initialize();
-                view_state.mode = VieMode::Pause(Rc::new(RefCell::new(adv)));
+                view_state.mode = ViewMode::Pause(Rc::new(RefCell::new(adv)));
+            }
+            refresh(c);
+        });
+        self.register_replay_event();
+    }
+
+    pub fn register_live_remote_event(&mut self) {
+        self.inner.add_global_callback(Event::Char(' '), move |c| {
+            let mut view_state = c.user_data::<ViewState>().expect("user data not set");
+
+            match &view_state.mode {
+                ViewMode::Pause(adv) => {
+                    // On resume, we need to jump to latest sample
+                    adv.borrow_mut().get_latest_sample();
+                    view_state.mode = ViewMode::LiveRemote(adv.clone());
+                }
+                ViewMode::LiveRemote(adv) => view_state.mode = ViewMode::Pause(adv.clone()),
+                _ => (),
             }
             refresh(c);
         });

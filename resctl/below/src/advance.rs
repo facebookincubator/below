@@ -98,6 +98,19 @@ impl Advance {
         }
     }
 
+    pub fn get_latest_sample(&mut self) -> Option<model::Model> {
+        // Try to get sample that just updated, we minus 1 second here is because
+        // advance will increase sample time by 1 second.
+        self.last_sample_time = SystemTime::now() - Duration::from_secs(1);
+        match self.advance(store::Direction::Forward) {
+            Some(model) => return Some(model),
+            None => (),
+        }
+        // Otherwise, we get the previous sample.
+        self.last_sample_time = SystemTime::now();
+        self.advance(store::Direction::Reverse)
+    }
+
     fn get_next_sample(
         &mut self,
         timestamp: SystemTime,

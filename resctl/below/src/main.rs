@@ -17,10 +17,12 @@
 #![recursion_limit = "256"]
 
 use std::backtrace::Backtrace;
+use std::cell::RefCell;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::exit;
+use std::rc::Rc;
 use std::sync::mpsc::{channel, Receiver, TryRecvError};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -65,6 +67,8 @@ use advance::Advance;
 use below_config::BelowConfig;
 use below_thrift::DataFrame;
 
+static LIVE_REMOTE_MAX_LATENCY_SEC: u64 = 10;
+
 #[derive(Debug, StructOpt)]
 #[structopt(no_version)]
 struct Opt {
@@ -82,6 +86,12 @@ enum Command {
     Live {
         #[structopt(short, long, default_value = "5")]
         interval_s: u64,
+        /// Supply hostname to activate remote viewing
+        #[structopt(long)]
+        host: Option<String>,
+        /// Override default port to connect remote viewing to
+        #[structopt(long)]
+        port: Option<u16>,
     },
     /// Record local system data (daemon mode)
     Record {
@@ -320,19 +330,28 @@ fn real_main(init: init::InitToken) {
     };
 
     // Use live mode as default
-    let cmd = opts
-        .cmd
-        .as_ref()
-        .unwrap_or(&Command::Live { interval_s: 5 });
+    let cmd = opts.cmd.as_ref().unwrap_or(&Command::Live {
+        interval_s: 5,
+        host: None,
+        port: None,
+    });
     let rc = match cmd {
-        Command::Live { ref interval_s } => {
+        Command::Live {
+            ref interval_s,
+            ref host,
+            ref port,
+        } => {
             let store_dir = below_config.store_dir.clone();
+            let host = host.clone();
+            let port = port.clone();
             run(init, debug, below_config, Service::Off, |logger, _errs| {
                 live(
                     logger,
                     Duration::from_secs(*interval_s as u64),
                     debug,
                     store_dir,
+                    host,
+                    port,
                 )
             })
         }
@@ -442,7 +461,7 @@ fn replay(
     // this should have no effect.
     advance.initialize();
     let mut view = match advance.advance(store::Direction::Forward) {
-        Some(model) => view::View::new_with_advance(model, advance),
+        Some(model) => view::View::new_with_advance(model, view::ViewMode::Replay(Rc::new(RefCell::new(advance)))),
         None => return Err(anyhow!(
             "No initial model could be found!\n\
             You may have provided a time in the future or no data was recorded during the provided time.\n\
@@ -529,7 +548,7 @@ fn record(
     }
 }
 
-fn live(logger: slog::Logger, interval: Duration, debug: bool, dir: PathBuf) -> Result<()> {
+fn live_local(logger: slog::Logger, interval: Duration, debug: bool, dir: PathBuf) -> Result<()> {
     // TODO Raise warning popup on error here: T69437919
     match bump_memlock_rlimit() {
         Err(e) => {
@@ -543,7 +562,7 @@ fn live(logger: slog::Logger, interval: Duration, debug: bool, dir: PathBuf) -> 
 
     let mut collector = model::Collector::new(exit_buffer);
     let mut view = view::View::new(collector.update_model(&logger)?);
-    view.register_live_event(logger.clone(), dir);
+    view.register_live_local_event(logger.clone(), dir);
 
     let sink = view.cb_sink().clone();
 
@@ -579,6 +598,66 @@ fn live(logger: slog::Logger, interval: Duration, debug: bool, dir: PathBuf) -> 
 
     logutil::set_current_log_target(logutil::TargetLog::File);
     view.run()
+}
+
+fn live_remote(
+    logger: slog::Logger,
+    interval: Duration,
+    host: String,
+    port: Option<u16>,
+) -> Result<()> {
+    let timestamp = SystemTime::now()
+        .checked_sub(Duration::from_secs(LIVE_REMOTE_MAX_LATENCY_SEC))
+        .expect("Fail to construct timestamp with latency allowance in live remote.");
+    let mut advance = Advance::new_with_remote(logger.clone(), host, port, timestamp)?;
+
+    advance.initialize();
+    let mut view = match advance.get_latest_sample() {
+        Some(model) => view::View::new_with_advance(
+            model,
+            view::ViewMode::LiveRemote(Rc::new(RefCell::new(advance))),
+        ),
+        None => return Err(anyhow!("No data could be found!")),
+    };
+
+    view.register_live_remote_event();
+
+    let sink = view.cb_sink().clone();
+
+    thread::spawn(move || loop {
+        thread::sleep(interval);
+        let data_plane = Box::new(move |s: &mut Cursive| {
+            let view_state = s.user_data::<ViewState>().expect("user data not set");
+
+            if let view::ViewMode::LiveRemote(adv) = view_state.mode.clone() {
+                match adv.borrow_mut().advance(store::Direction::Forward) {
+                    Some(data) => view_state.update(data),
+                    None => (),
+                }
+            }
+        });
+        if sink.send(data_plane).is_err() {
+            return;
+        }
+    });
+
+    logutil::set_current_log_target(logutil::TargetLog::File);
+    view.run()
+}
+
+fn live(
+    logger: slog::Logger,
+    interval: Duration,
+    debug: bool,
+    dir: PathBuf,
+    host: Option<String>,
+    port: Option<u16>,
+) -> Result<()> {
+    if let Some(host) = host {
+        live_remote(logger, interval, host, port)
+    } else {
+        live_local(logger, interval, debug, dir)
+    }
 }
 
 fn dump_store(logger: slog::Logger, time: String, path: PathBuf, json: bool) -> Result<()> {
