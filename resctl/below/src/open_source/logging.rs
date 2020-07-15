@@ -20,7 +20,7 @@ use slog::{o, Drain};
 use slog_term;
 
 use crate::init::InitToken;
-use crate::logutil::CompoundDecorator;
+use crate::logutil::{CommandPaletteDrain, CompoundDecorator};
 
 pub fn setup(_init: InitToken, path: PathBuf, debug: bool) -> slog::Logger {
     let file = OpenOptions::new()
@@ -43,6 +43,7 @@ pub fn setup(_init: InitToken, path: PathBuf, debug: bool) -> slog::Logger {
     let decorator = CompoundDecorator::new(file, std::io::stderr());
     let drain = slog_term::FullFormat::new(decorator).build().fuse();
     let drain = slog_async::Async::new(drain).build().fuse();
+    let drain = CommandPaletteDrain::new(drain).fuse();
 
     slog::Logger::root(drain, o!())
 }

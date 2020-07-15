@@ -24,6 +24,7 @@ use cursive::views::{
 };
 use cursive::Cursive;
 
+use crate::logutil::get_last_log_to_display;
 use crate::view::command_palette::CommandPalette;
 use crate::view::filter_popup;
 use crate::view::tab_view::TabView;
@@ -328,6 +329,9 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             .unwrap_or_else(|| panic!("Fail to query data from tab {}", cur_tab));
         select_view.add_all(tab_detail.get_rows(&self.state.borrow()));
         select_view.select_down(pos)(c);
+        if let Some(msg) = get_last_log_to_display() {
+            self.get_cmd_palette().set_alert(msg);
+        }
     }
 
     // Chaining call. Use for construction to get initial data.

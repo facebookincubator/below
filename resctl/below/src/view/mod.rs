@@ -294,8 +294,8 @@ impl View {
 
         let status_bar = status_bar::new(&mut self.inner);
         let system_view = system_view::new(&mut self.inner);
-        let process_view = process_view::ProcessView::new(&mut self.inner);
         let cgroup_view = cgroup_view::CgroupView::new(&mut self.inner);
+        let process_view = process_view::ProcessView::new(&mut self.inner);
         let core_view = core_view::CoreView::new(&mut self.inner);
         self.inner
             .add_fullscreen_layer(ResizedView::with_full_screen(

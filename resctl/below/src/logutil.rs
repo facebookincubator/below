@@ -13,9 +13,12 @@
 // limitations under the License.
 
 use once_cell::sync::Lazy;
+use slog::Drain;
+use slog::Level;
+
 use std::cell::RefCell;
 use std::io;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum TargetLog {
@@ -38,6 +41,67 @@ pub fn set_current_log_target(target: TargetLog) {
         .write()
         .expect("Failed to acquire write lock on the LOG_TARGET");
     *log_target = target;
+}
+
+/// CPMsgRecord stands for command palette record which used to pass the
+/// logging message from slog object to view objet by LAST_LOG_TO_DISPLAY
+pub struct CPMsgRecord {
+    level: Level,
+    msg: String,
+    consumed: bool,
+}
+
+impl CPMsgRecord {
+    pub fn get_msg(&mut self) -> Option<String> {
+        if self.consumed {
+            None
+        } else {
+            self.consumed = true;
+            Some(Self::construct_msg(self.level, &self.msg))
+        }
+    }
+
+    /// Convenience function of construct message.
+    // Since we have method in StatsView that raise warning message directly to
+    // CommandPalette instead of going through the RwLock process, we need to have
+    // such function to align the message format
+    pub fn construct_msg(level: Level, msg: &str) -> String {
+        format!("{}: {}", level.as_str(), msg)
+    }
+
+    fn set_msg(&mut self, msg: String, level: Level) {
+        self.msg = msg;
+        self.level = level;
+        self.consumed = false;
+    }
+
+    fn new() -> Self {
+        Self {
+            level: Level::Trace,
+            msg: String::new(),
+            consumed: true,
+        }
+    }
+}
+
+/// LAST_LOG_TO_DISPLAY here is used to pass msg to CommandPalette.
+// This is necessary because:
+// a. we cannot reference view inside log drain for:
+//     1. Once log constructed, we are no longer able to access the drain.
+//     2. In order to construct a view, we need a constructed log.
+// b. We are also not able to pass the view struct as a key value pair since
+//    slog's key val pair is a trait that does not implement `Any`, we are not
+//    able to downcast it.
+// c. Only reference the CommandPalette inside the log is not acceptable since
+//    there no implementation of IntoBoxedView<RefCell<View>>
+pub static LAST_LOG_TO_DISPLAY: Lazy<Arc<Mutex<CPMsgRecord>>> =
+    Lazy::new(|| Arc::new(Mutex::new(CPMsgRecord::new())));
+
+pub fn get_last_log_to_display() -> Option<String> {
+    LAST_LOG_TO_DISPLAY
+        .lock()
+        .expect("Fail to acquire lock for LAST_LOG_TO_DISPLAY")
+        .get_msg()
 }
 
 pub struct CompoundDecorator<W: io::Write, T: io::Write> {
@@ -137,5 +201,38 @@ where
 {
     fn reset(&mut self) -> io::Result<()> {
         Ok(())
+    }
+}
+
+pub struct CommandPaletteDrain<D> {
+    drain: D,
+}
+
+impl<D> CommandPaletteDrain<D> {
+    pub fn new(drain: D) -> Self {
+        Self { drain }
+    }
+}
+
+impl<D> Drain for CommandPaletteDrain<D>
+where
+    D: Drain,
+{
+    type Ok = Option<D::Ok>;
+    type Err = Option<D::Err>;
+
+    fn log(
+        &self,
+        record: &slog::Record,
+        values: &slog::OwnedKVList,
+    ) -> std::result::Result<Self::Ok, Self::Err> {
+        // We will use tag V as indicator of whether or not log to CommandPalette.
+        if record.tag() == "V" {
+            LAST_LOG_TO_DISPLAY
+                .lock()
+                .expect("Fail to acquire write lock for LAST_LOG_TO_DISPLAY")
+                .set_msg(format!("{}", record.msg()), record.level());
+        }
+        self.drain.log(record, values).map(Some).map_err(Some)
     }
 }
