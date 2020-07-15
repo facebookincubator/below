@@ -549,10 +549,15 @@ fn record(
 }
 
 fn live_local(logger: slog::Logger, interval: Duration, debug: bool, dir: PathBuf) -> Result<()> {
-    // TODO Raise warning popup on error here: T69437919
     match bump_memlock_rlimit() {
         Err(e) => {
-            error!(logger, "{}", e);
+            warn!(
+                logger,
+                #"V",
+                "Failed to initialize BPF: {}. Data collection will be degraded. \
+                You can ignore this warning or try to run with sudo.",
+                &e
+            );
         }
         _ => (),
     };
