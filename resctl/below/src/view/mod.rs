@@ -94,7 +94,28 @@ macro_rules! advance {
                     .update(data);
                 refresh($c);
             }
-            None => (),
+            None => {
+                let state = $c
+                    .user_data::<ViewState>()
+                    .expect("No user data set")
+                    .main_view_state
+                    .clone();
+                let msg = format!(
+                    "Data is not available{}",
+                    if $dir == crate::store::Direction::Forward {
+                        " yet."
+                    } else {
+                        "."
+                    }
+                );
+                match state {
+                    MainViewState::Cgroup => cgroup_view::ViewType::cp_warn($c, msg),
+                    MainViewState::Process | MainViewState::ProcessZoomedIntoCgroup => {
+                        process_view::ViewType::cp_warn($c, msg)
+                    }
+                    MainViewState::Core => core_view::ViewType::cp_warn($c, msg),
+                }
+            }
         }
     };
 }
