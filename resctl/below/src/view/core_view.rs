@@ -41,8 +41,6 @@ impl StateCommon for CoreState {
         &mut self.filter
     }
 
-    fn set_sort_tag(&mut self, _tab: &str, _idx: usize, _reverse: bool) {}
-
     fn get_model(&self) -> Ref<Self::ModelType> {
         self.model.borrow()
     }

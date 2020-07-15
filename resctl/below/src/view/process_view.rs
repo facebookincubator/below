@@ -45,7 +45,7 @@ impl StateCommon for ProcessState {
         &mut self.filter
     }
 
-    fn set_sort_tag(&mut self, tab: &str, idx: usize, reverse: bool) {
+    fn set_sort_tag(&mut self, tab: &str, idx: usize, reverse: bool) -> bool {
         self.sort_order = self
             .sort_tags
             .get(tab)
@@ -54,6 +54,7 @@ impl StateCommon for ProcessState {
             .expect("Out of title scope")
             .clone();
         self.reverse = reverse;
+        self.sort_order != ProcessOrders::Keep
     }
 
     fn get_model(&self) -> Ref<Self::ModelType> {

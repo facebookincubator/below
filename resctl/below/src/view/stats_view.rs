@@ -24,7 +24,7 @@ use cursive::views::{
 };
 use cursive::Cursive;
 
-use crate::logutil::get_last_log_to_display;
+use crate::logutil::{get_last_log_to_display, CPMsgRecord};
 use crate::view::command_palette::CommandPalette;
 use crate::view::filter_popup;
 use crate::view::tab_view::TabView;
@@ -38,7 +38,11 @@ pub trait StateCommon {
     type ModelType;
     /// Expose the filter data for StatsView to implement common '/' fitlering.
     fn get_filter(&mut self) -> &mut Option<String>;
-    fn set_sort_tag(&mut self, tab: &str, idx: usize, reverse: bool);
+    /// Set the sorting tag to common state
+    /// Return true on success, false if current tab doest support sorting.
+    fn set_sort_tag(&mut self, _tab: &str, _idx: usize, _reverse: bool) -> bool {
+        false
+    }
     fn get_model(&self) -> Ref<Self::ModelType>;
     fn get_model_mut(&self) -> RefMut<Self::ModelType>;
     fn new(model: Rc<RefCell<Self::ModelType>>) -> Self;
@@ -133,12 +137,24 @@ impl<V: 'static + ViewBridge> ViewWrapper for StatsView<V> {
             Event::Char('S') => {
                 let tab_view = self.get_tab_view();
                 let tab = tab_view.get_cur_selected();
-                let title_idx = self.get_title_view().current_selected;
-                self.state
-                    .borrow_mut()
-                    .set_sort_tag(tab, title_idx, self.reverse_sort);
+                let title_view = self.get_title_view();
+                let title_idx = title_view.current_selected;
+                let title = title_view.get_cur_selected().to_string();
+                let sort_res =
+                    self.state
+                        .borrow_mut()
+                        .set_sort_tag(tab, title_idx, self.reverse_sort);
                 self.reverse_sort = !self.reverse_sort;
-                EventResult::with_cb(|c| Self::refresh_myself(c))
+                EventResult::with_cb(move |c| {
+                    if sort_res {
+                        Self::refresh_myself(c);
+                    } else {
+                        Self::cp_warn(
+                            c,
+                            format!("\"{}\" is not sortable currently.", title.trim()),
+                        );
+                    }
+                })
             }
             Event::Char('/') => {
                 let state = self.state.clone();
@@ -347,5 +363,13 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         c.find_name::<Self>(V::get_view_name())
             .expect("Fail to find view with name")
             .refresh(c)
+    }
+
+    /// Convenience function to raise warning. Only to CommandPalette.
+    pub fn cp_warn(c: &mut Cursive, msg: String) {
+        c.find_name::<Self>(V::get_view_name())
+            .expect("Fail to find view with name")
+            .get_cmd_palette()
+            .set_alert(CPMsgRecord::construct_msg(slog::Level::Warning, &msg));
     }
 }

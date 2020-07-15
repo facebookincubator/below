@@ -22,7 +22,7 @@ use crate::view::stats_view::StateCommon;
 use below_derive::BelowDecor;
 
 // All available sorting tags
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum CgroupOrders {
     Keep,
     UsagePct,
