@@ -223,7 +223,7 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             tab_view_map,
             detailed_view,
             state: Rc::new(RefCell::new(state)),
-            reverse_sort: false,
+            reverse_sort: true,
         }
     }
 
