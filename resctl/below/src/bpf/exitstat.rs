@@ -115,6 +115,9 @@ impl ExitstatDriver {
             // with the bpf_get_current_cgroup_id() helper, but that returns what looks like an
             // inode number. I'm not sure if it's easy/possible to translate an inode # to a path.
             cgroup: "?".to_string(),
+            // We can't access cmdline b/c it requires taking mmap_sem and a
+            // bunch of memory management helpers.
+            cmdline: None,
         };
 
         // handle.lock() only fails if a thread holding the lock panic'd, in which
