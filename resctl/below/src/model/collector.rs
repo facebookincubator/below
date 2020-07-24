@@ -114,7 +114,7 @@ pub fn collect_sample(
     logger: &slog::Logger,
     disable_disk_stat: bool,
 ) -> Result<Sample> {
-    let reader = procfs::ProcReader::new();
+    let mut reader = procfs::ProcReader::new();
     Ok(Sample {
         cgroup: collect_cgroup_sample(&cgroupfs::CgroupReader::root()?, collect_io_stat)?,
         processes: merge_procfs_and_exit_data(reader.read_all_pids()?, exit_data),

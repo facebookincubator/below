@@ -16,11 +16,14 @@
 use openat::Dir;
 use std::collections::BTreeMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader, ErrorKind};
+use std::io::{BufRead, BufReader, ErrorKind, Read};
 use std::path::{Path, PathBuf};
+use std::sync::mpsc::{channel, RecvTimeoutError};
+use std::time::Duration;
 
 use lazy_static::lazy_static;
 use thiserror::Error;
+use threadpool::ThreadPool;
 
 pub use procfs_thrift::types::*;
 
@@ -133,17 +136,22 @@ macro_rules! parse_kb {
 
 pub struct ProcReader {
     path: PathBuf,
+    threadpool: ThreadPool,
 }
 
 impl ProcReader {
     pub fn new() -> ProcReader {
         ProcReader {
             path: Path::new("/proc").to_path_buf(),
+            // 5 threads max
+            threadpool: ThreadPool::with_name("procreader_worker".to_string(), 5),
         }
     }
 
     pub fn new_with_custom_procfs(path: PathBuf) -> ProcReader {
-        ProcReader { path }
+        let mut reader = ProcReader::new();
+        reader.path = path;
+        reader
     }
 
     fn read_uptime_secs(&self) -> Result<i64> {
@@ -542,7 +550,60 @@ impl ProcReader {
         Self::read_pid_cgroup_from_path(self.path.join(pid.to_string()))
     }
 
-    pub fn read_all_pids(&self) -> Result<PidMap> {
+    pub fn read_pid_cmdline(&mut self, pid: u32) -> Result<Option<String>> {
+        self.read_pid_cmdline_from_path(self.path.join(pid.to_string()))
+    }
+
+    fn read_pid_cmdline_from_path_blocking<P: AsRef<Path>>(path: P) -> Result<Option<String>> {
+        let path = path.as_ref().join("cmdline");
+        let mut file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
+        let mut buf = Vec::new();
+        match file
+            .read_to_end(&mut buf)
+            .map_err(|e| Error::IoError(path.clone(), e))?
+        {
+            // It's a zombie process and those don't have cmdlines
+            0 => Ok(None),
+            _ => {
+                Ok(Some(
+                    buf
+                        // /proc/pid/cmdline is split by nul bytes
+                        .split(|c| *c == 0)
+                        .filter(|s| !s.is_empty())
+                        .map(|s| {
+                            // Choose not to error on invalid utf8 b/c it's a process's
+                            // right to do crazy things if they want. No need for us to
+                            // erorr on it.
+                            String::from_utf8_lossy(s)
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                ))
+            }
+        }
+    }
+
+    /// Do /proc/pid/cmdline reads off-thread in a threadpool b/c kernel needs
+    /// to take the target process's mmap_sem semaphore and could block for a long
+    /// time. This way, we don't suffer a priority inversion (b/c this crate can be
+    /// run from a high priority binary).
+    fn read_pid_cmdline_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<Option<String>> {
+        let path = path.as_ref().to_owned();
+        let (tx, rx) = channel();
+        self.threadpool.execute(move || {
+            tx.send(Self::read_pid_cmdline_from_path_blocking(path))
+                .expect("cmdline receiver hung up");
+        });
+
+        // 1ms should be more than enough for an in-memory procfs read
+        match rx.recv_timeout(Duration::from_millis(1)) {
+            Ok(c) => c,
+            Err(RecvTimeoutError::Timeout) => Ok(None),
+            Err(RecvTimeoutError::Disconnected) => panic!("cmdline sender hung up"),
+        }
+    }
+
+    pub fn read_all_pids(&mut self) -> Result<PidMap> {
         let mut pidmap: PidMap = Default::default();
         for entry in
             std::fs::read_dir(&self.path).map_err(|e| Error::IoError(self.path.clone(), e))?
@@ -610,6 +671,16 @@ impl ProcReader {
                     continue
                 }
                 res => pidinfo.cgroup = res?,
+            }
+
+            match self.read_pid_cmdline_from_path(entry.path()) {
+                Err(Error::IoError(_, ref e))
+                    if e.raw_os_error()
+                        .map_or(false, |ec| ec == 2 || ec == 3 /* ENOENT or ESRCH */) =>
+                {
+                    continue
+                }
+                res => pidinfo.cmdline = res?,
             }
 
             let file_name = entry.file_name();

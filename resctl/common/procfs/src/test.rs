@@ -763,7 +763,7 @@ cancelled_write_bytes: 5431947264
     procfs.create_pid_file_with_content(1025, "io", io);
     procfs.create_pid_file_with_content(1025, "cgroup", cgroup);
     procfs.create_file_with_content("uptime", uptime);
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
 
     let pidmap = reader.read_all_pids().expect("Failed to get all pids");
 
