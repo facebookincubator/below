@@ -111,6 +111,29 @@ impl Advance {
         self.advance(store::Direction::Reverse)
     }
 
+    pub fn jump_sample_forward(&mut self, duration: humantime::Duration) -> Option<model::Model> {
+        self.last_sample_time += duration.into();
+        match self.advance(store::Direction::Forward) {
+            Some(model) => return Some(model),
+            None => (),
+        }
+
+        // If sample is not available, get the latest sample
+        self.last_sample_time = SystemTime::now();
+        self.advance(store::Direction::Reverse)
+    }
+
+    pub fn jump_sample_backward(&mut self, duration: humantime::Duration) -> Option<model::Model> {
+        self.last_sample_time -= duration.into();
+        match self.advance(store::Direction::Reverse) {
+            Some(model) => return Some(model),
+            None => (),
+        }
+
+        // If sample is not available, get the earlist sample
+        self.advance(store::Direction::Forward)
+    }
+
     fn get_next_sample(
         &mut self,
         timestamp: SystemTime,

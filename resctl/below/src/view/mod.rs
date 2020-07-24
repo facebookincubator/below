@@ -94,31 +94,40 @@ macro_rules! advance {
                     .update(data);
                 refresh($c);
             }
-            None => {
-                let state = $c
-                    .user_data::<ViewState>()
-                    .expect("No user data set")
-                    .main_view_state
-                    .clone();
-                let msg = format!(
-                    "Data is not available{}",
-                    if $dir == crate::store::Direction::Forward {
-                        " yet."
-                    } else {
-                        "."
-                    }
-                );
-                match state {
-                    MainViewState::Cgroup => cgroup_view::ViewType::cp_warn($c, msg),
-                    MainViewState::Process | MainViewState::ProcessZoomedIntoCgroup => {
-                        process_view::ViewType::cp_warn($c, msg)
-                    }
-                    MainViewState::Core => core_view::ViewType::cp_warn($c, msg),
+            None => view_warn!(
+                $c,
+                "Data is not available{}",
+                if $dir == crate::store::Direction::Forward {
+                    " yet."
+                } else {
+                    "."
                 }
-            }
+            ),
         }
     };
 }
+
+// Raise warning message in current view.
+macro_rules! view_warn {
+    ($c:ident, $($args:tt)*) => {{
+        let state = $c
+            .user_data::<crate::view::ViewState>()
+            .expect("No user data set")
+            .main_view_state
+            .clone();
+        let msg = format!($($args)*);
+        match state {
+            crate::view::MainViewState::Cgroup => crate::view::cgroup_view::ViewType::cp_warn($c, msg),
+            crate::view::MainViewState::Process | crate::view::MainViewState::ProcessZoomedIntoCgroup => {
+                crate::view::process_view::ViewType::cp_warn($c, msg)
+            }
+            crate::view::MainViewState::Core => crate::view::core_view::ViewType::cp_warn($c, msg),
+        }
+    }};
+}
+
+// Jump popup depends on view_warn
+mod jump_popup;
 
 #[derive(Clone)]
 pub enum MainViewState {
@@ -225,6 +234,39 @@ impl View {
         self.inner.cb_sink()
     }
 
+    pub fn register_jump_event(&mut self) {
+        // Jump forward
+        self.inner.add_global_callback('j', |c| {
+            let mode = c
+                .user_data::<ViewState>()
+                .expect("user data not set")
+                .mode
+                .clone();
+            match mode {
+                ViewMode::Pause(adv) | ViewMode::Replay(adv) => {
+                    println!("Demacia");
+                    c.add_layer(jump_popup::new(adv, Direction::Forward));
+                }
+                _ => (),
+            }
+        });
+
+        // Jump backward
+        self.inner.add_global_callback('J', |c| {
+            let mode = c
+                .user_data::<ViewState>()
+                .expect("user data not set")
+                .mode
+                .clone();
+            match mode {
+                ViewMode::Pause(adv) | ViewMode::Replay(adv) => {
+                    c.add_layer(jump_popup::new(adv, Direction::Reverse));
+                }
+                _ => (),
+            }
+        });
+    }
+
     pub fn register_replay_event(&mut self) {
         // Move sample forward
         self.inner.add_global_callback('t', |c| {
@@ -249,6 +291,7 @@ impl View {
                 _ => (),
             }
         });
+        self.register_jump_event();
     }
 
     pub fn register_live_local_event(&mut self, logger: slog::Logger, dir: PathBuf) {
