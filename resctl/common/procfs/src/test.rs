@@ -739,6 +739,40 @@ fn test_pid_cgroupv1() {
 }
 
 #[test]
+fn test_pid_cmdline() {
+    // procfs cmdline format is nul bytes to separate with a trailing nul byte
+    let cmdline = b"one\0--long-flag\0-f\0";
+
+    let procfs = TestProcfs::new();
+    procfs.create_pid_file_with_content(123, "cmdline", cmdline);
+    let mut reader = procfs.get_reader();
+    let cmdline = reader
+        .read_pid_cmdline(123)
+        .expect("Failed to read pid cmdline file");
+
+    assert_eq!(cmdline.expect("missing cmdline"), "one --long-flag -f");
+}
+
+#[test]
+fn test_pid_cmdline_loop() {
+    // procfs cmdline format is nul bytes to separate with a trailing nul byte
+    let cmdline = b"one\0--long-flag\0-f\0";
+
+    let procfs = TestProcfs::new();
+    procfs.create_pid_file_with_content(123, "cmdline", cmdline);
+    let mut reader = procfs.get_reader();
+    for _ in 0..10000 {
+        assert_eq!(
+            reader
+                .read_pid_cmdline(123)
+                .expect("Failed to read pid cmdline file")
+                .expect("missing cmdline"),
+            "one --long-flag -f"
+        );
+    }
+}
+
+#[test]
 fn test_read_all_pids() {
     let io = b"rchar: 1065638765191
 wchar: 330982500707
@@ -755,13 +789,18 @@ cancelled_write_bytes: 5431947264
 ";
     let uptime = b"1631826.45 37530838.66";
 
+    // procfs cmdline format is nul bytes to separate with a trailing nul byte
+    let cmdline = b"one\0two\0three\0";
+
     let procfs = TestProcfs::new();
     procfs.create_pid_file_with_content(1024, "stat", stat);
     procfs.create_pid_file_with_content(1024, "io", io);
     procfs.create_pid_file_with_content(1024, "cgroup", cgroup);
+    procfs.create_pid_file_with_content(1024, "cmdline", cmdline);
     procfs.create_pid_file_with_content(1025, "stat", stat);
     procfs.create_pid_file_with_content(1025, "io", io);
     procfs.create_pid_file_with_content(1025, "cgroup", cgroup);
+    procfs.create_pid_file_with_content(1025, "cmdline", cmdline);
     procfs.create_file_with_content("uptime", uptime);
     let mut reader = procfs.get_reader();
 
@@ -771,6 +810,10 @@ cancelled_write_bytes: 5431947264
     assert_eq!(
         pidmap[&1025].cgroup,
         "/user.slice/user-119756.slice/session-3.scope".to_string()
+    );
+    assert_eq!(
+        pidmap[&1025].cmdline.as_ref().expect("cmdline missing"),
+        "one two three"
     );
 }
 
