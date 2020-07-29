@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+namespace cpp2 resctl.common.procfs
+namespace py3 resctl.common.procfs
+
 struct CpuStat {
   1: optional i64 user_usec,
   2: optional i64 nice_usec,

@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+namespace cpp2 resctl.below
+namespace py3 resctl.below
+
 include "resctl/common/cgroupfs/if/cgroupfs.thrift"
 include "resctl/common/procfs/if/procfs.thrift"
 
