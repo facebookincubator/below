@@ -252,8 +252,9 @@ struct VmStat {
 }
 
 struct DiskStat {
-  1: optional i64 major,
-  2: optional i64 minor,
+  # Rename to avoid conflict with glibc macro name
+  1: optional i64 major (cpp.name = "major_num"),
+  2: optional i64 minor (cpp.name = "minor_num"),
   3: optional string name,
   4: optional i64 read_completed,
   5: optional i64 read_merged,
