@@ -595,8 +595,9 @@ impl ProcReader {
                 .expect("cmdline receiver hung up");
         });
 
-        // 1ms should be more than enough for an in-memory procfs read
-        match rx.recv_timeout(Duration::from_millis(1)) {
+        // 20ms should be more than enough for an in-memory procfs read and also high enough for a
+        // page fault
+        match rx.recv_timeout(Duration::from_millis(20)) {
             Ok(c) => c,
             Err(RecvTimeoutError::Timeout) => Ok(None),
             Err(RecvTimeoutError::Disconnected) => panic!("cmdline sender hung up"),
