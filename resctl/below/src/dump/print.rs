@@ -85,7 +85,8 @@ where
         round: usize,
     ) -> Result<()> {
         let repeat = self.get_opts().repeat_title.unwrap_or(0);
-        if round == 0 || (repeat != 0 && round % repeat == 0) {
+        let disable_title = self.get_opts().disable_title;
+        if !disable_title && (round == 0 || (repeat != 0 && round % repeat == 0)) {
             self.print_title_line(&model, output, " ")?;
         }
         self.print_field_line(&model, output, " ")
@@ -97,7 +98,8 @@ where
         output: &mut T,
         round: usize,
     ) -> Result<()> {
-        if round == 0 {
+        let disable_title = self.get_opts().disable_title;
+        if !disable_title && round == 0 {
             self.print_title_line(&model, output, ",")?;
         }
         self.print_field_line(&model, output, ",")

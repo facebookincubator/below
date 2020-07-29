@@ -404,6 +404,9 @@ pub struct GeneralOpt {
     /// Output destination, default to stdout.
     #[structopt(long, short)]
     pub output: Option<String>,
+    /// Disable title in raw or csv format output
+    #[structopt(long)]
+    pub disable_title: bool,
 }
 
 #[derive(Debug, StructOpt, Clone)]
