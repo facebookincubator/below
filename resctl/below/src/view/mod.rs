@@ -204,6 +204,15 @@ impl ViewState {
         view_state
     }
 
+    pub fn view_mode_str(&self) -> &'static str {
+        match self.mode {
+            ViewMode::Live => "live",
+            ViewMode::LiveRemote(_) => "live-remote",
+            ViewMode::Pause(_) => "live-paused",
+            ViewMode::Replay(_) => "replay",
+        }
+    }
+
     pub fn is_paused(&self) -> bool {
         match self.mode {
             ViewMode::Pause(_) => true,

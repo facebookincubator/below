@@ -35,9 +35,9 @@ fn get_content(c: &mut Cursive) -> impl Into<StyledString> {
     )
     .as_str();
     header_str += get_version_str().as_str();
-    if view_state.is_paused() {
-        header_str += "\t live-paused";
-    }
+
+    header_str += "\t ";
+    header_str += view_state.view_mode_str();
 
     header_str
 }
