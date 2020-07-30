@@ -30,6 +30,9 @@ pub struct ProcessData {
     #[bttr(title = "Comm", width = 12, tag = "ProcField::Comm&", cmp = true)]
     #[blink("SingleProcessModel$get_comm")]
     pub comm: Option<String>,
+    #[bttr(title = "Cmdline", width = 12, tag = "ProcField::Cmdline&", cmp = true)]
+    #[blink("SingleProcessModel$get_cmdline")]
+    pub cmdline: Option<String>,
     #[bttr(title = "State", width = 11, tag = "ProcField::State&", cmp = true)]
     #[blink("SingleProcessModel$get_state")]
     pub state: Option<procfs::PidState>,
