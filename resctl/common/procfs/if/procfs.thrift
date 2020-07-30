@@ -311,8 +311,9 @@ struct PidInfo {
   1: PidStat stat,
   2: PidIo io,
   3: string cgroup,
+  // 4: Depreciated,
   // Optional b/c cmdline may be sanitized or redacted based on security policy
-  4: optional string cmdline,
+  5: optional list<string> cmdline_vec,
 }
 
 typedef map<i32, PidInfo> PidMap

@@ -550,11 +550,11 @@ impl ProcReader {
         Self::read_pid_cgroup_from_path(self.path.join(pid.to_string()))
     }
 
-    pub fn read_pid_cmdline(&mut self, pid: u32) -> Result<Option<String>> {
+    pub fn read_pid_cmdline(&mut self, pid: u32) -> Result<Option<Vec<String>>> {
         self.read_pid_cmdline_from_path(self.path.join(pid.to_string()))
     }
 
-    fn read_pid_cmdline_from_path_blocking<P: AsRef<Path>>(path: P) -> Result<Option<String>> {
+    fn read_pid_cmdline_from_path_blocking<P: AsRef<Path>>(path: P) -> Result<Option<Vec<String>>> {
         let path = path.as_ref().join("cmdline");
         let mut file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
         let mut buf = Vec::new();
@@ -574,10 +574,9 @@ impl ProcReader {
                             // Choose not to error on invalid utf8 b/c it's a process's
                             // right to do crazy things if they want. No need for us to
                             // erorr on it.
-                            String::from_utf8_lossy(s)
+                            String::from_utf8_lossy(s).to_string()
                         })
-                        .collect::<Vec<_>>()
-                        .join(" "),
+                        .collect::<Vec<String>>(),
                 ))
             }
         }
@@ -587,7 +586,10 @@ impl ProcReader {
     /// to take the target process's mmap_sem semaphore and could block for a long
     /// time. This way, we don't suffer a priority inversion (b/c this crate can be
     /// run from a high priority binary).
-    fn read_pid_cmdline_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<Option<String>> {
+    fn read_pid_cmdline_from_path<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+    ) -> Result<Option<Vec<String>>> {
         let path = path.as_ref().to_owned();
         let (tx, rx) = channel();
         self.threadpool.execute(move || {
@@ -681,7 +683,7 @@ impl ProcReader {
                 {
                     continue
                 }
-                res => pidinfo.cmdline = res?,
+                res => pidinfo.cmdline_vec = res?,
             }
 
             let file_name = entry.file_name();

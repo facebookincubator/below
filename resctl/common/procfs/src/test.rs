@@ -750,7 +750,10 @@ fn test_pid_cmdline() {
         .read_pid_cmdline(123)
         .expect("Failed to read pid cmdline file");
 
-    assert_eq!(cmdline.expect("missing cmdline"), "one --long-flag -f");
+    assert_eq!(
+        cmdline.expect("missing cmdline"),
+        vec!["one", "--long-flag", "-f"]
+    );
 }
 
 #[test]
@@ -767,7 +770,7 @@ fn test_pid_cmdline_loop() {
                 .read_pid_cmdline(123)
                 .expect("Failed to read pid cmdline file")
                 .expect("missing cmdline"),
-            "one --long-flag -f"
+            vec!["one", "--long-flag", "-f"]
         );
     }
 }
@@ -812,7 +815,11 @@ cancelled_write_bytes: 5431947264
         "/user.slice/user-119756.slice/session-3.scope".to_string()
     );
     assert_eq!(
-        pidmap[&1025].cmdline.as_ref().expect("cmdline missing"),
+        pidmap[&1025]
+            .cmdline_vec
+            .as_ref()
+            .expect("cmdline missing")
+            .join(" "),
         "one two three"
     );
 }

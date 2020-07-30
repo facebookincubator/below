@@ -117,7 +117,7 @@ impl ExitstatDriver {
             cgroup: "?".to_string(),
             // We can't access cmdline b/c it requires taking mmap_sem and a
             // bunch of memory management helpers.
-            cmdline: None,
+            ..Default::default()
         };
 
         // handle.lock() only fails if a thread holding the lock panic'd, in which
