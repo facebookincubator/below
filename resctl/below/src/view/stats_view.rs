@@ -372,4 +372,12 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             .get_cmd_palette()
             .set_alert(CPMsgRecord::construct_msg(slog::Level::Warning, &msg));
     }
+
+    /// Convenience function to set filter to CommandPalette.
+    pub fn cp_filter(c: &mut Cursive, filter: Option<String>) {
+        c.find_name::<Self>(V::get_view_name())
+            .expect("Fail to find view with name")
+            .get_cmd_palette()
+            .set_filter(filter);
+    }
 }

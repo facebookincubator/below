@@ -34,12 +34,18 @@ enum CPMode {
 /// that use for input operation command like search, filter, rearrange, apply config, etc.
 pub struct CommandPalette {
     content: String,
+    filter: Option<String>,
     mode: CPMode,
 }
 
 impl View for CommandPalette {
     fn draw(&self, printer: &Printer) {
         printer.print_hline((0, 0), printer.size.x, "─");
+        if let Some(filter) = &self.filter {
+            let filter = format!("| Filter: {:>10.10} |", filter);
+            printer.print((printer.size.x - filter.len(), 0), &filter);
+        }
+
         // Message should adapt the screen size
         let mut msg_len_left = self.content.len();
         let mut idx = 0;
@@ -63,6 +69,7 @@ impl CommandPalette {
     pub fn new<T: Into<String>>(content: T) -> Self {
         Self {
             content: content.into(),
+            filter: None,
             mode: CPMode::Info,
         }
     }
@@ -78,6 +85,10 @@ impl CommandPalette {
     pub fn set_alert<T: Into<String>>(&mut self, content: T) {
         self.content = content.into();
         self.mode = CPMode::Alert;
+    }
+
+    pub fn set_filter(&mut self, filter: Option<String>) {
+        self.filter = filter;
     }
 
     fn print_info(&self, printer: &Printer, pos: Vec2, idx: usize) {

@@ -21,6 +21,23 @@ use cursive::views::{Dialog, EditView, OnEventView};
 use cursive::Cursive;
 
 use crate::view::stats_view::StateCommon;
+use crate::view::{MainViewState, ViewState};
+
+// Set command palette filter
+fn set_cp_filter(c: &mut Cursive, text: Option<String>) {
+    let state = c
+        .user_data::<ViewState>()
+        .expect("No user data")
+        .main_view_state
+        .clone();
+    match state {
+        MainViewState::Cgroup => crate::view::cgroup_view::ViewType::cp_filter(c, text),
+        MainViewState::Process | MainViewState::ProcessZoomedIntoCgroup => {
+            crate::view::process_view::ViewType::cp_filter(c, text)
+        }
+        MainViewState::Core => crate::view::core_view::ViewType::cp_filter(c, text),
+    }
+}
 
 pub fn new<F>(state: Rc<RefCell<impl StateCommon + 'static>>, refresh: F) -> impl View
 where
@@ -32,8 +49,10 @@ where
         .on_submit(move |c, text| {
             if text.is_empty() {
                 *submit_state.borrow_mut().get_filter() = None;
+                set_cp_filter(c, None);
             } else {
                 *submit_state.borrow_mut().get_filter() = Some(text.to_string());
+                set_cp_filter(c, Some(text.to_string()));
             }
             refresh(c);
             c.pop_layer();
@@ -60,8 +79,10 @@ where
 
                 if text.is_empty() {
                     *state.borrow_mut().get_filter() = None;
+                    set_cp_filter(c, None);
                 } else {
                     *state.borrow_mut().get_filter() = Some(text.to_string());
+                    set_cp_filter(c, Some(text.to_string()));
                 }
 
                 refresh(c);
