@@ -65,6 +65,15 @@ impl TestProcfs {
         self.create_file_with_content_full_path(path, content);
     }
 
+    fn create_pid_file_with_link<P: AsRef<Path>>(&self, pid: u32, src: P, dst: P) -> String {
+        self.create_pid_file_with_content(pid, src.as_ref(), b"");
+        let pid_dir = self.path().join(pid.to_string());
+        let src_path = pid_dir.join(src);
+        let dst_path = pid_dir.join(dst);
+        symlink(&src_path, &dst_path).expect("Fail to create pid symlink");
+        src_path.to_string_lossy().into_owned()
+    }
+
     fn get_net_reader(&self) -> NetReader {
         let iface_dir = self.path().join("iface");
         if !iface_dir.exists() {
@@ -1179,4 +1188,16 @@ fn verify_interfaces(netstat: &NetStat) {
         assert_eq!(netstat.tx_packets, Some(23));
         assert_eq!(netstat.tx_window_errors, Some(24));
     }
+}
+
+#[test]
+fn test_read_pid_exec() {
+    let procfs = TestProcfs::new();
+    let res = procfs.create_pid_file_with_link(1234, "exe_path", "exe");
+    let reader = procfs.get_reader();
+    let exe_path = reader
+        .read_pid_exe_path(1234)
+        .expect("Failed to read pid exe file");
+
+    assert_eq!(exe_path, res);
 }

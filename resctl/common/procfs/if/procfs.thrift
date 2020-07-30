@@ -314,6 +314,7 @@ struct PidInfo {
   // 4: Depreciated,
   // Optional b/c cmdline may be sanitized or redacted based on security policy
   5: optional list<string> cmdline_vec,
+  6: optional string exe_path,
 }
 
 typedef map<i32, PidInfo> PidMap

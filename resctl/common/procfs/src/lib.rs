@@ -606,6 +606,17 @@ impl ProcReader {
         }
     }
 
+    fn read_pid_exe_path_from_path<P: AsRef<Path>>(path: P) -> Result<String> {
+        let path = path.as_ref().join("exe");
+        std::fs::read_link(path.clone())
+            .map_err(|e| Error::IoError(path, e))
+            .map(|p| p.to_string_lossy().into_owned())
+    }
+
+    pub fn read_pid_exe_path(&self, pid: u32) -> Result<String> {
+        Self::read_pid_exe_path_from_path(self.path.join(pid.to_string()))
+    }
+
     pub fn read_all_pids(&mut self) -> Result<PidMap> {
         let mut pidmap: PidMap = Default::default();
         for entry in
@@ -684,6 +695,13 @@ impl ProcReader {
                     continue
                 }
                 res => pidinfo.cmdline_vec = res?,
+            }
+
+            // Swallow the error since reading the /proc/pid/exe
+            // 1. will need root permission to trace link
+            // 2. Even with root permission, some exe will have broken link, kworker for example.
+            if let Ok(s) = Self::read_pid_exe_path_from_path(entry.path()) {
+                pidinfo.exe_path = Some(s);
             }
 
             let file_name = entry.file_name();
