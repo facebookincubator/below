@@ -29,7 +29,11 @@ where
     let mut editview = EditView::new()
         // Run cb and close popup when user presses "Enter"
         .on_submit(move |c, text| {
-            *submit_state.borrow_mut().get_filter() = Some(text.to_string());
+            if text.is_empty() {
+                *submit_state.borrow_mut().get_filter() = None;
+            } else {
+                *submit_state.borrow_mut().get_filter() = Some(text.to_string());
+            }
             refresh(c);
             c.pop_layer();
         });
@@ -52,7 +56,12 @@ where
                 .call_on_name("filter_popup", |view: &mut EditView| view.get_content())
                 .expect("Unable to find filter_popup");
 
-            *state.borrow_mut().get_filter() = Some(text.to_string());
+            if text.is_empty() {
+                *state.borrow_mut().get_filter() = None;
+            } else {
+                *state.borrow_mut().get_filter() = Some(text.to_string());
+            }
+
             refresh(c);
 
             // Pop dialog

@@ -129,7 +129,7 @@ macro_rules! view_warn {
 // Jump popup depends on view_warn
 mod jump_popup;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum MainViewState {
     Cgroup,
     Process,
@@ -387,10 +387,22 @@ impl View {
                             (*stack.get_mut()).move_to_front(position);
 
                             Some(EventResult::with_cb(|c| {
-                                let view_state = c
+                                let current_state = c
                                     .user_data::<ViewState>()
-                                    .expect("No data stored in Cursive object!");
-                                view_state.main_view_state = MainViewState::Process;
+                                    .expect("No data stored in Cursive object!")
+                                    .main_view_state
+                                    .clone();
+
+                                // If the previous state is zoom state, we need to clear the zoom state
+                                if current_state == MainViewState::ProcessZoomedIntoCgroup {
+                                    process_view::ProcessView::get_process_view(c)
+                                        .state
+                                        .borrow_mut()
+                                        .reset_state_for_quiting_zoom();
+                                }
+                                c.user_data::<ViewState>()
+                                    .expect("No data stored in Cursive object!")
+                                    .main_view_state = MainViewState::Process;
                             }))
                         })
                         .on_pre_event_inner('c', |stack, _| {
@@ -400,10 +412,22 @@ impl View {
                             (*stack.get_mut()).move_to_front(position);
 
                             Some(EventResult::with_cb(|c| {
-                                let view_state = c
+                                let current_state = c
                                     .user_data::<ViewState>()
-                                    .expect("No data stored in Cursive object!");
-                                view_state.main_view_state = MainViewState::Cgroup;
+                                    .expect("No data stored in Cursive object!")
+                                    .main_view_state
+                                    .clone();
+
+                                // If the previous state is zoom state, we need to clear the zoom state
+                                if current_state == MainViewState::ProcessZoomedIntoCgroup {
+                                    process_view::ProcessView::get_process_view(c)
+                                        .state
+                                        .borrow_mut()
+                                        .reset_state_for_quiting_zoom();
+                                }
+                                c.user_data::<ViewState>()
+                                    .expect("No data stored in Cursive object!")
+                                    .main_view_state = MainViewState::Cgroup;
                             }))
                         })
                         .on_pre_event_inner('s', |stack, _| {
@@ -413,10 +437,22 @@ impl View {
                             (*stack.get_mut()).move_to_front(position);
 
                             Some(EventResult::with_cb(|c| {
-                                let view_state = c
+                                let current_state = c
                                     .user_data::<ViewState>()
-                                    .expect("No data stored in Cursive object!");
-                                view_state.main_view_state = MainViewState::Core;
+                                    .expect("No data stored in Cursive object!")
+                                    .main_view_state
+                                    .clone();
+
+                                // If the previous state is zoom state, we need to clear the zoom state
+                                if current_state == MainViewState::ProcessZoomedIntoCgroup {
+                                    process_view::ProcessView::get_process_view(c)
+                                        .state
+                                        .borrow_mut()
+                                        .reset_state_for_quiting_zoom();
+                                }
+                                c.user_data::<ViewState>()
+                                    .expect("No data stored in Cursive object!")
+                                    .main_view_state = MainViewState::Core;
                             }))
                         })
                         .on_pre_event('z', |c| {
@@ -439,14 +475,14 @@ impl View {
                                     process_view::ProcessView::get_process_view(c)
                                         .state
                                         .borrow_mut()
-                                        .cgroup_filter = None;
+                                        .reset_state_for_quiting_zoom();
                                     MainViewState::Cgroup
                                 }
                                 MainViewState::Cgroup => {
                                     process_view::ProcessView::get_process_view(c)
                                         .state
                                         .borrow_mut()
-                                        .cgroup_filter = Some(current_selection);
+                                        .handle_state_for_entering_zoom(current_selection);
                                     MainViewState::ProcessZoomedIntoCgroup
                                 }
                                 // Pressing 'z' in process view should do nothing

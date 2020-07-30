@@ -33,6 +33,9 @@ pub type ViewType = StatsView<ProcessView>;
 pub struct ProcessState {
     pub filter: Option<String>,
     pub cgroup_filter: Option<String>,
+    // For zoomed view, we should save current filter to here and reset the
+    // filter when go back to cgroup or process view.
+    pub filter_cache_for_zoom: Option<String>,
     pub sort_order: ProcessOrders,
     pub sort_tags: HashMap<String, Vec<ProcessOrders>>,
     pub reverse: bool,
@@ -74,6 +77,7 @@ impl StateCommon for ProcessState {
         Self {
             cgroup_filter: None,
             filter: None,
+            filter_cache_for_zoom: None,
             sort_order: ProcessOrders::Keep,
             sort_tags,
             reverse: false,
@@ -89,6 +93,18 @@ impl ProcessState {
 
     fn set_reverse(&mut self, reverse: bool) {
         self.reverse = reverse;
+    }
+
+    pub fn handle_state_for_entering_zoom(&mut self, current_selection: String) {
+        self.cgroup_filter = Some(current_selection);
+        std::mem::swap(&mut self.filter_cache_for_zoom, &mut self.filter);
+        self.filter = None;
+    }
+
+    pub fn reset_state_for_quiting_zoom(&mut self) {
+        std::mem::swap(&mut self.filter, &mut self.filter_cache_for_zoom);
+        self.cgroup_filter = None;
+        self.filter_cache_for_zoom = None;
     }
 }
 
