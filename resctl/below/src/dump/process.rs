@@ -33,6 +33,14 @@ pub struct ProcessData {
     #[bttr(title = "Cmdline", width = 12, tag = "ProcField::Cmdline&", cmp = true)]
     #[blink("SingleProcessModel$get_cmdline")]
     pub cmdline: Option<String>,
+    #[bttr(
+        title = "Exe Path",
+        width = 12,
+        tag = "ProcField::ExePath&",
+        cmp = true
+    )]
+    #[blink("SingleProcessModel$get_exe_path")]
+    pub exe_path: Option<String>,
     #[bttr(title = "State", width = 11, tag = "ProcField::State&", cmp = true)]
     #[blink("SingleProcessModel$get_state")]
     pub state: Option<procfs::PidState>,
@@ -193,6 +201,8 @@ make_dget!(
     ProcField::Uptime,
     ProcField::Cgroup,
     ProcField::Timestamp,
+    ProcField::Cmdline,
+    ProcField::ExePath,
 );
 
 impl Dprint for Process {}

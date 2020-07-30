@@ -426,6 +426,7 @@ fn test_dump_proc_content() {
         assert_eq!(value["Pid"].as_str().unwrap(), spm.get_pid_str());
         assert_eq!(value["Ppid"].as_str().unwrap(), spm.get_ppid_str());
         assert_eq!(value["Comm"].as_str().unwrap(), spm.get_comm_str());
+        assert_eq!(value["Exe Path"].as_str().unwrap(), spm.get_exe_path_str());
         assert_eq!(value["State"].as_str().unwrap(), spm.get_state_str());
         assert_eq!(
             value["Uptime(sec)"].as_str().unwrap(),

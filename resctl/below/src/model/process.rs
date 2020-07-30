@@ -60,6 +60,8 @@ pub struct SingleProcessModel {
     pub cpu: Option<ProcessCpuModel>,
     #[bttr(title = "Cmdline")]
     pub cmdline: Option<String>,
+    #[bttr(title = "Exe Path")]
+    pub exe_path: Option<String>,
 }
 
 impl SingleProcessModel {
@@ -82,6 +84,7 @@ impl SingleProcessModel {
             } else {
                 Some("?".into())
             },
+            exe_path: sample.exe_path.clone(),
         }
     }
 }

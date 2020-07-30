@@ -176,6 +176,7 @@ make_option! (ProcField {
     "io_write": IoWrite,
     "io_total": IoTotal,
     "cmdline": Cmdline,
+    "exe": ExePath,
 });
 
 make_option! (CgroupField {
@@ -503,7 +504,7 @@ pub enum DumpCommand {
     ///
     /// ********************** Available fields **********************
     ///
-    /// timestamp, datetime, pid, ppid, comm, state, uptime, cgroup, cmdline
+    /// timestamp, datetime, pid, ppid, comm, state, uptime, cgroup, cmdline, exe
     ///
     /// cpu_user, cpu_sys, cpu_threads, cpu_total
     ///
