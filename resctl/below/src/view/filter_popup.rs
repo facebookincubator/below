@@ -15,8 +15,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use cursive::event::Key;
 use cursive::view::{Identifiable, View};
-use cursive::views::{Dialog, EditView};
+use cursive::views::{Dialog, EditView, OnEventView};
 use cursive::Cursive;
 
 use crate::view::stats_view::StateCommon;
@@ -46,25 +47,30 @@ where
             .unwrap_or(&"".to_string()),
     );
 
-    Dialog::new()
-        .title("Filter by name")
-        .padding_lrtb(1, 1, 1, 0)
-        .content(editview.with_name("filter_popup"))
-        .dismiss_button("Close")
-        .button("Filter", move |c| {
-            let text = c
-                .call_on_name("filter_popup", |view: &mut EditView| view.get_content())
-                .expect("Unable to find filter_popup");
+    OnEventView::new(
+        Dialog::new()
+            .title("Filter by name")
+            .padding_lrtb(1, 1, 1, 0)
+            .content(editview.with_name("filter_popup"))
+            .dismiss_button("Close")
+            .button("Filter", move |c| {
+                let text = c
+                    .call_on_name("filter_popup", |view: &mut EditView| view.get_content())
+                    .expect("Unable to find filter_popup");
 
-            if text.is_empty() {
-                *state.borrow_mut().get_filter() = None;
-            } else {
-                *state.borrow_mut().get_filter() = Some(text.to_string());
-            }
+                if text.is_empty() {
+                    *state.borrow_mut().get_filter() = None;
+                } else {
+                    *state.borrow_mut().get_filter() = Some(text.to_string());
+                }
 
-            refresh(c);
+                refresh(c);
 
-            // Pop dialog
-            c.pop_layer();
-        })
+                // Pop dialog
+                c.pop_layer();
+            }),
+    )
+    .on_event(Key::Esc, |s| {
+        s.pop_layer();
+    })
 }
