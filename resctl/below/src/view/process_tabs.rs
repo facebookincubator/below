@@ -38,6 +38,7 @@ pub enum ProcessOrders {
     Read,
     Write,
     IoTotal,
+    Cmdline,
 }
 
 impl Default for ProcessOrders {
@@ -182,6 +183,9 @@ pub struct ProcessGeneral {
         unit = "/s"
     )]
     pub disk: Option<f64>,
+    #[blink("SingleProcessModel$get_cmdline")]
+    #[bttr(sort_tag = "ProcessOrders::Cmdline")]
+    pub cmdline: Option<String>,
 }
 
 impl ProcessTab for ProcessGeneral {

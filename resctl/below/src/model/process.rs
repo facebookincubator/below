@@ -58,6 +58,8 @@ pub struct SingleProcessModel {
     pub io: Option<ProcessIoModel>,
     pub mem: Option<ProcessMemoryModel>,
     pub cpu: Option<ProcessCpuModel>,
+    #[bttr(title = "Cmdline")]
+    pub cmdline: Option<String>,
 }
 
 impl SingleProcessModel {
@@ -75,6 +77,11 @@ impl SingleProcessModel {
             io: last.map(|(l, d)| ProcessIoModel::new(&l.io, &sample.io, d)),
             mem: last.map(|(l, d)| ProcessMemoryModel::new(&l.stat, &sample.stat, d)),
             cpu: last.map(|(l, d)| ProcessCpuModel::new(&l.stat, &sample.stat, d)),
+            cmdline: if let Some(cmd_vec) = sample.cmdline_vec.as_ref() {
+                Some(cmd_vec.join(" "))
+            } else {
+                Some("?".into())
+            },
         }
     }
 }
