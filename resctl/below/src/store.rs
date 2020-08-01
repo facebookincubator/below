@@ -210,7 +210,7 @@ impl StoreWriter {
         let shard = calculate_shard(timestamp);
         if shard != self.shard {
             // We just recreate the StoreWriter since this is a new shard
-            std::mem::replace(self, Self::new_with_shard(self.dir.as_path(), shard)?);
+            *self = Self::new_with_shard(self.dir.as_path(), shard)?;
         }
 
         // It doesn't really matter which order we write the data in,

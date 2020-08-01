@@ -165,7 +165,7 @@ fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
     view.add_child(TextView::new(io_row));
     view.add_child(TextView::new(iface_row));
 
-    std::mem::replace(v, view);
+    *v = view;
 }
 
 pub fn refresh(c: &mut Cursive) {
