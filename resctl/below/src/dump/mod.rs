@@ -26,6 +26,7 @@ use std::path::PathBuf;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, Result};
+use cursive::utils::markup::StyledString;
 use regex::Regex;
 use serde_json::{json, Value};
 

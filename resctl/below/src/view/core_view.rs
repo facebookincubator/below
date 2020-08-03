@@ -17,6 +17,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::rc::Rc;
 
+use cursive::utils::markup::StyledString;
 use cursive::view::Identifiable;
 use cursive::views::{NamedView, SelectView, ViewRef};
 use cursive::Cursive;
@@ -136,7 +137,7 @@ impl ViewBridge for CoreView {
         self.get_inner().get_title_vec(&model)
     }
 
-    fn get_rows(&mut self, state: &Self::StateType) -> Vec<(String, String)> {
+    fn get_rows(&mut self, state: &Self::StateType) -> Vec<(StyledString, String)> {
         self.get_inner().get_rows(state)
     }
 }

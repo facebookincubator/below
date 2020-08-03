@@ -88,11 +88,11 @@
 //! * `get_title_pipe(&self) -> String` -- Get all titles in a line, separated by '|', all style applied.
 //! * `get_FIELD_NAME_str(&self) -> String` -- Get the field string, all style applied.
 //! * `get_FIELD_NAME_str_raw(&self) -> String` -- Get the field string, no style applied.
-//! * `get_field_line(&self) -> String` -- Get all fields in a line, all style applied.
+//! * `get_field_line(&self) -> StyledString` -- Get all fields in a line, all style applied.
 //! * `get_csv_field(&self) -> String` -- Get all fields in a line, only apply decorator function. Comma separated.
 //! * `get_csv_title(&self) -> String` -- Get all title in a line, comma separated.
 //! * `cmp_by_FIELD_NAME(left: &Self, right, &Self) -> Ordering` -- comparison function. If field is a link, type of left and right will be Model
-//! * `get_interleave_line(&self, sep: &str, line_sep: &str) -> String` -- Interleave title and value and output
+//! * `get_interleave_line(&self, sep: &str) -> Vec<StyledString>` -- Interleave title and value and output
 //!    as string. `sep` is a string between title and value, `line_sep` is a string between each pair.
 //! * `sort(&self, tag: TagType, children: &mut Vec<ModelType>, reverse: bool)` -- Sort the children array by the sorting tag. If reverse if set
 //!    this function will sort in reverse order. TagType will be an enum type that decorate the struct.

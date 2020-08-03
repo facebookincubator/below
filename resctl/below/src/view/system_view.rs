@@ -13,6 +13,7 @@
 // limitations under the License.
 use std::collections::BTreeMap;
 
+use cursive::utils::markup::StyledString;
 use cursive::view::{Identifiable, View};
 use cursive::views::{LinearLayout, TextView};
 use cursive::Cursive;
@@ -33,12 +34,18 @@ macro_rules! gen_row_impl {
                 Default::default()
             }
 
-            fn get_row(model: &$model_type) -> String {
-                format!(
-                    "{:8.8}\t{}",
-                    $title,
-                    Self::get_default().get_interleave_line("", "\t", model)
-                )
+            // Styled strings don't handle \t's well. Probably b/c it registers
+            // the \t as taking up one cell but we expect it to expand to 8
+            // cells. So instead we use a bunch of spaces.
+            fn get_row(model: &$model_type) -> StyledString {
+                let mut row = StyledString::new();
+                row.append(format!("{:8.8}{:7.7}", $title, ""));
+                for line in Self::get_default().get_interleave_line("", model) {
+                    row.append(line);
+                    row.append(format!("{:7.7}", ""));
+                }
+
+                row
             }
         }
     };
@@ -112,7 +119,7 @@ gen_row_impl!(SysMem, MemoryModel, "Mem");
 struct SysIo;
 
 impl SysIo {
-    fn get_row(disks: &BTreeMap<String, SingleDiskModel>) -> String {
+    fn get_row(disks: &BTreeMap<String, SingleDiskModel>) -> StyledString {
         let mut disk_stat = format!("{:8.8}\t", "I/O");
 
         disks
@@ -126,14 +133,14 @@ impl SysIo {
                 ))
             });
 
-        disk_stat
+        disk_stat.into()
     }
 }
 
 struct SysIface;
 
 impl SysIface {
-    fn get_row(net: &NetworkModel) -> String {
+    fn get_row(net: &NetworkModel) -> StyledString {
         let mut network = format!("{:8.8}\t", "Iface");
 
         net.interfaces.iter().for_each(|(interface, snm)| {
@@ -143,7 +150,7 @@ impl SysIface {
                 format!("{}/s", snm.get_throughput_per_sec_str())
             ))
         });
-        network
+        network.into()
     }
 }
 
