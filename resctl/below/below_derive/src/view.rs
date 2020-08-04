@@ -108,7 +108,7 @@ fn generate_from_attr(f: &syn::Field, a: &BelowAttr, link: bool) -> Tstream {
         };
 
         quote! {
-            pub fn #fn_name(&self, model: &#m_type) -> String {
+            pub fn #fn_name(&self, model: &#m_type) -> StyledString {
                 let value = #value;
                 let prefix = #prefix;
                 let depth = #depth;
@@ -121,13 +121,13 @@ fn generate_from_attr(f: &syn::Field, a: &BelowAttr, link: bool) -> Tstream {
                     0
                 };
 
-                format!(
+                StyledString::plain(format!(
                     "{:>depth$.depth$}{:width$.width$}",
                     prefix,
                     value,
                     depth = depth,
                     width = width
-                )
+                ))
             }
 
             pub fn #fn_name_raw(&self, model: &#m_type) -> String {
@@ -142,7 +142,7 @@ fn generate_from_attr(f: &syn::Field, a: &BelowAttr, link: bool) -> Tstream {
         };
 
         quote! {
-            pub fn #fn_name(#args) -> String {
+            pub fn #fn_name(#args) -> StyledString {
                 let value = #value;
                 let prefix = #prefix;
                 let depth = #depth;
@@ -155,13 +155,13 @@ fn generate_from_attr(f: &syn::Field, a: &BelowAttr, link: bool) -> Tstream {
                     0
                 };
 
-                format!(
+                StyledString::plain(format!(
                     "{:>depth$.depth$}{:width$.width$}",
                     prefix,
                     value,
                     depth = depth,
                     width = width
-                )
+                ))
             }
 
             pub fn #fn_name_raw(#args) -> String {
@@ -232,7 +232,7 @@ pub fn gen_get_str_per_link_field(fields: &syn::FieldsNamed) -> Tstream {
                 let fn_name_raw = Ident::new(&format!("get_{}_str", name), Span::call_site());
 
                 quote! {
-                    pub fn #fn_name(&self, model: &#m_type) -> String {
+                    pub fn #fn_name(&self, model: &#m_type) -> StyledString {
                         &self.#name;
                         #link
                     }
@@ -317,6 +317,12 @@ fn unified_line_generation(fields: &syn::FieldsNamed, dformat: DFormat) -> Tstre
         ),
     };
 
+    let non_styled_extension = if !is_title && styled_string {
+        quote! {.source()}
+    } else {
+        quote! {}
+    };
+
     let rep = iter_field_attr!(fields)
         .filter(|(_, a)| a.field.is_some() && !a.field.as_ref().unwrap().no_show)
         .map(|(f, a)| {
@@ -326,12 +332,12 @@ fn unified_line_generation(fields: &syn::FieldsNamed, dformat: DFormat) -> Tstre
             if field_attr.link.is_some() && (!is_title || field_attr.title.is_none()) {
                 if styled_string {
                     quote! {
-                        res.append_plain(&self.#fn_name(model));
+                        res.append(self.#fn_name(model));
                         res.append_plain(#sep);
                     }
                 } else {
                     quote! {
-                        res.push_str(&self.#fn_name(model));
+                        res.push_str(&self.#fn_name(model)#non_styled_extension);
                         res.push_str(#sep);
                     }
                 }
@@ -343,24 +349,24 @@ fn unified_line_generation(fields: &syn::FieldsNamed, dformat: DFormat) -> Tstre
                 };
                 if styled_string {
                     quote! {
-                        res.append_plain(&Self::#fn_name(#args));
+                        res.append(Self::#fn_name(#args));
                         res.append_plain(#sep);
                     }
                 } else {
                     quote! {
-                        res.push_str(&Self::#fn_name(#args));
+                        res.push_str(&Self::#fn_name(#args)#non_styled_extension);
                         res.push_str(#sep);
                     }
                 }
             } else {
                 if styled_string {
                     quote! {
-                        res.append_plain(&self.#fn_name());
+                        res.append(self.#fn_name());
                         res.append_plain(#sep);
                     }
                 } else {
                     quote! {
-                        res.push_str(&self.#fn_name());
+                        res.push_str(&self.#fn_name()#non_styled_extension);
                         res.push_str(#sep);
                     }
                 }
@@ -466,7 +472,7 @@ pub fn gen_interleave(fields: &syn::FieldsNamed) -> Tstream {
                         let mut line = StyledString::new();
                         line.append_plain(self.#title_name(model));
                         line.append_plain(sep);
-                        line.append_plain(self.#value_name(model));
+                        line.append(self.#value_name(model));
                         res.push(line);
                     }
                 } else {
@@ -474,7 +480,7 @@ pub fn gen_interleave(fields: &syn::FieldsNamed) -> Tstream {
                         let mut line = StyledString::new();
                         line.append_plain(self.#title_name());
                         line.append_plain(sep);
-                        line.append_plain(self.#value_name(model));
+                        line.append(self.#value_name(model));
                         res.push(line);
                     }
                 }
@@ -483,7 +489,7 @@ pub fn gen_interleave(fields: &syn::FieldsNamed) -> Tstream {
                     let mut line = StyledString::new();
                     line.append_plain(Self::#title_name());
                     line.append_plain(sep);
-                    line.append_plain(Self::#value_name(input));
+                    line.append(Self::#value_name(input));
                     res.push(line);
                 }
             } else {
@@ -491,7 +497,7 @@ pub fn gen_interleave(fields: &syn::FieldsNamed) -> Tstream {
                     let mut line = StyledString::new();
                     line.append_plain(self.#title_name());
                     line.append_plain(sep);
-                    line.append_plain(self.#value_name());
+                    line.append(self.#value_name());
                     res.push(line);
                 }
             }

@@ -407,6 +407,12 @@ fn get_dfill_field_fns(
     fn_type: &Tstream,
     title: bool,
 ) -> Tstream {
+    let styled_str_extension = if suffix == "str_styled" && !title {
+        quote! {.source().to_string()}
+    } else {
+        quote! {}
+    };
+
     let per_field_fns = iter_field_attr!(fields)
         .filter(|(_, a)| a.field.is_some() && a.field.as_ref().unwrap().tag.is_some())
         .map(|(f, a)| {
@@ -433,16 +439,16 @@ fn get_dfill_field_fns(
                         #match_arm => self.#fn_type.push(Box::new(|data, _| data.#fn_name())),
                     },
                     (_, _, true) => quote! {
-                        #match_arm => self.#fn_type.push(Box::new(|_, model| Self::DataType::#fn_name(model))),
+                        #match_arm => self.#fn_type.push(Box::new(|_, model| Self::DataType::#fn_name(model)#styled_str_extension)),
                     },
                     _ => quote! {
-                        #match_arm => self.#fn_type.push(Box::new(|data, model| data.#fn_name(model))),
+                        #match_arm => self.#fn_type.push(Box::new(|data, model| data.#fn_name(model)#styled_str_extension)),
                     }
                 }
             } else {
                 let match_arm = match_arm.parse::<Tstream>().unwrap();
                 quote! {
-                    #match_arm => self.#fn_type.push(Box::new(|data, _| data.#fn_name())),
+                    #match_arm => self.#fn_type.push(Box::new(|data, _| data.#fn_name()#styled_str_extension)),
                 }
             }
         });
@@ -452,7 +458,13 @@ fn get_dfill_field_fns(
     }
 }
 
-fn get_dfill_class_field(field: &str, suffix: &str, fn_type: &Tstream, title: bool) -> Tstream {
+fn get_dfill_class_field(
+    field: &str,
+    suffix: &str,
+    fn_type: &Tstream,
+    title: bool,
+    styled_str_extension: &Tstream,
+) -> Tstream {
     let aggr = field.ends_with('@');
     let link = field.ends_with('&');
     // We use additional "&" to mark the title link. With T67969117 we can get rid of it.
@@ -474,10 +486,10 @@ fn get_dfill_class_field(field: &str, suffix: &str, fn_type: &Tstream, title: bo
                 self.#fn_type.push(Box::new(|data, model| data.#fn_name()));
             },
             (_, _, true) => quote! {
-                self.#fn_type.push(Box::new(|_, model| Self::DataType::#fn_name(model)));
+                self.#fn_type.push(Box::new(|_, model| Self::DataType::#fn_name(model)#styled_str_extension));
             },
             _ => quote! {
-                self.#fn_type.push(Box::new(|data, model| data.#fn_name(model)));
+                self.#fn_type.push(Box::new(|data, model| data.#fn_name(model)#styled_str_extension));
             },
         }
     } else {
@@ -485,7 +497,7 @@ fn get_dfill_class_field(field: &str, suffix: &str, fn_type: &Tstream, title: bo
             .parse::<Tstream>()
             .unwrap();
         quote! {
-            self.#fn_type.push(Box::new(|data, _| data.#fn_name()));
+            self.#fn_type.push(Box::new(|data, _| data.#fn_name()#styled_str_extension));
         }
     }
 }
@@ -496,6 +508,12 @@ fn get_dfill_class_fns(
     fn_type: &Tstream,
     title: bool,
 ) -> Tstream {
+    let styled_str_extension = if suffix == "str_styled" && !title {
+        quote! {.source().to_string()}
+    } else {
+        quote! {}
+    };
+
     let per_class_fns = iter_field_attr!(fields)
         .filter(|(_, a)| a.class.is_some())
         .map(|(f, a)| {
@@ -516,15 +534,15 @@ fn get_dfill_class_fns(
             let fields = class[1].split(':').collect::<Vec<&str>>();
             let fields_reg = fields[0].split(',').collect::<Vec<&str>>();
 
-            let fields_fns_reg = fields_reg
-                .iter()
-                .map(|field| get_dfill_class_field(field, suffix, fn_type, title));
+            let fields_fns_reg = fields_reg.iter().map(|field| {
+                get_dfill_class_field(field, suffix, fn_type, title, &styled_str_extension)
+            });
 
             if fields.len() > 1 {
                 let fields_detail = fields[1].split(',').collect::<Vec<&str>>();
-                let fields_fns_detail = fields_detail
-                    .iter()
-                    .map(|field| get_dfill_class_field(field, suffix, fn_type, title));
+                let fields_fns_detail = fields_detail.iter().map(|field| {
+                    get_dfill_class_field(field, suffix, fn_type, title, &styled_str_extension)
+                });
 
                 quote! {
                     #field_type::#name => {

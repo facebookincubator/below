@@ -95,19 +95,19 @@ fn test_bdecor_field_function() {
     assert_eq!(model.get_usage_pct().unwrap(), 12.6);
     assert_eq!(model.get_system_pct().unwrap(), 2.222);
     assert_eq!(model.get_cache_usage().unwrap(), 100.0);
-    assert_eq!(model.get_usage_pct_str_styled(), "12.6%  ");
-    assert_eq!(model.get_system_pct_str_styled(), "2.2%   ");
+    assert_eq!(model.get_usage_pct_str_styled().source(), "12.6%  ");
+    assert_eq!(model.get_system_pct_str_styled().source(), "2.2%   ");
     assert_eq!(model.get_usage_pct_str(), "12.6%");
     assert_eq!(model.get_system_pct_str(), "2.2%");
-    assert_eq!(TestModel::get_aggr_str_styled(&subfield), "3.30 ");
+    assert_eq!(TestModel::get_aggr_str_styled(&subfield).source(), "3.30 ");
     assert_eq!(TestModel::get_aggr_str(&subfield), "3.30");
     model.system_pct = None;
-    assert_eq!(model.get_system_pct_str_styled(), "0.0    ");
-    assert_eq!(model.get_cache_usage_str_styled(), "  -->10");
+    assert_eq!(model.get_system_pct_str_styled().source(), "0.0    ");
+    assert_eq!(model.get_cache_usage_str_styled().source(), "  -->10");
     assert_eq!(model.get_user_pct(&model).unwrap(), 12.6);
-    assert_eq!(model.get_user_pct_str_styled(&model), "12.6%  ");
-    assert_eq!(model.get_loopback_str_styled(&model), "12.6%  ");
-    assert_eq!(model.get_route_str_styled(&model), "12.6%  ");
+    assert_eq!(model.get_user_pct_str_styled(&model).source(), "12.6%  ");
+    assert_eq!(model.get_loopback_str_styled(&model).source(), "12.6%  ");
+    assert_eq!(model.get_route_str_styled(&model).source(), "12.6%  ");
     assert_eq!(model.get_loopback_str(&model), "12.6%");
     assert_eq!(model.get_route_str(&model), "12.6%");
     assert_eq!(
