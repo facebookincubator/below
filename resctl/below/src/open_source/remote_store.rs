@@ -16,7 +16,7 @@ use std::time::SystemTime;
 
 use anyhow::{bail, Result};
 
-use crate::store;
+use crate::store::Direction;
 use below_thrift::DataFrame;
 
 pub struct RemoteStore {}
@@ -29,7 +29,7 @@ impl RemoteStore {
     pub fn get_frame(
         &mut self,
         _timestamp: u64,
-        _direction: store::Direction,
+        _direction: Direction,
     ) -> Result<Option<(SystemTime, DataFrame)>> {
         bail!("Remote client not supported")
     }

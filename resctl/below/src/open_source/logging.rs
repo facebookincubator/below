@@ -22,7 +22,7 @@ use slog_term;
 use crate::init::InitToken;
 use crate::logutil::{CommandPaletteDrain, CompoundDecorator};
 
-pub fn setup(_init: InitToken, path: PathBuf, debug: bool) -> slog::Logger {
+pub fn setup(_init: InitToken, path: PathBuf, _debug: bool) -> slog::Logger {
     let file = OpenOptions::new()
         .create(true)
         .append(true)
