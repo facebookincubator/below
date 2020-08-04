@@ -111,7 +111,7 @@ fn test_bdecor_field_function() {
     assert_eq!(model.get_loopback_str(&model), "12.6%");
     assert_eq!(model.get_route_str(&model), "12.6%");
     assert_eq!(
-        model.get_field_line(&model, &subfield),
+        model.get_field_line(&model, &subfield).source(),
         "12.6%   12.6%   0.0       -->10 12.6%   12.6%   3.30  "
     );
     assert_eq!(
@@ -161,7 +161,13 @@ fn test_bdecor_cmp_function() {
 fn test_bdecor_interleave() {
     let model = TestModel::new();
     let subfield = SubField::new();
-    assert_eq!(model.get_interleave_line(": ", "\n", &model, &subfield), "Usage  : 12.6%  \nUser   : 12.6%  \nSystem : 2.2%   \nL1 Cach:   -->10\nUsage  : 12.6%  \nUsage  : 12.6%  \nAggr : 3.30 \n");
+    let lines = model.get_interleave_line(": ", &model, &subfield);
+    let mut string_lines = String::new();
+    for line in lines {
+        string_lines += line.source();
+        string_lines += "\n";
+    }
+    assert_eq!(string_lines, "Usage  : 12.6%  \nUser   : 12.6%  \nSystem : 2.2%   \nL1 Cach:   -->10\nUsage  : 12.6%  \nUsage  : 12.6%  \nAggr : 3.30 \n");
 }
 
 #[test]

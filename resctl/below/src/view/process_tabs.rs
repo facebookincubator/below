@@ -18,6 +18,8 @@ use crate::view::process_view::ProcessState;
 use crate::view::stats_view::StateCommon;
 use below_derive::BelowDecor;
 
+use cursive::utils::markup::StyledString;
+
 // All available sorting tags
 #[derive(Copy, Clone, PartialEq)]
 pub enum ProcessOrders {
@@ -50,7 +52,7 @@ impl Default for ProcessOrders {
 // Defines how to iterate through the process stats and generate get_rows for ViewBridge
 pub trait ProcessTab {
     fn get_title_vec(&self, model: &SingleProcessModel) -> Vec<String>;
-    fn get_field_line(&self, model: &SingleProcessModel) -> String;
+    fn get_field_line(&self, model: &SingleProcessModel) -> StyledString;
     fn sort(
         &self,
         sort_order: ProcessOrders,
@@ -58,7 +60,7 @@ pub trait ProcessTab {
         reverse: bool,
     );
 
-    fn get_rows(&mut self, state: &ProcessState) -> Vec<(String, String)> {
+    fn get_rows(&mut self, state: &ProcessState) -> Vec<(StyledString, String)> {
         let unknown = "?".to_string();
         let process_model = state.get_model();
         let mut processes: Vec<&SingleProcessModel> =
@@ -191,7 +193,7 @@ pub struct ProcessGeneral {
 impl ProcessTab for ProcessGeneral {
     impl_process_tab!(ProcessGeneral);
 
-    fn get_field_line(&self, model: &SingleProcessModel) -> String {
+    fn get_field_line(&self, model: &SingleProcessModel) -> StyledString {
         self.get_field_line(&model, &model)
     }
 }
@@ -243,7 +245,7 @@ pub struct ProcessCPU {
 impl ProcessTab for ProcessCPU {
     impl_process_tab!(ProcessGeneral);
 
-    fn get_field_line(&self, model: &SingleProcessModel) -> String {
+    fn get_field_line(&self, model: &SingleProcessModel) -> StyledString {
         self.get_field_line(&model, &model)
     }
 }
@@ -287,7 +289,7 @@ pub struct ProcessMem {
 impl ProcessTab for ProcessMem {
     impl_process_tab!(ProcessGeneral);
 
-    fn get_field_line(&self, model: &SingleProcessModel) -> String {
+    fn get_field_line(&self, model: &SingleProcessModel) -> StyledString {
         self.get_field_line(&model)
     }
 }
@@ -332,7 +334,7 @@ pub struct ProcessIO {
 impl ProcessTab for ProcessIO {
     impl_process_tab!(ProcessGeneral);
 
-    fn get_field_line(&self, model: &SingleProcessModel) -> String {
+    fn get_field_line(&self, model: &SingleProcessModel) -> StyledString {
         self.get_field_line(&model, &model)
     }
 }

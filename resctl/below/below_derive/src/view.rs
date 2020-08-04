@@ -279,12 +279,42 @@ fn unified_line_generation(fields: &syn::FieldsNamed, dformat: DFormat) -> Tstre
             Some(aggr_vec[0].to_string())
         });
 
-    let (fn_name, ext, sep, is_title) = match dformat {
-        DFormat::Title(e, "|") => ("get_title_pipe".parse::<Tstream>().unwrap(), e, "|", true),
-        DFormat::Title(e, s) => ("get_title_line".parse::<Tstream>().unwrap(), e, s, true),
-        DFormat::Field(e, s) => ("get_field_line".parse::<Tstream>().unwrap(), e, s, false),
-        DFormat::CSVTitle(e, s) => ("get_csv_title".parse::<Tstream>().unwrap(), e, s, true),
-        DFormat::CSVField(e, s) => ("get_csv_field".parse::<Tstream>().unwrap(), e, s, false),
+    let (fn_name, ext, sep, is_title, styled_string) = match dformat {
+        DFormat::Title(e, "|") => (
+            "get_title_pipe".parse::<Tstream>().unwrap(),
+            e,
+            "|",
+            true,
+            false,
+        ),
+        DFormat::Title(e, s) => (
+            "get_title_line".parse::<Tstream>().unwrap(),
+            e,
+            s,
+            true,
+            false,
+        ),
+        DFormat::Field(e, s) => (
+            "get_field_line".parse::<Tstream>().unwrap(),
+            e,
+            s,
+            false,
+            true,
+        ),
+        DFormat::CSVTitle(e, s) => (
+            "get_csv_title".parse::<Tstream>().unwrap(),
+            e,
+            s,
+            true,
+            false,
+        ),
+        DFormat::CSVField(e, s) => (
+            "get_csv_field".parse::<Tstream>().unwrap(),
+            e,
+            s,
+            false,
+            false,
+        ),
     };
 
     let rep = iter_field_attr!(fields)
@@ -294,9 +324,16 @@ fn unified_line_generation(fields: &syn::FieldsNamed, dformat: DFormat) -> Tstre
             let name = &f.ident.clone().unwrap();
             let fn_name = format!("get_{}_{}", &name, ext).parse::<Tstream>().unwrap();
             if field_attr.link.is_some() && (!is_title || field_attr.title.is_none()) {
-                quote! {
-                    res.push_str(&self.#fn_name(model));
-                    res.push_str(#sep);
+                if styled_string {
+                    quote! {
+                        res.append_plain(&self.#fn_name(model));
+                        res.append_plain(#sep);
+                    }
+                } else {
+                    quote! {
+                        res.push_str(&self.#fn_name(model));
+                        res.push_str(#sep);
+                    }
                 }
             } else if field_attr.aggr.is_some() {
                 let args = if ext.starts_with("title") {
@@ -304,14 +341,28 @@ fn unified_line_generation(fields: &syn::FieldsNamed, dformat: DFormat) -> Tstre
                 } else {
                     quote! {input}
                 };
-                quote! {
-                    res.push_str(&Self::#fn_name(#args));
-                    res.push_str(#sep);
+                if styled_string {
+                    quote! {
+                        res.append_plain(&Self::#fn_name(#args));
+                        res.append_plain(#sep);
+                    }
+                } else {
+                    quote! {
+                        res.push_str(&Self::#fn_name(#args));
+                        res.push_str(#sep);
+                    }
                 }
             } else {
-                quote! {
-                    res.push_str(&self.#fn_name());
-                    res.push_str(#sep);
+                if styled_string {
+                    quote! {
+                        res.append_plain(&self.#fn_name());
+                        res.append_plain(#sep);
+                    }
+                } else {
+                    quote! {
+                        res.push_str(&self.#fn_name());
+                        res.push_str(#sep);
+                    }
                 }
             }
         });
@@ -330,11 +381,21 @@ fn unified_line_generation(fields: &syn::FieldsNamed, dformat: DFormat) -> Tstre
 
     let args = args.parse::<Tstream>().unwrap();
 
-    quote! {
-        pub fn #fn_name(#args) -> String {
-            let mut res = String::new();
-            #(#rep)*
-            res
+    if styled_string {
+        quote! {
+            pub fn #fn_name(#args) -> StyledString {
+                let mut res = StyledString::new();
+                #(#rep)*
+                res
+            }
+        }
+    } else {
+        quote! {
+            pub fn #fn_name(#args) -> String {
+                let mut res = String::new();
+                #(#rep)*
+                res
+            }
         }
     }
 }
@@ -402,37 +463,41 @@ pub fn gen_interleave(fields: &syn::FieldsNamed) -> Tstream {
             if field_attr.link.is_some() {
                 if field_attr.title.is_none() {
                     quote! {
-                        res.push_str(&self.#title_name(model));
-                        res.push_str(sep);
-                        res.push_str(&self.#value_name(model));
-                        res.push_str(line_sep);
+                        let mut line = StyledString::new();
+                        line.append_plain(self.#title_name(model));
+                        line.append_plain(sep);
+                        line.append_plain(self.#value_name(model));
+                        res.push(line);
                     }
                 } else {
                     quote! {
-                        res.push_str(&self.#title_name());
-                        res.push_str(sep);
-                        res.push_str(&self.#value_name(model));
-                        res.push_str(line_sep);
+                        let mut line = StyledString::new();
+                        line.append_plain(self.#title_name());
+                        line.append_plain(sep);
+                        line.append_plain(self.#value_name(model));
+                        res.push(line);
                     }
                 }
             } else if field_attr.aggr.is_some() {
                 quote! {
-                    res.push_str(&Self::#title_name());
-                    res.push_str(sep);
-                    res.push_str(&Self::#value_name(input));
-                    res.push_str(line_sep);
+                    let mut line = StyledString::new();
+                    line.append_plain(Self::#title_name());
+                    line.append_plain(sep);
+                    line.append_plain(Self::#value_name(input));
+                    res.push(line);
                 }
             } else {
                 quote! {
-                    res.push_str(&self.#title_name());
-                    res.push_str(sep);
-                    res.push_str(&self.#value_name());
-                    res.push_str(line_sep);
+                    let mut line = StyledString::new();
+                    line.append_plain(self.#title_name());
+                    line.append_plain(sep);
+                    line.append_plain(self.#value_name());
+                    res.push(line);
                 }
             }
         });
 
-    let mut args = "&self, sep: &str, line_sep: &str".to_string();
+    let mut args = "&self, sep: &str".to_string();
     if let Some(model_type) = model_type {
         args.push_str(&format!(", model: &{}", model_type));
     }
@@ -442,8 +507,8 @@ pub fn gen_interleave(fields: &syn::FieldsNamed) -> Tstream {
     let args = args.parse::<Tstream>().unwrap();
 
     quote! {
-        pub fn #fn_name(#args) -> String {
-            let mut res = String::new();
+        pub fn #fn_name(#args) -> Vec<StyledString> {
+            let mut res: Vec<StyledString> = Vec::new();
             #(#rep)*
             res
         }

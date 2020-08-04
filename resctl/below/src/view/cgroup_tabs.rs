@@ -21,6 +21,8 @@ use crate::view::cgroup_view::CgroupState;
 use crate::view::stats_view::StateCommon;
 use below_derive::BelowDecor;
 
+use cursive::utils::markup::StyledString;
+
 // All available sorting tags
 #[derive(Copy, Clone, PartialEq)]
 pub enum CgroupOrders {
@@ -89,14 +91,14 @@ pub trait CgroupTab {
     fn get_title_vec(&self, model: &CgroupModel) -> Vec<String>;
     fn depth(&mut self) -> &mut usize;
     fn collapse(&mut self) -> &mut bool;
-    fn get_field_line(&self, model: &CgroupModel) -> String;
+    fn get_field_line(&self, model: &CgroupModel) -> StyledString;
     fn sort(&self, sort_order: CgroupOrders, cgroups: &mut Vec<&CgroupModel>, reverse: bool);
     fn output_cgroup(
         &mut self,
         cgroup: &CgroupModel,
         state: &CgroupState,
         filter_out_set: &Option<HashSet<String>>,
-        output: &mut Vec<(String, String)>,
+        output: &mut Vec<(StyledString, String)>,
     ) {
         if let Some(set) = &filter_out_set {
             if set.contains(&cgroup.full_path) {
@@ -140,7 +142,7 @@ pub trait CgroupTab {
         }
     }
 
-    fn get_rows(&mut self, state: &CgroupState) -> Vec<(String, String)> {
+    fn get_rows(&mut self, state: &CgroupState) -> Vec<(StyledString, String)> {
         let filter_out_set = if let Some(f) = &state.filter {
             Some(calculate_filter_out_set(&state.get_model(), &f))
         } else {
@@ -239,7 +241,7 @@ pub struct CgroupGeneral {
 impl CgroupTab for CgroupGeneral {
     impl_cgroup_tab!(CgroupGeneral);
 
-    fn get_field_line(&self, model: &CgroupModel) -> String {
+    fn get_field_line(&self, model: &CgroupModel) -> StyledString {
         self.get_field_line(&model, &model)
     }
 }
@@ -286,7 +288,7 @@ pub struct CgroupCPU {
 impl CgroupTab for CgroupCPU {
     impl_cgroup_tab!(CgroupCPU);
 
-    fn get_field_line(&self, model: &CgroupModel) -> String {
+    fn get_field_line(&self, model: &CgroupModel) -> StyledString {
         self.get_field_line(&model)
     }
 }
@@ -543,7 +545,7 @@ pub struct CgroupMem {
 impl CgroupTab for CgroupMem {
     impl_cgroup_tab!(CgroupMem);
 
-    fn get_field_line(&self, model: &CgroupModel) -> String {
+    fn get_field_line(&self, model: &CgroupModel) -> StyledString {
         self.get_field_line(&model)
     }
 }
@@ -626,7 +628,7 @@ pub struct CgroupIO {
 impl CgroupTab for CgroupIO {
     impl_cgroup_tab!(CgroupMem);
 
-    fn get_field_line(&self, model: &CgroupModel) -> String {
+    fn get_field_line(&self, model: &CgroupModel) -> StyledString {
         self.get_field_line(&model, &model)
     }
 }
@@ -695,7 +697,7 @@ pub struct CgroupPressure {
 impl CgroupTab for CgroupPressure {
     impl_cgroup_tab!(CgroupMem);
 
-    fn get_field_line(&self, model: &CgroupModel) -> String {
+    fn get_field_line(&self, model: &CgroupModel) -> StyledString {
         self.get_field_line(&model)
     }
 }

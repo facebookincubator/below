@@ -16,12 +16,14 @@ use crate::model::system::*;
 use crate::view::core_view::CoreState;
 use crate::view::stats_view::StateCommon;
 
+use cursive::utils::markup::StyledString;
+
 pub trait CoreTab {
     fn get_title_vec(&self, _: &SystemModel) -> Vec<String> {
         vec![format!("{:<20.20}", "Field"), format!("{:<20.20}", "Value")]
     }
 
-    fn get_rows(&mut self, state: &CoreState) -> Vec<(String, String)>;
+    fn get_rows(&mut self, state: &CoreState) -> Vec<(StyledString, String)>;
 }
 
 #[derive(Default, Clone)]
@@ -42,10 +44,10 @@ impl CoreTab for CoreCpu {
         res
     }
 
-    fn get_rows(&mut self, state: &CoreState) -> Vec<(String, String)> {
+    fn get_rows(&mut self, state: &CoreState) -> Vec<(StyledString, String)> {
         let model = state.get_model();
 
-        let mut res: Vec<(String, String)> = model
+        let mut res: Vec<(StyledString, String)> = model
             .cpu
             .cpus
             .as_ref()
@@ -81,21 +83,21 @@ impl CoreTab for CoreCpu {
 pub struct CoreMem;
 
 impl CoreTab for CoreMem {
-    fn get_rows(&mut self, state: &CoreState) -> Vec<(String, String)> {
+    fn get_rows(&mut self, state: &CoreState) -> Vec<(StyledString, String)> {
         let model = state.get_model();
 
         model
             .mem
-            .get_interleave_line(" ", "|")
-            .split('|')
+            .get_interleave_line(" ")
+            .iter()
             .filter(|s| {
                 if let Some(f) = &state.filter {
-                    s.contains(f)
+                    s.source().contains(f)
                 } else {
                     true
                 }
             })
-            .map(|s| (s.to_string(), "".into()))
+            .map(|s| (s.clone(), "".into()))
             .collect()
     }
 }
@@ -104,21 +106,21 @@ impl CoreTab for CoreMem {
 pub struct CoreVm;
 
 impl CoreTab for CoreVm {
-    fn get_rows(&mut self, state: &CoreState) -> Vec<(String, String)> {
+    fn get_rows(&mut self, state: &CoreState) -> Vec<(StyledString, String)> {
         let model = state.get_model();
 
         model
             .vm
-            .get_interleave_line(" ", "|")
-            .split('|')
+            .get_interleave_line(" ")
+            .iter()
             .filter(|s| {
                 if let Some(f) = &state.filter {
-                    s.contains(f)
+                    s.source().contains(f)
                 } else {
                     true
                 }
             })
-            .map(|s| (s.to_string(), "".into()))
+            .map(|s| (s.clone(), "".into()))
             .collect()
     }
 }
@@ -141,7 +143,7 @@ impl CoreTab for CoreDisk {
         res
     }
 
-    fn get_rows(&mut self, state: &CoreState) -> Vec<(String, String)> {
+    fn get_rows(&mut self, state: &CoreState) -> Vec<(StyledString, String)> {
         state
             .get_model_mut()
             .disks

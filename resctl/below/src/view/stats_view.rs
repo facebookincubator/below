@@ -18,6 +18,7 @@ use std::rc::Rc;
 
 use ::cursive::view::{Identifiable, Scrollable, View};
 use cursive::event::{Event, EventResult, EventTrigger, Key};
+use cursive::utils::markup::StyledString;
 use cursive::view::ViewWrapper;
 use cursive::views::{
     LinearLayout, NamedView, OnEventView, Panel, ResizedView, ScrollView, SelectView, ViewRef,
@@ -63,7 +64,7 @@ pub trait ViewBridge {
     /// The essential function that defines how a StatsView should fill
     /// the data. This function will iterate through the data, apply filter and sorting,
     /// return a Vec of (Stats String Line, Key) tuple.
-    fn get_rows(&mut self, state: &Self::StateType) -> Vec<(String, String)>;
+    fn get_rows(&mut self, state: &Self::StateType) -> Vec<(StyledString, String)>;
 }
 
 /// StatsView is a view wrapper that wraps tabs, titles, and list of stats.
