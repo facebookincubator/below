@@ -18,6 +18,10 @@ fn decor_function(item: &f64) -> String {
     format!("{} MB", item)
 }
 
+fn highlight_if_function(item: &f64) -> bool {
+    *item > 0.0
+}
+
 struct SubField {
     field_a: Option<f64>,
     field_b: Option<f64>,
@@ -34,7 +38,14 @@ impl SubField {
 
 #[derive(BelowDecor)]
 struct TestModel {
-    #[bttr(title = "Usage", unit = "%", width = 7, cmp = true, title_width = 7)]
+    #[bttr(
+        title = "Usage",
+        unit = "%",
+        width = 7,
+        cmp = true,
+        title_width = 7,
+        highlight_if = "highlight_if_function(&$)"
+    )]
     usage_pct: Option<f64>,
     #[bttr(title = "User", unit = "%", width = 7, cmp = true)]
     #[blink("TestModel$get_usage_pct")]
@@ -44,7 +55,8 @@ struct TestModel {
         unit = "%",
         none_mark = "0.0",
         width = 7,
-        precision = 1
+        precision = 1,
+        highlight_if = "(|| $ > 0.0)()"
     )]
     system_pct: Option<f64>,
     #[bttr(
@@ -119,6 +131,34 @@ fn test_bdecor_field_function() {
         "12.6%,12.6%,0.0,100 MB,12.6%,12.6%,3.30,"
     );
     assert_eq!(model.something_else, Some(0.0));
+}
+
+#[test]
+fn test_bdecor_field_highlight() {
+    let model = TestModel::new();
+
+    // Test regular function call
+    assert_eq!(model.get_usage_pct_str(), "12.6%");
+    assert_eq!(
+        model.get_usage_pct_str_styled(),
+        StyledString::styled("12.6%  ", Color::Light(BaseColor::Red))
+    );
+    assert_ne!(
+        model.get_usage_pct_str_styled(),
+        StyledString::plain("12.6%  ")
+    );
+
+    // Test lambda
+    assert_eq!(model.get_system_pct_str(), "2.2%");
+    assert_eq!(model.get_system_pct_str_styled().source(), "2.2%   ");
+    assert_eq!(
+        model.get_system_pct_str_styled(),
+        StyledString::styled("2.2%   ", Color::Light(BaseColor::Red))
+    );
+    assert_ne!(
+        model.get_system_pct_str_styled(),
+        StyledString::plain("2.2%   ")
+    );
 }
 
 #[test]

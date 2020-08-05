@@ -72,6 +72,11 @@ fn generate_from_attr(f: &syn::Field, a: &BelowAttr, link: bool) -> Tstream {
     } else {
         quote! {v}
     };
+    let highlight_if_val = if let Some(hl_if) = view.highlight_if.as_ref() {
+        hl_if.replace("$", "v").parse::<Tstream>().unwrap()
+    } else {
+        quote! {false}
+    };
 
     let mut pattern = "{".to_string();
     if let Some(p) = view.precision.clone() {
@@ -83,8 +88,8 @@ fn generate_from_attr(f: &syn::Field, a: &BelowAttr, link: bool) -> Tstream {
             let none_mark = &view.none_mark;
             quote! {
                 match #name.clone() {
-                    Some(v) => format!(#pattern, &#decored_val, #unit),
-                    _ => format!("{}", &#none_mark),
+                    Some(v) => (format!(#pattern, &#decored_val, #unit), #highlight_if_val),
+                    _ => (format!("{}", &#none_mark), false),
                 }
             }
         }
@@ -92,7 +97,7 @@ fn generate_from_attr(f: &syn::Field, a: &BelowAttr, link: bool) -> Tstream {
             quote! {
                 {
                     let v = &#name;
-                    format!(#pattern, &#decored_val, #unit)
+                   (format!(#pattern, &#decored_val, #unit), #highlight_if_val)
                 }
             }
         }
@@ -109,7 +114,7 @@ fn generate_from_attr(f: &syn::Field, a: &BelowAttr, link: bool) -> Tstream {
 
         quote! {
             pub fn #fn_name(&self, model: &#m_type) -> StyledString {
-                let value = #value;
+                let (value, highlight) = #value;
                 let prefix = #prefix;
                 let depth = #depth;
                 let unit = #unit;
@@ -121,17 +126,22 @@ fn generate_from_attr(f: &syn::Field, a: &BelowAttr, link: bool) -> Tstream {
                     0
                 };
 
-                StyledString::plain(format!(
-                    "{:>depth$.depth$}{:width$.width$}",
-                    prefix,
-                    value,
-                    depth = depth,
-                    width = width
-                ))
+                let unhighlighted = format!(
+                        "{:>depth$.depth$}{:width$.width$}",
+                        prefix,
+                        value,
+                        depth = depth,
+                        width = width
+                    );
+                if highlight {
+                    StyledString::styled(unhighlighted, cursive::theme::Color::Light(cursive::theme::BaseColor::Red))
+                } else {
+                    StyledString::plain(unhighlighted)
+                }
             }
 
             pub fn #fn_name_raw(&self, model: &#m_type) -> String {
-                #value
+                #value.0
             }
         }
     } else {
@@ -143,7 +153,7 @@ fn generate_from_attr(f: &syn::Field, a: &BelowAttr, link: bool) -> Tstream {
 
         quote! {
             pub fn #fn_name(#args) -> StyledString {
-                let value = #value;
+                let (value, highlight) = #value;
                 let prefix = #prefix;
                 let depth = #depth;
                 let unit = #unit;
@@ -155,17 +165,22 @@ fn generate_from_attr(f: &syn::Field, a: &BelowAttr, link: bool) -> Tstream {
                     0
                 };
 
-                StyledString::plain(format!(
-                    "{:>depth$.depth$}{:width$.width$}",
-                    prefix,
-                    value,
-                    depth = depth,
-                    width = width
-                ))
+                let unhighlighted = format!(
+                        "{:>depth$.depth$}{:width$.width$}",
+                        prefix,
+                        value,
+                        depth = depth,
+                        width = width
+                    );
+                if highlight {
+                    StyledString::styled(unhighlighted, cursive::theme::Color::Light(cursive::theme::BaseColor::Red))
+                } else {
+                    StyledString::plain(unhighlighted)
+                }
             }
 
             pub fn #fn_name_raw(#args) -> String {
-                #value
+                #value.0
             }
         }
     }

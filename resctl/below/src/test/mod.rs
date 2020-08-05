@@ -20,6 +20,7 @@ use std::sync::Mutex;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use cursive::theme::{BaseColor, Color};
 use cursive::utils::markup::StyledString;
 use once_cell::sync::Lazy;
 use slog::{self, error, o, Drain};

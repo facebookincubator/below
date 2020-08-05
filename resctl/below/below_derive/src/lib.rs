@@ -45,6 +45,8 @@
 //!       to the value of this field, will replace $ with the field name.
 //!     * precision: usize -- Defines what's the displaying precision when
 //!       the value is f64
+//!     * highlight_if: TokenStream -- Highlight field in red if function
+//!       returns true. Will replace `$` with the field name.
 //!
 //! * Field related attributes defines how you want to change the field.
 //!   If a field does not have any field attribute, `BelowDecor` will not

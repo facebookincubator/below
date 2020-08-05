@@ -24,6 +24,7 @@ pub struct BelowViewAttr {
     pub none_mark: String,
     pub decorator: Option<String>,
     pub precision: Option<usize>,
+    pub highlight_if: Option<String>,
 }
 
 #[derive(Default, Debug)]
@@ -57,6 +58,7 @@ impl std::default::Default for BelowViewAttr {
             none_mark: "?".into(),
             decorator: None,
             precision: None,
+            highlight_if: None,
         }
     }
 }
@@ -239,6 +241,13 @@ pub fn parse_attribute(attrs: &[syn::Attribute], field_name: &syn::Ident) -> Bel
                     bfttr.cmp = match &nv.lit {
                         syn::Lit::Bool(lb) => lb.value,
                         _ => unimplemented!("{}: cmp has to be a boolean", field_name),
+                    }
+                }
+                "highlight_if" => {
+                    view_flag = true;
+                    bvttr.highlight_if = match &nv.lit {
+                        syn::Lit::Str(ls) => Some(ls.value()),
+                        _ => unimplemented!("{}: highlight_if has to be a string", field_name),
                     }
                 }
                 _ => unimplemented!("{}: Unknown field", field_name),
