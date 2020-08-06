@@ -21,12 +21,12 @@ use cursive::view::Identifiable;
 use cursive::views::{NamedView, SelectView, ViewRef};
 use cursive::Cursive;
 
-use crate::model::CgroupModel;
-use crate::view::cgroup_tabs::{
+use crate::cgroup_tabs::{
     CgroupCPU, CgroupGeneral, CgroupIO, CgroupMem, CgroupOrders, CgroupPressure, CgroupTab,
 };
-use crate::view::stats_view::{StateCommon, StatsView, ViewBridge};
-use crate::view::ViewState;
+use crate::stats_view::{StateCommon, StatsView, ViewBridge};
+use crate::ViewState;
+use common::model::CgroupModel;
 
 pub type ViewType = StatsView<CgroupView>;
 

@@ -15,11 +15,11 @@
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
-use crate::model::CgroupModel;
-use crate::util::{calculate_filter_out_set, convert_bytes, fold_string, get_prefix};
-use crate::view::cgroup_view::CgroupState;
-use crate::view::stats_view::StateCommon;
+use crate::cgroup_view::CgroupState;
+use crate::stats_view::StateCommon;
 use below_derive::BelowDecor;
+use common::model::CgroupModel;
+use common::util::{calculate_filter_out_set, convert_bytes, fold_string, get_prefix};
 
 use cursive::utils::markup::StyledString;
 

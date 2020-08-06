@@ -25,10 +25,10 @@ use cursive::views::{
 };
 use cursive::Cursive;
 
-use crate::logutil::{get_last_log_to_display, CPMsgRecord};
-use crate::view::command_palette::CommandPalette;
-use crate::view::filter_popup;
-use crate::view::tab_view::TabView;
+use crate::command_palette::CommandPalette;
+use crate::filter_popup;
+use crate::tab_view::TabView;
+use common::logutil::{get_last_log_to_display, CPMsgRecord};
 
 /// A trait that defines common state data querying or event handling.
 ///

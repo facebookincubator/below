@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::model::SingleProcessModel;
-use crate::util::convert_bytes;
-use crate::view::process_view::ProcessState;
-use crate::view::stats_view::StateCommon;
+use crate::process_view::ProcessState;
+use crate::stats_view::StateCommon;
 use below_derive::BelowDecor;
+use common::model::SingleProcessModel;
+use common::util::convert_bytes;
 
 use cursive::utils::markup::StyledString;
 

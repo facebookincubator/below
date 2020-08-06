@@ -22,10 +22,11 @@ use cursive::view::Identifiable;
 use cursive::views::{NamedView, SelectView, ViewRef};
 use cursive::Cursive;
 
-use crate::model::system::SystemModel;
-use crate::view::core_tabs::*;
-use crate::view::stats_view::{StateCommon, StatsView, ViewBridge};
-use crate::view::ViewState;
+use crate::core_tabs::*;
+use crate::stats_view::{StateCommon, StatsView, ViewBridge};
+use crate::ViewState;
+
+use common::model::system::SystemModel;
 
 pub type ViewType = StatsView<CoreView>;
 

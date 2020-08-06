@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::model::system::*;
-use crate::view::core_view::CoreState;
-use crate::view::stats_view::StateCommon;
+use crate::core_view::CoreState;
+use crate::stats_view::StateCommon;
+use common::model::system::*;
 
 use cursive::utils::markup::StyledString;
 

@@ -6,6 +6,7 @@ members = [
     "resctl/below/common",
     "resctl/below/if",
     "resctl/below/store",
+    "resctl/below/view",
     "resctl/common/cgroupfs",
     "resctl/common/cgroupfs/if",
     "resctl/common/procfs",

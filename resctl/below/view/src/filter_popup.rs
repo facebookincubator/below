@@ -20,22 +20,22 @@ use cursive::view::{Identifiable, View};
 use cursive::views::{Dialog, EditView, OnEventView};
 use cursive::Cursive;
 
-use crate::view::stats_view::StateCommon;
-use crate::view::{MainViewState, ViewState};
+use crate::stats_view::StateCommon;
+use crate::MainViewState;
 
 // Set command palette filter
 fn set_cp_filter(c: &mut Cursive, text: Option<String>) {
     let state = c
-        .user_data::<ViewState>()
+        .user_data::<crate::ViewState>()
         .expect("No user data")
         .main_view_state
         .clone();
     match state {
-        MainViewState::Cgroup => crate::view::cgroup_view::ViewType::cp_filter(c, text),
+        MainViewState::Cgroup => crate::cgroup_view::ViewType::cp_filter(c, text),
         MainViewState::Process | MainViewState::ProcessZoomedIntoCgroup => {
-            crate::view::process_view::ViewType::cp_filter(c, text)
+            crate::process_view::ViewType::cp_filter(c, text)
         }
-        MainViewState::Core => crate::view::core_view::ViewType::cp_filter(c, text),
+        MainViewState::Core => crate::core_view::ViewType::cp_filter(c, text),
     }
 }
 

@@ -18,9 +18,9 @@ use cursive::view::{Identifiable, View};
 use cursive::views::TextView;
 use cursive::Cursive;
 
-use crate::view::ViewState;
+use crate::ViewState;
 
-use crate::version::get_version_str;
+//use crate::version::get_version_str;
 
 fn get_content(c: &mut Cursive) -> impl Into<StyledString> {
     let view_state = &c
@@ -34,10 +34,13 @@ fn get_content(c: &mut Cursive) -> impl Into<StyledString> {
         &view_state.system.borrow().hostname
     )
     .as_str();
-    header_str += get_version_str().as_str();
+    //header_str += get_version_str().as_str();
 
     header_str += "\t ";
     header_str += view_state.view_mode_str();
+    if view_state.is_paused() {
+        header_str += "\t live-paused";
+    }
 
     header_str
 }

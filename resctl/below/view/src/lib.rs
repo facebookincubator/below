@@ -55,14 +55,14 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime};
 
-use ::cursive::event::{Event, EventResult, EventTrigger};
-use ::cursive::theme::{BaseColor, Color, PaletteColor};
-use ::cursive::view::Identifiable;
-use ::cursive::views::{LinearLayout, NamedView, OnEventView, Panel, ResizedView, StackView};
-use ::cursive::Cursive;
 use anyhow::Result;
+use cursive::event::{Event, EventResult, EventTrigger};
+use cursive::theme::{BaseColor, Color, PaletteColor};
+use cursive::view::Identifiable;
+use cursive::views::{LinearLayout, NamedView, OnEventView, Panel, ResizedView, StackView};
+use cursive::Cursive;
 
-use crate::model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
+use common::model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
 use store::advance::Advance;
 use store::Direction;
 
@@ -97,7 +97,7 @@ macro_rules! advance {
             None => view_warn!(
                 $c,
                 "Data is not available{}",
-                if $dir == crate::store::Direction::Forward {
+                if $dir == Direction::Forward {
                     " yet."
                 } else {
                     "."
@@ -111,17 +111,17 @@ macro_rules! advance {
 macro_rules! view_warn {
     ($c:ident, $($args:tt)*) => {{
         let state = $c
-            .user_data::<crate::view::ViewState>()
+            .user_data::<crate::ViewState>()
             .expect("No user data set")
             .main_view_state
             .clone();
         let msg = format!($($args)*);
         match state {
-            crate::view::MainViewState::Cgroup => crate::view::cgroup_view::ViewType::cp_warn($c, msg),
-            crate::view::MainViewState::Process | crate::view::MainViewState::ProcessZoomedIntoCgroup => {
-                crate::view::process_view::ViewType::cp_warn($c, msg)
+            crate::MainViewState::Cgroup => crate::cgroup_view::ViewType::cp_warn($c, msg),
+            crate::MainViewState::Process | crate::MainViewState::ProcessZoomedIntoCgroup => {
+                crate::process_view::ViewType::cp_warn($c, msg)
             }
-            crate::view::MainViewState::Core => crate::view::core_view::ViewType::cp_warn($c, msg),
+            crate::MainViewState::Core => crate::core_view::ViewType::cp_warn($c, msg),
         }
     }};
 }
@@ -222,13 +222,13 @@ impl ViewState {
 }
 
 impl View {
-    pub fn new(model: crate::model::Model) -> View {
+    pub fn new(model: common::model::Model) -> View {
         let mut inner = Cursive::default();
         inner.set_user_data(ViewState::new(MainViewState::Cgroup, model));
         View { inner }
     }
 
-    pub fn new_with_advance(model: crate::model::Model, mode: ViewMode) -> View {
+    pub fn new_with_advance(model: common::model::Model, mode: ViewMode) -> View {
         let mut inner = Cursive::default();
         inner.set_user_data(ViewState::new_with_advance(
             MainViewState::Cgroup,

@@ -20,11 +20,16 @@ use cursive::view::{Identifiable, View};
 use cursive::views::{Dialog, EditView, LinearLayout, OnEventView, TextView};
 use cursive::Cursive;
 
-use crate::view::ViewState;
-use store::advance::Advance;
-use store::Direction;
+use store::{advance, Direction};
 
-fn advance_helper(adv: &Rc<RefCell<Advance>>, direction: Direction, c: &mut Cursive, input: &str) {
+use crate::ViewState;
+
+fn advance_helper(
+    adv: &Rc<RefCell<advance::Advance>>,
+    direction: Direction,
+    c: &mut Cursive,
+    input: &str,
+) {
     // Raise warning when input start with 0;
     if input.trim().starts_with('0') {
         view_warn!(c, "Time value should not start with 0");
@@ -56,7 +61,7 @@ fn advance_helper(adv: &Rc<RefCell<Advance>>, direction: Direction, c: &mut Curs
     }
 }
 
-pub fn new(adv: Rc<RefCell<Advance>>, direction: Direction) -> impl View {
+pub fn new(adv: Rc<RefCell<advance::Advance>>, direction: Direction) -> impl View {
     let title = match direction {
         Direction::Forward => "How far forward should we advance?",
         Direction::Reverse => "How far backward should we advance?",

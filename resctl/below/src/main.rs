@@ -33,35 +33,22 @@ use cursive::Cursive;
 use slog::{self, debug, error, warn};
 use structopt::StructOpt;
 
-// Shim between facebook types and open source types.
-//
-// The type interfaces and module hierarchy should be identical on
-// both "branches". And since we glob import, all the submodules in
-// this crate will inherit our name bindings and can use generic paths,
-// eg `crate::logging::setup(..)`.
-#[cfg(fbcode_build)]
-mod facebook;
-#[cfg(fbcode_build)]
-use crate::facebook::*;
-#[cfg(not(fbcode_build))]
-mod open_source;
-#[cfg(not(fbcode_build))]
-use crate::open_source::*;
-
 mod bpf;
 mod dump;
 #[cfg(test)]
 mod test;
-mod view;
 
-use crate::view::ViewState;
 use below_thrift::DataFrame;
 pub mod below_config;
 pub use below_config::BelowConfig;
 pub use common::model;
+pub use common::open_source_shim;
 pub use common::{dateutil, logutil, util};
 pub use store;
 use store::advance::Advance;
+use view::ViewState;
+
+open_source_shim!();
 
 static LIVE_REMOTE_MAX_LATENCY_SEC: u64 = 10;
 

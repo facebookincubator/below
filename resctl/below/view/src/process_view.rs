@@ -21,12 +21,13 @@ use cursive::view::Identifiable;
 use cursive::views::{NamedView, SelectView, ViewRef};
 use cursive::Cursive;
 
-use crate::model::{ProcessModel, SingleProcessModel};
-use crate::view::process_tabs::{
+use common::model::{ProcessModel, SingleProcessModel};
+
+use crate::process_tabs::{
     ProcessCPU, ProcessGeneral, ProcessIO, ProcessMem, ProcessOrders, ProcessTab,
 };
-use crate::view::stats_view::{StateCommon, StatsView, ViewBridge};
-use crate::view::ViewState;
+use crate::stats_view::{StateCommon, StatsView, ViewBridge};
+use crate::ViewState;
 
 pub type ViewType = StatsView<ProcessView>;
 
