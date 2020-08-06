@@ -14,8 +14,8 @@
 
 use super::*;
 
-use crate::model::SingleProcessModel;
-use crate::util::convert_bytes;
+use common::model::SingleProcessModel;
+use common::util::convert_bytes;
 
 use below_derive::BelowDecor;
 

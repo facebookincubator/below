@@ -14,8 +14,8 @@
 
 use super::*;
 
-use crate::model::SingleNetModel;
-use crate::util::convert_bytes;
+use common::model::SingleNetModel;
+use common::util::convert_bytes;
 
 use below_derive::BelowDecor;
 

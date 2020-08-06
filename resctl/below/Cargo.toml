@@ -10,6 +10,7 @@ include = ["src/**/*.rs"]
 below-thrift = { path = "if" }
 below_derive = { path = "below_derive" }
 common = { path = "common" }
+dump = { path = "dump" }
 procfs = { path = "../common/procfs" }
 store = { path = "store" }
 view = { path = "view" }

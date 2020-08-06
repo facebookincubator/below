@@ -14,8 +14,8 @@
 
 use super::*;
 
-use crate::model::CgroupModel;
-use crate::util::{convert_bytes, get_prefix};
+use common::model::CgroupModel;
+use common::util::{convert_bytes, get_prefix};
 
 use below_derive::BelowDecor;
 use std::iter::FromIterator;

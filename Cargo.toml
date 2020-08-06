@@ -4,6 +4,7 @@ members = [
     "resctl/below",
     "resctl/below/below_derive",
     "resctl/below/common",
+    "resctl/below/dump",
     "resctl/below/if",
     "resctl/below/store",
     "resctl/below/view",

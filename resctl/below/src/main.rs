@@ -34,7 +34,6 @@ use slog::{self, debug, error, warn};
 use structopt::StructOpt;
 
 mod bpf;
-mod dump;
 #[cfg(test)]
 mod test;
 
@@ -44,6 +43,7 @@ pub use below_config::BelowConfig;
 pub use common::model;
 pub use common::open_source_shim;
 pub use common::{dateutil, logutil, util};
+pub use dump;
 pub use store;
 use store::advance::Advance;
 use view::ViewState;
