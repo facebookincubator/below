@@ -14,7 +14,7 @@
 
 use super::*;
 
-use crate::model::NetworkModel;
+use model::NetworkModel;
 
 use below_derive::BelowDecor;
 

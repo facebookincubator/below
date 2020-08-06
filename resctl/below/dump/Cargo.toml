@@ -9,6 +9,7 @@ include = ["src/**/*.rs"]
 [dependencies]
 below_derive = { path = "../below_derive" }
 common = { path = "../common" }
+model = { path = "../model" }
 procfs = { path = "../../common/procfs" }
 store = { path = "../store" }
 anyhow = "1.0"

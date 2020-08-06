@@ -26,7 +26,7 @@ use crate::cgroup_tabs::{
 };
 use crate::stats_view::{StateCommon, StatsView, ViewBridge};
 use crate::ViewState;
-use common::model::CgroupModel;
+use model::CgroupModel;
 
 pub type ViewType = StatsView<CgroupView>;
 

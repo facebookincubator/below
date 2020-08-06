@@ -15,8 +15,8 @@
 use crate::process_view::ProcessState;
 use crate::stats_view::StateCommon;
 use below_derive::BelowDecor;
-use common::model::SingleProcessModel;
 use common::util::convert_bytes;
+use model::SingleProcessModel;
 
 use cursive::utils::markup::StyledString;
 

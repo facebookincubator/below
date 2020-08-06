@@ -17,9 +17,10 @@ use std::iter::FromIterator;
 
 use crate::cgroup_view::CgroupState;
 use crate::stats_view::StateCommon;
+
 use below_derive::BelowDecor;
-use common::model::CgroupModel;
-use common::util::{calculate_filter_out_set, convert_bytes, fold_string, get_prefix};
+use common::util::{convert_bytes, fold_string, get_prefix};
+use model::CgroupModel;
 
 use cursive::utils::markup::StyledString;
 
@@ -153,6 +154,45 @@ pub trait CgroupTab {
         self.output_cgroup(&state.get_model(), state, &filter_out_set, &mut rows);
         rows
     }
+}
+
+/// Returns a set of full cgroup paths that should be filtered out.
+///
+/// Note that this algorithm recursively whitelists parents of cgroups that are
+/// whitelisted. The reason for this is because cgroups are inherently tree-like
+/// and displaying a lone cgroup without its ancestors doesn't make much sense.
+pub fn calculate_filter_out_set(cgroup: &CgroupModel, filter: &str) -> HashSet<String> {
+    fn should_filter_out(cgroup: &CgroupModel, filter: &str, set: &mut HashSet<String>) -> bool {
+        // No children
+        if cgroup.count == 1 {
+            if !cgroup.full_path.contains(filter) {
+                set.insert(cgroup.full_path.clone());
+                return true;
+            }
+            return false;
+        }
+
+        let mut filter_cgroup = true;
+        for child in &cgroup.children {
+            if should_filter_out(&child, &filter, set) {
+                set.insert(child.full_path.clone());
+            } else {
+                // We found a child that's not filtered out. That means
+                // we have to keep this (the parent cgroup) too.
+                filter_cgroup = false;
+            }
+        }
+
+        if filter_cgroup {
+            set.insert(cgroup.full_path.clone());
+        }
+
+        filter_cgroup
+    }
+
+    let mut set = HashSet::new();
+    should_filter_out(&cgroup, &filter, &mut set);
+    set
 }
 
 // macro defines common implementation of CgroupTab.

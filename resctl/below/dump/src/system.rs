@@ -14,7 +14,7 @@
 
 use super::*;
 
-use crate::model::SystemModel;
+use model::SystemModel;
 
 use below_derive::BelowDecor;
 

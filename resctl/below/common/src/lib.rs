@@ -16,8 +16,6 @@ pub mod dateutil;
 pub mod logutil;
 pub mod util;
 
-pub mod model;
-
 // Shim between facebook types and open source types.
 //
 // The type interfaces and module hierarchy should be identical on

@@ -14,8 +14,8 @@
 
 use super::*;
 
-use common::model::CgroupModel;
 use common::util::{convert_bytes, get_prefix};
+use model::CgroupModel;
 
 use below_derive::BelowDecor;
 use std::iter::FromIterator;

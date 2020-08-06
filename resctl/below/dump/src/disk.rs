@@ -14,7 +14,7 @@
 
 use super::*;
 
-use crate::model::SingleDiskModel;
+use model::SingleDiskModel;
 
 use below_derive::BelowDecor;
 

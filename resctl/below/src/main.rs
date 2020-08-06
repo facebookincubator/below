@@ -40,8 +40,9 @@ mod test;
 
 use below_config::BelowConfig;
 use below_thrift::DataFrame;
-use common::{dateutil, logutil, model, open_source_shim};
+use common::{dateutil, logutil, open_source_shim};
 use dump::DumpCommand;
+use model;
 use store;
 use store::advance::Advance;
 use view::ViewState;

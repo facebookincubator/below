@@ -25,8 +25,8 @@ use regex::Regex;
 use serde_json::{json, Value};
 
 use common::dateutil;
-use common::model;
 use common::util::translate_datetime;
+use model;
 
 use store::advance::Advance;
 use store::Direction;

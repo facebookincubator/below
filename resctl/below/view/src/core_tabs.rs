@@ -14,7 +14,7 @@
 
 use crate::core_view::CoreState;
 use crate::stats_view::StateCommon;
-use common::model::system::*;
+use model::system::{SingleCpuModel, SingleDiskModel, SystemModel};
 
 use cursive::utils::markup::StyledString;
 

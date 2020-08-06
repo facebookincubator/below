@@ -62,8 +62,8 @@ use cursive::view::Identifiable;
 use cursive::views::{LinearLayout, NamedView, OnEventView, Panel, ResizedView, StackView};
 use cursive::Cursive;
 
-use common::model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
 use common::open_source_shim;
+use model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
 use store::advance::Advance;
 use store::Direction;
 
@@ -225,13 +225,13 @@ impl ViewState {
 }
 
 impl View {
-    pub fn new(model: common::model::Model) -> View {
+    pub fn new(model: model::Model) -> View {
         let mut inner = Cursive::default();
         inner.set_user_data(ViewState::new(MainViewState::Cgroup, model));
         View { inner }
     }
 
-    pub fn new_with_advance(model: common::model::Model, mode: ViewMode) -> View {
+    pub fn new_with_advance(model: model::Model, mode: ViewMode) -> View {
         let mut inner = Cursive::default();
         inner.set_user_data(ViewState::new_with_advance(
             MainViewState::Cgroup,

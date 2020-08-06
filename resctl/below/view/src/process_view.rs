@@ -21,7 +21,7 @@ use cursive::view::Identifiable;
 use cursive::views::{NamedView, SelectView, ViewRef};
 use cursive::Cursive;
 
-use common::model::{ProcessModel, SingleProcessModel};
+use model::{ProcessModel, SingleProcessModel};
 
 use crate::process_tabs::{
     ProcessCPU, ProcessGeneral, ProcessIO, ProcessMem, ProcessOrders, ProcessTab,

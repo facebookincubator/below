@@ -14,8 +14,8 @@
 
 use super::*;
 
-use common::model::SingleProcessModel;
 use common::util::convert_bytes;
+use model::SingleProcessModel;
 
 use below_derive::BelowDecor;
 

@@ -11,6 +11,7 @@ below-thrift = { path = "if" }
 below_derive = { path = "below_derive" }
 common = { path = "common" }
 dump = { path = "dump" }
+model = { path = "model" }
 procfs = { path = "../common/procfs" }
 store = { path = "store" }
 view = { path = "view" }

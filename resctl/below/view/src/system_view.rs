@@ -19,8 +19,8 @@ use cursive::views::{LinearLayout, TextView};
 use cursive::Cursive;
 
 use crate::ViewState;
-use common::model::{CpuModel, MemoryModel, NetworkModel, SingleDiskModel};
 use common::util::convert_bytes;
+use model::{CpuModel, MemoryModel, NetworkModel, SingleDiskModel};
 
 use below_derive::BelowDecor;
 

@@ -26,7 +26,7 @@ use crate::core_tabs::*;
 use crate::stats_view::{StateCommon, StatsView, ViewBridge};
 use crate::ViewState;
 
-use common::model::system::SystemModel;
+use model::system::SystemModel;
 
 pub type ViewType = StatsView<CoreView>;
 

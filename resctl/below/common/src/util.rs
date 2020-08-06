@@ -14,10 +14,7 @@
 
 /// This file contains various helpers
 use chrono::prelude::*;
-use std::collections::HashSet;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
-use crate::model::CgroupModel;
 
 /// Convert `timestamp` from `SystemTime` to seconds since epoch
 pub fn get_unix_timestamp(timestamp: SystemTime) -> u64 {
@@ -90,45 +87,6 @@ where
     let front_string = val[..front_len].to_string();
     let back_string = val[str_len - width + front_len + 3..].to_string();
     format!("{}...{}", front_string, back_string)
-}
-
-/// Returns a set of full cgroup paths that should be filtered out.
-///
-/// Note that this algorithm recursively whitelists parents of cgroups that are
-/// whitelisted. The reason for this is because cgroups are inherently tree-like
-/// and displaying a lone cgroup without its ancestors doesn't make much sense.
-pub fn calculate_filter_out_set(cgroup: &CgroupModel, filter: &str) -> HashSet<String> {
-    fn should_filter_out(cgroup: &CgroupModel, filter: &str, set: &mut HashSet<String>) -> bool {
-        // No children
-        if cgroup.count == 1 {
-            if !cgroup.full_path.contains(filter) {
-                set.insert(cgroup.full_path.clone());
-                return true;
-            }
-            return false;
-        }
-
-        let mut filter_cgroup = true;
-        for child in &cgroup.children {
-            if should_filter_out(&child, &filter, set) {
-                set.insert(child.full_path.clone());
-            } else {
-                // We found a child that's not filtered out. That means
-                // we have to keep this (the parent cgroup) too.
-                filter_cgroup = false;
-            }
-        }
-
-        if filter_cgroup {
-            set.insert(cgroup.full_path.clone());
-        }
-
-        filter_cgroup
-    }
-
-    let mut set = HashSet::new();
-    should_filter_out(&cgroup, &filter, &mut set);
-    set
 }
 
 /// Convert system time to human readable datetime.

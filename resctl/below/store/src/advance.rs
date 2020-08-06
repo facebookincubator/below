@@ -19,8 +19,8 @@ use anyhow::{bail, Context, Result};
 use slog::{self, error};
 
 use below_thrift::{DataFrame, Sample};
-use common::model::{self, Model};
 use common::util;
+use model::{self, Model};
 
 use crate::Direction;
 
