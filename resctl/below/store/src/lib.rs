@@ -22,8 +22,25 @@ use anyhow::{Context, Result};
 use fbthrift::compact_protocol;
 use slog::warn;
 
-use crate::util::get_unix_timestamp;
 use below_thrift::DataFrame;
+use common::util::get_unix_timestamp;
+
+pub mod advance;
+
+// Shim between facebook types and open source types.
+//
+// The type interfaces and module hierarchy should be identical on
+// both "branches". And since we glob import, all the submodules in
+// this crate will inherit our name bindings and can use generic paths,
+// eg `crate::logging::setup(..)`.
+#[cfg(fbcode_build)]
+mod facebook;
+#[cfg(fbcode_build)]
+use crate::facebook::*;
+#[cfg(not(fbcode_build))]
+mod open_source;
+#[cfg(not(fbcode_build))]
+use crate::open_source::*;
 
 /// This data store works as follows:
 ///

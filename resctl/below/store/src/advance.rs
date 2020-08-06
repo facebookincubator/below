@@ -18,15 +18,15 @@ use std::time::{Duration, SystemTime};
 use anyhow::{bail, Context, Result};
 use slog::{self, error};
 
-use crate::model::{self, Model};
-use crate::remote_store;
-use crate::store;
-use crate::util;
 use below_thrift::{DataFrame, Sample};
+use common::model::{self, Model};
+use common::util;
+
+use crate::Direction;
 
 enum AdvanceStore {
     Local(PathBuf),
-    Remote(remote_store::RemoteStore),
+    Remote(crate::remote_store::RemoteStore),
 }
 
 // Object to manage advancing through the store and constructing the
@@ -35,7 +35,7 @@ enum AdvanceStore {
 pub struct Advance {
     logger: slog::Logger,
     store: AdvanceStore,
-    direction: store::Direction,
+    direction: crate::Direction,
     last_sample: Option<Sample>,
     last_sample_time: SystemTime,
 }
@@ -45,7 +45,7 @@ impl Advance {
         Advance {
             logger,
             store: AdvanceStore::Local(store_dir),
-            direction: store::Direction::Forward,
+            direction: crate::Direction::Forward,
             last_sample: None,
             last_sample_time: timestamp,
         }
@@ -57,12 +57,12 @@ impl Advance {
         port: Option<u16>,
         timestamp: SystemTime,
     ) -> Result<Advance> {
-        let store = remote_store::RemoteStore::new(host, port)?;
+        let store = crate::remote_store::RemoteStore::new(host, port)?;
 
         Ok(Advance {
             logger,
             store: AdvanceStore::Remote(store),
-            direction: store::Direction::Forward,
+            direction: crate::Direction::Forward,
             last_sample: None,
             last_sample_time: timestamp,
         })
@@ -73,7 +73,7 @@ impl Advance {
         // Only initialize once
         assert!(self.last_sample == None);
 
-        match self.get_next_sample(self.last_sample_time, store::Direction::Reverse) {
+        match self.get_next_sample(self.last_sample_time, crate::Direction::Reverse) {
             Ok(Some((timestamp, dataframe))) => {
                 self.last_sample = Some(dataframe.sample);
                 self.last_sample_time = timestamp;
@@ -90,11 +90,11 @@ impl Advance {
         if self.last_sample == None {
             return self.last_sample_time;
         }
-        // store::read_next_sample gives >= or <= so we add or
+        // crate::read_next_sample gives >= or <= so we add or
         // subtract one to get the next sample
         match self.direction {
-            store::Direction::Forward => self.last_sample_time + Duration::from_secs(1),
-            store::Direction::Reverse => self.last_sample_time - Duration::from_secs(1),
+            crate::Direction::Forward => self.last_sample_time + Duration::from_secs(1),
+            crate::Direction::Reverse => self.last_sample_time - Duration::from_secs(1),
         }
     }
 
@@ -102,46 +102,46 @@ impl Advance {
         // Try to get sample that just updated, we minus 1 second here is because
         // advance will increase sample time by 1 second.
         self.last_sample_time = SystemTime::now() - Duration::from_secs(1);
-        match self.advance(store::Direction::Forward) {
+        match self.advance(crate::Direction::Forward) {
             Some(model) => return Some(model),
             None => (),
         }
         // Otherwise, we get the previous sample.
         self.last_sample_time = SystemTime::now();
-        self.advance(store::Direction::Reverse)
+        self.advance(crate::Direction::Reverse)
     }
 
     pub fn jump_sample_forward(&mut self, duration: humantime::Duration) -> Option<model::Model> {
         self.last_sample_time += duration.into();
-        match self.advance(store::Direction::Forward) {
+        match self.advance(Direction::Forward) {
             Some(model) => return Some(model),
             None => (),
         }
 
         // If sample is not available, get the latest sample
         self.last_sample_time = SystemTime::now();
-        self.advance(store::Direction::Reverse)
+        self.advance(Direction::Reverse)
     }
 
     pub fn jump_sample_backward(&mut self, duration: humantime::Duration) -> Option<model::Model> {
         self.last_sample_time -= duration.into();
-        match self.advance(store::Direction::Reverse) {
+        match self.advance(Direction::Reverse) {
             Some(model) => return Some(model),
             None => (),
         }
 
         // If sample is not available, get the earlist sample
-        self.advance(store::Direction::Forward)
+        self.advance(Direction::Forward)
     }
 
     fn get_next_sample(
         &mut self,
         timestamp: SystemTime,
-        direction: store::Direction,
+        direction: crate::Direction,
     ) -> Result<Option<(SystemTime, DataFrame)>> {
         match &mut self.store {
             AdvanceStore::Local(dir) => {
-                store::read_next_sample(dir, timestamp, direction, self.logger.clone())
+                crate::read_next_sample(dir, timestamp, direction, self.logger.clone())
             }
             AdvanceStore::Remote(ref mut store) => {
                 store.get_frame(util::get_unix_timestamp(timestamp), direction)
@@ -149,7 +149,7 @@ impl Advance {
         }
     }
 
-    fn handle_direction_switch(&mut self, direction: store::Direction) -> anyhow::Result<()> {
+    fn handle_direction_switch(&mut self, direction: crate::Direction) -> anyhow::Result<()> {
         if direction == self.direction {
             return Ok(());
         }
@@ -180,7 +180,7 @@ impl Advance {
         Ok(())
     }
 
-    pub fn advance(&mut self, direction: store::Direction) -> Option<model::Model> {
+    pub fn advance(&mut self, direction: crate::Direction) -> Option<model::Model> {
         if let Err(e) = self.handle_direction_switch(direction) {
             error!(self.logger, "Failed to switch iterator direction: {}", e);
             return None;
@@ -194,11 +194,11 @@ impl Advance {
                 let older_sample;
 
                 match self.direction {
-                    store::Direction::Forward => {
+                    crate::Direction::Forward => {
                         newer_sample = (dataframe.sample, timestamp);
                         older_sample = self.last_sample.take().map(|s| (s, self.last_sample_time));
                     }
-                    store::Direction::Reverse => {
+                    crate::Direction::Reverse => {
                         if self.last_sample.is_none() {
                             return None;
                         }
@@ -225,11 +225,11 @@ impl Advance {
                 ));
 
                 match self.direction {
-                    store::Direction::Forward => {
+                    crate::Direction::Forward => {
                         self.last_sample = Some(newer_sample.0);
                         self.last_sample_time = newer_sample.1;
                     }
-                    store::Direction::Reverse => {
+                    crate::Direction::Reverse => {
                         let older = older_sample.expect("older_sample is none!");
                         self.last_sample = Some(older.0);
                         self.last_sample_time = older.1;

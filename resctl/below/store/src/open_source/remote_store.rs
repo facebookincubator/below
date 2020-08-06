@@ -16,7 +16,7 @@ use std::time::SystemTime;
 
 use anyhow::{bail, Result};
 
-use crate::store::Direction;
+use crate::Direction;
 use below_thrift::DataFrame;
 
 pub struct RemoteStore {}

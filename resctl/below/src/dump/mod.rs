@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::advance::Advance;
-
 use crate::dateutil;
 use crate::model;
-use crate::store::Direction;
 use crate::util::translate_datetime;
+use store::advance::Advance;
+use store::Direction;
 
 use std::collections::HashSet;
 use std::fs::File;

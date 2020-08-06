@@ -48,22 +48,20 @@ mod open_source;
 #[cfg(not(fbcode_build))]
 use crate::open_source::*;
 
-mod advance;
 mod bpf;
 mod dump;
 #[cfg(test)]
 mod test;
 mod view;
 
-use crate::advance::Advance;
 use crate::view::ViewState;
 use below_thrift::DataFrame;
 pub mod below_config;
 pub use below_config::BelowConfig;
 pub use common::model;
-pub use common::store;
-pub use common::util;
-pub use common::{dateutil, logutil};
+pub use common::{dateutil, logutil, util};
+pub use store;
+use store::advance::Advance;
 
 static LIVE_REMOTE_MAX_LATENCY_SEC: u64 = 10;
 

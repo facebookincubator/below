@@ -63,8 +63,8 @@ use ::cursive::Cursive;
 use anyhow::Result;
 
 use crate::model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
-use crate::store::Direction;
-use crate::Advance;
+use store::advance::Advance;
+use store::Direction;
 
 #[macro_use]
 mod stats_view;

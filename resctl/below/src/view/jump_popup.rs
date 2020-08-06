@@ -20,9 +20,9 @@ use cursive::view::{Identifiable, View};
 use cursive::views::{Dialog, EditView, LinearLayout, OnEventView, TextView};
 use cursive::Cursive;
 
-use crate::store::Direction;
 use crate::view::ViewState;
-use crate::Advance;
+use store::advance::Advance;
+use store::Direction;
 
 fn advance_helper(adv: &Rc<RefCell<Advance>>, direction: Direction, c: &mut Cursive, input: &str) {
     // Raise warning when input start with 0;

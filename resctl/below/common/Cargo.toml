@@ -11,18 +11,12 @@ below-thrift = { path = "../if" }
 below_derive = { path = "../below_derive" }
 cgroupfs = { path = "../../common/cgroupfs" }
 procfs = { path = "../../common/procfs" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 anyhow = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 cursive = { git = "https://github.com/gyscos/cursive", rev = "750a7af6c79946ba7c87253714a6957abdd8bfd3" }
 hostname = "0.3"
 humantime = "1.3"
-memmap = "0.7"
-nix = "0.17"
 once_cell = "1.4"
 regex = "1.3.7"
 slog = { version = "2.5", features = ["max_level_debug"] }
 slog-term = "2.4.2"
-
-[dev-dependencies]
-tempdir = "0.3"
