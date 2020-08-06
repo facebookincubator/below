@@ -49,23 +49,21 @@ mod open_source;
 use crate::open_source::*;
 
 mod advance;
-mod below_config;
 mod bpf;
-mod dateutil;
 mod dump;
-mod logutil;
-mod model;
-mod store;
 #[cfg(test)]
 mod test;
-mod util;
 mod view;
 
-use crate::model::collect_sample;
+use crate::advance::Advance;
 use crate::view::ViewState;
-use advance::Advance;
-use below_config::BelowConfig;
 use below_thrift::DataFrame;
+pub mod below_config;
+pub use below_config::BelowConfig;
+pub use common::model;
+pub use common::store;
+pub use common::util;
+pub use common::{dateutil, logutil};
 
 static LIVE_REMOTE_MAX_LATENCY_SEC: u64 = 10;
 
@@ -508,7 +506,7 @@ fn record(
 
         let collect_instant = Instant::now();
         let collected_sample =
-            collect_sample(&exit_buffer, collect_io_stat, &logger, disable_disk_stat);
+            model::collect_sample(&exit_buffer, collect_io_stat, &logger, disable_disk_stat);
         let post_collect_sys_time = SystemTime::now();
         let post_collect_instant = Instant::now();
 

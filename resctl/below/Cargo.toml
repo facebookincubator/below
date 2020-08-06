@@ -9,9 +9,8 @@ include = ["src/**/*.rs"]
 [dependencies]
 below-thrift = { path = "if" }
 below_derive = { path = "below_derive" }
-cgroupfs = { path = "../common/cgroupfs" }
+common = { path = "common" }
 procfs = { path = "../common/procfs" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
@@ -19,13 +18,10 @@ async-trait = "0.1.29"
 chrono = { version = "0.4", features = ["serde"] }
 cursive = { git = "https://github.com/gyscos/cursive", rev = "750a7af6c79946ba7c87253714a6957abdd8bfd3" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-hostname = "0.3"
 humantime = "1.3"
 libbpf-rs = "0.3"
 libc = "0.2"
 maplit = "1.0"
-memmap = "0.7"
-nix = "0.17"
 once_cell = "1.4"
 plain = "0.2"
 regex = "1.3.7"
@@ -40,5 +36,6 @@ toml = "=0.5.6"
 walkdir = "2.2.9"
 
 [dev-dependencies]
+cgroupfs = { path = "../common/cgroupfs" }
 rand = { version = "0.7", features = ["small_rng"] }
 tempdir = "0.3"
