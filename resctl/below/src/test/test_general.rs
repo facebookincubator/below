@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use super::*;
-use crate::util::fold_string;
+use common::util::fold_string;
 
 #[test]
 fn record_replay_integration() {

@@ -33,18 +33,16 @@ use cursive::Cursive;
 use slog::{self, debug, error, warn};
 use structopt::StructOpt;
 
+mod below_config;
 mod bpf;
 #[cfg(test)]
 mod test;
 
+use below_config::BelowConfig;
 use below_thrift::DataFrame;
-pub mod below_config;
-pub use below_config::BelowConfig;
-pub use common::model;
-pub use common::open_source_shim;
-pub use common::{dateutil, logutil, util};
-pub use dump;
-pub use store;
+use common::{dateutil, logutil, model, open_source_shim};
+use dump::DumpCommand;
+use store;
 use store::advance::Advance;
 use view::ViewState;
 
@@ -132,7 +130,7 @@ enum Command {
         #[structopt(long)]
         port: Option<u16>,
         #[structopt(subcommand)]
-        cmd: dump::DumpCommand,
+        cmd: DumpCommand,
     },
 }
 

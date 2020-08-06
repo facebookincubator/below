@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::*;
-use crate::dump::*;
-use crate::util::convert_bytes;
-use command::{GeneralOpt, OutputFormat, ProcField, SysField};
-use get::Dget;
-use print::Dprint;
-use tmain::Dump;
-
 use std::io;
 use std::iter::FromIterator;
 use std::path::PathBuf;
 
 use serde_json::Value;
+
+use super::*;
+use command::{GeneralOpt, OutputFormat, ProcField, SysField};
+use common::util::convert_bytes;
+use dump::*;
+use get::Dget;
+use print::Dprint;
+use tmain::Dump;
 
 #[test]
 fn test_tmain_init() {
