@@ -63,8 +63,11 @@ use cursive::views::{LinearLayout, NamedView, OnEventView, Panel, ResizedView, S
 use cursive::Cursive;
 
 use common::model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
+use common::open_source_shim;
 use store::advance::Advance;
 use store::Direction;
+
+open_source_shim!();
 
 #[macro_use]
 mod stats_view;

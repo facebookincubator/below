@@ -20,8 +20,6 @@ use cursive::Cursive;
 
 use crate::ViewState;
 
-//use crate::version::get_version_str;
-
 fn get_content(c: &mut Cursive) -> impl Into<StyledString> {
     let view_state = &c
         .user_data::<ViewState>()
@@ -34,7 +32,8 @@ fn get_content(c: &mut Cursive) -> impl Into<StyledString> {
         &view_state.system.borrow().hostname
     )
     .as_str();
-    //header_str += get_version_str().as_str();
+
+    header_str += crate::get_version_str().as_str();
 
     header_str += "\t ";
     header_str += view_state.view_mode_str();

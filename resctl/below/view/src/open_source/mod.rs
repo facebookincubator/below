@@ -13,5 +13,9 @@
 // limitations under the License.
 
 pub fn get_version_str() -> String {
-    String::from("")
+    let version = option_env!("CARGO_PKG_VERSION");
+    match version {
+        None => String::from(""),
+        Some(version_str) => String::from(version_str),
+    }
 }
