@@ -324,7 +324,7 @@ pub struct ProcessIO {
         title = "RW Total",
         decorator = "convert_bytes($ as f64)",
         width = 11,
-        aggr = "SingleProcessModel: io?.rbytes_per_sec? + io?.rbytes_per_sec?",
+        aggr = "SingleProcessModel: io?.rbytes_per_sec? + io?.wbytes_per_sec?",
         sort_tag = "ProcessOrders::IoTotal",
         unit = "/s"
     )]
