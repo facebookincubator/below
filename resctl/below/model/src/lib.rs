@@ -20,7 +20,7 @@ use cursive::utils::markup::StyledString;
 
 use below_derive::BelowDecor;
 use below_thrift::types::{CgroupSample, Sample, SystemSample};
-use common::util::{convert_bytes, fold_string, get_prefix};
+use common::util::{convert_bytes, fold_string, get_prefix, is_cpu_significant};
 
 #[macro_use]
 pub mod collector;

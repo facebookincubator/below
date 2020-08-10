@@ -15,7 +15,7 @@
 use crate::process_view::ProcessState;
 use crate::stats_view::StateCommon;
 use below_derive::BelowDecor;
-use common::util::convert_bytes;
+use common::util::{convert_bytes, is_cpu_significant};
 use model::SingleProcessModel;
 
 use cursive::utils::markup::StyledString;
@@ -146,7 +146,8 @@ pub struct ProcessGeneral {
         precision = 2,
         unit = "%",
         aggr = "SingleProcessModel: cpu?.user_pct? + cpu?.system_pct?",
-        sort_tag = "ProcessOrders::CpuTotal"
+        sort_tag = "ProcessOrders::CpuTotal",
+        highlight_if = "is_cpu_significant($)"
     )]
     pub cpu: Option<f64>,
     #[blink("SingleProcessModel$cpu?.get_user_pct")]

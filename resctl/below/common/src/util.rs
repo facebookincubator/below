@@ -98,3 +98,7 @@ pub fn translate_datetime(timestamp: &i64) -> String {
         .format("%Y-%m-%d %H:%M:%S")
         .to_string()
 }
+
+pub fn is_cpu_significant(v: f64) -> bool {
+    v > 100.0
+}

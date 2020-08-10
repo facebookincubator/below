@@ -118,9 +118,21 @@ impl ProcessIoModel {
 
 #[derive(Clone, BelowDecor, Default)]
 pub struct ProcessCpuModel {
-    #[bttr(title = "CPU User", width = 11, precision = 2, unit = "%")]
+    #[bttr(
+        title = "CPU User",
+        width = 11,
+        precision = 2,
+        unit = "%",
+        highlight_if = "is_cpu_significant($)"
+    )]
     pub user_pct: Option<f64>,
-    #[bttr(title = "CPU Sys", width = 11, precision = 2, unit = "%")]
+    #[bttr(
+        title = "CPU Sys",
+        width = 11,
+        precision = 2,
+        unit = "%",
+        highlight_if = "is_cpu_significant($)"
+    )]
     pub system_pct: Option<f64>,
     #[bttr(title = "Threads", width = 11)]
     pub num_threads: Option<u64>,

@@ -151,11 +151,29 @@ impl CgroupModel {
 
 #[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
 pub struct CgroupCpuModel {
-    #[bttr(title = "CPU", width = 15, unit = "%", precision = 2)]
+    #[bttr(
+        title = "CPU",
+        width = 15,
+        unit = "%",
+        precision = 2,
+        highlight_if = "is_cpu_significant($)"
+    )]
     pub usage_pct: Option<f64>,
-    #[bttr(title = "CPU User", width = 15, unit = "%", precision = 2)]
+    #[bttr(
+        title = "CPU User",
+        width = 15,
+        unit = "%",
+        precision = 2,
+        highlight_if = "is_cpu_significant($)"
+    )]
     pub user_pct: Option<f64>,
-    #[bttr(title = "CPU Sys", width = 15, unit = "%", precision = 2)]
+    #[bttr(
+        title = "CPU Sys",
+        width = 15,
+        unit = "%",
+        precision = 2,
+        highlight_if = "is_cpu_significant($)"
+    )]
     pub system_pct: Option<f64>,
     #[bttr(title = "Nr Period", width = 15, unit = "/s", precision = 2)]
     pub nr_periods_per_sec: Option<f64>,
