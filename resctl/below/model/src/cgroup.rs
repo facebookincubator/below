@@ -384,17 +384,45 @@ impl CgroupMemoryModel {
     }
 }
 
+fn is_pressure_significant(p: f64) -> bool {
+    p > 40.0
+}
+
 #[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
 pub struct CgroupPressureModel {
-    #[bttr(title = "CPU Pressure", width = 15, unit = "%", precision = 2)]
+    #[bttr(
+        title = "CPU Pressure",
+        width = 15,
+        unit = "%",
+        precision = 2,
+        highlight_if = "is_pressure_significant($)"
+    )]
     pub cpu_some_pct: Option<f64>,
-    #[bttr(title = "I/O Some Pressure")]
+    #[bttr(
+        title = "I/O Some Pressure",
+        highlight_if = "is_pressure_significant($)"
+    )]
     pub io_some_pct: Option<f64>,
-    #[bttr(title = "I/O Pressure", width = 15, unit = "%", precision = 2)]
+    #[bttr(
+        title = "I/O Pressure",
+        width = 15,
+        unit = "%",
+        precision = 2,
+        highlight_if = "is_pressure_significant($)"
+    )]
     pub io_full_pct: Option<f64>,
-    #[bttr(title = "Mem Some Pressure")]
+    #[bttr(
+        title = "Mem Some Pressure",
+        highlight_if = "is_pressure_significant($)"
+    )]
     pub memory_some_pct: Option<f64>,
-    #[bttr(title = "Mem Pressure", width = 15, unit = "%", precision = 2)]
+    #[bttr(
+        title = "Mem Pressure",
+        width = 15,
+        unit = "%",
+        precision = 2,
+        highlight_if = "is_pressure_significant($)"
+    )]
     pub memory_full_pct: Option<f64>,
 }
 

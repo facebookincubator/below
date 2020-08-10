@@ -219,7 +219,12 @@ impl SingleCpuModel {
 pub struct MemoryModel {
     #[bttr(title = "Total", decorator = "convert_bytes($ as f64)", width = 20)]
     pub total: Option<u64>,
-    #[bttr(title = "Free", decorator = "convert_bytes($ as f64)", width = 20)]
+    #[bttr(
+        title = "Free",
+        decorator = "convert_bytes($ as f64)",
+        width = 20,
+        highlight_if = "(|| $ < (2 << 20))()"
+    )]
     pub free: Option<u64>,
     #[bttr(title = "Available", width = 20, decorator = "convert_bytes($ as f64)")]
     pub available: Option<u64>,
