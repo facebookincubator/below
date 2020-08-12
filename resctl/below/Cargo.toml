@@ -21,7 +21,7 @@ anyhow = "1.0"
 async-trait = "0.1.29"
 cursive = { git = "https://github.com/gyscos/cursive", rev = "750a7af6c79946ba7c87253714a6957abdd8bfd3" }
 humantime = "1.3"
-libbpf-rs = "0.3"
+libbpf-rs = "0.4"
 libc = "0.2"
 once_cell = "1.4"
 plain = "0.2"
