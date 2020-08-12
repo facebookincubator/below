@@ -197,7 +197,28 @@ impl ProcessView {
     }
 
     pub fn refresh(c: &mut Cursive) {
-        Self::get_process_view(c).refresh(c);
+        let mut view = Self::get_process_view(c);
+        view.refresh(c);
+        let mut cmd_palette = view.get_cmd_palette();
+        // We should not override alert on refresh. Only selection should override alert.
+        match (
+            cmd_palette.is_alerting(),
+            view.get_detail_view().selection(),
+        ) {
+            (false, Some(selection)) => {
+                let cgroup = view
+                    .state
+                    .borrow()
+                    .get_model()
+                    .processes
+                    .get(&selection.parse::<i32>().unwrap_or(0))
+                    .map_or("?".to_string(), |spm| {
+                        spm.cgroup.clone().unwrap_or_else(|| "?".to_string())
+                    });
+                cmd_palette.set_info(cgroup.to_string())
+            }
+            _ => (),
+        }
     }
 
     fn get_inner(&self) -> Box<dyn ProcessTab> {

@@ -115,4 +115,8 @@ impl CommandPalette {
             CPMode::Alert => self.print_alert(printer, pos.into(), idx),
         }
     }
+
+    pub fn is_alerting(&self) -> bool {
+        self.mode == CPMode::Alert
+    }
 }

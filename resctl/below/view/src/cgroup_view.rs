@@ -223,6 +223,15 @@ impl CgroupView {
     pub fn refresh(c: &mut Cursive) {
         let mut view = Self::get_cgroup_view(c);
         view.refresh(c);
+        let mut cmd_palette = view.get_cmd_palette();
+        // We should not override alert on refresh. Only selection should override alert.
+        match (
+            cmd_palette.is_alerting(),
+            view.get_detail_view().selection(),
+        ) {
+            (false, Some(selection)) => cmd_palette.set_info(selection.to_string()),
+            _ => (),
+        }
     }
 
     fn get_inner(&self) -> Box<dyn CgroupTab> {
