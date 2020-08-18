@@ -20,6 +20,7 @@ use cursive::view::{Identifiable, View};
 use cursive::views::{Dialog, EditView, LinearLayout, OnEventView, TextView};
 use cursive::Cursive;
 
+use common::dateutil;
 use store::{advance, Direction};
 
 use crate::ViewState;
@@ -36,6 +37,7 @@ fn advance_helper(
         return;
     }
 
+    // Jump for duration
     match (input.parse::<humantime::Duration>(), direction) {
         (Ok(d), Direction::Forward) => match adv.borrow_mut().jump_sample_forward(d) {
             Some(data) => c
@@ -57,8 +59,26 @@ fn advance_helper(
             // silently doing nothing.
             None => (),
         },
-        (Err(e), _) => view_warn!(c, "Fail to parse time value: {}", e),
-    }
+        _ => match dateutil::HgTime::parse(input) {
+            // Jump for absolute time
+            Some(pt) => {
+                // For forward jumping: we will find the next available sample of the input time forward
+                // For backward jumping: we will find the next available sample of the input time backward
+                let timestamp = std::time::UNIX_EPOCH + std::time::Duration::from_secs(pt.unixtime);
+                match adv.borrow_mut().jump_sample_to(timestamp, direction) {
+                    Some(data) => c
+                        .user_data::<ViewState>()
+                        .expect("No user data set")
+                        .update(data),
+                    None => view_warn!(c, "Cannot find available data sample"),
+                }
+            }
+            None => {
+                view_warn!(c, "Failed to parse time value: {}", input);
+                return ();
+            }
+        },
+    };
 }
 
 pub fn new(adv: Rc<RefCell<advance::Advance>>, direction: Direction) -> impl View {
@@ -80,7 +100,9 @@ pub fn new(adv: Rc<RefCell<advance::Advance>>, direction: Direction) -> impl Vie
                             })
                             .with_name("jump_popup"),
                     )
-                    .child(TextView::new("e.g. 10s or 3h5m or 2d")),
+                    .child(TextView::new("e.g:"))
+                    .child(TextView::new("  Relative Time: 10s or 3h5m or 2d"))
+                    .child(TextView::new("  Absulute time: 10:00am")),
             )
             .dismiss_button("Close"),
     )

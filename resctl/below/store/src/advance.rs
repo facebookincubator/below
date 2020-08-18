@@ -134,6 +134,15 @@ impl Advance {
         self.advance(Direction::Forward)
     }
 
+    pub fn jump_sample_to(
+        &mut self,
+        timestamp: SystemTime,
+        direction: Direction,
+    ) -> Option<model::Model> {
+        self.last_sample_time = timestamp;
+        self.advance(direction)
+    }
+
     fn get_next_sample(
         &mut self,
         timestamp: SystemTime,
