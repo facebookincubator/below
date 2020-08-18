@@ -235,6 +235,7 @@ fn collect_cgroup_sample(
             .transpose()?,
         memory_swap_current: wrap(reader.read_memory_swap_current().map(|v| v as i64))?,
         memory_high: reader.read_memory_high()?,
+        memory_events: wrap(reader.read_memory_events())?,
     })
 }
 

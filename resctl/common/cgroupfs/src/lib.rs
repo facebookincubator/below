@@ -22,7 +22,8 @@ use openat::{AsPath, Dir, SimpleType};
 use thiserror::Error;
 
 pub use cgroupfs_thrift::types::{
-    CpuPressure, CpuStat, IoPressure, IoStat, MemoryPressure, MemoryStat, Pressure, PressureMetrics,
+    CpuPressure, CpuStat, IoPressure, IoStat, MemoryEvents, MemoryPressure, MemoryStat, Pressure,
+    PressureMetrics,
 };
 
 #[cfg(test)]
@@ -126,6 +127,10 @@ impl CgroupReader {
     /// statistics
     pub fn read_memory_stat(&self) -> Result<MemoryStat> {
         MemoryStat::read(&self)
+    }
+
+    pub fn read_memory_events(&self) -> Result<MemoryEvents> {
+        MemoryEvents::read(&self)
     }
 
     /// Read cpu.pressure
@@ -302,6 +307,14 @@ key_values_format!(MemoryStat; memory.stat; [
     pglazyfreed,
     thp_fault_alloc,
     thp_collapse_alloc
+]);
+
+key_values_format!(MemoryEvents; memory.events; [
+    low,
+    high,
+    max,
+    oom,
+    oom_kill
 ]);
 
 // Trait to add a read() method for `<string> key=value` formatted files

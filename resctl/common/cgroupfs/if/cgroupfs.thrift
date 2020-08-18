@@ -93,3 +93,11 @@ struct Pressure {
   2: IoPressure io,
   3: MemoryPressure memory,
 }
+
+struct MemoryEvents {
+  1: optional i64 low,
+  2: optional i64 high,
+  3: optional i64 max,
+  4: optional i64 oom,
+  5: optional i64 oom_kill,
+}

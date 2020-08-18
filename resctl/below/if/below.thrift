@@ -38,6 +38,7 @@ struct CgroupSample {
   6: optional map<string, CgroupSample> children,
   7: optional i64 memory_swap_current,
   8: optional i64 memory_high,
+  9: optional cgroupfs.MemoryEvents memory_events,
 }
 
 struct SystemSample {
