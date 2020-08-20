@@ -566,15 +566,15 @@ pub struct CgroupMem {
     pub pglazyfreed: Option<u64>,
     #[blink("CgroupModel$memory?.get_thp_fault_alloc")]
     #[bttr(
-        title = "THP Fault Alloc",
+        title = "THP Fault Alloc/s",
         width = 18,
         sort_tag = "CgroupOrders::THPFaultAlloc"
     )]
     pub thp_fault_alloc: Option<u64>,
     #[blink("CgroupModel$memory?.get_thp_collapse_alloc")]
     #[bttr(
-        title = "THP Collapse Alloc",
-        width = 18,
+        title = "THP Collapse Alloc/s",
+        width = 20,
         sort_tag = "CgroupOrders::THPCollapseAlloc"
     )]
     pub thp_collapse_alloc: Option<u64>,

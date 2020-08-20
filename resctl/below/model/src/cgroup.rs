@@ -400,9 +400,15 @@ impl CgroupMemoryModel {
                     count_per_sec!(last_stat.pglazyfree, stat.pglazyfree, delta, u64);
                 model.pglazyfreed =
                     count_per_sec!(last_stat.pglazyfreed, stat.pglazyfreed, delta, u64);
+                model.thp_fault_alloc =
+                    count_per_sec!(last_stat.thp_fault_alloc, stat.thp_fault_alloc, delta, u64);
+                model.thp_collapse_alloc = count_per_sec!(
+                    last_stat.thp_collapse_alloc,
+                    stat.thp_collapse_alloc,
+                    delta,
+                    u64
+                );
             }
-            model.thp_fault_alloc = stat.thp_fault_alloc.map(|v| v as u64);
-            model.thp_collapse_alloc = stat.thp_collapse_alloc.map(|v| v as u64);
         }
 
         model
