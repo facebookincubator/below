@@ -59,7 +59,8 @@ impl Model {
                 0,
                 &sample.cgroup,
                 last.map(|(s, d)| (&s.cgroup, d)),
-            ),
+            )
+            .aggr_top_level_val(),
             process: ProcessModel::new(&sample.processes, last.map(|(s, d)| (&s.processes, d))),
             network: NetworkModel::new(&sample.netstats, last.map(|(s, d)| (&s.netstats, d))),
         }

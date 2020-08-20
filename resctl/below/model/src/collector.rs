@@ -46,11 +46,13 @@ impl Collector {
     }
 }
 
-pub fn opt_add<S: Sized + std::ops::Add<T, Output = S>, T: Sized>(
-    a: Option<S>,
-    b: Option<T>,
-) -> Option<S> {
-    a.and_then(|x| b.map(|y| x + y))
+pub fn opt_add<T: std::ops::Add<T, Output = T>>(a: Option<T>, b: Option<T>) -> Option<T> {
+    match (a, b) {
+        (Some(a), Some(b)) => Some(a + b),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        _ => None,
+    }
 }
 
 pub fn opt_multiply<S: Sized + std::ops::Mul<T, Output = S>, T: Sized>(

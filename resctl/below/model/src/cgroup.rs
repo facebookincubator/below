@@ -138,6 +138,13 @@ impl CgroupModel {
             depth,
         }
     }
+
+    pub fn aggr_top_level_val(mut self) -> Self {
+        self.memory = self.children.iter().fold(Default::default(), |acc, model| {
+            opt_add(acc, model.memory.clone())
+        });
+        self
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
@@ -328,6 +335,52 @@ pub struct CgroupMemoryModel {
     pub thp_collapse_alloc: Option<u64>,
     #[bttr(title = "Memory.High")]
     pub memory_high: Option<i64>,
+}
+
+impl std::ops::Add for CgroupMemoryModel {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self::Output {
+        Self {
+            total: opt_add(self.total, other.total),
+            swap: opt_add(self.swap, other.swap),
+            anon: opt_add(self.anon, other.anon),
+            file: opt_add(self.file, other.file),
+            kernel_stack: opt_add(self.kernel_stack, other.kernel_stack),
+            slab: opt_add(self.slab, other.slab),
+            sock: opt_add(self.sock, other.sock),
+            shmem: opt_add(self.shmem, other.shmem),
+            file_mapped: opt_add(self.file_mapped, other.file_mapped),
+            file_dirty: opt_add(self.file_dirty, other.file_dirty),
+            file_writeback: opt_add(self.file_writeback, other.file_writeback),
+            anon_thp: opt_add(self.anon_thp, other.anon_thp),
+            inactive_anon: opt_add(self.inactive_anon, other.inactive_anon),
+            active_anon: opt_add(self.active_anon, other.active_anon),
+            inactive_file: opt_add(self.inactive_file, other.inactive_file),
+            active_file: opt_add(self.active_file, other.active_file),
+            unevictable: opt_add(self.unevictable, other.unevictable),
+            slab_reclaimable: opt_add(self.slab_reclaimable, other.slab_reclaimable),
+            slab_unreclaimable: opt_add(self.slab_unreclaimable, other.slab_unreclaimable),
+            pgfault: opt_add(self.pgfault, other.pgfault),
+            pgmajfault: opt_add(self.pgmajfault, other.pgmajfault),
+            workingset_refault: opt_add(self.workingset_refault, other.workingset_refault),
+            workingset_activate: opt_add(self.workingset_activate, other.workingset_activate),
+            workingset_nodereclaim: opt_add(
+                self.workingset_nodereclaim,
+                other.workingset_nodereclaim,
+            ),
+            pgrefill: opt_add(self.pgrefill, other.pgrefill),
+            pgscan: opt_add(self.pgscan, other.pgscan),
+            pgsteal: opt_add(self.pgsteal, other.pgsteal),
+            pgactivate: opt_add(self.pgactivate, other.pgactivate),
+            pgdeactivate: opt_add(self.pgdeactivate, other.pgdeactivate),
+            pglazyfree: opt_add(self.pglazyfree, other.pglazyfree),
+            pglazyfreed: opt_add(self.pglazyfreed, other.pglazyfreed),
+            thp_fault_alloc: opt_add(self.thp_fault_alloc, other.thp_fault_alloc),
+            thp_collapse_alloc: opt_add(self.thp_collapse_alloc, other.thp_collapse_alloc),
+            memory_high: None,
+        }
+    }
 }
 
 impl CgroupMemoryModel {
