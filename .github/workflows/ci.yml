@@ -1,0 +1,41 @@
+name: CI
+
+on: [push, pull_request]
+jobs:
+  rustfmt:
+    # Only run clang-format on pull requests. We want to allow people to
+    # ignore rustfmt if they think it's not helpful.
+    if: "github.event_name == 'pull_request'"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run rustmt
+      # rustfmt tries to format the hidden facebook:: modules but chokes b/c
+      # those files aren't published to github. Instead, we'll do a git diff
+      # to see if anything was changed.
+      run: cargo fmt || true
+    - name: Check for diff
+      run: git diff --exit-code
+
+  fbthrift:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Create directory for fbthrift
+      run: mkdir -p /tmp/fbthrift
+    - name: Build and install fbthrit
+      run: ./build/fbcode_builder/getdeps.py build fbthrift --install-prefix /tmp/fbthrift
+
+  build_test:
+    runs-on: ubuntu-latest
+    needs: fbthrift
+    env:
+      THRIFT: /tmp/fbthrift/bin/thrift1
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install deps
+      run: sudo apt-get install -y zlib1g-dev libelf-dev
+    - name: Build
+      run: cargo build
+    - name: Test
+      run: cargo test
