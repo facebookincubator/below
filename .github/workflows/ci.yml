@@ -45,11 +45,3 @@ jobs:
     - name: Build fbthrift
       if: steps.fbthrift-artifacts.outputs.cache-hit != 'true'
       run: mkdir -p /tmp/fbthrift && ./build/fbcode_builder/getdeps.py build fbthrift --install-prefix /tmp/fbthrift
-    - name: Build
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-    - name: Test
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
