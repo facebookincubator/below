@@ -1,7 +1,7 @@
 # resctl
 
-![CI](https://github.com/facebookincubator/resctl/workflows/CI/badge.svg)
-![Matrix chat](https://img.shields.io/matrix/below:matrix.org)
+[![CI](https://github.com/facebookincubator/resctl/workflows/CI/badge.svg)](https://github.com/facebookincubator/resctl/actions?query=workflow%3ACI+branch%3Amaster+)
+[![Matrix chat](https://img.shields.io/matrix/below:matrix.org)](https://matrix.to/#/!SrWxtbLuRUMrDbftgA:matrix.org?via=matrix.org)
 
 resctl is an umbrella repository for **res**ource **c**on**t**ro**l** projects
 at Facebook.
