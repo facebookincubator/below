@@ -27,6 +27,12 @@ below does **not** have support for cgroup1.
 The name "below" stems from the fact that the below developers rejected many
 of [atop](https://linux.die.net/man/1/atop)'s design and style decisions.
 
+#### Demo
+
+<a href="https://asciinema.org/a/355506">
+<img src="https://asciinema.org/a/355506.svg" width="500">
+</a>
+
 ### procfs
 
 `procfs` is a rust library that parses
