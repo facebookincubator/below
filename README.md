@@ -3,6 +3,38 @@
 resctl is an umbrella repository for **res**ource **c**on**t**ro**l** projects
 at Facebook.
 
+## Projects
+
+### below
+
+`below` is an interactive tool to view and record historical system data. It
+has support for:
+
+* information regarding hardware resource utilization
+* viewing the cgroup hierarchy
+* cgroup and process information
+* pressure stall information (PSI)
+* `record` mode to record system data
+* `replay` mode to replay historical system data
+* `live` mode to view live system data
+* `dump` subcommand to report script-friendly information (eg json and csv)
+
+below does **not** have support for cgroup1.
+
+The name "below" stems from the fact that the below developers rejected many
+of [atop](https://linux.die.net/man/1/atop)'s design and style decisions.
+
+### procfs
+
+`procfs` is a rust library that parses
+[procfs](https://www.man7.org/linux/man-pages/man5/procfs.5.html) files.
+
+### cgroupfs
+
+`cgroupfs` is a rust library that parses
+[cgroup2](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html)
+control files.
+
 ## Building
 
 See [building.md](resctl/below/docs/building.md).
