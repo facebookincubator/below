@@ -708,3 +708,4 @@ fn setup_log_on_panic(logger: slog::Logger) {
         }
     }));
 }
+
