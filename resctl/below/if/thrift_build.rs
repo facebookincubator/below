@@ -11,9 +11,9 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "below _ crate
-cgroupfs _ cgroupfs_thrift
-procfs _ procfs_thrift",
+        "below crate
+cgroupfs cgroupfs_thrift
+procfs procfs_thrift",
     ).expect("Failed to write cratemap");
 
     let conf = {
