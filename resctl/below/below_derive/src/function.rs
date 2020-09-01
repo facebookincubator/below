@@ -465,4 +465,155 @@ impl Function {
             }
         }
     }
+
+    /// Generate get_FIELD_str and get_FIELD_str_impl function
+    pub fn gen_get_str(field: &Field) -> Tstream {
+        let fn_name = field.build_fn_name("str");
+        let impl_name = field.build_fn_caller("str_impl", "");
+        let fn_name_styled = field.build_fn_name("str_styled");
+        let impl_name_styled = field.build_fn_caller("str_styled_impl", "");
+
+        if field.is_blink() {
+            Self::gen_get_str_blink(field, fn_name, impl_name, fn_name_styled, impl_name_styled)
+        } else {
+            Self::gen_get_str_direct(field, fn_name, impl_name, fn_name_styled, impl_name_styled)
+        }
+    }
+
+    /// Generate get_FIELD_str and get_FIELD_str_impl function for direct field:
+    /// Example:
+    /// ```ignore
+    /// #[bttr(
+    ///     title = "Field",
+    ///     unit = "/s",
+    ///     precision = 2,
+    ///     prefix = "-->",
+    ///     depth = 2,
+    ///     width = 20,
+    ///     decorator = "if $ > 0 { $ * 2 } else { 0 }"
+    /// )]
+    /// field: i32
+    /// ```
+    /// Will Generate:
+    /// ```ignore
+    /// fn get_field_str(&self) -> String {
+    ///     self.get_field_str_impl(None, None, None)
+    /// }
+    /// ```
+    fn gen_get_str_direct(
+        field: &Field,
+        fn_name: Tstream,
+        impl_name: Tstream,
+        fn_name_styled: Tstream,
+        impl_name_styled: Tstream,
+    ) -> Tstream {
+        let args = field.get_common_args();
+        let args_val = if field.is_aggr() {
+            quote! {model}
+        } else {
+            quote! {}
+        };
+
+        let value_type = field.inner_type.as_ref().unwrap_or(&field.field_type);
+        quote! {
+            pub fn #fn_name(#args) -> String {
+                    #impl_name(None::<Box<dyn Fn(#value_type) -> Box<dyn std::fmt::Display>>>, None, None, #args_val)
+            }
+
+            pub fn #fn_name_styled(#args) -> StyledString {
+                    #impl_name_styled(None::<Box<dyn Fn(#value_type) -> Box<dyn std::fmt::Display>>>, None, None, None, None, None, #args_val)
+            }
+        }
+    }
+
+    /// Generate get_FIELD_str and get_FIELD_str_impl function for linked field:
+    /// Example:
+    /// ```ignore
+    /// #[bttr(
+    ///     title = "Field",
+    ///     unit = "/s",
+    ///     precision = 2,
+    ///     prefix = "-->",
+    ///     depth = 2,
+    ///     width = 20,
+    ///     decorator = "if $ > 0 { $ * 2 } else { 0 }"
+    /// )]
+    /// #[blink(ModelType$.)]
+    /// field: i32
+    /// ```
+    /// Will Generate:
+    /// ```ignore
+    /// fn get_field_str(&self, model:&ModelType) -> String {
+    ///     model.get_field_str_impl(Some(|v: i32| if v > 0 { v * 2} else { 0 }), Some("/s"), Some(2))
+    /// }
+    /// ```
+    fn gen_get_str_blink(
+        field: &Field,
+        fn_name: Tstream,
+        impl_name: Tstream,
+        fn_name_styled: Tstream,
+        impl_name_styled: Tstream,
+    ) -> Tstream {
+        let blink_type = field
+            .blink_type
+            .as_ref()
+            .unwrap()
+            .parse::<Tstream>()
+            .unwrap();
+        let unit = field.view_attr.unit.as_ref().map_or_else(
+            || quote! {None},
+            |_| {
+                let v = field.unit.clone();
+                quote! {Some(#v)}
+            },
+        );
+        let prefix = field.view_attr.prefix.as_ref().map_or_else(
+            || quote! {None},
+            |_| {
+                let v = field.prefix.clone();
+                quote! {Some(#v)}
+            },
+        );
+        let depth = field.view_attr.depth.as_ref().map_or_else(
+            || quote! {None},
+            |_| {
+                let v = field.depth.clone();
+                quote! {Some(#v)}
+            },
+        );
+        let width = field.view_attr.width.as_ref().map_or_else(
+            || quote! {None},
+            |_| {
+                let v = field.width.clone();
+                quote! {Some(#v)}
+            },
+        );
+        let precision = match field.view_attr.precision {
+            Some(v) => quote! {Some(#v)},
+            None => quote! {None},
+        };
+
+        let value_type = field.inner_type.as_ref().unwrap_or(&field.field_type);
+
+        let decor_value = match &field.decor_value {
+            Some(f) => quote! {Some(#f)},
+            None => quote! {None::<Box<dyn Fn(#value_type) -> Box<dyn std::fmt::Display>>>},
+        };
+
+        let args_val = if field.is_aggr() {
+            quote! {model}
+        } else {
+            quote! {}
+        };
+
+        quote! {
+            pub fn #fn_name(&self, model: &#blink_type) -> String {
+                #impl_name(#decor_value, #unit, #precision, #args_val)
+            }
+
+            pub fn #fn_name_styled(&self, model: &#blink_type) -> StyledString {
+                #impl_name_styled(#decor_value, #unit, #precision, #prefix, #depth, #width, #args_val)
+            }
+        }
+    }
 }
