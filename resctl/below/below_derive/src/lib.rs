@@ -124,18 +124,14 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::export::Span;
-use syn::{parse_macro_input::parse, Data::Struct, DeriveInput, Fields, Ident};
+use syn::{parse_macro_input::parse, Data::Struct, DeriveInput, Fields};
 
 type Tstream = proc_macro2::TokenStream;
 
-#[macro_use]
 mod attr;
-mod attr_new;
 mod field;
 mod function;
 mod model;
-mod view;
 
 #[proc_macro_derive(BelowDecor, attributes(bttr, blink))]
 pub fn derive(input: TokenStream) -> TokenStream {
@@ -149,52 +145,38 @@ pub fn derive(input: TokenStream) -> TokenStream {
         },
         _ => unimplemented!("Currently only support struct"),
     };
-    let get_fn_on_dir_field = field::gen_get_function_for_direct_field(&members);
-    let get_title_per_field = field::gen_get_title_per_field(&members);
-    let get_fn_on_link_field = field::gen_get_function_for_linked_field(&members);
-    let get_str_dir_field = view::gen_get_str_per_dir_field(&members);
-    let get_str_link_field = view::gen_get_str_per_link_field(&members);
-    let get_title_line = view::gen_title_line(&members);
-    let get_title_pipe = view::gen_title_pipe(&members);
-    let get_field_line = view::gen_field_line(&members);
-    let cmp_fns = field::gen_cmp_fns(&members);
-    let get_csv_field = view::gen_csv_field(&members);
-    let get_csv_title = view::gen_csv_title(&members);
-    let get_interleave_line = view::gen_interleave(&members);
-    let get_dfill = field::gen_dfill_tag_and_class_fns(&members, &input_ident);
-    let sort_fn = field::gen_tag_sort_fn(&members);
 
-    // let model = model::Model::new_with_members(&members);
-    // let _get_fns = model.generate_get_fns();
-    // let get_title_fns = model.generate_get_title_fns();
-    // let get_title_line = model.generate_get_title_line();
-    // let get_str_impl_fns = model.generate_get_str_impl_fns();
-    // let get_str_fns = model.generate_get_str_fns();
-    // let get_field_line = model.generate_get_field_line();
-    // let get_title_pipe = model.generate_get_title_pipe();
-    // let get_csv_field = model.generate_get_csv_field();
-    // let get_csv_title = model.generate_get_csv_title();
-    // let cmp_fns = model.generate_cmp_fns();
-    // let get_interleave_line = model.generate_interleave();
-    // let sort_fn = model.generate_sort_fn();
-    // let sort_util = model.generate_sort_util_fns();
-    // let get_dfill = model.generate_dfill_fns();
+    let model = model::Model::new_with_members(&members);
+    let get_fns = model.generate_get_fns();
+    let get_title_fns = model.generate_get_title_fns();
+    let get_title_line = model.generate_get_title_line();
+    let get_str_impl_fns = model.generate_get_str_impl_fns();
+    let get_str_fns = model.generate_get_str_fns();
+    let get_field_line = model.generate_get_field_line();
+    let get_title_pipe = model.generate_get_title_pipe();
+    let get_csv_field = model.generate_get_csv_field();
+    let get_csv_title = model.generate_get_csv_title();
+    let cmp_fns = model.generate_cmp_fns();
+    let get_interleave_line = model.generate_interleave();
+    let sort_fn = model.generate_sort_fn();
+    let sort_util = model.generate_sort_util_fns();
+    let get_dfill = model.generate_dfill_fns();
 
     let token = quote! {
         impl #input_ident {
-            #get_fn_on_dir_field
-            #get_title_per_field
-            #get_title_line
-            #get_fn_on_link_field
-            #get_str_dir_field
-            #get_str_link_field
-            #get_field_line
+            #get_fns
+            #get_title_fns
+            #get_str_impl_fns
+            #get_str_fns
             #cmp_fns
+            #get_title_line
+            #get_title_pipe
+            #get_field_line
             #get_csv_field
             #get_csv_title
             #get_interleave_line
-            #get_title_pipe
             #sort_fn
+            #sort_util
         }
 
         #get_dfill

@@ -150,7 +150,7 @@ impl CgroupModel {
 #[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
 pub struct CgroupCpuModel {
     #[bttr(
-        title = "CPU",
+        title = "CPU Usage",
         width = 15,
         unit = "%",
         precision = 2,
@@ -214,13 +214,18 @@ pub struct CgroupIoModel {
         decorator = "convert_bytes($ as f64)"
     )]
     pub wbytes_per_sec: Option<f64>,
-    #[bttr(title = "R I/O", unit = "/s")]
+    #[bttr(title = "Read IOPS", width = 11, precision = 1)]
     pub rios_per_sec: Option<f64>,
-    #[bttr(title = "W I/O", unit = "/s")]
+    #[bttr(title = "Write IOPS", width = 11, precision = 1)]
     pub wios_per_sec: Option<f64>,
-    #[bttr(title = "DBytes", unit = "/s")]
+    #[bttr(
+        title = "Discards",
+        width = 9,
+        unit = "/s",
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub dbytes_per_sec: Option<f64>,
-    #[bttr(title = "D I/O", unit = "/s")]
+    #[bttr(title = "Discard IOPS", width = 13, precision = 1)]
     pub dios_per_sec: Option<f64>,
 }
 
@@ -269,71 +274,119 @@ impl std::ops::Add<&CgroupIoModel> for CgroupIoModel {
 pub struct CgroupMemoryModel {
     #[bttr(title = "Memory", width = 11, decorator = "convert_bytes($ as f64)")]
     pub total: Option<u64>,
-    #[bttr(title = "Memory Swap")]
+    #[bttr(
+        title = "Memory Swap",
+        width = 13,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub swap: Option<u64>,
-    #[bttr(title = "Anon")]
+    #[bttr(title = "Anon", width = 11, decorator = "convert_bytes($ as f64)")]
     pub anon: Option<u64>,
-    #[bttr(title = "File")]
+    #[bttr(title = "File", width = 11, decorator = "convert_bytes($ as f64)")]
     pub file: Option<u64>,
-    #[bttr(title = "Kernel Stack")]
+    #[bttr(
+        title = "Kernel Stack",
+        width = 14,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub kernel_stack: Option<u64>,
-    #[bttr(title = "Slab")]
+    #[bttr(title = "Slab", width = 11, decorator = "convert_bytes($ as f64)")]
     pub slab: Option<u64>,
-    #[bttr(title = "Sock")]
+    #[bttr(title = "Sock", width = 11, decorator = "convert_bytes($ as f64)")]
     pub sock: Option<u64>,
-    #[bttr(title = "Shmem")]
+    #[bttr(title = "Shmem", width = 11, decorator = "convert_bytes($ as f64)")]
     pub shmem: Option<u64>,
-    #[bttr(title = "File Mapped")]
+    #[bttr(
+        title = "File Mapped",
+        width = 13,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub file_mapped: Option<u64>,
-    #[bttr(title = "File Dirty")]
+    #[bttr(
+        title = "File Dirty",
+        width = 13,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub file_dirty: Option<u64>,
-    #[bttr(title = "File Writeback")]
+    #[bttr(title = "File WB", width = 11, decorator = "convert_bytes($ as f64)")]
     pub file_writeback: Option<u64>,
-    #[bttr(title = "Anon Thp")]
+    #[bttr(title = "Anon THP", width = 11, decorator = "convert_bytes($ as f64)")]
     pub anon_thp: Option<u64>,
-    #[bttr(title = "Inactive Anon")]
+    #[bttr(
+        title = "Inactive Anon",
+        width = 15,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub inactive_anon: Option<u64>,
-    #[bttr(title = "Active Anon")]
+    #[bttr(
+        title = "Active Anon",
+        width = 13,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub active_anon: Option<u64>,
-    #[bttr(title = "Inactive File")]
+    #[bttr(
+        title = "Inactive File",
+        width = 15,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub inactive_file: Option<u64>,
-    #[bttr(title = "Active File")]
+    #[bttr(
+        title = "Active File",
+        width = 13,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub active_file: Option<u64>,
-    #[bttr(title = "Unevictable")]
+    #[bttr(
+        title = "Unevictable",
+        width = 13,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub unevictable: Option<u64>,
-    #[bttr(title = "Slab Reclaimable")]
+    #[bttr(
+        title = "Slab Reclaimable",
+        width = 18,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub slab_reclaimable: Option<u64>,
-    #[bttr(title = "Slab Unreclaimable")]
+    #[bttr(
+        title = "Slab Unreclaimable",
+        width = 20,
+        decorator = "convert_bytes($ as f64)"
+    )]
     pub slab_unreclaimable: Option<u64>,
-    #[bttr(title = "Pgfault")]
+    #[bttr(title = "Pgfault/s", width = 11)]
     pub pgfault: Option<u64>,
-    #[bttr(title = "Pgmajfault")]
+    #[bttr(title = "Pgmajfault/s", width = 15)]
     pub pgmajfault: Option<u64>,
-    #[bttr(title = "Workingset Refault")]
+    #[bttr(title = "Workingset Refault/s", width = 23)]
     pub workingset_refault: Option<u64>,
-    #[bttr(title = "Workingset Activate")]
+    #[bttr(title = "Workingset Activate/s", width = 25)]
     pub workingset_activate: Option<u64>,
-    #[bttr(title = "Workingset Nodereclaim")]
+    #[bttr(title = "Workingset Nodereclaim/s", width = 25)]
     pub workingset_nodereclaim: Option<u64>,
-    #[bttr(title = "Pgrefill")]
+    #[bttr(title = "Pgrefill/s", width = 11)]
     pub pgrefill: Option<u64>,
-    #[bttr(title = "Pgscan")]
+    #[bttr(title = "Pgscan/s", width = 11)]
     pub pgscan: Option<u64>,
-    #[bttr(title = "Pgsteal")]
+    #[bttr(title = "Pgsteal/s", width = 13)]
     pub pgsteal: Option<u64>,
-    #[bttr(title = "Pgactivate")]
+    #[bttr(title = "Pgactivate/s", width = 15)]
     pub pgactivate: Option<u64>,
-    #[bttr(title = "Pgdeactivate")]
+    #[bttr(title = "Pgdeactivate/s", width = 17)]
     pub pgdeactivate: Option<u64>,
-    #[bttr(title = "Pglazyfree")]
+    #[bttr(title = "Pglazyfree/s", width = 15)]
     pub pglazyfree: Option<u64>,
-    #[bttr(title = "Pglazyfreed")]
+    #[bttr(title = "Pglazyfreed/s", width = 18)]
     pub pglazyfreed: Option<u64>,
-    #[bttr(title = "THP Fault Alloc")]
+    #[bttr(title = "THP Fault Alloc/s", width = 18)]
     pub thp_fault_alloc: Option<u64>,
-    #[bttr(title = "THP Collapse Alloc")]
+    #[bttr(title = "THP Collapse Alloc/s", width = 18)]
     pub thp_collapse_alloc: Option<u64>,
-    #[bttr(title = "Memory.High")]
+    #[bttr(
+        title = "Memory.High",
+        width = 18,
+        decorator = "if $ == -1 { \"max\".to_string() } else { convert_bytes($ as f64) }"
+    )]
     pub memory_high: Option<i64>,
 }
 
@@ -484,6 +537,9 @@ pub struct CgroupPressureModel {
     pub cpu_some_pct: Option<f64>,
     #[bttr(
         title = "I/O Some Pressure",
+        width = 18,
+        unit = "%",
+        precision = 2,
         highlight_if = "is_pressure_significant($)"
     )]
     pub io_some_pct: Option<f64>,
@@ -497,6 +553,9 @@ pub struct CgroupPressureModel {
     pub io_full_pct: Option<f64>,
     #[bttr(
         title = "Mem Some Pressure",
+        width = 20,
+        unit = "%",
+        precision = 2,
         highlight_if = "is_pressure_significant($)"
     )]
     pub memory_some_pct: Option<f64>,

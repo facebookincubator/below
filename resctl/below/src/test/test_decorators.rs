@@ -22,8 +22,11 @@ fn highlight_if_function(item: &f64) -> bool {
     *item > 0.0
 }
 
+#[derive(BelowDecor)]
 struct SubField {
+    #[bttr(title = "Field A", width = 7)]
     field_a: Option<f64>,
+    #[bttr(title = "Field B", width = 8)]
     field_b: Option<f64>,
 }
 
@@ -36,6 +39,7 @@ impl SubField {
     }
 }
 
+#[allow(unused)]
 #[derive(BelowDecor)]
 struct TestModel {
     #[bttr(
@@ -48,7 +52,7 @@ struct TestModel {
     )]
     usage_pct: Option<f64>,
     #[bttr(title = "User", unit = "%", width = 7, cmp = true)]
-    #[blink("TestModel$get_usage_pct")]
+    #[blink("SubField$get_field_a")]
     user_pct: Option<f64>,
     #[bttr(
         title = "System",
@@ -67,20 +71,15 @@ struct TestModel {
         width = 7
     )]
     cache_usage: Option<f64>,
-    #[blink("TestModel$get_usage_pct")]
+    #[blink("SubField$get_field_a")]
     loopback: Option<f64>,
-    #[blink("TestModel$get_loopback&")]
+    #[blink("SubField$get_field_b")]
     route: Option<f64>,
     something_else: Option<f64>,
-    #[bttr(
-        title = "Aggr",
-        aggr = "SubField: field_a? + field_b?",
-        cmp = true,
-        width = 5,
-        precision = 2
-    )]
+    #[bttr(title = "Aggr", cmp = true, width = 5, precision = 2)]
+    #[blink("SubField$get_field_a")]
+    #[blink("SubField$get_field_b")]
     pub aggr: Option<f64>,
-    #[bttr(aggr = "SubField: field_a? + field_b?", cmp = true)]
     pub no_show: Option<f64>,
 }
 
@@ -104,31 +103,32 @@ impl TestModel {
 fn test_bdecor_field_function() {
     let mut model = TestModel::new();
     let subfield = SubField::new();
-    assert_eq!(model.get_usage_pct().unwrap(), 12.6);
-    assert_eq!(model.get_system_pct().unwrap(), 2.222);
-    assert_eq!(model.get_cache_usage().unwrap(), 100.0);
+    assert_eq!(model.get_usage_pct_value().unwrap(), 12.6);
+    assert_eq!(model.get_system_pct_value().unwrap(), 2.222);
+    assert_eq!(model.get_cache_usage_value().unwrap(), 100.0);
     assert_eq!(model.get_usage_pct_str_styled().source(), "12.6%  ");
     assert_eq!(model.get_system_pct_str_styled().source(), "2.2%   ");
     assert_eq!(model.get_usage_pct_str(), "12.6%");
     assert_eq!(model.get_system_pct_str(), "2.2%");
-    assert_eq!(TestModel::get_aggr_str_styled(&subfield).source(), "3.30 ");
-    assert_eq!(TestModel::get_aggr_str(&subfield), "3.30");
+    assert_eq!(model.get_aggr_str_styled(&subfield).source(), "3.30 ");
+    assert_eq!(model.get_aggr_str(&subfield), "3.30");
     model.system_pct = None;
     assert_eq!(model.get_system_pct_str_styled().source(), "0.0    ");
     assert_eq!(model.get_cache_usage_str_styled().source(), "  -->10");
-    assert_eq!(model.get_user_pct(&model).unwrap(), 12.6);
-    assert_eq!(model.get_user_pct_str_styled(&model).source(), "12.6%  ");
-    assert_eq!(model.get_loopback_str_styled(&model).source(), "12.6%  ");
-    assert_eq!(model.get_route_str_styled(&model).source(), "12.6%  ");
-    assert_eq!(model.get_loopback_str(&model), "12.6%");
-    assert_eq!(model.get_route_str(&model), "12.6%");
+    assert_eq!(model.get_user_pct_value(&subfield).unwrap(), 1.1);
+    assert_eq!(model.get_user_pct_str_styled(&subfield).source(), "1.1%   ");
+    assert_eq!(model.get_user_pct_str(&subfield), "1.1%");
+    assert_eq!(model.get_loopback_str_styled(&subfield).source(), "1.1    ");
+    assert_eq!(model.get_route_str_styled(&subfield).source(), "2.2     ");
+    assert_eq!(model.get_loopback_str(&subfield), "1.1");
+    assert_eq!(model.get_route_str(&subfield), "2.2");
     assert_eq!(
-        model.get_field_line(&model, &subfield).source(),
-        "12.6%   12.6%   0.0       -->10 12.6%   12.6%   3.30  "
+        model.get_field_line(&subfield).source(),
+        "12.6%   1.1%    0.0       -->10 1.1     2.2      3.30  "
     );
     assert_eq!(
-        model.get_csv_field(&model, &subfield),
-        "12.6%,12.6%,0.0,100 MB,12.6%,12.6%,3.30,"
+        model.get_csv_field(&subfield),
+        "12.6%,1.1%,0.0,100 MB,1.1,2.2,3.30,"
     );
     assert_eq!(model.something_else, Some(0.0));
 }
@@ -164,50 +164,57 @@ fn test_bdecor_field_highlight() {
 #[test]
 fn test_bdecor_title_function() {
     let model = TestModel::new();
-    assert_eq!(model.get_user_pct_title(), "User");
-    assert_eq!(model.get_loopback_title(&model), "Usage");
-    assert_eq!(model.get_route_title(&model), "Usage");
-    assert_eq!(model.get_user_pct_title_styled(), "User   ");
-    assert_eq!(model.get_loopback_title_styled(&model), "Usage  ");
-    assert_eq!(model.get_route_title_styled(&model), "Usage  ");
+    let subfield = SubField::new();
+    assert_eq!(model.get_user_pct_title(&subfield), "User");
+    assert_eq!(model.get_loopback_title(&subfield), "Field A");
+    assert_eq!(model.get_route_title(&subfield), "Field B");
+    assert_eq!(model.get_user_pct_title_styled(&subfield), "User   ");
+    assert_eq!(model.get_loopback_title_styled(&subfield), "Field A");
+    assert_eq!(model.get_route_title_styled(&subfield), "Field B ");
     assert_eq!(
-        model.get_title_line(&model),
-        "Usage   User    System  L1 Cach Usage   Usage   Aggr  "
+        model.get_title_line(&subfield),
+        "Usage   User    System  L1 Cach Field A Field B  Aggr  "
     );
     assert_eq!(
-        model.get_csv_title(&model),
-        "Usage,User,System,L1 Cache,Usage,Usage,Aggr,"
+        model.get_csv_title(&subfield),
+        "Usage,User,System,L1 Cache,Field A,Field B,Aggr,"
     );
 }
 
 #[test]
 fn test_bdecor_cmp_function() {
+    let model = TestModel::new();
     let mut m1 = TestModel::new();
     m1.usage_pct = Some(13.0);
     let mut arr = vec![TestModel::new(), TestModel::new(), m1];
     arr.sort_by(|a, b| {
-        TestModel::cmp_by_usage_pct(a, b)
+        model
+            .cmp_by_usage_pct(a, b)
             .unwrap_or(std::cmp::Ordering::Equal)
             .reverse()
     });
 
-    assert_eq!(arr[0].get_usage_pct().unwrap(), 13.0);
+    assert_eq!(arr[0].get_usage_pct_value().unwrap(), 13.0);
     arr[0].usage_pct = Some(11.0);
-    arr.sort_by(|a, b| TestModel::cmp_by_user_pct(a, b).unwrap_or(std::cmp::Ordering::Equal));
-    assert_eq!(arr[0].get_usage_pct().unwrap(), 11.0);
+    arr.sort_by(|a, b| {
+        model
+            .cmp_by_usage_pct(a, b)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    assert_eq!(arr[0].get_usage_pct_value().unwrap(), 11.0);
 }
 
 #[test]
 fn test_bdecor_interleave() {
     let model = TestModel::new();
     let subfield = SubField::new();
-    let lines = model.get_interleave_line(": ", &model, &subfield);
+    let lines = model.get_interleave_line(": ", &subfield);
     let mut string_lines = String::new();
     for line in lines {
         string_lines += line.source();
         string_lines += "\n";
     }
-    assert_eq!(string_lines, "Usage  : 12.6%  \nUser   : 12.6%  \nSystem : 2.2%   \nL1 Cach:   -->10\nUsage  : 12.6%  \nUsage  : 12.6%  \nAggr : 3.30 \n");
+    assert_eq!(string_lines, "Usage  : 12.6%  \nUser   : 1.1%   \nSystem : 2.2%   \nL1 Cach:   -->10\nField A: 1.1    \nField B : 2.2     \nAggr : 3.30 \n");
 }
 
 #[test]

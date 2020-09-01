@@ -43,7 +43,7 @@ pub struct SingleProcessModel {
     pub pid: Option<i32>,
     #[bttr(title = "Ppid", width = 11)]
     pub ppid: Option<i32>,
-    #[bttr(title = "Comm", width = 12)]
+    #[bttr(title = "Comm", width = 30)]
     pub comm: Option<String>,
     #[bttr(title = "State", width = 11)]
     pub state: Option<procfs::PidState>,

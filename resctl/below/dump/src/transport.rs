@@ -20,199 +20,208 @@ use below_derive::BelowDecor;
 
 #[derive(BelowDecor, Default)]
 pub struct TransportData {
+    #[bttr(dfill_struct = "Transport")]
     #[bttr(
         title = "TcpActiveOpens/s",
-        width = 20,
-        tag = "TransportField::ActiveOpens&"
+        tag = "TransportField::ActiveOpens",
+        class = "TransportField::Tcp"
     )]
     #[blink("NetworkModel$tcp.get_active_opens_per_sec")]
     pub active_opens_per_sec: Option<u64>,
     #[bttr(
         title = "TcpPassiveOpens/s",
-        width = 20,
-        tag = "TransportField::PassiveOpens&"
+        tag = "TransportField::PassiveOpens",
+        class = "TransportField::Tcp"
     )]
     #[blink("NetworkModel$tcp.get_passive_opens_per_sec")]
     pub passive_opens_per_sec: Option<u64>,
     #[bttr(
         title = "TcpAttemptFails/s",
-        width = 20,
-        tag = "TransportField::AttemptFailed&"
+        tag = "TransportField::AttemptFailed",
+        class = "TransportField::Tcp"
     )]
     #[blink("NetworkModel$tcp.get_attempt_fails_per_sec")]
     pub attempt_fails_per_sec: Option<u64>,
     #[bttr(
         title = "TcpEstabResets/s",
-        width = 20,
-        tag = "TransportField::EstabReset&"
+        tag = "TransportField::EstabReset",
+        class = "TransportField::Tcp"
     )]
     #[blink("NetworkModel$tcp.get_estab_resets_per_sec")]
     pub estab_resets_per_sec: Option<u64>,
-    #[bttr(title = "CurEstabConn", width = 20, tag = "TransportField::CurrEstab&")]
+    #[bttr(
+        title = "CurEstabConn",
+        tag = "TransportField::CurrEstab",
+        class = "TransportField::Tcp"
+    )]
     #[blink("NetworkModel$tcp.get_curr_estab_conn")]
     pub curr_estab_conn: Option<u64>,
     #[bttr(
         title = "TcpInSegs/s",
-        unit = " segs",
-        width = 20,
-        tag = "TransportField::InSegs&"
+        tag = "TransportField::InSegs",
+        class = "TransportField::Tcp"
     )]
     #[blink("NetworkModel$tcp.get_in_segs_per_sec")]
     pub in_segs_per_sec: Option<u64>,
     #[bttr(
         title = "TcpOutSegs/s",
-        unit = " segs",
-        width = 20,
-        tag = "TransportField::OutSegs&"
+        tag = "TransportField::OutSegs",
+        class = "TransportField::Tcp"
     )]
     #[blink("NetworkModel$tcp.get_out_segs_per_sec")]
     pub out_segs_per_sec: Option<u64>,
     #[bttr(
         title = "TcpRetransSegs/s",
-        unit = " segs",
-        width = 20,
-        tag = "TransportField::RetransSegsPS&"
+        tag = "TransportField::RetransSegsPS",
+        class = "TransportField::Tcp"
     )]
     #[blink("NetworkModel$tcp.get_retrans_segs_per_sec")]
     pub retrans_segs_per_sec: Option<u64>,
     #[bttr(
         title = "TcpRetransSegs",
-        unit = " segs",
-        width = 20,
-        tag = "TransportField::RetransSegs&"
+        tag = "TransportField::RetransSegs",
+        class = "TransportField::Tcp"
     )]
     #[blink("NetworkModel$tcp.get_retrans_segs")]
     pub retrans_segs: Option<u64>,
-    #[bttr(title = "TcpInErrors", width = 20, tag = "TransportField::TcpInErrs&")]
+    #[bttr(
+        title = "TcpInErrors",
+        tag = "TransportField::TcpInErrs",
+        class = "TransportField::Tcp"
+    )]
     #[blink("NetworkModel$tcp.get_in_errs")]
     pub in_errs: Option<u64>,
-    #[bttr(title = "TcpOutRsts/s", width = 20, tag = "TransportField::OutRsts&")]
+    #[bttr(
+        title = "TcpOutRsts/s",
+        tag = "TransportField::OutRsts",
+        class = "TransportField::Tcp"
+    )]
     #[blink("NetworkModel$tcp.get_out_rsts_per_sec")]
     pub out_rsts_per_sec: Option<u64>,
     #[bttr(
         title = "TcpInCsumErrors",
-        width = 20,
-        tag = "TransportField::InCsumErrs&"
+        tag = "TransportField::InCsumErrs",
+        class = "TransportField::Tcp"
     )]
     #[blink("NetworkModel$tcp.get_in_csum_errors")]
     pub in_csum_errors: Option<u64>,
     #[bttr(
         title = "UdpInPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "TransportField::InDgrms&"
+        tag = "TransportField::InDgrms",
+        class = "TransportField::Udp"
     )]
     #[blink("NetworkModel$udp.get_in_datagrams_pkts_per_sec")]
     pub in_datagrams_pkts_per_sec: Option<u64>,
-    #[bttr(title = "UdpNoPorts", width = 20, tag = "TransportField::NoPorts&")]
+    #[bttr(
+        title = "UdpNoPorts",
+        tag = "TransportField::NoPorts",
+        class = "TransportField::Udp"
+    )]
     #[blink("NetworkModel$udp.get_no_ports")]
     pub no_ports: Option<u64>,
-    #[bttr(title = "UdpInErrs", width = 20, tag = "TransportField::UdpInErrs&")]
+    #[bttr(
+        title = "UdpInErrs",
+        tag = "TransportField::UdpInErrs",
+        class = "TransportField::Udp"
+    )]
     #[blink("NetworkModel$udp.get_in_errors")]
     pub in_errors: Option<u64>,
     #[bttr(
         title = "UdpOutPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "TransportField::OutDgrms&"
+        tag = "TransportField::OutDgrms",
+        class = "TransportField::Udp"
     )]
     #[blink("NetworkModel$udp.get_out_datagrams_pkts_per_sec")]
     pub out_datagrams_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "UdpRcvbufErrs",
-        width = 20,
-        tag = "TransportField::RecvBufErrs&"
+        tag = "TransportField::RecvBufErrs",
+        class = "TransportField::Udp"
     )]
     #[blink("NetworkModel$udp.get_rcvbuf_errors")]
     pub rcvbuf_errors: Option<u64>,
     #[bttr(
         title = "UdpSndBufErrs",
-        width = 20,
-        tag = "TransportField::SndBufErrs&"
+        tag = "TransportField::SndBufErrs",
+        class = "TransportField::Udp"
     )]
     #[blink("NetworkModel$udp.get_sndbuf_errors")]
     pub sndbuf_errors: Option<u64>,
     #[bttr(
         title = "UdpIgnoredMulti",
-        width = 20,
-        tag = "TransportField::IgnoredMulti&"
+        tag = "TransportField::IgnoredMulti",
+        class = "TransportField::Udp"
     )]
     #[blink("NetworkModel$udp.get_ignored_multi")]
     pub ignored_multi: Option<u64>,
     #[bttr(
         title = "Udp6InPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "TransportField::InDgrms6&"
+        tag = "TransportField::InDgrms6",
+        class = "TransportField::Udp6"
     )]
     #[blink("NetworkModel$udp6.get_in_datagrams_pkts_per_sec")]
     pub in_datagrams_pkts_per_sec6: Option<u64>,
-    #[bttr(title = "Udp6NoPorts", width = 20, tag = "TransportField::NoPorts6&")]
+    #[bttr(
+        title = "Udp6NoPorts",
+        tag = "TransportField::NoPorts6",
+        class = "TransportField::Udp6"
+    )]
     #[blink("NetworkModel$udp6.get_no_ports")]
     pub no_ports6: Option<u64>,
-    #[bttr(title = "Udp6InErrs", width = 20, tag = "TransportField::UdpInErrs6&")]
+    #[bttr(
+        title = "Udp6InErrs",
+        tag = "TransportField::UdpInErrs6",
+        class = "TransportField::Udp6"
+    )]
     #[blink("NetworkModel$udp6.get_in_errors")]
     pub in_errors6: Option<u64>,
     #[bttr(
         title = "Udp6OutPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "TransportField::OutDgrms6&"
+        tag = "TransportField::OutDgrms6",
+        class = "TransportField::Udp6"
     )]
     #[blink("NetworkModel$udp6.get_out_datagrams_pkts_per_sec")]
     pub out_datagrams_pkts_per_sec6: Option<u64>,
     #[bttr(
         title = "Udp6RcvbufErrs",
-        width = 20,
-        tag = "TransportField::RecvBufErrs6&"
+        tag = "TransportField::RecvBufErrs6",
+        class = "TransportField::Udp6"
     )]
     #[blink("NetworkModel$udp6.get_rcvbuf_errors")]
     pub rcvbuf_errors6: Option<u64>,
     #[bttr(
         title = "Udp6SndBufErrs",
-        width = 20,
-        tag = "TransportField::SndBufErrs6&"
+        tag = "TransportField::SndBufErrs6",
+        class = "TransportField::Udp6"
     )]
     #[blink("NetworkModel$udp6.get_sndbuf_errors")]
     pub sndbuf_errors6: Option<u64>,
     #[bttr(
         title = "Udp6InCsumErrs",
-        width = 20,
-        tag = "TransportField::InCsumErrs6&"
+        tag = "TransportField::InCsumErrs6",
+        class = "TransportField::Udp6"
     )]
     #[blink("NetworkModel$udp6.get_in_csum_errors")]
     pub in_csum_errors6: Option<u64>,
     #[bttr(
         title = "Udp6IgnoredMulti",
-        width = 20,
-        tag = "TransportField::IgnoredMulti6&"
+        tag = "TransportField::IgnoredMulti6",
+        class = "TransportField::Udp6"
     )]
     #[blink("NetworkModel$udp6.get_ignored_multi")]
     pub ignored_multi6: Option<u64>,
     #[bttr(
         title = "Datetime",
         width = 19,
-        decorator = "translate_datetime($)",
+        decorator = "translate_datetime(&$)",
         tag = "TransportField::Datetime"
     )]
     datetime: i64,
     #[bttr(title = "Timestamp", width = 10, tag = "TransportField::Timestamp")]
     timestamp: i64,
-    #[bttr(
-        class = "TransportField$active_opens_per_sec&,passive_opens_per_sec&,attempt_fails_per_sec&,estab_resets_per_sec&,curr_estab_conn&,in_segs_per_sec&,out_segs_per_sec&,retrans_segs_per_sec&,retrans_segs&,in_errs&,out_rsts_per_sec&,in_csum_errors&"
-    )]
-    pub tcp: AwaysNone,
-    #[bttr(
-        class = "TransportField$in_datagrams_pkts_per_sec&,no_ports&,in_errors&,out_datagrams_pkts_per_sec&,rcvbuf_errors&,sndbuf_errors&,ignored_multi&"
-    )]
-    pub udp: AwaysNone,
-    #[bttr(
-        class = "TransportField$in_datagrams_pkts_per_sec6&,no_ports6&,in_errors6&,out_datagrams_pkts_per_sec6&,rcvbuf_errors6&,sndbuf_errors6&,in_csum_errors6&,ignored_multi6&"
-    )]
-    pub udp6: AwaysNone,
 }
 
-type TitleFtype = Box<dyn Fn(&TransportData, &NetworkModel) -> &'static str>;
+type TitleFtype = Box<dyn Fn(&TransportData, &NetworkModel) -> String>;
 type FieldFtype = Box<dyn Fn(&TransportData, &NetworkModel) -> String>;
 
 pub struct Transport {

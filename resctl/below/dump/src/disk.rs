@@ -20,87 +20,76 @@ use below_derive::BelowDecor;
 
 #[derive(BelowDecor, Default)]
 pub struct DiskData {
-    #[bttr(tag = "DiskField::Name&")]
+    #[bttr(dfill_struct = "Disk")]
+    #[bttr(tag = "DiskField::Name")]
     #[blink("SingleDiskModel$get_name")]
     pub name: Option<String>,
-    #[bttr(tag = "DiskField::TotalBytes&")]
+    #[bttr(tag = "DiskField::TotalBytes")]
     #[blink("SingleDiskModel$get_disk_total_bytes_per_sec")]
     pub disk_total_bytes_per_sec: Option<f64>,
-    #[bttr(tag = "DiskField::ReadBytes&")]
+    #[bttr(tag = "DiskField::ReadBytes", class = "DiskField::Read")]
     #[blink("SingleDiskModel$get_read_bytes_per_sec")]
     pub read_bytes_per_sec: Option<f64>,
-    #[bttr(tag = "DiskField::WriteBytes&")]
+    #[bttr(tag = "DiskField::WriteBytes", class = "DiskField::Write")]
     #[blink("SingleDiskModel$get_write_bytes_per_sec")]
     pub write_bytes_per_sec: Option<f64>,
-    #[bttr(tag = "DiskField::DiscardBytes&")]
+    #[bttr(tag = "DiskField::DiscardBytes", class = "DiskField::Discard")]
     #[blink("SingleDiskModel$get_discard_bytes_per_sec")]
     pub discard_bytes_per_sec: Option<f64>,
-    #[bttr(tag = "DiskField::ReadComplated&")]
+    #[bttr(tag = "DiskField::ReadComplated", class = "DiskField::Read")]
     #[blink("SingleDiskModel$get_read_completed")]
     pub read_completed: Option<u64>,
-    #[bttr(tag = "DiskField::ReadMerged&")]
+    #[bttr(tag = "DiskField::ReadMerged", class = "DiskField::Read")]
     #[blink("SingleDiskModel$get_read_merged")]
     pub read_merged: Option<u64>,
-    #[bttr(tag = "DiskField::ReadSectors&")]
+    #[bttr(tag = "DiskField::ReadSectors", class = "DiskField::Read")]
     #[blink("SingleDiskModel$get_read_sectors")]
     pub read_sectors: Option<u64>,
-    #[bttr(tag = "DiskField::TimeSpendRead&")]
+    #[bttr(tag = "DiskField::TimeSpendRead", class = "DiskField::Read")]
     #[blink("SingleDiskModel$get_time_spend_read_ms")]
     pub time_spend_read_ms: Option<u64>,
-    #[bttr(tag = "DiskField::WriteCompleted&")]
+    #[bttr(tag = "DiskField::WriteCompleted", class = "DiskField::Write")]
     #[blink("SingleDiskModel$get_write_completed")]
     pub write_completed: Option<u64>,
-    #[bttr(tag = "DiskField::WriteMerged&")]
+    #[bttr(tag = "DiskField::WriteMerged", class = "DiskField::Write")]
     #[blink("SingleDiskModel$get_write_merged")]
     pub write_merged: Option<u64>,
-    #[bttr(tag = "DiskField::WriteSectors&")]
+    #[bttr(tag = "DiskField::WriteSectors", class = "DiskField::Write")]
     #[blink("SingleDiskModel$get_write_sectors")]
     pub write_sectors: Option<u64>,
-    #[bttr(tag = "DiskField::TimeSpendWrite&")]
+    #[bttr(tag = "DiskField::TimeSpendWrite", class = "DiskField::Write")]
     #[blink("SingleDiskModel$get_time_spend_write_ms")]
     pub time_spend_write_ms: Option<u64>,
-    #[bttr(tag = "DiskField::DiscardCompleted&")]
+    #[bttr(tag = "DiskField::DiscardCompleted", class = "DiskField::Discard")]
     #[blink("SingleDiskModel$get_discard_completed")]
     pub discard_completed: Option<u64>,
-    #[bttr(tag = "DiskField::DiscardMerged&")]
+    #[bttr(tag = "DiskField::DiscardMerged", class = "DiskField::Discard")]
     #[blink("SingleDiskModel$get_discard_merged")]
     pub discard_merged: Option<u64>,
-    #[bttr(tag = "DiskField::DiscardSectors&")]
+    #[bttr(tag = "DiskField::DiscardSectors", class = "DiskField::Discard")]
     #[blink("SingleDiskModel$get_discard_sectors")]
     pub discard_sectors: Option<u64>,
-    #[bttr(tag = "DiskField::TimeSpendDiscard&")]
+    #[bttr(tag = "DiskField::TimeSpendDiscard", class = "DiskField::Discard")]
     #[blink("SingleDiskModel$get_time_spend_discard_ms")]
     pub time_spend_discard_ms: Option<u64>,
-    #[bttr(tag = "DiskField::Major&")]
+    #[bttr(tag = "DiskField::Major")]
     #[blink("SingleDiskModel$get_major")]
     pub major: Option<u64>,
-    #[bttr(tag = "DiskField::Minor&")]
+    #[bttr(tag = "DiskField::Minor")]
     #[blink("SingleDiskModel$get_minor")]
     pub minor: Option<u64>,
     #[bttr(
         title = "Datetime",
         width = 19,
-        decorator = "translate_datetime($)",
+        decorator = "translate_datetime(&$)",
         tag = "DiskField::Datetime"
     )]
     datetime: i64,
     #[bttr(title = "Timestamp", width = 10, tag = "DiskField::Timestamp")]
     timestamp: i64,
-    #[bttr(
-        class = "DiskField$read_bytes_per_sec&&,read_completed&&,read_merged&&,read_sectors&&,time_spend_read_ms&&"
-    )]
-    pub read: AwaysNone,
-    #[bttr(
-        class = "DiskField$write_bytes_per_sec&&,write_completed&&,write_merged&&,write_sectors&&,time_spend_write_ms&&"
-    )]
-    pub write: AwaysNone,
-    #[bttr(
-        class = "DiskField$discard_bytes_per_sec&&,discard_completed&&,discard_merged&&,discard_sectors&&,time_spend_discard_ms&&"
-    )]
-    pub discard: AwaysNone,
 }
 
-type TitleFtype = Box<dyn Fn(&DiskData, &SingleDiskModel) -> &'static str>;
+type TitleFtype = Box<dyn Fn(&DiskData, &SingleDiskModel) -> String>;
 type FieldFtype = Box<dyn Fn(&DiskData, &SingleDiskModel) -> String>;
 
 pub struct Disk {

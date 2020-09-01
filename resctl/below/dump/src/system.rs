@@ -21,236 +21,397 @@ use below_derive::BelowDecor;
 #[derive(BelowDecor, Default)]
 pub struct SystemData {
     // Syslevel cpu
-    #[bttr(tag = "SysField::Hostname&")]
+    #[bttr(dfill_struct = "System")]
+    #[bttr(tag = "SysField::Hostname")]
     #[blink("SystemModel$get_hostname")]
     pub hostname: String,
-    #[bttr(tag = "SysField::TotalInterruptCt&")]
+    #[bttr(tag = "SysField::TotalInterruptCt", class = "SysField::Stat")]
     #[blink("SystemModel$cpu.get_total_interrupt_ct")]
     pub total_interrupt_ct: Option<i64>,
-    #[bttr(tag = "SysField::ContextSwitches&")]
+    #[bttr(tag = "SysField::ContextSwitches", class = "SysField::Stat")]
     #[blink("SystemModel$cpu.get_context_switches")]
     pub context_switches: Option<i64>,
-    #[bttr(tag = "SysField::BootTimeEpochSecs&")]
+    #[bttr(tag = "SysField::BootTimeEpochSecs", class = "SysField::Stat")]
     #[blink("SystemModel$cpu.get_boot_time_epoch_secs")]
     pub boot_time_epoch_secs: Option<i64>,
-    #[bttr(tag = "SysField::TotalProcs&")]
+    #[bttr(tag = "SysField::TotalProcs", class = "SysField::Stat")]
     #[blink("SystemModel$cpu.get_total_processes")]
     pub total_processes: Option<i64>,
-    #[bttr(tag = "SysField::RunningProcs&")]
+    #[bttr(tag = "SysField::RunningProcs", class = "SysField::Stat")]
     #[blink("SystemModel$cpu.get_running_processes")]
     pub running_processes: Option<i32>,
-    #[bttr(tag = "SysField::BlockedProcs&")]
+    #[bttr(tag = "SysField::BlockedProcs", class = "SysField::Stat")]
     #[blink("SystemModel$cpu.get_blocked_processes")]
     pub blocked_processes: Option<i32>,
     // Cpu
-    #[bttr(tag = "SysField::CpuUsagePct&")]
+    #[bttr(tag = "SysField::CpuUsagePct", class = "SysField::Cpu")]
     #[blink("SystemModel$cpu.total_cpu?.get_usage_pct")]
     pub usage_pct: Option<f64>,
-    #[bttr(tag = "SysField::CpuUserPct&")]
+    #[bttr(tag = "SysField::CpuUserPct", class = "SysField::Cpu")]
     #[blink("SystemModel$cpu.total_cpu?.get_user_pct")]
     pub user_pct: Option<f64>,
-    #[bttr(tag = "SysField::CpuIdlePct&")]
+    #[bttr(
+        tag = "SysField::CpuIdlePct",
+        class = "SysField::Cpu",
+        class_detail = true
+    )]
     #[blink("SystemModel$cpu.total_cpu?.get_idle_pct")]
     pub idle_pct: Option<f64>,
-    #[bttr(tag = "SysField::CpuSystemPct&")]
+    #[bttr(tag = "SysField::CpuSystemPct", class = "SysField::Cpu")]
     #[blink("SystemModel$cpu.total_cpu?.get_system_pct")]
     pub system_pct: Option<f64>,
-    #[bttr(tag = "SysField::CpuNicePct&")]
+    #[bttr(
+        tag = "SysField::CpuNicePct",
+        class = "SysField::Cpu",
+        class_detail = true
+    )]
     #[blink("SystemModel$cpu.total_cpu?.get_nice_pct")]
     pub nice_pct: Option<f64>,
-    #[bttr(tag = "SysField::CpuIowaitPct&")]
+    #[bttr(
+        tag = "SysField::CpuIowaitPct",
+        class = "SysField::Cpu",
+        class_detail = true
+    )]
     #[blink("SystemModel$cpu.total_cpu?.get_iowait_pct")]
     pub iowait_pct: Option<f64>,
-    #[bttr(tag = "SysField::CpuIrq&")]
+    #[bttr(tag = "SysField::CpuIrq", class = "SysField::Cpu", class_detail = true)]
     #[blink("SystemModel$cpu.total_cpu?.get_irq_pct")]
     pub irq_pct: Option<f64>,
-    #[bttr(tag = "SysField::CpuSoftIrq&")]
+    #[bttr(
+        tag = "SysField::CpuSoftIrq",
+        class = "SysField::Cpu",
+        class_detail = true
+    )]
     #[blink("SystemModel$cpu.total_cpu?.get_softirq_pct")]
     pub softirq_pct: Option<f64>,
-    #[bttr(tag = "SysField::CpuStolen&")]
+    #[bttr(
+        tag = "SysField::CpuStolen",
+        class = "SysField::Cpu",
+        class_detail = true
+    )]
     #[blink("SystemModel$cpu.total_cpu?.get_stolen_pct")]
     pub stolen_pct: Option<f64>,
-    #[bttr(tag = "SysField::CpuGuest&")]
+    #[bttr(
+        tag = "SysField::CpuGuest",
+        class = "SysField::Cpu",
+        class_detail = true
+    )]
     #[blink("SystemModel$cpu.total_cpu?.get_guest_pct")]
     pub guest_pct: Option<f64>,
-    #[bttr(tag = "SysField::CpuGuestNice&")]
+    #[bttr(
+        tag = "SysField::CpuGuestNice",
+        class = "SysField::Cpu",
+        class_detail = true
+    )]
     #[blink("SystemModel$cpu.total_cpu?.get_guest_nice_pct")]
     pub guest_nice_pct: Option<f64>,
     // Mem stats
-    #[bttr(tag = "SysField::MemTotal&")]
+    #[bttr(tag = "SysField::MemTotal", class = "SysField::Mem")]
     #[blink("SystemModel$mem.get_total")]
     pub total: Option<u64>,
-    #[bttr(tag = "SysField::MemFree&")]
+    #[bttr(tag = "SysField::MemFree", class = "SysField::Mem")]
     #[blink("SystemModel$mem.get_free")]
     pub free: Option<u64>,
-    #[bttr(tag = "SysField::MemAvailable&")]
+    #[bttr(
+        tag = "SysField::MemAvailable",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_available")]
     pub available: Option<u64>,
-    #[bttr(tag = "SysField::MemBuffers&")]
+    #[bttr(
+        tag = "SysField::MemBuffers",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_buffers")]
     pub buffers: Option<u64>,
-    #[bttr(tag = "SysField::MemCached&")]
+    #[bttr(
+        tag = "SysField::MemCached",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_cached")]
     pub cached: Option<u64>,
-    #[bttr(tag = "SysField::MemSwapCached&")]
+    #[bttr(
+        tag = "SysField::MemSwapCached",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_swap_cached")]
     pub swap_cached: Option<u64>,
-    #[bttr(tag = "SysField::MemActive&")]
+    #[bttr(
+        tag = "SysField::MemActive",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_active")]
     pub active: Option<u64>,
-    #[bttr(tag = "SysField::MemInactive&")]
+    #[bttr(
+        tag = "SysField::MemInactive",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_inactive")]
     pub inactive: Option<u64>,
-    #[bttr(tag = "SysField::MemAnon&")]
+    #[bttr(
+        tag = "SysField::MemAnon",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_anon")]
     pub anon: Option<u64>,
-    #[bttr(tag = "SysField::MemFile&")]
+    #[bttr(
+        tag = "SysField::MemFile",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_file")]
     pub file: Option<u64>,
-    #[bttr(tag = "SysField::MemUnevictable&")]
+    #[bttr(
+        tag = "SysField::MemUnevictable",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_unevictable")]
     pub unevictable: Option<u64>,
-    #[bttr(tag = "SysField::MemMlocked&")]
+    #[bttr(
+        tag = "SysField::MemMlocked",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_mlocked")]
     pub mlocked: Option<u64>,
-    #[bttr(tag = "SysField::MemSwapTotal&")]
+    #[bttr(
+        tag = "SysField::MemSwapTotal",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_swap_total")]
     pub swap_total: Option<u64>,
-    #[bttr(tag = "SysField::MemSwapFree&")]
+    #[bttr(
+        tag = "SysField::MemSwapFree",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_swap_free")]
     pub swap_free: Option<u64>,
-    #[bttr(tag = "SysField::MemDirty&")]
+    #[bttr(
+        tag = "SysField::MemDirty",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_dirty")]
     pub dirty: Option<u64>,
-    #[bttr(tag = "SysField::MemWriteback&")]
+    #[bttr(
+        tag = "SysField::MemWriteback",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_writeback")]
     pub writeback: Option<u64>,
-    #[bttr(tag = "SysField::MemAnonPages&")]
+    #[bttr(
+        tag = "SysField::MemAnonPages",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_anon_pages")]
     pub anon_pages: Option<u64>,
-    #[bttr(tag = "SysField::MemMapped&")]
+    #[bttr(
+        tag = "SysField::MemMapped",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_mapped")]
     pub mapped: Option<u64>,
-    #[bttr(tag = "SysField::MemShmem&")]
+    #[bttr(
+        tag = "SysField::MemShmem",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_shmem")]
     pub shmem: Option<u64>,
-    #[bttr(tag = "SysField::MemKreclaimable&")]
+    #[bttr(
+        tag = "SysField::MemKreclaimable",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_kreclaimable")]
     pub kreclaimable: Option<u64>,
-    #[bttr(tag = "SysField::MemSlab&")]
+    #[bttr(
+        tag = "SysField::MemSlab",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_slab")]
     pub slab: Option<u64>,
-    #[bttr(tag = "SysField::MemSlabReclaimable&")]
+    #[bttr(
+        tag = "SysField::MemSlabReclaimable",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_slab_reclaimable")]
     pub slab_reclaimable: Option<u64>,
-    #[bttr(tag = "SysField::MemSlabUnreclaimable&")]
+    #[bttr(
+        tag = "SysField::MemSlabUnreclaimable",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_slab_unreclaimable")]
     pub slab_unreclaimable: Option<u64>,
-    #[bttr(tag = "SysField::MemKernelStack&")]
+    #[bttr(
+        tag = "SysField::MemKernelStack",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_kernel_stack")]
     pub kernel_stack: Option<u64>,
-    #[bttr(tag = "SysField::MemPageTables&")]
+    #[bttr(
+        tag = "SysField::MemPageTables",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_page_tables")]
     pub page_tables: Option<u64>,
-    #[bttr(tag = "SysField::MemAnonHugePages&")]
+    #[bttr(
+        tag = "SysField::MemAnonHugePages",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_anon_huge_pages_bytes")]
     pub anon_huge_pages_bytes: Option<u64>,
-    #[bttr(tag = "SysField::MemShmemHugePages&")]
+    #[bttr(
+        tag = "SysField::MemShmemHugePages",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_shmem_huge_pages_bytes")]
     pub shmem_huge_pages_bytes: Option<u64>,
-    #[bttr(tag = "SysField::MemFileHugePages&")]
+    #[bttr(
+        tag = "SysField::MemFileHugePages",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_file_huge_pages_bytes")]
     pub file_huge_pages_bytes: Option<u64>,
-    #[bttr(tag = "SysField::MemTotalHugePages&")]
+    #[bttr(
+        tag = "SysField::MemTotalHugePages",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_total_huge_pages_bytes")]
     pub total_huge_pages_bytes: Option<u64>,
-    #[bttr(tag = "SysField::MemFreeHugePages&")]
+    #[bttr(
+        tag = "SysField::MemFreeHugePages",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_free_huge_pages_bytes")]
     pub free_huge_pages_bytes: Option<u64>,
-    #[bttr(tag = "SysField::MemHugePageSize&")]
+    #[bttr(
+        tag = "SysField::MemHugePageSize",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_huge_page_size")]
     pub huge_page_size: Option<u64>,
-    #[bttr(tag = "SysField::MemCmaTotal&")]
+    #[bttr(
+        tag = "SysField::MemCmaTotal",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_cma_total")]
     pub cma_total: Option<u64>,
-    #[bttr(tag = "SysField::MemCmaFree&")]
+    #[bttr(
+        tag = "SysField::MemCmaFree",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_cma_free")]
     pub cma_free: Option<u64>,
-    #[bttr(tag = "SysField::MemVmallocTotal&")]
+    #[bttr(
+        tag = "SysField::MemVmallocTotal",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_vmalloc_total")]
     pub vmalloc_total: Option<u64>,
-    #[bttr(tag = "SysField::MemVmallocUsed&")]
+    #[bttr(
+        tag = "SysField::MemVmallocUsed",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_vmalloc_used")]
     pub vmalloc_used: Option<u64>,
-    #[bttr(tag = "SysField::MemVmallocChunk&")]
+    #[bttr(
+        tag = "SysField::MemVmallocChunk",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_vmalloc_chunk")]
     pub vmalloc_chunk: Option<u64>,
-    #[bttr(tag = "SysField::MemDirectMap4k&")]
+    #[bttr(
+        tag = "SysField::MemDirectMap4k",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_direct_map_4k")]
     pub direct_map_4k: Option<u64>,
-    #[bttr(tag = "SysField::MemDirectMap2m&")]
+    #[bttr(
+        tag = "SysField::MemDirectMap2m",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_direct_map_2m")]
     pub direct_map_2m: Option<u64>,
-    #[bttr(tag = "SysField::MemDirectMap1g&")]
+    #[bttr(
+        tag = "SysField::MemDirectMap1g",
+        class = "SysField::Mem",
+        class_detail = true
+    )]
     #[blink("SystemModel$mem.get_direct_map_1g")]
     pub direct_map_1g: Option<u64>,
     // vm stats
-    #[bttr(tag = "SysField::VmPgpgin&")]
+    #[bttr(tag = "SysField::VmPgpgin", class = "SysField::Vm")]
     #[blink("SystemModel$vm.get_pgpgin_per_sec")]
     pub pgpgin_per_sec: Option<f64>,
-    #[bttr(tag = "SysField::VmPgpgout&")]
+    #[bttr(tag = "SysField::VmPgpgout", class = "SysField::Vm")]
     #[blink("SystemModel$vm.get_pgpgout_per_sec")]
     pub pgpgout_per_sec: Option<f64>,
-    #[bttr(tag = "SysField::VmPswpin&")]
+    #[bttr(tag = "SysField::VmPswpin", class = "SysField::Vm")]
     #[blink("SystemModel$vm.get_pswpin_per_sec")]
     pub pswpin_per_sec: Option<f64>,
-    #[bttr(tag = "SysField::VmPswpout&")]
+    #[bttr(tag = "SysField::VmPswpout", class = "SysField::Vm")]
     #[blink("SystemModel$vm.get_pswpout_per_sec")]
     pub pswpout_per_sec: Option<f64>,
-    #[bttr(tag = "SysField::VmPstealKswapd&")]
+    #[bttr(tag = "SysField::VmPstealKswapd", class = "SysField::Vm")]
     #[blink("SystemModel$vm.get_pgsteal_kswapd")]
     pub pgsteal_kswapd: Option<u64>,
-    #[bttr(tag = "SysField::VmPstealDirect&")]
+    #[bttr(tag = "SysField::VmPstealDirect", class = "SysField::Vm")]
     #[blink("SystemModel$vm.get_pgsteal_direct")]
     pub pgsteal_direct: Option<u64>,
-    #[bttr(tag = "SysField::VmPscanKswapd&")]
+    #[bttr(tag = "SysField::VmPscanKswapd", class = "SysField::Vm")]
     #[blink("SystemModel$vm.get_pgscan_kswapd")]
     pub pgscan_kswapd: Option<u64>,
-    #[bttr(tag = "SysField::VmPscanDirect&")]
+    #[bttr(tag = "SysField::VmPscanDirect", class = "SysField::Vm")]
     #[blink("SystemModel$vm.get_pgscan_direct")]
     pub pgscan_direct: Option<u64>,
-    #[bttr(tag = "SysField::VmOomKill&")]
+    #[bttr(tag = "SysField::VmOomKill", class = "SysField::Vm")]
     #[blink("SystemModel$vm.get_oom_kill")]
     pub oom_kill: Option<u64>,
     // time and aggr
     #[bttr(
         title = "Datetime",
         width = 19,
-        decorator = "translate_datetime($)",
+        decorator = "translate_datetime(&$)",
         tag = "SysField::Datetime"
     )]
     datetime: i64,
     #[bttr(title = "Timestamp", width = 10, tag = "SysField::Timestamp")]
     timestamp: i64,
-    #[bttr(
-        class = "SysField$total_interrupt_ct&&,context_switches&&,boot_time_epoch_secs&&,total_processes&&,running_processes&&,blocked_processes&&"
-    )]
-    pub stat: AwaysNone,
-    #[bttr(
-        class = "SysField$usage_pct&&,user_pct&&,system_pct&&:idle_pct&&,nice_pct&&,iowait_pct&&,irq_pct&&,softirq_pct&&,stolen_pct&&,guest_pct&&,guest_nice_pct&&"
-    )]
-    pub cpu: AwaysNone,
-    #[bttr(
-        class = "SysField$total&&,free&&:available&&,buffers&&,cached&&,swap_cached&&,active&&,inactive&&,anon&&,file&&,unevictable&&,mlocked&&,swap_total&&,swap_free&&,dirty&&,writeback&&,anon_pages&&,mapped&&,shmem&&,kreclaimable&&,slab&&,slab_reclaimable&&,slab_unreclaimable&&,kernel_stack&&,page_tables&&,anon_huge_pages_bytes&&,shmem_huge_pages_bytes&&,file_huge_pages_bytes&&,total_huge_pages_bytes&&,free_huge_pages_bytes&&,huge_page_size&&,cma_total&&,cma_free&&,vmalloc_total&&,vmalloc_used&&,vmalloc_chunk&&,direct_map_4k&&,direct_map_2m&&,direct_map_1g&&"
-    )]
-    pub mem: AwaysNone,
-    #[bttr(
-        class = "SysField$pgpgin_per_sec&&,pgpgout_per_sec&&,pswpin_per_sec&&,pswpout_per_sec&&,pgsteal_kswapd&&,pgsteal_direct&&,pgscan_kswapd&&,pgscan_direct&&,oom_kill&&"
-    )]
-    pub vm: AwaysNone,
 }
 
-type TitleFtype = Box<dyn Fn(&SystemData, &SystemModel) -> &'static str>;
+type TitleFtype = Box<dyn Fn(&SystemData, &SystemModel) -> String>;
 type FieldFtype = Box<dyn Fn(&SystemData, &SystemModel) -> String>;
 
 pub struct System {

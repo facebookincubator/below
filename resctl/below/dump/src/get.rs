@@ -24,7 +24,7 @@ macro_rules! make_dget {
         impl Dget for $name {
             fn get_title_fns(
                 & self,
-            ) -> & Vec<Box<dyn Fn(&Self::DataType, &Self::Model) -> &'static str>> {
+            ) -> & Vec<Box<dyn Fn(&Self::DataType, &Self::Model) -> String>> {
                 &self.title_fns
             }
 
@@ -70,7 +70,7 @@ pub trait Dget
 where
     Self: DumpType,
 {
-    fn get_title_fns(&self) -> &Vec<Box<dyn Fn(&Self::DataType, &Self::Model) -> &'static str>>;
+    fn get_title_fns(&self) -> &Vec<Box<dyn Fn(&Self::DataType, &Self::Model) -> String>>;
     fn get_field_fns(&self) -> &Vec<Box<dyn Fn(&Self::DataType, &Self::Model) -> String>>;
     fn get_data(&self) -> &Self::DataType;
     fn get_time_end(&self) -> &SystemTime;

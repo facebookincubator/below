@@ -1,4 +1,3 @@
-#![allow(unused)]
 // Copyright (c) Facebook, Inc. and its affiliates.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +13,7 @@
 // limitations under the License.
 
 use crate::*;
-use attr_new::*;
+use attr::*;
 use field::*;
 use function::Function;
 use std::collections::BTreeMap;

@@ -393,15 +393,15 @@ impl Function {
         let value = quote! {
             {let value = if let Some(p) = precision {
                 if let Some(decor_fn) = decorator {
-                    format!("{:.precision$}", decor_fn(v), precision = p)
+                    format!("{:.precision$}", decor_fn(v.clone()), precision = p)
                 } else {
-                    format!("{:.precision$}", #decor_value(v), precision = p)
+                    format!("{:.precision$}", #decor_value(v.clone()), precision = p)
                 }
             } else {
                 if let Some(decor_fn) = decorator {
-                    format!("{}", decor_fn(v))
+                    format!("{}", decor_fn(v.clone()))
                 } else {
-                    format!("{}", #decor_value(v))
+                    format!("{}", #decor_value(v.clone()))
                 }
             };
 
@@ -428,6 +428,7 @@ impl Function {
                 {
                     let precision = precision.map_or(#precision, |p| Some(p));
                     if let Some(v) = #get_fn {
+
                         (#value, if let Some(hif_fn) = highlight_if {
                             hif_fn(v)
                         } else {
@@ -443,7 +444,7 @@ impl Function {
                 pub fn #fn_name<P, Q> (
                     &self,
                     decorator: Option<P>,
-                    highlight_if: Option<P, Q>,
+                    highlight_if: Option<Q>,
                     unit: Option<&str>,
                     precision: Option<usize>,
                     #args

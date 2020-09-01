@@ -20,294 +20,278 @@ use below_derive::BelowDecor;
 
 #[derive(BelowDecor, Default)]
 pub struct NetworkData {
+    #[bttr(dfill_struct = "Network")]
     #[bttr(
         title = "IpForwPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::ForwPkts&"
+        tag = "NetworkField::ForwPkts",
+        class = "NetworkField::Ip"
     )]
     #[blink("NetworkModel$ip.get_forwarding_pkts_per_sec")]
     pub forwarding_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "IpInPkts/s",
-        unit = " pkts",
-        width = 2,
-        tag = "NetworkField::InRecvPkts&"
+        tag = "NetworkField::InRecvPkts",
+        class = "NetworkField::Ip"
     )]
     #[blink("NetworkModel$ip.get_in_receives_pkts_per_sec")]
     pub in_receives_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "IpForwDatagrams/s",
-        width = 20,
-        tag = "NetworkField::ForwDgrm&"
+        tag = "NetworkField::ForwDgrm",
+        class = "NetworkField::Ip"
     )]
     #[blink("NetworkModel$ip.get_forw_datagrams_per_sec")]
     pub forw_datagrams_per_sec: Option<u64>,
     #[bttr(
         title = "IpInDiscardPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::InDiscards&"
+        tag = "NetworkField::InDiscards",
+        class = "NetworkField::Ip"
     )]
     #[blink("NetworkModel$ip.get_in_discards_pkts_per_sec")]
     pub in_discards_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "IpInDeliversPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::InDelivers&"
+        tag = "NetworkField::InDelivers",
+        class = "NetworkField::Ip"
     )]
     #[blink("NetworkModel$ip.get_in_delivers_pkts_per_sec")]
     pub in_delivers_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "IpOutReqs/s",
-        unit = " reqs",
-        width = 20,
-        tag = "NetworkField::OutRequests&"
+        tag = "NetworkField::OutRequests",
+        class = "NetworkField::Ip"
     )]
     #[blink("NetworkModel$ip.get_out_requests_per_sec")]
     pub out_requests_per_sec: Option<u64>,
     #[bttr(
         title = "IpOutDiscardPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::OutDiscards&"
+        tag = "NetworkField::OutDiscards",
+        class = "NetworkField::Ip"
     )]
     #[blink("NetworkModel$ip.get_out_discards_pkts_per_sec")]
     pub out_discards_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "IpOutNoRoutesPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::OutNoRoutes&"
+        tag = "NetworkField::OutNoRoutes",
+        class = "NetworkField::Ip"
     )]
     #[blink("NetworkModel$ip.get_out_no_routes_pkts_per_sec")]
     pub out_no_routes_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "IpInMcastPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::InMcast&"
+        tag = "NetworkField::InMcast",
+        class = "NetworkField::Ip"
     )]
     #[blink("NetworkModel$ip_ext.get_in_mcast_pkts_per_sec")]
     pub in_mcast_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "IpOutMcastPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::OutMcast&"
+        tag = "NetworkField::OutMcast",
+        class = "NetworkField::Ip"
     )]
     #[blink("NetworkModel$ip_ext.get_out_mcast_pkts_per_sec")]
     pub out_mcast_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "IpInBcastPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::InBcast&"
+        tag = "NetworkField::InBcast",
+        class = "NetworkField::Ip"
     )]
     #[blink("NetworkModel$ip_ext.get_in_bcast_pkts_per_sec")]
     pub in_bcast_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "IpOutBcastPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::OutBcast&"
+        tag = "NetworkField::OutBcast",
+        class = "NetworkField::Ip"
     )]
     #[blink("NetworkModel$ip_ext.get_out_bcast_pkts_per_sec")]
     pub out_bcast_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "Ip6InPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::InRecvPkts6&"
+        tag = "NetworkField::InRecvPkts6",
+        class = "NetworkField::Ip6"
     )]
     #[blink("NetworkModel$ip6.get_in_receives_pkts_per_sec")]
     pub in_receives_pkts_per_sec6: Option<u64>,
-    #[bttr(title = "Ip6InHdrErrs", width = 20, tag = "NetworkField::InHdrErr6&")]
+    #[bttr(
+        title = "Ip6InHdrErrs",
+        tag = "NetworkField::InHdrErr6",
+        class = "NetworkField::Ip6"
+    )]
     #[blink("NetworkModel$ip6.get_in_hdr_errors")]
     pub in_hdr_errors6: Option<u64>,
     #[bttr(
         title = "Ip6InNoRoutesPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::InNoRoutes6&"
+        tag = "NetworkField::InNoRoutes6",
+        class = "NetworkField::Ip6"
     )]
     #[blink("NetworkModel$ip6.get_in_no_routes_pkts_per_sec")]
     pub in_no_routes_pkts_per_sec6: Option<u64>,
-    #[bttr(title = "Ip6InAddrErrs", width = 20, tag = "NetworkField::InAddrErr6&")]
+    #[bttr(
+        title = "Ip6InAddrErrs",
+        tag = "NetworkField::InAddrErr6",
+        class = "NetworkField::Ip6"
+    )]
     #[blink("NetworkModel$ip6.get_in_addr_errors")]
     pub in_addr_errors6: Option<u64>,
     #[bttr(
         title = "Ip6InDiscardsPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::InDiscards6&"
+        tag = "NetworkField::InDiscards6",
+        class = "NetworkField::Ip6"
     )]
     #[blink("NetworkModel$ip6.get_in_discards_pkts_per_sec")]
     pub in_discards_pkts_per_sec6: Option<u64>,
     #[bttr(
         title = "Ip6InDeliversPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::InDelivers6&"
+        tag = "NetworkField::InDelivers6",
+        class = "NetworkField::Ip6"
     )]
     #[blink("NetworkModel$ip6.get_in_delivers_pkts_per_sec")]
     pub in_delivers_pkts_per_sec6: Option<u64>,
     #[bttr(
         title = "Ip6ForwDatagrams/s",
-        width = 20,
-        tag = "NetworkField::ForwDgrm6&"
+        tag = "NetworkField::ForwDgrm6",
+        class = "NetworkField::Ip6"
     )]
     #[blink("NetworkModel$ip6.get_out_forw_datagrams_per_sec")]
     pub out_forw_datagrams_per_sec6: Option<u64>,
     #[bttr(
         title = "Ip6OutReqs/s",
-        unit = " reqs",
-        width = 20,
-        tag = "NetworkField::OutRequests6&"
+        tag = "NetworkField::OutRequests6",
+        class = "NetworkField::Ip6"
     )]
     #[blink("NetworkModel$ip6.get_out_requests_per_sec")]
     pub out_requests_per_sec6: Option<u64>,
     #[bttr(
         title = "Ip6OutNoRoutesPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::OutNoRoutes6&"
+        tag = "NetworkField::OutNoRoutes6",
+        class = "NetworkField::Ip6"
     )]
     #[blink("NetworkModel$ip6.get_out_no_routes_pkts_per_sec")]
     pub out_no_routes_pkts_per_sec6: Option<u64>,
     #[bttr(
         title = "Ip6InMcastPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::InMcast6&"
+        tag = "NetworkField::InMcast6",
+        class = "NetworkField::Ip6"
     )]
     #[blink("NetworkModel$ip6.get_in_mcast_pkts_per_sec")]
     pub in_mcast_pkts_per_sec6: Option<u64>,
     #[bttr(
         title = "Ip6OutMcastPkts/s",
-        unit = " pkts",
-        width = 20,
-        tag = "NetworkField::OutMcast6&"
+        tag = "NetworkField::OutMcast6",
+        class = "NetworkField::Ip6"
     )]
     #[blink("NetworkModel$ip6.get_out_mcast_pkts_per_sec")]
     pub out_mcast_pkts_per_sec6: Option<u64>,
     #[bttr(
         title = "Ip6InBcastOctets/s",
-        unit = " octets",
-        width = 20,
-        tag = "NetworkField::InBcast6&"
+        tag = "NetworkField::InBcast6",
+        class = "NetworkField::Ip6"
     )]
     #[blink("NetworkModel$ip6.get_in_bcast_octets_per_sec")]
     pub in_bcast_octets_per_sec6: Option<u64>,
     #[bttr(
         title = "Ip6OutBcastOctets/s",
-        unit = " octets",
-        width = 20,
-        tag = "NetworkField::OutBcast6&"
+        tag = "NetworkField::OutBcast6",
+        class = "NetworkField::Ip6"
     )]
     #[blink("NetworkModel$ip6.get_out_bcast_octets_per_sec")]
     pub out_bcast_octets_per_sec6: Option<u64>,
     #[bttr(
         title = "IcmpInMsg/s",
-        unit = " msgs",
-        width = 20,
-        tag = "NetworkField::InMsg&"
+        tag = "NetworkField::InMsg",
+        class = "NetworkField::Ip6"
     )]
     #[blink("NetworkModel$icmp.get_in_msgs_per_sec")]
     pub in_msgs_per_sec: Option<u64>,
-    #[bttr(title = "IcmpInErrs", width = 20, tag = "NetworkField::InErrs&")]
+    #[bttr(
+        title = "IcmpInErrs",
+        tag = "NetworkField::InErrs",
+        class = "NetworkField::Icmp"
+    )]
     #[blink("NetworkModel$icmp.get_in_errors")]
     pub in_errors: Option<u64>,
     #[bttr(
         title = "IcmpInDestUnreachs",
-        width = 20,
-        tag = "NetworkField::InDestUnreachs&"
+        tag = "NetworkField::InDestUnreachs",
+        class = "NetworkField::Icmp"
     )]
     #[blink("NetworkModel$icmp.get_in_dest_unreachs")]
     pub in_dest_unreachs: Option<u64>,
     #[bttr(
         title = "IcmpOutMsg/s",
-        unit = " msgs",
-        width = 20,
-        tag = "NetworkField::OutMsg&"
+        tag = "NetworkField::OutMsg",
+        class = "NetworkField::Icmp"
     )]
     #[blink("NetworkModel$icmp.get_out_msgs_per_sec")]
     pub out_msgs_per_sec: Option<u64>,
-    #[bttr(title = "IcmpOutErrs", width = 20, tag = "NetworkField::OutErrs&")]
+    #[bttr(
+        title = "IcmpOutErrs",
+        tag = "NetworkField::OutErrs",
+        class = "NetworkField::Icmp"
+    )]
     #[blink("NetworkModel$icmp.get_out_errors")]
     pub out_errors: Option<u64>,
     #[bttr(
         title = "IcmpOutDestUnreachs",
-        width = 20,
-        tag = "NetworkField::OutDestUnreachs&"
+        tag = "NetworkField::OutDestUnreachs",
+        class = "NetworkField::Icmp"
     )]
     #[blink("NetworkModel$icmp.get_out_dest_unreachs")]
     pub out_dest_unreachs: Option<u64>,
     #[bttr(
         title = "Icmp6InMsg/s",
-        unit = " msgs",
-        width = 20,
-        tag = "NetworkField::InMsg6&"
+        tag = "NetworkField::InMsg6",
+        class = "NetworkField::Icmp6"
     )]
     #[blink("NetworkModel$icmp6.get_in_msgs_per_sec")]
     pub in_msgs_per_sec6: Option<u64>,
-    #[bttr(title = "Icmp6InErrs", width = 20, tag = "NetworkField::InErrs6&")]
+    #[bttr(
+        title = "Icmp6InErrs",
+        tag = "NetworkField::InErrs6",
+        class = "NetworkField::Icmp6"
+    )]
     #[blink("NetworkModel$icmp6.get_in_errors")]
     pub in_errors6: Option<u64>,
     #[bttr(
         title = "Icmp6InDestUnreachs",
-        width = 20,
-        tag = "NetworkField::InDestUnreachs6&"
+        tag = "NetworkField::InDestUnreachs6",
+        class = "NetworkField::Icmp6"
     )]
     #[blink("NetworkModel$icmp6.get_in_dest_unreachs")]
     pub in_dest_unreachs6: Option<u64>,
     #[bttr(
         title = "Icmp6OutMsg/s",
-        unit = " msgs",
-        width = 20,
-        tag = "NetworkField::OutMsg6&"
+        tag = "NetworkField::OutMsg6",
+        class = "NetworkField::Icmp6"
     )]
     #[blink("NetworkModel$icmp6.get_out_msgs_per_sec")]
     pub out_msgs_per_sec6: Option<u64>,
-    #[bttr(title = "Icmp6OutErrs", width = 20, tag = "NetworkField::OutErrs6&")]
+    #[bttr(
+        title = "Icmp6OutErrs",
+        tag = "NetworkField::OutErrs6",
+        class = "NetworkField::Icmp6"
+    )]
     #[blink("NetworkModel$icmp6.get_out_errors")]
     pub out_errors6: Option<u64>,
     #[bttr(
         title = "Icmp6OutDestUnreachs",
-        width = 20,
-        tag = "NetworkField::OutDestUnreachs6&"
+        tag = "NetworkField::OutDestUnreachs6",
+        class = "NetworkField::Icmp6"
     )]
     #[blink("NetworkModel$icmp6.get_out_dest_unreachs")]
     pub out_dest_unreachs6: Option<u64>,
     #[bttr(
         title = "Datetime",
         width = 19,
-        decorator = "translate_datetime($)",
+        decorator = "translate_datetime(&$)",
         tag = "NetworkField::Datetime"
     )]
     datetime: i64,
     #[bttr(title = "Timestamp", width = 10, tag = "NetworkField::Timestamp")]
     timestamp: i64,
-    #[bttr(
-        class = "NetworkField$forwarding_pkts_per_sec&,in_receives_pkts_per_sec&,forw_datagrams_per_sec&,in_discards_pkts_per_sec&,in_delivers_pkts_per_sec&,out_requests_per_sec&,out_discards_pkts_per_sec&,out_no_routes_pkts_per_sec&,in_mcast_pkts_per_sec&,out_mcast_pkts_per_sec&,in_bcast_pkts_per_sec&,out_bcast_pkts_per_sec&"
-    )]
-    pub ip: AwaysNone,
-    #[bttr(
-        class = "NetworkField$in_receives_pkts_per_sec6&,in_hdr_errors6&,in_no_routes_pkts_per_sec6&,in_addr_errors6&,in_discards_pkts_per_sec6&,in_delivers_pkts_per_sec6&,out_forw_datagrams_per_sec6&,out_requests_per_sec6&,out_no_routes_pkts_per_sec6&,in_mcast_pkts_per_sec6&,out_mcast_pkts_per_sec6&,in_bcast_octets_per_sec6&,out_bcast_octets_per_sec6&"
-    )]
-    pub ip6: AwaysNone,
-    #[bttr(
-        class = "NetworkField$in_msgs_per_sec&,in_errors&,in_dest_unreachs&,out_msgs_per_sec&,out_errors&,out_dest_unreachs&"
-    )]
-    pub icmp: AwaysNone,
-    #[bttr(
-        class = "NetworkField$in_msgs_per_sec6&,in_errors6&,in_dest_unreachs6&,out_msgs_per_sec6&,out_errors6&,out_dest_unreachs6&"
-    )]
-    pub icmp6: AwaysNone,
 }
 
-type TitleFtype = Box<dyn Fn(&NetworkData, &NetworkModel) -> &'static str>;
+type TitleFtype = Box<dyn Fn(&NetworkData, &NetworkModel) -> String>;
 type FieldFtype = Box<dyn Fn(&NetworkData, &NetworkModel) -> String>;
 
 pub struct Network {

@@ -12,37 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BelowViewAttr {
     pub depth: Option<proc_macro2::TokenStream>,
     pub unit: Option<String>,
     pub prefix: Option<proc_macro2::TokenStream>,
     pub width: Option<usize>,
     pub title_width: Option<usize>,
-    pub title_depth: Option<usize>,
-    pub title_prefix: Option<String>,
     pub none_mark: String,
     pub decorator: Option<String>,
     pub precision: Option<usize>,
     pub highlight_if: Option<String>,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct BelowFieldAttr {
     pub title: Option<String>,
-    pub link: Option<String>,
-    pub aggr: Option<String>,
+    pub link: Vec<String>,
     pub tag: Option<String>,
     pub sort_tag: Option<String>,
+    pub class: Option<String>,
     pub no_show: bool,
     pub cmp: bool,
+    pub gen: bool,
+    pub class_detail: bool,
+    pub dfill_struct: Option<String>,
 }
 
 #[derive(Default, Debug)]
 pub struct BelowAttr {
     pub view: Option<BelowViewAttr>,
     pub field: Option<BelowFieldAttr>,
-    pub class: Option<String>,
 }
 
 impl std::default::Default for BelowViewAttr {
@@ -53,8 +53,6 @@ impl std::default::Default for BelowViewAttr {
             prefix: None,
             width: None,
             title_width: None,
-            title_depth: None,
-            title_prefix: None,
             none_mark: "?".into(),
             decorator: None,
             precision: None,
@@ -93,7 +91,7 @@ pub fn parse_attribute(attrs: &[syn::Attribute], field_name: &syn::Ident) -> Bel
                     match n_meta {
                         syn::NestedMeta::Lit(syn::Lit::Str(ls)) => {
                             field_flag = true;
-                            bfttr.link = Some(ls.value());
+                            bfttr.link.push(ls.value());
                         }
                         _ => unimplemented!("{}: blink value has to be a string", field_name),
                     }
@@ -136,24 +134,23 @@ pub fn parse_attribute(attrs: &[syn::Attribute], field_name: &syn::Ident) -> Bel
                     };
                     bfttr.cmp = true;
                 }
-                "aggr" => {
-                    field_flag = true;
-                    bfttr.aggr = match &nv.lit {
-                        syn::Lit::Str(ls) => Some(ls.value()),
-                        _ => unimplemented!("{}: aggr has to be a string", field_name),
-                    }
-                }
                 "tag" => {
                     field_flag = true;
                     bfttr.tag = match &nv.lit {
                         syn::Lit::Str(ls) => Some(ls.value()),
                         _ => unimplemented!("{}: tag has to be a string", field_name),
-                    }
+                    };
                 }
                 "class" => {
-                    bttr.class = match &nv.lit {
+                    bfttr.class = match &nv.lit {
                         syn::Lit::Str(ls) => Some(ls.value()),
                         _ => unimplemented!("{}: class has to be a string", field_name),
+                    }
+                }
+                "dfill_struct" => {
+                    bfttr.dfill_struct = match &nv.lit {
+                        syn::Lit::Str(ls) => Some(ls.value()),
+                        _ => unimplemented!("{}: dfill_struct has to be a string", field_name),
                     }
                 }
                 "unit" => {
@@ -203,23 +200,6 @@ pub fn parse_attribute(attrs: &[syn::Attribute], field_name: &syn::Ident) -> Bel
                         _ => unimplemented!("{}: width has to be a integer", field_name),
                     }
                 }
-                "title_depth" => {
-                    view_flag = true;
-                    bvttr.title_depth = match &nv.lit {
-                        syn::Lit::Int(li) => Some(
-                            li.base10_parse::<usize>()
-                                .expect("Fail to parse title_depth"),
-                        ),
-                        _ => unimplemented!("{}: title_depth has to be a integer", field_name),
-                    }
-                }
-                "title_prefix" => {
-                    view_flag = true;
-                    bvttr.title_prefix = match &nv.lit {
-                        syn::Lit::Str(ls) => Some(ls.value()),
-                        _ => unimplemented!("{}: title_prefix has to be a string", field_name),
-                    }
-                }
                 "precision" => {
                     view_flag = true;
                     bvttr.precision = match &nv.lit {
@@ -250,13 +230,23 @@ pub fn parse_attribute(attrs: &[syn::Attribute], field_name: &syn::Ident) -> Bel
                         _ => unimplemented!("{}: highlight_if has to be a string", field_name),
                     }
                 }
+                "gen" => {
+                    field_flag = true;
+                    bfttr.gen = match &nv.lit {
+                        syn::Lit::Bool(lb) => lb.value,
+                        _ => unimplemented!("{}: gen has to be a boolean", field_name),
+                    }
+                }
+                "class_detail" => {
+                    field_flag = true;
+                    bfttr.class_detail = match &nv.lit {
+                        syn::Lit::Bool(lb) => lb.value,
+                        _ => unimplemented!("{}: class_detail has to be a boolean", field_name),
+                    }
+                }
                 _ => unimplemented!("{}: Unknown field", field_name),
             };
         });
-
-    if bfttr.aggr.is_some() && bfttr.title.is_none() {
-        bfttr.no_show = true;
-    }
 
     if field_flag {
         bttr.field = Some(bfttr);
@@ -267,13 +257,4 @@ pub fn parse_attribute(attrs: &[syn::Attribute], field_name: &syn::Ident) -> Bel
     }
 
     bttr
-}
-
-macro_rules! iter_field_attr {
-    ($fields: ident) => {
-        $fields
-            .named
-            .iter()
-            .map(|f| (f, parse_attribute(&f.attrs, &f.ident.clone().unwrap())))
-    };
 }

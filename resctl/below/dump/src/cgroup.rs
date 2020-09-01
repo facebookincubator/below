@@ -22,518 +22,495 @@ use std::iter::FromIterator;
 
 #[derive(BelowDecor, Default)]
 pub struct CgroupData {
+    #[bttr(dfill_struct = "Cgroup")]
     #[blink("CgroupModel$get_name")]
     #[bttr(
         title = "Name",
-        width = 50,
-        tag = "CgroupField::Name&",
+        tag = "CgroupField::Name",
         depth = "model.depth as usize * 3",
         prefix = "get_prefix(false)"
     )]
     pub name: String,
     #[blink("CgroupModel$get_full_path")]
-    #[bttr(title = "Full Path", width = 50, tag = "CgroupField::FullPath&")]
+    #[bttr(title = "Full Path", tag = "CgroupField::FullPath")]
     pub full_path: String,
     #[blink("CgroupModel$cpu?.get_usage_pct")]
     #[bttr(
         title = "CPU Usage",
-        width = 15,
-        unit = "%",
-        precision = 2,
-        tag = "CgroupField::CpuUsage&",
-        cmp = true
+        tag = "CgroupField::CpuUsage",
+        cmp = true,
+        class = "CgroupField::Cpu"
     )]
     pub usage_pct: Option<f64>,
     #[blink("CgroupModel$cpu?.get_user_pct")]
     #[bttr(
         title = "CPU User",
-        width = 15,
-        unit = "%",
-        precision = 2,
-        tag = "CgroupField::CpuUser&",
-        cmp = true
+        tag = "CgroupField::CpuUser",
+        cmp = true,
+        class = "CgroupField::Cpu",
+        class_detail = true
     )]
     pub user_pct: Option<f64>,
     #[blink("CgroupModel$cpu?.get_system_pct")]
     #[bttr(
         title = "CPU Sys",
-        width = 15,
-        unit = "%",
-        precision = 2,
-        tag = "CgroupField::CpuSystem&",
-        cmp = true
+        tag = "CgroupField::CpuSystem",
+        cmp = true,
+        class = "CgroupField::Cpu",
+        class_detail = true
     )]
     pub sys_pct: Option<f64>,
     #[blink("CgroupModel$cpu?.get_nr_periods_per_sec")]
     #[bttr(
         title = "Nr Period",
-        width = 15,
-        unit = "/s",
-        precision = 2,
-        tag = "CgroupField::CpuNrPeriods&",
-        cmp = true
+        tag = "CgroupField::CpuNrPeriods",
+        cmp = true,
+        class = "CgroupField::Cpu",
+        class_detail = true
     )]
     pub nr_periods_per_sec: Option<f64>,
     #[blink("CgroupModel$cpu?.get_nr_throttled_per_sec")]
     #[bttr(
         title = "Nr Throttle",
-        width = 15,
-        unit = "/s",
-        precision = 2,
-        tag = "CgroupField::CpuNrThrottled&",
-        cmp = true
+        tag = "CgroupField::CpuNrThrottled",
+        cmp = true,
+        class = "CgroupField::Cpu",
+        class_detail = true
     )]
     pub nr_throttled_per_sec: Option<f64>,
     #[blink("CgroupModel$cpu?.get_throttled_pct")]
     #[bttr(
         title = "Throttle Pct",
-        width = 15,
-        unit = "%",
-        precision = 2,
-        tag = "CgroupField::CpuThrottled&",
-        cmp = true
+        tag = "CgroupField::CpuThrottled",
+        cmp = true,
+        class = "CgroupField::Cpu",
+        class_detail = true
     )]
     pub throttled_pct: Option<f64>,
     #[blink("CgroupModel$memory?.get_total")]
     #[bttr(
         title = "Mem Total",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemTotal&",
-        cmp = true
+        tag = "CgroupField::MemTotal",
+        cmp = true,
+        class = "CgroupField::Mem"
     )]
     pub memory_total: Option<u64>,
     #[blink("CgroupModel$memory?.get_swap")]
     #[bttr(
         title = "Mem Swap",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemSwap&",
-        cmp = true
+        tag = "CgroupField::MemSwap",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub memory_swap: Option<u64>,
     #[blink("CgroupModel$memory?.get_anon")]
     #[bttr(
         title = "Mem Anon",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemAnon&",
-        cmp = true
+        tag = "CgroupField::MemAnon",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub anon: Option<u64>,
     #[blink("CgroupModel$memory?.get_file")]
     #[bttr(
         title = "Mem File",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemFile&",
-        cmp = true
+        tag = "CgroupField::MemFile",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub file: Option<u64>,
     #[blink("CgroupModel$memory?.get_kernel_stack")]
     #[bttr(
         title = "Kernel Stack",
-        width = 12,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemKernel&",
-        cmp = true
+        tag = "CgroupField::MemKernel",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub kernel_stack: Option<u64>,
     #[blink("CgroupModel$memory?.get_slab")]
     #[bttr(
         title = "Mem Slab",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemSlab&",
-        cmp = true
+        tag = "CgroupField::MemSlab",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub slab: Option<u64>,
     #[blink("CgroupModel$memory?.get_sock")]
     #[bttr(
         title = "Mem Sock",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemSock&",
-        cmp = true
+        tag = "CgroupField::MemSock",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub sock: Option<u64>,
     #[blink("CgroupModel$memory?.get_shmem")]
     #[bttr(
         title = "Mem Shmem",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemShem&",
-        cmp = true
+        tag = "CgroupField::MemShem",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub shmem: Option<u64>,
     #[blink("CgroupModel$memory?.get_file_mapped")]
     #[bttr(
         title = "File Mapped",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemFileMapped&",
-        cmp = true
+        tag = "CgroupField::MemFileMapped",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub file_mapped: Option<u64>,
     #[blink("CgroupModel$memory?.get_file_dirty")]
     #[bttr(
         title = "File Dirty",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemFileDirty&",
-        cmp = true
+        tag = "CgroupField::MemFileDirty",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub file_dirty: Option<u64>,
     #[blink("CgroupModel$memory?.get_file_writeback")]
     #[bttr(
         title = "File WB",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemFileWriteBack&",
-        cmp = true
+        tag = "CgroupField::MemFileWriteBack",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub file_writeback: Option<u64>,
     #[blink("CgroupModel$memory?.get_anon_thp")]
     #[bttr(
         title = "Anon THP",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemAnonThp&",
-        cmp = true
+        tag = "CgroupField::MemAnonThp",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub anon_thp: Option<u64>,
     #[blink("CgroupModel$memory?.get_inactive_anon")]
     #[bttr(
         title = "Inactive Anon",
-        width = 13,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemInactiveAnon&",
-        cmp = true
+        tag = "CgroupField::MemInactiveAnon",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub inactive_anon: Option<u64>,
     #[blink("CgroupModel$memory?.get_active_anon")]
     #[bttr(
         title = "Active Anon",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemActiveAnon&",
-        cmp = true
+        tag = "CgroupField::MemActiveAnon",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub active_anon: Option<u64>,
     #[blink("CgroupModel$memory?.get_inactive_file")]
     #[bttr(
         title = "Inactive File",
-        width = 13,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemInactiveFile&",
-        cmp = true
+        tag = "CgroupField::MemInactiveFile",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub inactive_file: Option<u64>,
     #[blink("CgroupModel$memory?.get_active_file")]
     #[bttr(
         title = "Active File",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemActiveFile&",
-        cmp = true
+        tag = "CgroupField::MemActiveFile",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub active_file: Option<u64>,
     #[blink("CgroupModel$memory?.get_unevictable")]
     #[bttr(
         title = "Unevictable",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemUnevictable&",
-        cmp = true
+        tag = "CgroupField::MemUnevictable",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub unevictable: Option<u64>,
     #[blink("CgroupModel$memory?.get_slab_reclaimable")]
     #[bttr(
         title = "Slab Reclaimable",
-        width = 16,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemSlabReclaimable&",
-        cmp = true
+        tag = "CgroupField::MemSlabReclaimable",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub slab_reclaimable: Option<u64>,
     #[blink("CgroupModel$memory?.get_slab_unreclaimable")]
     #[bttr(
         title = "Slab Unreclaimable",
-        width = 18,
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::MemSlabUnreclaimable&",
-        cmp = true
+        tag = "CgroupField::MemSlabUnreclaimable",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub slab_unreclaimable: Option<u64>,
     #[blink("CgroupModel$memory?.get_pgfault")]
     #[bttr(
         title = "Pgfault",
-        width = 11,
-        tag = "CgroupField::Pgfault&",
-        cmp = true
+        tag = "CgroupField::Pgfault",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub pgfault: Option<u64>,
     #[blink("CgroupModel$memory?.get_pgmajfault")]
     #[bttr(
         title = "Pgmajfault",
-        width = 11,
-        tag = "CgroupField::MemPgmajfault&",
-        cmp = true
+        tag = "CgroupField::MemPgmajfault",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub pgmajfault: Option<u64>,
     #[blink("CgroupModel$memory?.get_workingset_refault")]
     #[bttr(
         title = "Workingset Refault",
-        width = 18,
-        tag = "CgroupField::MemWorkingsetRefault&",
-        cmp = true
+        tag = "CgroupField::MemWorkingsetRefault",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub workingset_refault: Option<u64>,
     #[blink("CgroupModel$memory?.get_workingset_activate")]
     #[bttr(
         title = "Workingset Activate",
-        width = 20,
-        tag = "CgroupField::MemWorkingsetActivate&",
-        cmp = true
+        tag = "CgroupField::MemWorkingsetActivate",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub workingset_activate: Option<u64>,
     #[blink("CgroupModel$memory?.get_workingset_nodereclaim")]
     #[bttr(
         title = "Workingset Nodereclaim",
-        width = 18,
-        tag = "CgroupField::MemWorkingsetNodereclaim&",
-        cmp = true
+        tag = "CgroupField::MemWorkingsetNodereclaim",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub workingset_nodereclaim: Option<u64>,
     #[blink("CgroupModel$memory?.get_pgrefill")]
     #[bttr(
         title = "Pgrefill",
-        width = 11,
-        tag = "CgroupField::MemPgrefill&",
-        cmp = true
+        tag = "CgroupField::MemPgrefill",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub pgrefill: Option<u64>,
     #[blink("CgroupModel$memory?.get_pgscan")]
     #[bttr(
         title = "Pgscan",
-        width = 11,
-        tag = "CgroupField::MemPgscan&",
-        cmp = true
+        tag = "CgroupField::MemPgscan",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub pgscan: Option<u64>,
     #[blink("CgroupModel$memory?.get_pgsteal")]
     #[bttr(
         title = "Pgsteal",
-        width = 11,
-        tag = "CgroupField::MemPgsteal&",
-        cmp = true
+        tag = "CgroupField::MemPgsteal",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub pgsteal: Option<u64>,
     #[blink("CgroupModel$memory?.get_pgactivate")]
     #[bttr(
         title = "Pgactivate",
-        width = 11,
-        tag = "CgroupField::MemPgactivate&",
-        cmp = true
+        tag = "CgroupField::MemPgactivate",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub pgactivate: Option<u64>,
     #[blink("CgroupModel$memory?.get_pgdeactivate")]
     #[bttr(
         title = "Pgdeactivate",
-        width = 14,
-        tag = "CgroupField::MemPgdeactivate&",
-        cmp = true
+        tag = "CgroupField::MemPgdeactivate",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub pgdeactivate: Option<u64>,
     #[blink("CgroupModel$memory?.get_pglazyfree")]
     #[bttr(
         title = "Pglazyfree",
-        width = 11,
-        tag = "CgroupField::MemPglazyfree&",
-        cmp = true
+        tag = "CgroupField::MemPglazyfree",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub pglazyfree: Option<u64>,
     #[blink("CgroupModel$memory?.get_pglazyfreed")]
     #[bttr(
         title = "Pglazyfreed",
-        width = 18,
-        tag = "CgroupField::MemPglazyfreed&",
-        cmp = true
+        tag = "CgroupField::MemPglazyfreed",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub pglazyfreed: Option<u64>,
     #[blink("CgroupModel$memory?.get_thp_fault_alloc")]
     #[bttr(
         title = "THP Fault Alloc",
-        width = 18,
-        tag = "CgroupField::MemTHPFaultAlloc&",
-        cmp = true
+        tag = "CgroupField::MemTHPFaultAlloc",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub thp_fault_alloc: Option<u64>,
     #[blink("CgroupModel$memory?.get_thp_collapse_alloc")]
     #[bttr(
         title = "THP Collapse Alloc",
-        width = 18,
-        tag = "CgroupField::MemTHPCollapseAlloc&",
-        cmp = true
+        tag = "CgroupField::MemTHPCollapseAlloc",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub thp_collapse_alloc: Option<u64>,
     #[blink("CgroupModel$memory?.get_memory_high")]
     #[bttr(
         title = "Memory.High",
-        width = 18,
-        tag = "CgroupField::MemHigh&",
+        tag = "CgroupField::MemHigh",
         cmp = true,
-        decorator = "if $ == -1 { \"max\".to_string() } else { convert_bytes($ as f64) }"
+        class = "CgroupField::Mem",
+        class_detail = true
     )]
     pub mem_high: Option<i64>,
     #[blink("CgroupModel$pressure?.get_cpu_some_pct")]
     #[bttr(
         title = "CPU Pressure",
-        width = 15,
-        unit = "%",
-        precision = 2,
-        tag = "CgroupField::CpuSome&",
-        cmp = true
+        tag = "CgroupField::CpuSome",
+        cmp = true,
+        class = "CgroupField::Pressure"
     )]
     pub cpu_some_pct: Option<f64>,
     #[blink("CgroupModel$pressure?.get_memory_some_pct")]
     #[bttr(
         title = "Memory Some Pressure",
-        width = 20,
-        unit = "%",
-        precision = 2,
-        tag = "CgroupField::MemSome&",
-        cmp = true
+        tag = "CgroupField::MemSome",
+        cmp = true,
+        class = "CgroupField::Pressure",
+        class_detail = true
     )]
     pub pressure_memory_some_pct: Option<f64>,
     #[blink("CgroupModel$pressure?.get_memory_full_pct")]
     #[bttr(
         title = "Memory Pressure",
-        width = 15,
-        unit = "%",
-        precision = 2,
-        tag = "CgroupField::MemFull&",
-        cmp = true
+        tag = "CgroupField::MemFull",
+        cmp = true,
+        class = "CgroupField::Pressure"
     )]
     pub pressure_memory_full_pct: Option<f64>,
     #[blink("CgroupModel$pressure?.get_io_some_pct")]
     #[bttr(
         title = "I/O Some Pressure",
-        width = 15,
-        unit = "%",
-        precision = 2,
-        tag = "CgroupField::IoSome&",
-        cmp = true
+        tag = "CgroupField::IoSome",
+        cmp = true,
+        class = "CgroupField::Pressure",
+        class_detail = true
     )]
     pub pressure_io_some_pct: Option<f64>,
     #[blink("CgroupModel$pressure?.get_io_full_pct")]
     #[bttr(
         title = "I/O Pressure",
-        width = 15,
-        unit = "%",
-        precision = 2,
-        tag = "CgroupField::IoFull&",
-        cmp = true
+        tag = "CgroupField::IoFull",
+        cmp = true,
+        class = "CgroupField::Pressure"
     )]
     pub pressure_io_full_pct: Option<f64>,
     #[blink("CgroupModel$io_total?.get_rbytes_per_sec")]
     #[bttr(
         title = "RBytes",
-        width = 11,
-        unit = "/s",
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::IoRead&",
-        cmp = true
+        tag = "CgroupField::IoRead",
+        cmp = true,
+        class = "CgroupField::Io"
     )]
     pub rbytes_per_sec: Option<f64>,
     #[blink("CgroupModel$io_total?.get_wbytes_per_sec")]
     #[bttr(
         title = "WBytes",
-        width = 11,
-        unit = "/s",
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::IoWrite&",
-        cmp = true
+        tag = "CgroupField::IoWrite",
+        cmp = true,
+        class = "CgroupField::Io"
     )]
     pub wbytes_per_sec: Option<f64>,
     #[blink("CgroupModel$io_total?.get_rios_per_sec")]
     #[bttr(
         title = "R I/O",
-        width = 11,
-        unit = "/s",
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::IoRiops&",
-        cmp = true
+        tag = "CgroupField::IoRiops",
+        cmp = true,
+        class = "CgroupField::Io",
+        class_detail = true
     )]
     pub rios_per_sec: Option<f64>,
     #[blink("CgroupModel$io_total?.get_wios_per_sec")]
     #[bttr(
         title = "W I/O",
-        width = 11,
-        unit = "/s",
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::IoWiops&",
-        cmp = true
+        tag = "CgroupField::IoWiops",
+        cmp = true,
+        class = "CgroupField::Io",
+        class_detail = true
     )]
     pub wios_per_sec: Option<f64>,
     #[blink("CgroupModel$io_total?.get_dbytes_per_sec")]
     #[bttr(
         title = "DBytes",
-        width = 11,
-        unit = "/s",
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::IoDbps&",
-        cmp = true
+        tag = "CgroupField::IoDbps",
+        cmp = true,
+        class = "CgroupField::Io",
+        class_detail = true
     )]
     pub dbytes_per_sec: Option<f64>,
     #[blink("CgroupModel$io_total?.get_dios_per_sec")]
     #[bttr(
         title = "D I/O",
-        width = 11,
-        unit = "/s",
-        decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::IoDiops&",
-        cmp = true
+        tag = "CgroupField::IoDiops",
+        cmp = true,
+        class = "CgroupField::Io",
+        class_detail = true
     )]
     pub dios_per_sec: Option<f64>,
     #[bttr(
-        aggr = "CgroupModel: io_total?.rbytes_per_sec? + io_total?.wbytes_per_sec?",
         width = 11,
         unit = "/s",
         decorator = "convert_bytes($ as f64)",
-        tag = "CgroupField::IoTotal&",
+        tag = "CgroupField::IoTotal",
         title = "RW Total",
-        cmp = true
+        cmp = true,
+        class = "CgroupField::Io",
+        class_detail = true
     )]
+    #[blink("CgroupModel$io_total?.get_rbytes_per_sec")]
+    #[blink("CgroupModel$io_total?.get_wbytes_per_sec")]
     pub rw_total: Option<f64>,
     #[bttr(
         title = "Datetime",
         width = 19,
-        decorator = "translate_datetime($)",
+        decorator = "translate_datetime(&$)",
         tag = "CgroupField::Datetime"
     )]
     datetime: i64,
     #[bttr(title = "Timestamp", width = 10, tag = "CgroupField::Timestamp")]
     timestamp: i64,
-    #[bttr(
-        class = "CgroupField$usage_pct&:user_pct&,sys_pct&,nr_periods_per_sec&,nr_throttled_per_sec&,throttled_pct&"
-    )]
-    pub cpu: AwaysNone,
-    #[bttr(
-        class = "CgroupField$memory_total&:memory_swap&,anon&,file&,kernel_stack&,slab&,sock&,shmem&,file_mapped&,file_dirty&,file_writeback&,anon_thp&,inactive_anon&,active_anon&,inactive_file&,active_file&,unevictable&,slab_reclaimable&,slab_unreclaimable&,pgfault&,pgmajfault&,workingset_refault&,workingset_activate&,workingset_nodereclaim&,pgrefill&,pgscan&,pgsteal&,pgactivate&,pgdeactivate&,pglazyfree&,pglazyfreed&,thp_fault_alloc&,thp_collapse_alloc&,mem_high&"
-    )]
-    pub mem: AwaysNone,
-    #[bttr(
-        class = "CgroupField$rbytes_per_sec&,wbytes_per_sec&:rw_total@,rios_per_sec&,wios_per_sec&,dbytes_per_sec&,dios_per_sec&"
-    )]
-    pub io: AwaysNone,
-    #[bttr(
-        class = "CgroupField$cpu_some_pct&,pressure_memory_full_pct&,pressure_io_full_pct&:pressure_io_some_pct&,pressure_memory_some_pct&"
-    )]
-    pub pressure: AwaysNone,
 }
 
-type TitleFtype = Box<dyn Fn(&CgroupData, &CgroupModel) -> &'static str>;
+type TitleFtype = Box<dyn Fn(&CgroupData, &CgroupModel) -> String>;
 type FieldFtype = Box<dyn Fn(&CgroupData, &CgroupModel) -> String>;
 
 pub struct Cgroup {

@@ -55,15 +55,6 @@ use get::Dget;
 use print::Dprint;
 use tmain::{Dump, IterExecResult};
 
-// I put concrete type for other `blink` fields is because the proc
-// macro will use that to infer the underlying type of a field.
-//
-// For `bttr::class` type of field, however, we can think it's a bridge
-// to display multiple fields. For example, `cpu` will actually display
-// `usage_pct`, `user_pct`, and `system_pct`. For such kind of behavior,
-// the type is not important and the value will always be `None`.
-type AwaysNone = Option<()>;
-
 // The DumpType trait is the key of how we make our dump generic.
 // Basically, the DumpType trait will be required by all dump related
 // traits to provide a guideline on what's the concrete type looks like.

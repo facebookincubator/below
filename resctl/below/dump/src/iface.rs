@@ -14,166 +14,223 @@
 
 use super::*;
 
-use common::util::convert_bytes;
 use model::SingleNetModel;
 
 use below_derive::BelowDecor;
 
 #[derive(BelowDecor, Default)]
 pub struct IfaceData {
-    #[bttr(title = "interface", width = 20, tag = "IfaceField::Interface&")]
+    #[bttr(dfill_struct = "Iface")]
+    #[bttr(title = "interface", tag = "IfaceField::Interface")]
     #[blink("SingleNetModel$get_interface")]
     pub interface: String,
     #[bttr(
         title = "RX Bytes/s",
-        width = 20,
-        tag = "IfaceField::RBps&",
-        decorator = "convert_bytes($)"
+        tag = "IfaceField::RBps",
+        class = "IfaceField::Rate"
     )]
     #[blink("SingleNetModel$get_rx_bytes_per_sec")]
     pub rx_bytes_per_sec: Option<f64>,
     #[bttr(
         title = "TX Bytes/s",
-        width = 20,
-        tag = "IfaceField::TBps&",
-        decorator = "convert_bytes($)"
+        tag = "IfaceField::TBps",
+        class = "IfaceField::Rate"
     )]
     #[blink("SingleNetModel$get_tx_bytes_per_sec")]
     pub tx_bytes_per_sec: Option<f64>,
     #[bttr(
         title = "I/O Bytes/s",
-        width = 20,
-        tag = "IfaceField::IOBps&",
-        decorator = "convert_bytes($)"
+        tag = "IfaceField::IOBps",
+        class = "IfaceField::Rate"
     )]
     #[blink("SingleNetModel$get_throughput_per_sec")]
     pub throughput_per_sec: Option<f64>,
-    #[bttr(title = "RX pkts/s", width = 20, tag = "IfaceField::RPktps&")]
+    #[bttr(
+        title = "RX pkts/s",
+        tag = "IfaceField::RPktps",
+        class = "IfaceField::Rate"
+    )]
     #[blink("SingleNetModel$get_rx_packets_per_sec")]
     pub rx_packets_per_sec: Option<u64>,
-    #[bttr(title = "TX pkts/s", width = 20, tag = "IfaceField::TPktps&")]
+    #[bttr(
+        title = "TX pkts/s",
+        tag = "IfaceField::TPktps",
+        class = "IfaceField::Rate"
+    )]
     #[blink("SingleNetModel$get_tx_packets_per_sec")]
     pub tx_packets_per_sec: Option<u64>,
-    #[bttr(title = "Collisions", width = 20, tag = "IfaceField::Collisions&")]
+    #[bttr(title = "Collisions", tag = "IfaceField::Collisions")]
     #[blink("SingleNetModel$get_collisions")]
     pub collisions: Option<u64>,
-    #[bttr(title = "Multicast", width = 20, tag = "IfaceField::Multicast&")]
+    #[bttr(title = "Multicast", tag = "IfaceField::Multicast")]
     #[blink("SingleNetModel$get_multicast")]
     pub multicast: Option<u64>,
-    #[bttr(title = "RX Bytes", width = 20, tag = "IfaceField::RxBytes&")]
+    #[bttr(
+        title = "RX Bytes",
+        tag = "IfaceField::RxBytes",
+        class = "IfaceField::Rx"
+    )]
     #[blink("SingleNetModel$get_rx_bytes")]
     pub rx_bytes: Option<u64>,
-    #[bttr(title = "RX Compressed", width = 20, tag = "IfaceField::RxCompressed&")]
+    #[bttr(
+        title = "RX Compressed",
+        tag = "IfaceField::RxCompressed",
+        class = "IfaceField::Rx"
+    )]
     #[blink("SingleNetModel$get_rx_compressed")]
     pub rx_compressed: Option<u64>,
-    #[bttr(title = "RX CRC Errors", width = 20, tag = "IfaceField::RxCrcErr&")]
+    #[bttr(
+        title = "RX CRC Errors",
+        tag = "IfaceField::RxCrcErr",
+        class = "IfaceField::Rx"
+    )]
     #[blink("SingleNetModel$get_rx_crc_errors")]
     pub rx_crc_errors: Option<u64>,
-    #[bttr(title = "RX Dropped", width = 20, tag = "IfaceField::RxDropped&")]
+    #[bttr(
+        title = "RX Dropped",
+        tag = "IfaceField::RxDropped",
+        class = "IfaceField::Rx"
+    )]
     #[blink("SingleNetModel$get_rx_dropped")]
     pub rx_dropped: Option<u64>,
-    #[bttr(title = "RX Errors", width = 20, tag = "IfaceField::RxErr&")]
+    #[bttr(
+        title = "RX Errors",
+        tag = "IfaceField::RxErr",
+        class = "IfaceField::Rx"
+    )]
     #[blink("SingleNetModel$get_rx_errors")]
     pub rx_errors: Option<u64>,
-    #[bttr(title = "RX Fifo Errors", width = 20, tag = "IfaceField::RxFifoErr&")]
+    #[bttr(
+        title = "RX Fifo Errors",
+        tag = "IfaceField::RxFifoErr",
+        class = "IfaceField::Rx"
+    )]
     #[blink("SingleNetModel$get_rx_fifo_errors")]
     pub rx_fifo_errors: Option<u64>,
-    #[bttr(title = "RX Frame Errors", width = 20, tag = "IfaceField::RxFrameErr&")]
+    #[bttr(
+        title = "RX Frame Errors",
+        tag = "IfaceField::RxFrameErr",
+        class = "IfaceField::Rx"
+    )]
     #[blink("SingleNetModel$get_rx_frame_errors")]
     pub rx_frame_errors: Option<u64>,
     #[bttr(
         title = "RX Length Errors",
-        width = 20,
-        tag = "IfaceField::RxLengthErr&"
+        tag = "IfaceField::RxLengthErr",
+        class = "IfaceField::Rx"
     )]
     #[blink("SingleNetModel$get_rx_length_errors")]
     pub rx_length_errors: Option<u64>,
     #[bttr(
         title = "RX Missed Errors",
-        width = 20,
-        tag = "IfaceField::RxMissedErr&"
+        tag = "IfaceField::RxMissedErr",
+        class = "IfaceField::Rx"
     )]
     #[blink("SingleNetModel$get_rx_missed_errors")]
     pub rx_missed_errors: Option<u64>,
-    #[bttr(title = "RX Nohandler", width = 20, tag = "IfaceField::RxNohandler&")]
+    #[bttr(
+        title = "RX Nohandler",
+        tag = "IfaceField::RxNohandler",
+        class = "IfaceField::Rx"
+    )]
     #[blink("SingleNetModel$get_rx_nohandler")]
     pub rx_nohandler: Option<u64>,
-    #[bttr(title = "RX Over Errors", width = 20, tag = "IfaceField::RxOverErr&")]
+    #[bttr(
+        title = "RX Over Errors",
+        tag = "IfaceField::RxOverErr",
+        class = "IfaceField::Rx"
+    )]
     #[blink("SingleNetModel$get_rx_over_errors")]
     pub rx_over_errors: Option<u64>,
-    #[bttr(title = "RX Packets", width = 20, tag = "IfaceField::RxPckt&")]
+    #[bttr(
+        title = "RX Packets",
+        tag = "IfaceField::RxPckt",
+        class = "IfaceField::Rx"
+    )]
     #[blink("SingleNetModel$get_rx_packets")]
     pub rx_packets: Option<u64>,
     #[bttr(
         title = "TX Aborted Errors",
-        width = 20,
-        tag = "IfaceField::TxAbortedErr&"
+        tag = "IfaceField::TxAbortedErr",
+        class = "IfaceField::Tx"
     )]
     #[blink("SingleNetModel$get_tx_aborted_errors")]
     pub tx_aborted_errors: Option<u64>,
-    #[bttr(title = "TX Bytes", width = 20, tag = "IfaceField::TxBytes&")]
+    #[bttr(
+        title = "TX Bytes",
+        tag = "IfaceField::TxBytes",
+        class = "IfaceField::Tx"
+    )]
     #[blink("SingleNetModel$get_tx_bytes")]
     pub tx_bytes: Option<u64>,
     #[bttr(
         title = "TX Carrier Errors",
-        width = 20,
-        tag = "IfaceField::TxCarrierErr&"
+        tag = "IfaceField::TxCarrierErr",
+        class = "IfaceField::Tx"
     )]
     #[blink("SingleNetModel$get_tx_carrier_errors")]
     pub tx_carrier_errors: Option<u64>,
-    #[bttr(title = "TX Compressed", width = 20, tag = "IfaceField::TxCompressed&")]
+    #[bttr(
+        title = "TX Compressed",
+        tag = "IfaceField::TxCompressed",
+        class = "IfaceField::Tx"
+    )]
     #[blink("SingleNetModel$get_tx_compressed")]
     pub tx_compressed: Option<u64>,
-    #[bttr(title = "TX Dropped", width = 20, tag = "IfaceField::TxDropped&")]
+    #[bttr(
+        title = "TX Dropped",
+        tag = "IfaceField::TxDropped",
+        class = "IfaceField::Tx"
+    )]
     #[blink("SingleNetModel$get_tx_dropped")]
     pub tx_dropped: Option<u64>,
-    #[bttr(title = "TX Errors", width = 20, tag = "IfaceField::TxErr&")]
+    #[bttr(
+        title = "TX Errors",
+        tag = "IfaceField::TxErr",
+        class = "IfaceField::Tx"
+    )]
     #[blink("SingleNetModel$get_tx_errors")]
     pub tx_errors: Option<u64>,
-    #[bttr(title = "TX Fifo Errors", width = 20, tag = "IfaceField::TxFifoErr&")]
+    #[bttr(
+        title = "TX Fifo Errors",
+        tag = "IfaceField::TxFifoErr",
+        class = "IfaceField::Tx"
+    )]
     #[blink("SingleNetModel$get_tx_fifo_errors")]
     pub tx_fifo_errors: Option<u64>,
     #[bttr(
         title = "TX Heartbeat Errors",
-        width = 20,
-        tag = "IfaceField::TxHeartBeatErr&"
+        tag = "IfaceField::TxHeartBeatErr",
+        class = "IfaceField::Tx"
     )]
     #[blink("SingleNetModel$get_tx_heartbeat_errors")]
     pub tx_heartbeat_errors: Option<u64>,
-    #[bttr(title = "TX Packets", width = 20, tag = "IfaceField::TxPckt&")]
+    #[bttr(
+        title = "TX Packets",
+        tag = "IfaceField::TxPckt",
+        class = "IfaceField::Tx"
+    )]
     #[blink("SingleNetModel$get_tx_packets")]
     pub tx_packets: Option<u64>,
     #[bttr(
         title = "TX Window Errors",
-        width = 20,
-        tag = "IfaceField::TxWindowErr&"
+        tag = "IfaceField::TxWindowErr",
+        class = "IfaceField::Tx"
     )]
     #[blink("SingleNetModel$get_tx_window_errors")]
     pub tx_window_errors: Option<u64>,
     #[bttr(
         title = "Datetime",
         width = 19,
-        decorator = "translate_datetime($)",
+        decorator = "translate_datetime(&$)",
         tag = "IfaceField::Datetime"
     )]
     datetime: i64,
     #[bttr(title = "Timestamp", width = 10, tag = "IfaceField::Timestamp")]
     timestamp: i64,
-    #[bttr(
-        class = "IfaceField$rx_bytes_per_sec&,tx_bytes_per_sec&,throughput_per_sec&:rx_packets_per_sec&,tx_packets_per_sec&"
-    )]
-    pub rate: AwaysNone,
-    #[bttr(
-        class = "IfaceField$rx_bytes&,rx_dropped&,rx_errors&:rx_compressed&,rx_crc_errors&,rx_fifo_errors&,rx_frame_errors&,rx_length_errors&,rx_missed_errors&,rx_nohandler&,rx_over_errors&,rx_packets&"
-    )]
-    pub rx: AwaysNone,
-    #[bttr(
-        class = "IfaceField$tx_bytes&,tx_dropped&,tx_errors&:tx_aborted_errors&,tx_carrier_errors&,tx_compressed&,tx_fifo_errors&,tx_heartbeat_errors&,tx_packets&,tx_window_errors&"
-    )]
-    pub tx: AwaysNone,
 }
 
-type TitleFtype = Box<dyn Fn(&IfaceData, &SingleNetModel) -> &'static str>;
+type TitleFtype = Box<dyn Fn(&IfaceData, &SingleNetModel) -> String>;
 type FieldFtype = Box<dyn Fn(&IfaceData, &SingleNetModel) -> String>;
 
 pub struct Iface {

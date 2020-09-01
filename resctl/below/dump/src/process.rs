@@ -21,155 +21,137 @@ use below_derive::BelowDecor;
 
 #[derive(BelowDecor, Default)]
 pub struct ProcessData {
-    #[bttr(title = "Pid", width = 11, tag = "ProcField::Pid&", cmp = true)]
+    #[bttr(dfill_struct = "Process")]
+    #[bttr(title = "Pid", tag = "ProcField::Pid", cmp = true)]
     #[blink("SingleProcessModel$get_pid")]
     pub pid: Option<i32>,
-    #[bttr(title = "Ppid", width = 11, tag = "ProcField::Ppid&", cmp = true)]
+    #[bttr(title = "Ppid", tag = "ProcField::Ppid", cmp = true)]
     #[blink("SingleProcessModel$get_ppid")]
     pub ppid: Option<i32>,
-    #[bttr(title = "Comm", width = 12, tag = "ProcField::Comm&", cmp = true)]
+    #[bttr(title = "Comm", tag = "ProcField::Comm", cmp = true)]
     #[blink("SingleProcessModel$get_comm")]
     pub comm: Option<String>,
-    #[bttr(title = "Cmdline", width = 12, tag = "ProcField::Cmdline&", cmp = true)]
+    #[bttr(title = "Cmdline", tag = "ProcField::Cmdline", cmp = true)]
     #[blink("SingleProcessModel$get_cmdline")]
     pub cmdline: Option<String>,
-    #[bttr(
-        title = "Exe Path",
-        width = 12,
-        tag = "ProcField::ExePath&",
-        cmp = true
-    )]
+    #[bttr(title = "Exe Path", tag = "ProcField::ExePath", cmp = true)]
     #[blink("SingleProcessModel$get_exe_path")]
     pub exe_path: Option<String>,
-    #[bttr(title = "State", width = 11, tag = "ProcField::State&", cmp = true)]
+    #[bttr(title = "State", tag = "ProcField::State", cmp = true)]
     #[blink("SingleProcessModel$get_state")]
     pub state: Option<procfs::PidState>,
-    #[bttr(
-        title = "Uptime(sec)",
-        width = 11,
-        tag = "ProcField::Uptime&",
-        cmp = true
-    )]
+    #[bttr(title = "Uptime(sec)", tag = "ProcField::Uptime", cmp = true)]
     #[blink("SingleProcessModel$get_uptime_secs")]
     pub uptime_secs: Option<u64>,
-    #[bttr(title = "Cgroup", width = 50, tag = "ProcField::Cgroup&", cmp = true)]
+    #[bttr(title = "Cgroup", tag = "ProcField::Cgroup", cmp = true)]
     #[blink("SingleProcessModel$get_cgroup")]
     pub cgroup: Option<String>,
     #[bttr(
         title = "User CPU",
-        width = 11,
-        precision = 2,
-        unit = "%",
-        tag = "ProcField::CpuUserPct&",
-        cmp = true
+        tag = "ProcField::CpuUserPct",
+        cmp = true,
+        class = "ProcField::Cpu"
     )]
     #[blink("SingleProcessModel$cpu?.get_user_pct")]
     pub cpu_user: Option<f64>,
     #[bttr(
         title = "Sys CPU",
-        width = 11,
-        precision = 2,
-        unit = "%",
-        tag = "ProcField::CpuSysPct&",
-        cmp = true
+        tag = "ProcField::CpuSysPct",
+        cmp = true,
+        class = "ProcField::Cpu",
+        class_detail = true
     )]
     #[blink("SingleProcessModel$cpu?.get_system_pct")]
     pub cpu_sys: Option<f64>,
     #[bttr(
         title = "Threads",
-        width = 11,
-        tag = "ProcField::CpuNumThreads&",
-        cmp = true
+        tag = "ProcField::CpuNumThreads",
+        cmp = true,
+        class = "ProcField::Cpu",
+        class_detail = true
     )]
     #[blink("SingleProcessModel$cpu?.get_num_threads")]
     pub cpu_num_threads: Option<u64>,
     #[bttr(
         title = "CPU",
+        tag = "ProcField::CpuTotalPct",
+        cmp = true,
+        class = "ProcField::Cpu",
+        class_detail = true,
         width = 11,
         precision = 2,
-        unit = "%",
-        aggr = "SingleProcessModel: cpu?.user_pct? + cpu?.system_pct?",
-        tag = "ProcField::CpuTotalPct&",
-        cmp = true
+        unit = "%"
     )]
+    #[blink("SingleProcessModel$cpu?.get_user_pct")]
+    #[blink("SingleProcessModel$cpu?.get_system_pct")]
     pub cpu_total: Option<f64>,
     #[bttr(
         title = "RSS",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "ProcField::MemRssBytes&",
-        cmp = true
+        tag = "ProcField::MemRssBytes",
+        cmp = true,
+        class = "ProcField::Mem"
     )]
     #[blink("SingleProcessModel$mem?.get_rss_bytes")]
     pub mem_rss: Option<u64>,
     #[bttr(
         title = "Minflt",
-        width = 11,
-        precision = 2,
-        tag = "ProcField::MemMinor&",
+        tag = "ProcField::MemMinor",
         cmp = true,
-        unit = "/s"
+        class = "ProcField::Mem",
+        class_detail = true
     )]
     #[blink("SingleProcessModel$mem?.get_minorfaults_per_sec")]
     pub mem_minorfaults: Option<f64>,
     #[bttr(
         title = "Majflt",
-        width = 11,
-        precision = 2,
-        tag = "ProcField::MemMajor&",
+        tag = "ProcField::MemMajor",
         cmp = true,
-        unit = "/s"
+        class = "ProcField::Mem",
+        class_detail = true
     )]
     #[blink("SingleProcessModel$mem?.get_majorfaults_per_sec")]
     pub mem_majorfaults: Option<f64>,
     #[bttr(
         title = "Reads",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "ProcField::IoRead&",
+        tag = "ProcField::IoRead",
         cmp = true,
-        unit = "/s"
+        class = "ProcField::Io"
     )]
     #[blink("SingleProcessModel$io?.get_rbytes_per_sec")]
     pub io_read: Option<f64>,
     #[bttr(
         title = "Writes",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        tag = "ProcField::IoWrite&",
+        tag = "ProcField::IoWrite",
         cmp = true,
-        unit = "/s"
+        class = "ProcField::Io"
     )]
     #[blink("SingleProcessModel$io?.get_wbytes_per_sec")]
     pub io_write: Option<f64>,
     #[bttr(
         title = "RW",
-        tag = "ProcField::IoTotal&",
+        tag = "ProcField::IoTotal",
         decorator = "convert_bytes($ as f64)",
         width = 11,
-        aggr = "SingleProcessModel: io?.rbytes_per_sec? + io?.rbytes_per_sec?",
+        unit = "/s",
         cmp = true,
-        unit = "/s"
+        class = "ProcField::Io",
+        class_detail = true
     )]
+    #[blink("SingleProcessModel$io?.get_rbytes_per_sec")]
+    #[blink("SingleProcessModel$io?.get_wbytes_per_sec")]
     pub io_total: Option<f64>,
     #[bttr(
         title = "Datetime",
         width = 19,
-        decorator = "translate_datetime($)",
+        decorator = "translate_datetime(&$)",
         tag = "ProcField::Datetime"
     )]
     datetime: i64,
     #[bttr(title = "Timestamp", width = 10, tag = "ProcField::Timestamp")]
     timestamp: i64,
-    #[bttr(class = "ProcField$cpu_total@:cpu_user&,cpu_sys&,cpu_num_threads&")]
-    pub cpu: AwaysNone,
-    #[bttr(class = "ProcField$mem_rss&:mem_minorfaults&,mem_majorfaults&")]
-    pub mem: AwaysNone,
-    #[bttr(class = "ProcField$io_read&,io_write&:io_total@")]
-    pub io: AwaysNone,
 }
 
-type TitleFtype = Box<dyn Fn(&ProcessData, &SingleProcessModel) -> &'static str>;
+type TitleFtype = Box<dyn Fn(&ProcessData, &SingleProcessModel) -> String>;
 type FieldFtype = Box<dyn Fn(&ProcessData, &SingleProcessModel) -> String>;
 
 pub struct Process {

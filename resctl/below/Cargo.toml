@@ -8,7 +8,6 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 below-thrift = { path = "if" }
-below_derive = { path = "below_derive" }
 common = { path = "common" }
 dump = { path = "dump" }
 model = { path = "model" }
@@ -20,25 +19,25 @@ stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch 
 anyhow = "1.0"
 async-trait = "0.1.29"
 cursive = { git = "https://github.com/gyscos/cursive", rev = "750a7af6c79946ba7c87253714a6957abdd8bfd3" }
-humantime = "1.3"
 libbpf-rs = "0.4"
 libc = "0.2"
 once_cell = "1.4"
 plain = "0.2"
-regex = "1.3.7"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 slog = { version = "2.5", features = ["max_level_debug"] }
 slog-async = "2.3"
-slog-term = "2.4.2"
 structopt = "0.3.7"
 tokio = { version = "=0.2.13", features = ["full"] }
 toml = "=0.5.6"
 walkdir = "2.2.9"
 
 [dev-dependencies]
+below_derive = { path = "below_derive" }
 cgroupfs = { path = "../common/cgroupfs" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 maplit = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
+regex = "1.3.7"
+slog-term = "2.4.2"
 tempdir = "0.3"

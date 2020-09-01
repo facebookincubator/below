@@ -702,7 +702,7 @@ fn traverse_cgroup_tree(model: &CgroupModel, jval: &mut Value) {
             mem.get_thp_collapse_alloc_str()
         );
 
-        if *mem.get_memory_high() == Some(-1) {
+        if mem.get_memory_high_value() == Some(-1) {
             assert_eq!(jval["Memory.High"].as_str().unwrap(), "max");
         } else {
             assert_eq!(
@@ -744,22 +744,13 @@ fn traverse_cgroup_tree(model: &CgroupModel, jval: &mut Value) {
             jval["WBytes"].as_str().unwrap(),
             io.get_wbytes_per_sec_str()
         );
-        assert_eq!(
-            jval["R I/O"].as_str().unwrap(),
-            format!("{}/s", convert_bytes(io.rios_per_sec.unwrap_or_default()))
-        );
-        assert_eq!(
-            jval["W I/O"].as_str().unwrap(),
-            format!("{}/s", convert_bytes(io.wios_per_sec.unwrap_or_default()))
-        );
+        assert_eq!(jval["R I/O"].as_str().unwrap(), io.get_rios_per_sec_str());
+        assert_eq!(jval["W I/O"].as_str().unwrap(), io.get_wios_per_sec_str());
         assert_eq!(
             jval["DBytes"].as_str().unwrap(),
             format!("{}/s", convert_bytes(io.dbytes_per_sec.unwrap_or_default()))
         );
-        assert_eq!(
-            jval["D I/O"].as_str().unwrap(),
-            format!("{}/s", convert_bytes(io.dios_per_sec.unwrap_or_default()))
-        );
+        assert_eq!(jval["D I/O"].as_str().unwrap(), io.get_dios_per_sec_str());
         assert_eq!(
             jval["RW Total"].as_str().unwrap(),
             format!(
