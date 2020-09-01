@@ -20,7 +20,7 @@ use cursive::Cursive;
 
 use crate::ViewState;
 use common::util::convert_bytes;
-use model::{CpuModel, MemoryModel, NetworkModel, SingleDiskModel};
+use model::{CpuModel, MemoryModel, NetworkModel, SingleDiskModel, VmModel};
 
 use below_derive::BelowDecor;
 
@@ -57,19 +57,19 @@ struct SysCpu {
         title = "Usage",
         unit = "%",
         width = 10,
-        title_width = 7,
+        title_width = 9,
         precision = 2
     )]
     #[blink("CpuModel$total_cpu?.get_usage_pct")]
     pub usage_pct: Option<f64>,
-    #[bttr(title = "User", unit = "%", width = 10, title_width = 7, precision = 2)]
+    #[bttr(title = "User", unit = "%", width = 10, title_width = 9, precision = 2)]
     #[blink("CpuModel$total_cpu?.get_user_pct")]
     pub user_pct: Option<f64>,
     #[bttr(
         title = "System",
         unit = "%",
         width = 10,
-        title_width = 7,
+        title_width = 9,
         precision = 2
     )]
     #[blink("CpuModel$total_cpu?.get_system_pct")]
@@ -84,7 +84,7 @@ struct SysMem {
         title = "Total",
         decorator = "convert_bytes($ as f64)",
         width = 10,
-        title_width = 7
+        title_width = 9
     )]
     #[blink("MemoryModel$get_total")]
     pub total: Option<u64>,
@@ -92,7 +92,7 @@ struct SysMem {
         title = "Free",
         decorator = "convert_bytes($ as f64)",
         width = 10,
-        title_width = 7
+        title_width = 9
     )]
     #[blink("MemoryModel$get_free")]
     pub free: Option<u64>,
@@ -100,7 +100,7 @@ struct SysMem {
         title = "Anon",
         decorator = "convert_bytes($ as f64)",
         width = 10,
-        title_width = 7
+        title_width = 9
     )]
     #[blink("MemoryModel$get_anon")]
     pub anon: Option<u64>,
@@ -108,13 +108,59 @@ struct SysMem {
         title = "File",
         decorator = "convert_bytes($ as f64)",
         width = 10,
-        title_width = 7
+        title_width = 9
     )]
     #[blink("MemoryModel$get_file")]
     pub file: Option<u64>,
 }
 
 gen_row_impl!(SysMem, MemoryModel, "Mem");
+
+#[derive(BelowDecor, Default)]
+struct SysVM {
+    #[bttr(
+        title = "Page In",
+        decorator = "convert_bytes($)",
+        width = 10,
+        title_width = 9,
+        decorator = "convert_bytes($)",
+        unit = "/s"
+    )]
+    #[blink("VmModel$get_pgpgin_per_sec")]
+    pub page_in: Option<f64>,
+    #[bttr(
+        title = "Page Out",
+        decorator = "convert_bytes($)",
+        width = 10,
+        title_width = 9,
+        decorator = "convert_bytes($)",
+        unit = "/s"
+    )]
+    #[blink("VmModel$get_pgpgout_per_sec")]
+    pub page_out: Option<f64>,
+    #[bttr(
+        title = "Swap In",
+        decorator = "convert_bytes($)",
+        width = 10,
+        title_width = 9,
+        decorator = "convert_bytes($)",
+        unit = "/s"
+    )]
+    #[blink("VmModel$get_pswpin_per_sec")]
+    pub swap_in: Option<f64>,
+    #[bttr(
+        title = "Swap Out",
+        decorator = "convert_bytes($)",
+        width = 10,
+        title_width = 9,
+        decorator = "convert_bytes($)",
+        unit = "/s"
+    )]
+    #[blink("VmModel$get_pswpout_per_sec")]
+    pub swap_out: Option<f64>,
+}
+
+gen_row_impl!(SysVM, VmModel, "VM");
 
 struct SysIo;
 
@@ -127,9 +173,10 @@ impl SysIo {
             .filter(|(disk_name, _)| !disk_name.chars().last().unwrap().is_digit(10))
             .for_each(|(disk_name, sdm)| {
                 disk_stat.push_str(&format!(
-                    "{:7.7}{:<10.10}\t",
+                    "{:9.9}{:<10.10}{:7.7}",
                     disk_name,
                     sdm.get_disk_total_bytes_per_sec_str(),
+                    ""
                 ))
             });
 
@@ -145,9 +192,10 @@ impl SysIface {
 
         net.interfaces.iter().for_each(|(interface, snm)| {
             network.push_str(&format!(
-                "{:7.7}{:<10.10}\t",
+                "{:9.9}{:<10.10}{:7.7}",
                 interface,
-                format!("{}/s", snm.get_throughput_per_sec_str())
+                format!("{}/s", snm.get_throughput_per_sec_str()),
+                ""
             ))
         });
         network.into()
@@ -163,12 +211,14 @@ fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
     let network_model = view_state.network.borrow();
     let cpu_row = SysCpu::get_row(&system_model.cpu);
     let mem_row = SysMem::get_row(&system_model.mem);
+    let vm_row = SysVM::get_row(&system_model.vm);
     let io_row = SysIo::get_row(&system_model.disks);
     let iface_row = SysIface::get_row(&network_model);
 
     let mut view = LinearLayout::vertical();
     view.add_child(TextView::new(cpu_row));
     view.add_child(TextView::new(mem_row));
+    view.add_child(TextView::new(vm_row));
     view.add_child(TextView::new(io_row));
     view.add_child(TextView::new(iface_row));
 
