@@ -302,6 +302,18 @@ struct PidStat {
   14: optional i32 processor,
 }
 
+struct PidMem {
+  1: optional i64 vm_size,
+  2: optional i64 lock,
+  3: optional i64 pin,
+  4: optional i64 anon,
+  5: optional i64 file,
+  6: optional i64 shmem,
+  7: optional i64 pte,
+  8: optional i64 swap,
+  9: optional i64 huge_tlb,
+}
+
 struct PidIo {
   1: optional i64 rbytes,
   2: optional i64 wbytes,
@@ -315,6 +327,7 @@ struct PidInfo {
   // Optional b/c cmdline may be sanitized or redacted based on security policy
   5: optional list<string> cmdline_vec,
   6: optional string exe_path,
+  7: PidMem mem,
 }
 
 typedef map<i32, PidInfo> PidMap

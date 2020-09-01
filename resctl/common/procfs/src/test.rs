@@ -687,6 +687,82 @@ fn test_pid_stat() {
 }
 
 #[test]
+fn test_pid_mem() {
+    let status = b"Name:	below
+Umask:	0022
+State:	S (sleeping)
+Tgid:	93041
+Ngid:	0
+Pid:	93041
+PPid:	1
+TracerPid:	0
+Uid:	0	0	0	0
+Gid:	0	0	0	0
+FDSize:	256
+Groups:
+NStgid:	93041
+NSpid:	93041
+NSpgid:	93041
+NSsid:	93041
+VmPeak:	 1381848 kB
+VmSize:	 1381532 kB
+VmLck:	       4 kB
+VmPin:	    6240 kB
+VmHWM:	  128092 kB
+VmRSS:	  124404 kB
+RssAnon:	   99284 kB
+RssFile:	   25120 kB
+RssShmem:	      12 kB
+VmData:	 1236636 kB
+VmStk:	     132 kB
+VmExe:	   60652 kB
+VmLib:	    9096 kB
+VmPTE:	    1840 kB
+VmSwap:	    8812 kB
+HugetlbPages:	      13 kB
+CoreDumping:	0
+THP_enabled:	1
+Threads:	147
+SigQ:	5/228815
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+SigBlk:	0000000000000000
+SigIgn:	0000000000000000
+SigCgt:	00000001840054ec
+CapInh:	0000000000000000
+CapPrm:	0000003fffffffff
+CapEff:	0000003fffffffff
+CapBnd:	0000003fffffffff
+CapAmb:	0000000000000000
+NoNewPrivs:	0
+Seccomp:	0
+Speculation_Store_Bypass:	vulnerable
+Cpus_allowed:	ffffff
+Cpus_allowed_list:	0-23
+Mems_allowed:	01
+Mems_allowed_list:	0
+voluntary_ctxt_switches:	2144888
+nonvoluntary_ctxt_switches:	37733";
+
+    let procfs = TestProcfs::new();
+    procfs.create_pid_file_with_content(93041, "status", status);
+    let reader = procfs.get_reader();
+    let pidmem = reader
+        .read_pid_mem(93041)
+        .expect("Failed to read pid status file");
+
+    assert_eq!(pidmem.vm_size, Some(1_381_532 * 1024));
+    assert_eq!(pidmem.lock, Some(4 * 1024));
+    assert_eq!(pidmem.pin, Some(6240 * 1024));
+    assert_eq!(pidmem.anon, Some(99_284 * 1024));
+    assert_eq!(pidmem.file, Some(25_120 * 1024));
+    assert_eq!(pidmem.shmem, Some(12 * 1024));
+    assert_eq!(pidmem.pte, Some(1840 * 1024));
+    assert_eq!(pidmem.swap, Some(8812 * 1024));
+    assert_eq!(pidmem.huge_tlb, Some(13 * 1024));
+}
+
+#[test]
 fn test_pid_io() {
     let io = b"rchar: 1065638765191
 wchar: 330982500707
@@ -801,15 +877,73 @@ cancelled_write_bytes: 5431947264
 ";
     let uptime = b"1631826.45 37530838.66";
 
+    let status = b"Name:	below
+Umask:	0022
+State:	S (sleeping)
+Tgid:	93041
+Ngid:	0
+Pid:	93041
+PPid:	1
+TracerPid:	0
+Uid:	0	0	0	0
+Gid:	0	0	0	0
+FDSize:	256
+Groups:
+NStgid:	93041
+NSpid:	93041
+NSpgid:	93041
+NSsid:	93041
+VmPeak:	 1381848 kB
+VmSize:	 1381532 kB
+VmLck:	       4 kB
+VmPin:	    6240 kB
+VmHWM:	  128092 kB
+VmRSS:	  124404 kB
+RssAnon:	   99284 kB
+RssFile:	   25120 kB
+RssShmem:	      12 kB
+VmData:	 1236636 kB
+VmStk:	     132 kB
+VmExe:	   60652 kB
+VmLib:	    9096 kB
+VmPTE:	    1840 kB
+VmSwap:	    8812 kB
+HugetlbPages:	      13 kB
+CoreDumping:	0
+THP_enabled:	1
+Threads:	147
+SigQ:	5/228815
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+SigBlk:	0000000000000000
+SigIgn:	0000000000000000
+SigCgt:	00000001840054ec
+CapInh:	0000000000000000
+CapPrm:	0000003fffffffff
+CapEff:	0000003fffffffff
+CapBnd:	0000003fffffffff
+CapAmb:	0000000000000000
+NoNewPrivs:	0
+Seccomp:	0
+Speculation_Store_Bypass:	vulnerable
+Cpus_allowed:	ffffff
+Cpus_allowed_list:	0-23
+Mems_allowed:	01
+Mems_allowed_list:	0
+voluntary_ctxt_switches:	2144888
+nonvoluntary_ctxt_switches:	37733";
+
     // procfs cmdline format is nul bytes to separate with a trailing nul byte
     let cmdline = b"one\0two\0three\0";
 
     let procfs = TestProcfs::new();
     procfs.create_pid_file_with_content(1024, "stat", stat);
     procfs.create_pid_file_with_content(1024, "io", io);
+    procfs.create_pid_file_with_content(1024, "status", status);
     procfs.create_pid_file_with_content(1024, "cgroup", cgroup);
     procfs.create_pid_file_with_content(1024, "cmdline", cmdline);
     procfs.create_pid_file_with_content(1025, "stat", stat);
+    procfs.create_pid_file_with_content(1025, "status", status);
     procfs.create_pid_file_with_content(1025, "io", io);
     procfs.create_pid_file_with_content(1025, "cgroup", cgroup);
     procfs.create_pid_file_with_content(1025, "cmdline", cmdline);
