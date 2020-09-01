@@ -15,6 +15,82 @@
 use crate::*;
 use attr::*;
 
+/// A field is an instance of a struct field name with its parsed decoration attributes
+#[allow(unused)]
+pub struct Field {
+    // name of the field
+    pub name: syn::Ident,
+    pub field_type: syn::Type,
+    // name of the inner type of option field
+    pub inner_type: Option<syn::Type>,
+    // Unwrap the field attr into Field, one less if layer during generation
+    pub field_attr: BelowFieldAttr,
+    // Unwrap the view attr into Field, one less if layer during generation
+    pub view_attr: BelowViewAttr,
+    // Unwrap the class attr into Field, one less if layer during generation
+    pub class_attr: Option<String>,
+    // Generated expr of aggregated field, more details in the comment of `parse_blink`
+    pub aggr_val: Option<String>,
+    // The linked model type, more details in the comment of `parse_blink`
+    pub blink_type: Option<String>,
+    // The linked field prefix, more details in the comment of `parse_blink`
+    pub blink_prefix: Option<String>,
+    // The sort tag enum type, more in the comment of `parse_sort_tag`
+    pub sort_tag_type: Option<Tstream>,
+    // The sort tag enum value, more in the comment of `parse_sort_tag`
+    pub sort_tag_val: Option<Tstream>,
+    // Parsed display related values. More in `parse_view_attr`
+    pub decor_value: Option<Tstream>,
+    pub prefix: Tstream,
+    pub depth: Tstream,
+    pub width: Tstream,
+    pub unit: String,
+    // Parse dfill related boxed fn handle. More in `parse_dfill_tag`
+    pub dfill_tag_title: Option<Tstream>,
+    pub dfill_tag_title_styled: Option<Tstream>,
+    pub dfill_tag_field: Option<Tstream>,
+    pub dfill_tag_field_styled: Option<Tstream>,
+}
+
+#[allow(unused)]
+impl Field {
+    /// Generate new field from the attributes
+    pub fn new_with_attr(name: syn::Ident, field_type: syn::Type, attr: BelowAttr) -> Field {
+        let mut field = Field {
+            name,
+            field_type,
+            inner_type: None,
+            field_attr: Default::default(),
+            view_attr: Default::default(),
+            class_attr: None,
+            aggr_val: None,
+            blink_type: None,
+            blink_prefix: None,
+            sort_tag_type: None,
+            sort_tag_val: None,
+            decor_value: None,
+            prefix: quote! {},
+            depth: quote! {},
+            width: quote! {},
+            unit: String::new(),
+            dfill_tag_title: None,
+            dfill_tag_title_styled: None,
+            dfill_tag_field: None,
+            dfill_tag_field_styled: None,
+        };
+
+        field.parse_below_attribute(attr);
+
+        field
+    }
+
+    /// Parse field and view attributes.
+    fn parse_below_attribute(&mut self, attr: BelowAttr) {
+        self.field_attr = attr.field.unwrap_or_default();
+        self.view_attr = attr.view.unwrap_or_default();
+    }
+}
+
 /// Generate get function for direct field.
 /// # note
 /// This function will not honor decorator.
