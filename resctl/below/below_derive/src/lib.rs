@@ -35,10 +35,6 @@
 //!       both title and field.
 //!     * title_width: usize -- Defines the width of title, will override
 //!       width for title.
-//!     * title_depth: usize -- Defines the heading indentation of title,
-//!       default to 0.
-//!     * title_prefix: String -- A String that represents the title prefix
-//!       symbol.
 //!     * none_mark: String -- Default to '?', defines what need show
 //!       if the field is None.
 //!     * decorator: TokenStream -- Field decorator, apply a function
@@ -54,42 +50,35 @@
 //!
 //!     * title: String -- Title of the field
 //!     * cmp: bool -- If need to generate compare function for this field.
-//!     * aggr: string -- Use to deal with the case that one field will represent
-//!       an aggregation of another field. The format is "Type: field1 + field2".
+//!     * gen: bool -- Only generate minimal getter without display code.
 //!       Eg.: `"CgroupModel: io_total?.rbytes_per_sec? + io_total?.wbytes_per_sec?"`
 //!     * tag: string -- Help to generate dfill trait that map the tag to concrete processing
-//!       functions. Eg: tag = "CgroupField::IoDiops&"
-//!     * class: string -- Help to generate dfill trait that map an aggregation of fields to
-//!       a single tag. Eg: `CgroupField$usage_pct&:user_pct&,sys_pct&,nr_periods_per_sec&`.
-//!       Please note that, it will use the field name as tag name. For example, field `cpu`
-//!       will map to tag `FieldType::Cpu`. We use `:` to split the detail level. By default,
-//!       it will only display the item before `:`. It will display all items if a user specify
-//!       `--detail`.
+//!       functions. Eg: tag = "CgroupField::IoDiops"
+//!     * class: string -- Mark which class current field belongs to. Dump ONLY.
+//!     * class_detail: bool -- If set, current field will show if --detail specified. Dump ONLY
 //!
 //!
 //! ## blink - below link
 //! * `Type$call_path` -- Type is the argument type of the generated function.
 //!   `Model$cgroup.get_cpu` will generate `model.cgroup.get_cpu()`, the
-//!    `model` here is an argument of the generated function.
+//!    `model` here is an argument of the generated function. More details can be found in field::parse_blink
 //! * Limitation: All link from same struct should have a same starting point, aka, model.
+//! * Multi-link will aggregate the link value
 //!
 //! ## Special characters
-//! * `&` --> Means the marked field is a link, it will tell the proc macro to generate link
-//!   related code. Use with `aggr`, `blink`, `class`, and `tag`
 //! * `?` --> Means the marked field is an option, it will tell the macro to unwrap a
 //!   reference of the field, if the option is None, it will auto use the default value.
-//!   Use with `blink` and `aggr`
-//! * `@` --> Means the marked field is an `aggr`. Only use within `class`
+//!   Use with `blink`
 //!
 //! ## Generated functions
 //! **If a field has a link, you will need an extra model argument.**
-//! * `get_FIELD_NAME<'a>(&'a self) -> &'a Type` -- Get a reference of FIELD_NAME. This function won't apply decorator function.
+//! * `get_FIELD_NAME_value<'a>(&'a self) -> &'a Type` -- Get a reference of FIELD_NAME. This function won't apply decorator function.
 //! * `get_FIELD_NAME_title(&self) -> &'static str` -- Get raw title string. We capture a `&self` here is for chaining of link.
 //! * `get_FIELD_NAME_title_styled(&self) -> &'static str` -- Get styled title string. This function will apply width attribute.
-//! * `get_title_line(&self) -> String` -- Get all titles in a line, all style applied.
-//! * `get_title_pipe(&self) -> String` -- Get all titles in a line, separated by '|', all style applied.
-//! * `get_FIELD_NAME_str(&self) -> String` -- Get the field string, all style applied.
-//! * `get_FIELD_NAME_str_raw(&self) -> String` -- Get the field string, no style applied.
+//! * `get_title_line() -> String` -- Get all titles in a line, all style applied.
+//! * `get_title_pipe() -> String` -- Get all titles in a line, separated by '|', all style applied.
+//! * `get_FIELD_NAME_str_styled(&self) -> StyledString` -- Get the field string, all style applied.
+//! * `get_FIELD_NAME_str(&self) -> String` -- Get the field string, no style applied, decorator will be hornored.
 //! * `get_field_line(&self) -> StyledString` -- Get all fields in a line, all style applied.
 //! * `get_csv_field(&self) -> String` -- Get all fields in a line, only apply decorator function. Comma separated.
 //! * `get_csv_title(&self) -> String` -- Get all title in a line, comma separated.
@@ -144,6 +133,8 @@ type Tstream = proc_macro2::TokenStream;
 mod attr;
 mod attr_new;
 mod field;
+mod function;
+mod model;
 mod view;
 
 #[proc_macro_derive(BelowDecor, attributes(bttr, blink))]
@@ -172,6 +163,22 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let get_interleave_line = view::gen_interleave(&members);
     let get_dfill = field::gen_dfill_tag_and_class_fns(&members, &input_ident);
     let sort_fn = field::gen_tag_sort_fn(&members);
+
+    // let model = model::Model::new_with_members(&members);
+    // let _get_fns = model.generate_get_fns();
+    // let get_title_fns = model.generate_get_title_fns();
+    // let get_title_line = model.generate_get_title_line();
+    // let get_str_impl_fns = model.generate_get_str_impl_fns();
+    // let get_str_fns = model.generate_get_str_fns();
+    // let get_field_line = model.generate_get_field_line();
+    // let get_title_pipe = model.generate_get_title_pipe();
+    // let get_csv_field = model.generate_get_csv_field();
+    // let get_csv_title = model.generate_get_csv_title();
+    // let cmp_fns = model.generate_cmp_fns();
+    // let get_interleave_line = model.generate_interleave();
+    // let sort_fn = model.generate_sort_fn();
+    // let sort_util = model.generate_sort_util_fns();
+    // let get_dfill = model.generate_dfill_fns();
 
     let token = quote! {
         impl #input_ident {

@@ -1,3 +1,4 @@
+#![allow(unused)]
 // Copyright (c) Facebook, Inc. and its affiliates.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +27,6 @@ impl CallSelf {
 }
 
 /// A field is an instance of a struct field name with its parsed decoration attributes
-#[allow(unused)]
 pub struct Field {
     // name of the field
     pub name: syn::Ident,
@@ -60,7 +60,6 @@ pub struct Field {
     pub dfill_tag_field_styled: Option<Tstream>,
 }
 
-#[allow(unused)]
 impl Field {
     /// Generate new field from the attributes
     pub fn new_with_attr(
