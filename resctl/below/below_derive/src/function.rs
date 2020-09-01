@@ -246,4 +246,223 @@ impl Function {
             }
         }
     }
+
+    /// Generate the get_FIELD_str_impl function. Direct field ONLY
+    /// Example:
+    /// ```ignore
+    /// #[bttr(
+    ///     title = "Field",
+    ///     unit = "/s",
+    ///     precision = 2,
+    ///     prefix = "-->",
+    ///     depth = 2,
+    ///     width = 20,
+    ///     decorator = "if $ > 0 { $ * 2 } else { 0 }"
+    /// )]
+    /// field: i32
+    /// ```
+    /// Will generate:
+    /// ```ignore
+    /// pub fn get_field_str_impl<P> (
+    ///     &self,
+    ///     decorator: Option<P>,
+    ///     unit: Option<&str>,
+    ///     precision: Option<usize>,
+    /// ) -> String
+    /// where
+    ///     P: Fn(i32) -> Box<dyn std::fmt::Display>
+    /// {
+    ///     let precision = precision.map_or(Some(2), |p| Some(p));
+    ///     let v = self.get_field_value();
+    ///     let value = if let Some(p) = precision {
+    ///         if let Some(decor_fn) = decorator {
+    ///             format!("{:.precision$}", decor_fn(v), precision = p)
+    ///         } else {
+    ///             format!("{:.precision$}", if v > 0 { $ * 2 } else { 0 }, precision = p)
+    ///         }
+    ///     } else {
+    ///         if let Some(decor_fn) = decorator {
+    ///             format!("{}", decor_fn(v), precision = p)
+    ///         } else {
+    ///             format!("{}", if v > 0 { $ * 2 } else { 0 }, precision = p)
+    ///         }
+    ///     }
+    ///
+    ///     format!(
+    ///         "{}{}",
+    ///         value,
+    ///         unit.unwrap_or(#unit),
+    ///     )
+    /// }
+    ///
+    /// pub fn get_field_str_styled_impl<P>(
+    ///     &self,
+    ///     decorator: Option<P>,
+    ///     unit: Option<&str>,
+    ///     precision: Option<usize>,
+    ///     prefix: Option<&str>,
+    ///     depth: Option<usize>,
+    ///     width: Option<usize>,
+    /// ) -> StyledString
+    /// where
+    ///     P: Fn(i32) -> Box<dyn std::fmt::Display>
+    /// {
+    ///     let value = self.get_field_str_impl(decorator, unit, precision);
+    ///     let depth = depth.unwrap_or(#depth);
+    ///     let width = width.unwrap_or(#width);
+    ///     let width = if width == 0 {
+    ///         value.len()
+    ///     } else if width >= depth {
+    ///         width - depth
+    ///     } else {
+    ///         0
+    ///     };
+    ///
+    ///     format!(
+    ///         "{:>depth$.depth$}{:width$.width$}",
+    ///         prefix.unwrap_or(#prefix),
+    ///         value,
+    ///         depth = depth,
+    ///         width = width,
+    ///     )
+    /// }
+    /// ```
+    pub fn gen_get_str_impl(field: &Field) -> Tstream {
+        let fn_name = field.build_fn_name("str_impl");
+        let fn_name_styled = field.build_fn_name("str_styled_impl");
+
+        let unit = field.unit.clone();
+        let prefix = field.prefix.clone();
+        let depth = field.depth.clone();
+        let width = field.width.clone();
+        let precision = match field.view_attr.precision {
+            Some(v) => quote! {Some(#v)},
+            None => quote! {None},
+        };
+
+        let get_fn = field.build_fn_interface("value");
+        let none_mark = field.view_attr.none_mark.clone();
+
+        let value_type = field.inner_type.as_ref().unwrap_or(&field.field_type);
+
+        let decor_value = match &field.decor_value {
+            Some(d) => d.clone(),
+            _ => quote! {
+                (|v| {
+                    let res: Box<dyn std::fmt::Display> = Box::new(v);
+                    res
+                })
+            },
+        };
+
+        let (args, args_val) = if field.is_aggr() {
+            let aggr_type = field
+                .blink_type
+                .as_ref()
+                .unwrap()
+                .parse::<Tstream>()
+                .unwrap();
+            (quote! {model: &#aggr_type}, quote! {model})
+        } else {
+            (quote! {}, quote! {})
+        };
+
+        let value = quote! {
+            let value = if let Some(p) = precision {
+                if let Some(decor_fn) = decorator {
+                    format!("{:.precision$}", decor_fn(v), precision = p)
+                } else {
+                    format!("{:.precision$}", #decor_value(v), precision = p)
+                }
+            } else {
+                if let Some(decor_fn) = decorator {
+                    format!("{}", decor_fn(v))
+                } else {
+                    format!("{}", #decor_value(v))
+                }
+            };
+
+            format!(
+                "{}{}",
+                value,
+                unit.unwrap_or(#unit)
+            )
+        };
+
+        let str_impl_fn = if field.is_option() {
+            quote! {
+                pub fn #fn_name<P> (
+                    &self,
+                    decorator: Option<P>,
+                    unit: Option<&str>,
+                    precision: Option<usize>,
+                    #args
+                ) -> String
+                where
+                    P: Fn(#value_type) -> Box<dyn std::fmt::Display>
+                {
+                    let precision = precision.map_or(#precision, |p| Some(p));
+                    if let Some(v) = #get_fn {
+                        #value
+                    } else {
+                        #none_mark.into()
+                    }
+                }
+            }
+        } else {
+            quote! {
+                pub fn #fn_name<P> (
+                    &self,
+                    decorator: Option<P>,
+                    unit: Option<&str>,
+                    precision: Option<usize>,
+                    #args
+                ) -> String
+                where
+                    P: Fn(#value_type) -> Box<dyn std::fmt::Display>
+                {
+                    let precision = precision.map_or(#precision, |p| Some(p));
+                    let v = #get_fn;
+                    #value
+                }
+            }
+        };
+
+        quote! {
+            #str_impl_fn
+
+            pub fn #fn_name_styled<P>(
+                &self,
+                decorator: Option<P>,
+                unit: Option<&str>,
+                precision: Option<usize>,
+                prefix: Option<&str>,
+                depth: Option<usize>,
+                width: Option<usize>,
+                #args
+            ) -> StyledString
+            where
+                P: Fn(#value_type) -> Box<dyn std::fmt::Display>
+            {
+                let value = self.#fn_name(decorator, unit, precision, #args_val);
+                let depth = depth.unwrap_or(#depth);
+                let width = width.unwrap_or(#width);
+                let width = if width == 0 {
+                    value.len()
+                } else if width >= depth {
+                    width - depth
+                } else {
+                    0
+                };
+
+                StyledString::plain(format!(
+                    "{:>depth$.depth$}{:width$.width$}",
+                    prefix.unwrap_or(#prefix),
+                    value,
+                    depth = depth,
+                    width = width,
+                ))
+            }
+        }
+    }
 }
