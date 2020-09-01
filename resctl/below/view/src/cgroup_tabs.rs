@@ -92,7 +92,7 @@ pub trait CgroupTab {
     fn get_title_vec(&self, model: &CgroupModel) -> Vec<String>;
     fn depth(&mut self) -> &mut usize;
     fn collapse(&mut self) -> &mut bool;
-    fn get_cgroup_field_line(&self, model: &CgroupModel) -> StyledString;
+    fn get_cgroup_field_line(&self, model: &CgroupModel, offset: Option<usize>) -> StyledString;
     fn sort_cgroup(&self, sort_order: CgroupOrders, cgroups: &mut Vec<&CgroupModel>, reverse: bool);
     fn output_cgroup(
         &mut self,
@@ -100,6 +100,7 @@ pub trait CgroupTab {
         state: &CgroupState,
         filter_out_set: &Option<HashSet<String>>,
         output: &mut Vec<(StyledString, String)>,
+        offset: Option<usize>,
     ) {
         if let Some(set) = &filter_out_set {
             if set.contains(&cgroup.full_path) {
@@ -110,7 +111,7 @@ pub trait CgroupTab {
         let collapsed = state.collapsed_cgroups.borrow().contains(&cgroup.full_path);
         *self.depth() = cgroup.depth as usize;
         *self.collapse() = collapsed;
-        let row = self.get_cgroup_field_line(&cgroup);
+        let row = self.get_cgroup_field_line(&cgroup, offset);
         // Each row is (label, value), where label is visible and value is used
         // as identifier to correlate the row with its state in global data.
         output.push((row, cgroup.full_path.clone()));
@@ -139,11 +140,15 @@ pub trait CgroupTab {
                     .borrow_mut()
                     .insert(child_cgroup.full_path.to_string());
             }
-            self.output_cgroup(child_cgroup, state, filter_out_set, output);
+            self.output_cgroup(child_cgroup, state, filter_out_set, output, offset);
         }
     }
 
-    fn get_rows(&mut self, state: &CgroupState) -> Vec<(StyledString, String)> {
+    fn get_rows(
+        &mut self,
+        state: &CgroupState,
+        offset: Option<usize>,
+    ) -> Vec<(StyledString, String)> {
         let filter_out_set = if let Some(f) = &state.filter {
             Some(calculate_filter_out_set(&state.get_model(), &f))
         } else {
@@ -151,7 +156,13 @@ pub trait CgroupTab {
         };
 
         let mut rows = Vec::new();
-        self.output_cgroup(&state.get_model(), state, &filter_out_set, &mut rows);
+        self.output_cgroup(
+            &state.get_model(),
+            state,
+            &filter_out_set,
+            &mut rows,
+            offset,
+        );
         rows
     }
 }
@@ -210,8 +221,28 @@ macro_rules! impl_cgroup_tab {
                 res
             }
 
-            fn get_cgroup_field_line(&self, model: &CgroupModel) -> StyledString {
-                self.get_field_line(&model)
+            fn get_cgroup_field_line(
+                &self,
+                model: &CgroupModel,
+                offset: Option<usize>,
+            ) -> StyledString {
+                match offset {
+                    Some(offset) => {
+                        let mut field_iter = self.get_field_vec(&model).into_iter();
+                        let mut res = StyledString::new();
+                        if let Some(name) = field_iter.next() {
+                            res.append(name);
+                            res.append_plain(" ")
+                        };
+
+                        field_iter.skip(offset).for_each(|item| {
+                            res.append(item);
+                            res.append_plain(" ")
+                        });
+                        res
+                    }
+                    _ => self.get_field_line(&model),
+                }
             }
 
             fn sort_cgroup(

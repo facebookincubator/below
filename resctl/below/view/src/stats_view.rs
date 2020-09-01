@@ -64,7 +64,14 @@ pub trait ViewBridge {
     /// The essential function that defines how a StatsView should fill
     /// the data. This function will iterate through the data, apply filter and sorting,
     /// return a Vec of (Stats String Line, Key) tuple.
-    fn get_rows(&mut self, state: &Self::StateType) -> Vec<(StyledString, String)>;
+    /// # Arguments
+    /// * `state`: The concrete view state
+    /// * `offset`: Indicates how many columns we should pass after the first column when generating a line. (Cgroup only)
+    fn get_rows(
+        &mut self,
+        state: &Self::StateType,
+        offset: Option<usize>,
+    ) -> Vec<(StyledString, String)>;
 }
 
 /// StatsView is a view wrapper that wraps tabs, titles, and list of stats.
@@ -128,12 +135,21 @@ impl<V: 'static + ViewBridge> ViewWrapper for StatsView<V> {
             Event::Char('.') => {
                 let x = self.get_title_view().on_tab();
                 self.set_horizontal_offset(x);
-                EventResult::Consumed(None)
+                EventResult::with_cb(move |c| Self::refresh_myself(c))
             }
             Event::Char(',') => {
                 let x = self.get_title_view().on_shift_tab();
                 self.set_horizontal_offset(x);
-                EventResult::Consumed(None)
+                EventResult::with_cb(move |c| Self::refresh_myself(c))
+            }
+            Event::Key(Key::Right) => {
+                let screen_width = self.get_screen_width();
+                self.get_title_view().on_right(screen_width);
+                EventResult::with_cb(move |c| Self::refresh_myself(c))
+            }
+            Event::Key(Key::Left) => {
+                self.get_title_view().on_left();
+                EventResult::with_cb(move |c| Self::refresh_myself(c))
             }
             Event::Char('S') => {
                 let tab_view = self.get_tab_view();
@@ -238,6 +254,8 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             .unwrap_or_else(|| panic!("Fail to query title from tab {}", cur_tab))
             .clone();
         title_view.current_selected = 0;
+        title_view.current_offset_idx = 0;
+        title_view.cur_offset = 0;
         title_view.total_length = title_view.tabs.iter().fold(0, |acc, x| acc + x.len() + 1);
         title_view.cur_length = title_view.tabs[0].len();
     }
@@ -319,14 +337,18 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         cmd_palette.get_mut()
     }
 
-    pub fn set_horizontal_offset(&mut self, x: usize) {
-        let detail_panel = self.get_scroll_view();
+    // convenience function to get screen width
+    fn get_screen_width(&mut self) -> usize {
+        self.get_scroll_view().content_viewport().width()
+    }
 
-        let screen_width = detail_panel.content_viewport().width();
+    pub fn set_horizontal_offset(&mut self, x: usize) {
+        let screen_width = self.get_screen_width();
         if screen_width < x {
-            detail_panel.set_offset((x - screen_width, 0));
+            self.get_title_view()
+                .scroll_to_offset(x - screen_width, screen_width);
         } else {
-            detail_panel.set_offset((0, 0));
+            self.get_title_view().scroll_to_offset(0, screen_width);
         }
     }
 
@@ -340,11 +362,13 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         let pos = select_view.selected_id().unwrap_or(0);
         select_view.clear();
 
+        let horizontal_offset = self.get_title_view().current_offset_idx;
+
         let tab_detail = self
             .tab_view_map
             .get_mut(&cur_tab)
             .unwrap_or_else(|| panic!("Fail to query data from tab {}", cur_tab));
-        select_view.add_all(tab_detail.get_rows(&self.state.borrow()));
+        select_view.add_all(tab_detail.get_rows(&self.state.borrow(), Some(horizontal_offset)));
         select_view.select_down(pos)(c);
         if let Some(msg) = get_last_log_to_display() {
             self.get_cmd_palette().set_alert(msg);

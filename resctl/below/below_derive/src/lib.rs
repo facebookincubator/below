@@ -153,6 +153,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let get_str_impl_fns = model.generate_get_str_impl_fns();
     let get_str_fns = model.generate_get_str_fns();
     let get_field_line = model.generate_get_field_line();
+    let get_field_vec = model.generate_get_field_vec();
     let get_title_pipe = model.generate_get_title_pipe();
     let get_csv_field = model.generate_get_csv_field();
     let get_csv_title = model.generate_get_csv_title();
@@ -172,6 +173,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
             #get_title_line
             #get_title_pipe
             #get_field_line
+            #get_field_vec
             #get_csv_field
             #get_csv_title
             #get_interleave_line

@@ -58,7 +58,7 @@ pub struct SingleProcessModel {
     pub io: Option<ProcessIoModel>,
     pub mem: Option<ProcessMemoryModel>,
     pub cpu: Option<ProcessCpuModel>,
-    #[bttr(title = "Cmdline")]
+    #[bttr(title = "Cmdline", width = 50)]
     pub cmdline: Option<String>,
     #[bttr(title = "Exe Path")]
     pub exe_path: Option<String>,

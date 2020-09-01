@@ -256,7 +256,11 @@ impl ViewBridge for CgroupView {
         self.get_inner().get_title_vec(&model)
     }
 
-    fn get_rows(&mut self, state: &Self::StateType) -> Vec<(StyledString, String)> {
-        self.get_inner().get_rows(state)
+    fn get_rows(
+        &mut self,
+        state: &Self::StateType,
+        offset: Option<usize>,
+    ) -> Vec<(StyledString, String)> {
+        self.get_inner().get_rows(state, offset)
     }
 }

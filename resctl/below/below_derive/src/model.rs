@@ -238,6 +238,35 @@ impl Model {
         )
     }
 
+    /// Generate get_field_vec fn
+    pub fn generate_get_field_vec(&self) -> Tstream {
+        let fields = self
+            .fields
+            .iter()
+            .filter(|f| f.field_attr.title.is_some() || f.is_blink())
+            .map(|f| {
+                let get_fn = f.build_self_caller("str_styled");
+                quote! {
+                    res.push(#get_fn);
+                }
+            });
+
+        let args = match &self.blink_type {
+            Some(blink_type) => {
+                quote! {&self, model: &#blink_type}
+            }
+            _ => quote! {&self},
+        };
+
+        quote! {
+            pub fn get_field_vec(#args) -> Vec<StyledString> {
+                let mut res = vec![];
+                #(#fields)*
+                res
+            }
+        }
+    }
+
     /// Generate get_title_pipe fn
     pub fn generate_get_title_pipe(&self) -> Tstream {
         self.unified_line_generator_plain(

@@ -28,15 +28,24 @@ use anyhow::{bail, Result};
 pub struct TabView {
     pub tabs: Vec<String>,
     pub current_selected: usize,
+    pub current_offset_idx: usize,
     separator: String,
     pub cur_length: usize,
+    pub cur_offset: usize,
     pub total_length: usize,
 }
 
 impl View for TabView {
     fn draw(&self, printer: &Printer) {
         let mut current_offset = 0;
+        let mut current_offset_idx = self.current_offset_idx;
         for idx in 0..self.tabs.len() {
+            // Skip the hide item
+            if idx != 0 && current_offset_idx > 0 {
+                current_offset_idx -= 1;
+                continue;
+            }
+
             let content = self.tabs[idx].to_string();
 
             if idx == self.current_selected {
@@ -80,8 +89,10 @@ impl TabView {
         Ok(Self {
             tabs,
             current_selected: 0,
+            current_offset_idx: 0,
             separator: sep.into(),
             cur_length,
+            cur_offset: 0,
             total_length,
         })
     }
@@ -109,9 +120,45 @@ impl TabView {
             self.current_selected = self.tabs.len() - 1;
             self.cur_length = self.total_length;
         } else {
-            self.cur_length -= self.get_cur_selected().len() - 1;
+            self.cur_length -= self.get_cur_selected().len() + 1;
             self.current_selected -= 1;
         }
         self.cur_length
+    }
+
+    /// Right scrolling offset
+    pub fn on_right(&mut self, screen_size: usize) -> usize {
+        if self.total_length - self.cur_offset <= screen_size {
+            return self.cur_offset;
+        }
+        self.current_offset_idx += 1;
+        self.cur_offset += self.tabs[self.current_offset_idx].len() + 1;
+        self.cur_offset
+    }
+
+    /// Left scrolling offset
+    pub fn on_left(&mut self) -> usize {
+        if self.current_offset_idx == 0 {
+            return 0;
+        }
+
+        self.cur_offset -= self.tabs[self.current_offset_idx].len() + 1;
+        self.current_offset_idx -= 1;
+        self.cur_offset
+    }
+
+    /// Scroll to the target offset and automatically fill the length gap
+    pub fn scroll_to_offset(&mut self, offset: usize, screen_size: usize) -> usize {
+        self.cur_offset = 0;
+        self.current_offset_idx = 0;
+        if offset == 0 {
+            return 0;
+        }
+
+        while self.total_length - self.cur_offset > screen_size && self.cur_offset < offset {
+            self.on_right(screen_size);
+        }
+
+        self.cur_offset
     }
 }

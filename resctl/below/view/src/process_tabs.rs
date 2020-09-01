@@ -52,7 +52,11 @@ impl Default for ProcessOrders {
 // Defines how to iterate through the process stats and generate get_rows for ViewBridge
 pub trait ProcessTab {
     fn get_title_vec(&self, model: &SingleProcessModel) -> Vec<String>;
-    fn get_process_field_line(&self, model: &SingleProcessModel) -> StyledString;
+    fn get_process_field_line(
+        &self,
+        model: &SingleProcessModel,
+        offset: Option<usize>,
+    ) -> StyledString;
     fn sort_process(
         &self,
         sort_order: ProcessOrders,
@@ -60,7 +64,11 @@ pub trait ProcessTab {
         reverse: bool,
     );
 
-    fn get_rows(&mut self, state: &ProcessState) -> Vec<(StyledString, String)> {
+    fn get_rows(
+        &mut self,
+        state: &ProcessState,
+        offset: Option<usize>,
+    ) -> Vec<(StyledString, String)> {
         let unknown = "?".to_string();
         let process_model = state.get_model();
         let mut processes: Vec<&SingleProcessModel> =
@@ -88,7 +96,7 @@ pub trait ProcessTab {
             })
             .map(|spm| {
                 (
-                    self.get_process_field_line(&spm),
+                    self.get_process_field_line(&spm, offset),
                     spm.pid.unwrap_or(0).to_string(),
                 )
             })
@@ -119,8 +127,28 @@ macro_rules! impl_process_tab {
                 self.sort(sort_order, processes, reverse)
             }
 
-            fn get_process_field_line(&self, model: &SingleProcessModel) -> StyledString {
-                self.get_field_line(model)
+            fn get_process_field_line(
+                &self,
+                model: &SingleProcessModel,
+                offset: Option<usize>,
+            ) -> StyledString {
+                match offset {
+                    Some(offset) => {
+                        let mut field_iter = self.get_field_vec(&model).into_iter();
+                        let mut res = StyledString::new();
+                        if let Some(name) = field_iter.next() {
+                            res.append(name);
+                            res.append_plain(" ")
+                        };
+
+                        field_iter.skip(offset).for_each(|item| {
+                            res.append(item);
+                            res.append_plain(" ")
+                        });
+                        res
+                    }
+                    _ => self.get_field_line(&model),
+                }
             }
         }
     };
