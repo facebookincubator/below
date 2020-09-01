@@ -25,7 +25,6 @@ prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runti
 prost-build = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
-protobuf-build = { git = "https://github.com/tikv/protobuf-build.git", rev = "1b8b7f8b4aa1be4647acd85bab9345583a5df4f1" }
 pyo3 = { git = "https://github.com/PyO3/pyo3.git", rev = "4af61e83c34a04d74679a1048ee3866831a327ab" }
 r2d2_sqlite = { git = "https://github.com/jsgf/r2d2-sqlite.git", rev = "6d77a828ca0a3c507a3f58561532a1b6c66c7918" }
 rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }

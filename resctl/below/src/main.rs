@@ -548,6 +548,7 @@ fn live_local(logger: slog::Logger, interval: Duration, debug: bool, dir: PathBu
     let mut bpf_err_warned = false;
 
     let mut collector = model::Collector::new(exit_buffer);
+    logutil::set_current_log_target(logutil::TargetLog::File);
     let mut view = view::View::new(collector.update_model(&logger)?);
     view.register_live_local_event(logger.clone(), dir);
 
@@ -583,7 +584,6 @@ fn live_local(logger: slog::Logger, interval: Duration, debug: bool, dir: PathBu
         }
     });
 
-    logutil::set_current_log_target(logutil::TargetLog::File);
     view.run()
 }
 
