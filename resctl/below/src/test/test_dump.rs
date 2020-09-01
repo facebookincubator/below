@@ -447,7 +447,76 @@ fn test_dump_proc_content() {
         );
 
         let mem = spm.mem.as_ref().expect("SPM mem is none");
-        assert_eq!(value["RSS"].as_str().unwrap(), mem.get_rss_bytes_str());
+        assert_eq!(
+            value["RSS"].as_str().unwrap(),
+            match mem.rss_bytes {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
+        );
+        assert_eq!(
+            value["VM Size"].as_str().unwrap(),
+            match mem.vm_size {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
+        );
+        assert_eq!(
+            value["Lock"].as_str().unwrap(),
+            match mem.lock {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
+        );
+        assert_eq!(
+            value["Pin"].as_str().unwrap(),
+            match mem.pin {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
+        );
+        assert_eq!(
+            value["Anon"].as_str().unwrap(),
+            match mem.anon {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
+        );
+        assert_eq!(
+            value["File"].as_str().unwrap(),
+            match mem.file {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
+        );
+        assert_eq!(
+            value["Shmem"].as_str().unwrap(),
+            match mem.shmem {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
+        );
+        assert_eq!(
+            value["PTE"].as_str().unwrap(),
+            match mem.pte {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
+        );
+        assert_eq!(
+            value["Swap"].as_str().unwrap(),
+            match mem.swap {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
+        );
+        assert_eq!(
+            value["Huge TLB"].as_str().unwrap(),
+            match mem.huge_tlb {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
+        );
         assert_eq!(
             value["Minflt"].as_str().unwrap(),
             mem.get_minorfaults_per_sec_str()
@@ -587,75 +656,129 @@ fn traverse_cgroup_tree(model: &CgroupModel, jval: &mut Value) {
         assert_eq!(jval["Mem Total"].as_str().unwrap(), mem.get_total_str());
         assert_eq!(
             jval["Mem Swap"].as_str().unwrap(),
-            convert_bytes(mem.swap.unwrap_or_default() as f64)
+            match mem.swap {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["Mem Anon"].as_str().unwrap(),
-            convert_bytes(mem.anon.unwrap_or_default() as f64)
+            match mem.anon {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["Mem File"].as_str().unwrap(),
-            convert_bytes(mem.file.unwrap_or_default() as f64)
+            match mem.file {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["Kernel Stack"].as_str().unwrap(),
-            convert_bytes(mem.kernel_stack.unwrap_or_default() as f64)
+            match mem.kernel_stack {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["Mem Slab"].as_str().unwrap(),
-            convert_bytes(mem.slab.unwrap_or_default() as f64)
+            match mem.slab {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["Mem Sock"].as_str().unwrap(),
-            convert_bytes(mem.sock.unwrap_or_default() as f64)
+            match mem.sock {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["Mem Shmem"].as_str().unwrap(),
-            convert_bytes(mem.shmem.unwrap_or_default() as f64)
+            match mem.shmem {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["File Mapped"].as_str().unwrap(),
-            convert_bytes(mem.file_mapped.unwrap_or_default() as f64)
+            match mem.file_mapped {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["File Dirty"].as_str().unwrap(),
-            convert_bytes(mem.file_dirty.unwrap_or_default() as f64)
+            match mem.file_dirty {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["File WB"].as_str().unwrap(),
-            convert_bytes(mem.file_writeback.unwrap_or_default() as f64)
+            match mem.file_writeback {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["Anon THP"].as_str().unwrap(),
-            convert_bytes(mem.anon_thp.unwrap_or_default() as f64)
+            match mem.anon_thp {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["Inactive Anon"].as_str().unwrap(),
-            convert_bytes(mem.inactive_anon.unwrap_or_default() as f64)
+            match mem.inactive_anon {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["Active Anon"].as_str().unwrap(),
-            convert_bytes(mem.active_anon.unwrap_or_default() as f64)
+            match mem.active_anon {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["Inactive File"].as_str().unwrap(),
-            convert_bytes(mem.inactive_file.unwrap_or_default() as f64)
+            match mem.inactive_file {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["Active File"].as_str().unwrap(),
-            convert_bytes(mem.active_file.unwrap_or_default() as f64)
+            match mem.active_file {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["Unevictable"].as_str().unwrap(),
-            convert_bytes(mem.unevictable.unwrap_or_default() as f64)
+            match mem.unevictable {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["Slab Reclaimable"].as_str().unwrap(),
-            convert_bytes(mem.slab_reclaimable.unwrap_or_default() as f64)
+            match mem.slab_reclaimable {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(
             jval["Slab Unreclaimable"].as_str().unwrap(),
-            convert_bytes(mem.slab_unreclaimable.unwrap_or_default() as f64)
+            match mem.slab_unreclaimable {
+                Some(v) => convert_bytes(v as f64),
+                None => "?".into(),
+            }
         );
         assert_eq!(jval["Pgfault"].as_str().unwrap(), mem.get_pgfault_str());
         assert_eq!(

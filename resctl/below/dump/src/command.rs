@@ -172,6 +172,15 @@ make_option! (ProcField {
     "mem_rss": MemRssBytes,
     "mem_minorfaults": MemMinor,
     "mem_majorfaults": MemMajor,
+    "mem_vm_size": VmSize,
+    "mem_lock": Lock,
+    "mem_pin": Pin,
+    "mem_anon": Anon,
+    "mem_file": File,
+    "mem_shmem": Shmem,
+    "mem_pte": Pte,
+    "mem_swap": Swap,
+    "mem_huge_tlb": HugeTLB,
     "io_read": IoRead,
     "io_write": IoWrite,
     "io_total": IoTotal,
@@ -508,7 +517,8 @@ pub enum DumpCommand {
     ///
     /// cpu_user, cpu_sys, cpu_threads, cpu_total
     ///
-    /// mem_rss, mem_minorfaults, mem_majorfaults
+    /// mem_rss, mem_minorfaults, mem_majorfaults, mem_vm_size, mem_lock, mem_pin, mem_anon
+    /// mem_file, mem_shmem, mem_pte, mem_swap, mem_huge_tlb
     ///
     /// io_read, io_write, io_total
     ///
@@ -516,7 +526,7 @@ pub enum DumpCommand {
     ///
     /// * cpu: includes [cpu_total]. Additionally includes [cpu_user, cpu_sys, cpu_threads] if --detail specified
     ///
-    /// * mem: includes [mem_rss]. Additionally includes [mem_minorfaults, mem_majorfaults] if --detail specified
+    /// * mem: includes [mem_rss]. Additionally includes [mem_*] if --detail specified
     ///
     /// * io: includes [io_read, io_write]. Additionally includes[io_total] -if --detail specified
     ///

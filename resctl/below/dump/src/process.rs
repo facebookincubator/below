@@ -94,6 +94,87 @@ pub struct ProcessData {
     #[blink("SingleProcessModel$mem?.get_rss_bytes")]
     pub mem_rss: Option<u64>,
     #[bttr(
+        title = "VM Size",
+        tag = "ProcField::VmSize",
+        cmp = true,
+        class = "ProcField::Mem",
+        class_detail = true
+    )]
+    #[blink("SingleProcessModel$mem?.get_vm_size")]
+    pub mem_vm_size: Option<u64>,
+    #[bttr(
+        title = "Lock",
+        tag = "ProcField::Lock",
+        cmp = true,
+        class = "ProcField::Mem",
+        class_detail = true
+    )]
+    #[blink("SingleProcessModel$mem?.get_lock")]
+    pub mem_lock: Option<u64>,
+    #[bttr(
+        title = "Pin",
+        tag = "ProcField::Pin",
+        cmp = true,
+        class = "ProcField::Mem",
+        class_detail = true
+    )]
+    #[blink("SingleProcessModel$mem?.get_pin")]
+    pub mem_pin: Option<u64>,
+    #[bttr(
+        title = "Anon",
+        tag = "ProcField::Anon",
+        cmp = true,
+        class = "ProcField::Mem",
+        class_detail = true
+    )]
+    #[blink("SingleProcessModel$mem?.get_anon")]
+    pub mem_anon: Option<u64>,
+    #[bttr(
+        title = "File",
+        tag = "ProcField::File",
+        cmp = true,
+        class = "ProcField::Mem",
+        class_detail = true
+    )]
+    #[blink("SingleProcessModel$mem?.get_file")]
+    pub mem_file: Option<u64>,
+    #[bttr(
+        title = "Shmem",
+        tag = "ProcField::Shmem",
+        cmp = true,
+        class = "ProcField::Mem",
+        class_detail = true
+    )]
+    #[blink("SingleProcessModel$mem?.get_shmem")]
+    pub mem_shmem: Option<u64>,
+    #[bttr(
+        title = "PTE",
+        tag = "ProcField::Pte",
+        cmp = true,
+        class = "ProcField::Mem",
+        class_detail = true
+    )]
+    #[blink("SingleProcessModel$mem?.get_pte")]
+    pub mem_pte: Option<u64>,
+    #[bttr(
+        title = "Swap",
+        tag = "ProcField::Swap",
+        cmp = true,
+        class = "ProcField::Mem",
+        class_detail = true
+    )]
+    #[blink("SingleProcessModel$mem?.get_swap")]
+    pub mem_swap: Option<u64>,
+    #[bttr(
+        title = "Huge TLB",
+        tag = "ProcField::HugeTLB",
+        cmp = true,
+        class = "ProcField::Mem",
+        class_detail = true
+    )]
+    #[blink("SingleProcessModel$mem?.get_huge_tlb")]
+    pub mem_huge_tlb: Option<u64>,
+    #[bttr(
         title = "Minflt",
         tag = "ProcField::MemMinor",
         cmp = true,
