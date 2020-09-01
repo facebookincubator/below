@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use crate::*;
-use field::Field;
+use field::*;
 
 /// Per field fn generator
 pub struct Function;
@@ -613,6 +613,54 @@ impl Function {
 
             pub fn #fn_name_styled(&self, model: &#blink_type) -> StyledString {
                 #impl_name_styled(#decor_value, #unit, #precision, #prefix, #depth, #width, #args_val)
+            }
+        }
+    }
+
+    /// Generate per field cmp function
+    /// Example:
+    /// ```ignore
+    /// pub fn cmp_by_FIELD(left: &Model, right: &Model) -> Option<std::cmp::Ordering> {
+    ///     left.get_FIELD().partial_cmp(right.get_field())
+    /// }
+    /// ```
+    pub fn gen_cmp_fn(field: &Field) -> Tstream {
+        let args_type = if field.is_blink() || field.is_aggr() {
+            field
+                .blink_type
+                .as_ref()
+                .unwrap()
+                .parse::<Tstream>()
+                .unwrap()
+        } else {
+            quote! {Self}
+        };
+
+        // Aggr field will need to call on self
+        let caller = if field.is_aggr() || field.is_blink() {
+            Some("self")
+        } else {
+            None
+        };
+
+        let left_caller = field.build_custom_caller(
+            "value",
+            caller.unwrap_or("left"),
+            CallSelf(true),
+            Some("left"),
+        );
+        let right_caller = field.build_custom_caller(
+            "value",
+            caller.unwrap_or("right"),
+            CallSelf(true),
+            Some("right"),
+        );
+
+        let fn_name = format!("cmp_by_{}", field.name).parse::<Tstream>().unwrap();
+
+        quote! {
+            pub fn #fn_name(&self, left: &#args_type, right: &#args_type) -> Option<std::cmp::Ordering> {
+                #left_caller.partial_cmp(&#right_caller)
             }
         }
     }

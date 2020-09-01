@@ -26,7 +26,7 @@ pub struct Model {
     // Denormalization: if any of the fields is a blink, we will have the model type
     // here since all fields should have the same model type.
     blink_type: Option<Tstream>,
-    // sort_tag_type: Option<Tstream>,
+    sort_tag_type: Option<Tstream>,
     // class_fns: BTreeMap<String, ClassField>,
     // dfill_struct: Option<Tstream>,
 }
@@ -56,7 +56,7 @@ impl Model {
                 })
                 .collect(),
             blink_type: None,
-            // sort_tag_type: None,
+            sort_tag_type: None,
             // class_fns: BTreeMap::new(),
             // dfill_struct: None,
         };
@@ -65,6 +65,8 @@ impl Model {
             .fields
             .iter()
             .find_map(|f| f.blink_type.as_ref().map(|v| v.parse::<Tstream>().unwrap()));
+
+        model.sort_tag_type = model.fields.iter().find_map(|f| f.sort_tag_type.clone());
 
         model
     }
@@ -75,6 +77,109 @@ impl Model {
         let get_fns = self.fields.iter().map(|f| Function::gen_get_fn(&f));
         quote! {
             #(#get_fns)*
+        }
+    }
+
+    /// Generate compare function for each field
+    pub fn generate_cmp_fns(&self) -> Tstream {
+        let cmp_fns = self
+            .fields
+            .iter()
+            .filter(|f| f.field_attr.cmp)
+            .map(|f| Function::gen_cmp_fn(f));
+        quote! {
+            #(#cmp_fns)*
+        }
+    }
+
+    /// Generate sorting functions
+    /// For all fields that decorated by `cmp`, we will automatically generate a cmp_by_FIELD_NAME function. And for
+    /// All fields that decorated by `sort_tag`, we will use the associate cmp_by_FIELD_NAME function and generate a sort
+    /// function. The generated code will be something like this:
+    /// ```ignore
+    /// fn sort(&self, tag: TagType, children: Vec<ModelType>, reverse: bool) {
+    ///     match tag {
+    ///         TagType::Tag1 => children.sort_by(|lhs, rhs| {
+    ///             if reverse {
+    ///                 self.cmp_by_FIELD_NAME1(&lhs, &rhs)
+    ///                     .unwrap_or(std::cmp::Ordering::Equal)
+    ///                     .reverse()
+    ///             } else {
+    ///                 self.#cmp_by_FIELD_NAME1(&lhs, &rhs)
+    ///                     .unwrap_or(std::cmp::Ordering::Equal)
+    ///             }
+    ///         }),
+    ///         ...
+    ///         _ => ()
+    ///     }
+    /// }
+    /// ```
+    /// All fields without a sorting tagged will automatically tagged by TagType::Keep. So when defining sorting tag,
+    /// it's mandatory to have a field named Keep. Please note that all fields that are decorated by `sort_tag` will be automatically
+    /// set `cmp = true`
+    pub fn generate_sort_fn(&self) -> Tstream {
+        // No sort tag
+        if self.sort_tag_type.is_none() {
+            return quote! {};
+        }
+
+        let model_type = self.blink_type.clone().unwrap_or(quote! {Self});
+
+        let sort_tag_type = self.sort_tag_type.as_ref().unwrap();
+
+        let match_arms = self
+            .fields
+            .iter()
+            .filter(|f| f.sort_tag_type.is_some())
+            .map(|f| {
+                let cmp_fn_name = format!("cmp_by_{}", f.name).parse::<Tstream>().unwrap();
+                let sort_tag_val = f.sort_tag_val.as_ref().unwrap();
+                quote! {
+                    #sort_tag_val => children.sort_by(|lhs, rhs| {
+                        if reverse {
+                            self.#cmp_fn_name(&lhs, &rhs)
+                                .unwrap_or(std::cmp::Ordering::Equal)
+                                .reverse()
+                        } else {
+                            self.#cmp_fn_name(&lhs, &rhs)
+                                .unwrap_or(std::cmp::Ordering::Equal)
+                        }
+                    })
+                }
+            });
+
+        quote! {
+            pub fn sort(&self, tag: #sort_tag_type, children: &mut Vec<&#model_type>, reverse: bool) {
+                match tag {
+                    #(#match_arms,)*
+                    _ => (),
+                };
+            }
+        }
+    }
+
+    /// Generate get_sort_tag_vec and has_tag fn
+    pub fn generate_sort_util_fns(&self) -> Tstream {
+        // No sort tag
+        if self.sort_tag_type.is_none() {
+            return quote! {};
+        }
+
+        let sort_tag_type = self.sort_tag_type.as_ref().unwrap();
+        let sort_tags_vec = self.fields.iter().map(|f| {
+            if f.sort_tag_val.is_some() {
+                f.sort_tag_val.clone().unwrap()
+            } else {
+                quote! {
+                    #sort_tag_type::Keep
+                }
+            }
+        });
+
+        quote! {
+            pub fn get_sort_tag_vec() -> Vec<#sort_tag_type> {
+                vec![#(#sort_tags_vec,)*]
+            }
         }
     }
 }

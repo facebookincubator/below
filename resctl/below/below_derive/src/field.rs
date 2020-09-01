@@ -17,7 +17,7 @@ use crate::*;
 use attr::*;
 
 /// Struct to indicate if a function is called on `self` object.
-pub struct CallSelf(bool);
+pub struct CallSelf(pub bool);
 
 impl CallSelf {
     pub fn is_true(&self) -> bool {
@@ -72,6 +72,7 @@ impl Field {
         let field_attr = attr.field.unwrap_or_default();
         let view_attr = attr.view.unwrap_or_default();
         let width = view_attr.width.unwrap_or(0);
+        let (sort_tag_type, sort_tag_val) = Self::parse_sort_tag(&field_attr, &name);
 
         Field {
             name: name.clone(),
@@ -82,8 +83,8 @@ impl Field {
             aggr_val: Self::parse_aggr_val(&field_attr.link, is_option),
             blink_type: Self::parse_blink_type(&field_attr.link),
             blink_prefix: Self::parse_blink_prefix(&field_attr.link, &name),
-            sort_tag_type: None,
-            sort_tag_val: None,
+            sort_tag_type,
+            sort_tag_val,
             decor_value: Self::parse_decor(&view_attr, &inner_type, &field_type),
             prefix: view_attr.prefix.clone().unwrap_or_else(|| quote! {""}),
             depth: view_attr.depth.clone().unwrap_or_else(|| quote! {0}),
@@ -210,6 +211,27 @@ impl Field {
     /// Convenience function to check if a field is an aggregated field.
     pub fn is_aggr(&self) -> bool {
         self.blink_type.is_some() && self.aggr_val.is_some()
+    }
+
+    /// Parse the sort tag string into type and value
+    /// Example: ProcessTag::Cmdline
+    /// => sort_type = ProcessTag,
+    /// => sort_val = ProcessTag::Cmdline,
+    fn parse_sort_tag(
+        field_attr: &attr_new::BelowFieldAttr,
+        name: &syn::Ident,
+    ) -> (Option<Tstream>, Option<Tstream>) {
+        if let Some(sort_tag) = field_attr.sort_tag.as_ref() {
+            let sort_tag_path = sort_tag.split(':').collect::<Vec<&str>>();
+            if sort_tag_path.len() < 2 {
+                unimplemented!("{}: wrong sort tag format, expect EnumType::EnumVal", name);
+            }
+            let sort_tag_type = Some(sort_tag_path[0].parse().unwrap());
+            let sort_tag_val = Some(sort_tag.parse().unwrap());
+            (sort_tag_type, sort_tag_val)
+        } else {
+            (None, None)
+        }
     }
 
     /// If a field's type is option, we will parse the inner type of the field
