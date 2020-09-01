@@ -77,7 +77,7 @@ impl SingleProcessModel {
             uptime_secs: sample.stat.running_secs.map(|s| s as u64),
             cgroup: Some(sample.cgroup.clone()),
             io: last.map(|(l, d)| ProcessIoModel::new(&l.io, &sample.io, d)),
-            mem: last.map(|(l, d)| ProcessMemoryModel::new(&l.stat, &sample.stat, d)),
+            mem: last.map(|(l, d)| ProcessMemoryModel::new(&l, &sample, d)),
             cpu: last.map(|(l, d)| ProcessCpuModel::new(&l.stat, &sample.stat, d)),
             cmdline: if let Some(cmd_vec) = sample.cmdline_vec.as_ref() {
                 Some(cmd_vec.join(" "))
@@ -161,14 +161,41 @@ pub struct ProcessMemoryModel {
         cmp = true
     )]
     pub rss_bytes: Option<u64>,
+    #[bttr(title = "VM Size")]
+    pub vm_size: Option<u64>,
+    #[bttr(title = "Lock")]
+    pub lock: Option<u64>,
+    #[bttr(title = "Pin")]
+    pub pin: Option<u64>,
+    #[bttr(title = "Anon")]
+    pub anon: Option<u64>,
+    #[bttr(title = "File")]
+    pub file: Option<u64>,
+    #[bttr(title = "Shmem")]
+    pub shmem: Option<u64>,
+    #[bttr(title = "PTE")]
+    pub pte: Option<u64>,
+    #[bttr(title = "Swap")]
+    pub swap: Option<u64>,
+    #[bttr(title = "Huge TLB")]
+    pub huge_tlb: Option<u64>,
 }
 
 impl ProcessMemoryModel {
-    fn new(begin: &procfs::PidStat, end: &procfs::PidStat, delta: Duration) -> ProcessMemoryModel {
+    fn new(begin: &procfs::PidInfo, end: &procfs::PidInfo, delta: Duration) -> ProcessMemoryModel {
         ProcessMemoryModel {
-            minorfaults_per_sec: count_per_sec!(begin.minflt, end.minflt, delta),
-            majorfaults_per_sec: count_per_sec!(begin.majflt, end.majflt, delta),
-            rss_bytes: end.rss_bytes.map(|i| i as u64),
+            minorfaults_per_sec: count_per_sec!(begin.stat.minflt, end.stat.minflt, delta),
+            majorfaults_per_sec: count_per_sec!(begin.stat.majflt, end.stat.majflt, delta),
+            rss_bytes: end.stat.rss_bytes.map(|i| i as u64),
+            vm_size: end.mem.vm_size.map(|i| i as u64),
+            lock: end.mem.lock.map(|i| i as u64),
+            pin: end.mem.pin.map(|i| i as u64),
+            anon: end.mem.anon.map(|i| i as u64),
+            file: end.mem.file.map(|i| i as u64),
+            shmem: end.mem.shmem.map(|i| i as u64),
+            pte: end.mem.pte.map(|i| i as u64),
+            swap: end.mem.swap.map(|i| i as u64),
+            huge_tlb: end.mem.huge_tlb.map(|i| i as u64),
         }
     }
 }
