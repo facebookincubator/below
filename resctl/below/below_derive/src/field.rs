@@ -15,6 +15,16 @@
 use crate::*;
 use attr::*;
 
+/// Struct to indicate if a function is called on `self` object.
+pub struct CallSelf(bool);
+
+impl CallSelf {
+    pub fn is_true(&self) -> bool {
+        let CallSelf(res) = self;
+        *res
+    }
+}
+
 /// A field is an instance of a struct field name with its parsed decoration attributes
 #[allow(unused)]
 pub struct Field {
@@ -212,6 +222,86 @@ impl Field {
     /// Convenience function to check if a field is an Option
     pub fn is_option(&self) -> bool {
         self.inner_type.is_some()
+    }
+
+    /// Unified function argument convention
+    pub fn get_common_args(&self) -> Tstream {
+        if self.is_blink() || self.is_aggr() {
+            let blink_type = self
+                .blink_type
+                .as_ref()
+                .unwrap()
+                .parse::<Tstream>()
+                .unwrap();
+            quote! {&self, model: &#blink_type}
+        } else {
+            quote! {&self}
+        }
+    }
+
+    /// Unified function caller argument convention
+    pub fn get_common_args_value(&self, call_self: CallSelf, arg: Option<&str>) -> Tstream {
+        if (self.is_blink() && call_self.is_true()) || self.is_aggr() {
+            let arg = arg.unwrap_or("model").parse::<Tstream>().unwrap();
+            quote! {#arg}
+        } else {
+            quote! {}
+        }
+    }
+
+    /// Convenience function for build function interface
+    /// This function will enforce all generated function following same pattern
+    /// Example: get_field_value
+    pub fn build_fn_name(&self, sub_fn: &str) -> Tstream {
+        format!("get_{}_{}", self.name, sub_fn).parse().unwrap()
+    }
+
+    /// Convenience function for build function interface
+    /// This function will enforce all generated function following same pattern
+    /// Example: self.get_field_value(model)
+    pub fn build_fn_interface(&self, sub_fn: &str) -> Tstream {
+        self.build_fn_caller(
+            sub_fn,
+            &format!("({})", &self.get_common_args_value(CallSelf(false), None)),
+        )
+    }
+
+    /// Convenience function for build function interface
+    /// Example: model.get_field_value()
+    pub fn build_fn_caller(&self, sub_fn: &str, args: &str) -> Tstream {
+        if self.is_blink() {
+            format!("{}_{}{}", self.blink_prefix.as_ref().unwrap(), sub_fn, args)
+                .parse()
+                .unwrap()
+        } else {
+            format!("self.{}{}", self.build_fn_name(sub_fn), args)
+                .parse()
+                .unwrap()
+        }
+    }
+
+    /// Convenience function for build function interface on self
+    pub fn build_self_caller(&self, sub_fn: &str) -> Tstream {
+        self.build_custom_caller(sub_fn, "self", CallSelf(true), None)
+    }
+
+    /// Convenience function for build function interface on caller
+    /// `arg` here will be used for replace unified item with special item
+    pub fn build_custom_caller(
+        &self,
+        sub_fn: &str,
+        caller: &str,
+        call_self: CallSelf,
+        arg: Option<&str>,
+    ) -> Tstream {
+        format!(
+            "{}.{}({})",
+            caller,
+            self.build_fn_name(sub_fn),
+            self.get_common_args_value(call_self, arg)
+        )
+        .parse()
+        .unwrap()
     }
 }
 
