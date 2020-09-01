@@ -63,6 +63,7 @@ impl std::default::Default for BelowViewAttr {
 
 /// Parse attribute into attribute data structure.
 /// If there's a field, there will be a view, but not vice versa.
+#[allow(unused)]
 pub fn parse_attribute(attrs: &[syn::Attribute], field_name: &syn::Ident) -> BelowAttr {
     let mut bttr: BelowAttr = std::default::Default::default();
     let mut bfttr: BelowFieldAttr = std::default::Default::default();

@@ -142,6 +142,7 @@ type Tstream = proc_macro2::TokenStream;
 
 #[macro_use]
 mod attr;
+mod attr_new;
 mod field;
 mod view;
 

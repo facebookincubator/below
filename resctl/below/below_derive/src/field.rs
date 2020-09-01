@@ -24,11 +24,9 @@ pub struct Field {
     // name of the inner type of option field
     pub inner_type: Option<syn::Type>,
     // Unwrap the field attr into Field, one less if layer during generation
-    pub field_attr: BelowFieldAttr,
+    pub field_attr: attr_new::BelowFieldAttr,
     // Unwrap the view attr into Field, one less if layer during generation
-    pub view_attr: BelowViewAttr,
-    // Unwrap the class attr into Field, one less if layer during generation
-    pub class_attr: Option<String>,
+    pub view_attr: attr_new::BelowViewAttr,
     // Generated expr of aggregated field, more details in the comment of `parse_blink`
     pub aggr_val: Option<String>,
     // The linked model type, more details in the comment of `parse_blink`
@@ -55,14 +53,17 @@ pub struct Field {
 #[allow(unused)]
 impl Field {
     /// Generate new field from the attributes
-    pub fn new_with_attr(name: syn::Ident, field_type: syn::Type, attr: BelowAttr) -> Field {
+    pub fn new_with_attr(
+        name: syn::Ident,
+        field_type: syn::Type,
+        attr: attr_new::BelowAttr,
+    ) -> Field {
         let mut field = Field {
             name,
             field_type,
             inner_type: None,
             field_attr: Default::default(),
             view_attr: Default::default(),
-            class_attr: None,
             aggr_val: None,
             blink_type: None,
             blink_prefix: None,
@@ -79,15 +80,138 @@ impl Field {
             dfill_tag_field_styled: None,
         };
 
+        field.parse_option();
         field.parse_below_attribute(attr);
+        field.parse_blink();
 
         field
     }
 
     /// Parse field and view attributes.
-    fn parse_below_attribute(&mut self, attr: BelowAttr) {
+    fn parse_below_attribute(&mut self, attr: attr_new::BelowAttr) {
         self.field_attr = attr.field.unwrap_or_default();
         self.view_attr = attr.view.unwrap_or_default();
+    }
+
+    /// Parse `blink_type`, `blink_prefix` and `aggr_val` from `BelowAttr`
+    /// `blink_type`, `blink_prefix`, and `aggr_val` are parsed from the BelowFieldAttr::link,
+    /// which is in form of "Type$call_path". For example:
+    /// `CgroupModel$cpu?.get_cpu`
+    /// will be parsed to:
+    /// ```ignore
+    /// blink_type: "CgroupModel"
+    /// blink_prefix: "model.cpu.unwrap_or(&Default::default()).get_cpu"
+    /// ```
+    /// Multi blinks will aggregate the blink value, all of the blink val should have same type.
+    /// ```ignore
+    /// #[blink(CgroupModel$cpu?.get_system_usage)]
+    /// #[blink(CgroupModel$cpu?.get_user_usage)]
+    /// cpu_total
+    /// ```
+    /// Will generate:
+    /// ```ignore
+    /// blink_type: "CgroupModel"
+    /// blink_prefix: None
+    /// aggr_value:
+    ///     model.cpu.unwrap_or(&Default::default()).get_system_usage_value().unwrap_or_default()
+    ///      + model.cpu.unwrap_or(&Default::default()).get_user_usage_value().unwrap_or_default()
+    /// ```
+    ///
+    /// ## Char replacing:
+    /// * "?": indicates the marked value is an Option, will be replaced to `unwrap_or(&Default::default())`
+    ///
+    /// ## Note (single blink ONLY):
+    /// For convenience, will use current field name for prefix if the prefix is omitted. For example:
+    /// ```ignore
+    /// #[blink("CgroupModel$pressure?.")]
+    /// cpu_some_pressure
+    /// ```
+    /// is equal to
+    /// ```ignore
+    /// #[blink("CgroupModel$pressure?.get_cpu_some_pressure")]
+    /// cpu_some_pressure
+    /// ```
+    fn parse_blink(&mut self) {
+        if self.field_attr.link.is_empty() {
+            return;
+        }
+
+        // "CgroupModel$cpu?.get_cpu" to
+        // "CgroupModel$cpu.as_ref().unwrap_or(&Default::default()).get_cpu"
+        let link = self.field_attr.link[0].replace("?", ".as_ref().unwrap_or(&Default::default())");
+        let link_vec = link.split('$').collect::<Vec<&str>>();
+
+        if link_vec.len() != 2 {
+            unimplemented!("Link format error, expect \"ModelType$get_field_name\".");
+        }
+
+        // ["CgroupModel", "cpu.as_ref().unwrap_or(...).get_cpu"]
+        self.blink_type = Some(link_vec[0].trim().to_string());
+
+        // Pure blink
+        if self.field_attr.link.len() == 1 {
+            let mut blink_prefix = link_vec[1].trim().to_string();
+
+            // Handle omitted field name replacement.
+            if blink_prefix.is_empty() || blink_prefix.ends_with('.') {
+                blink_prefix.push_str(&format!("get_{}", self.name));
+            }
+            self.blink_prefix = Some(format!("model.{}", blink_prefix));
+            return;
+        }
+
+        // Aggr
+        self.aggr_val = Some(
+            self.field_attr
+                .link
+                .iter()
+                .map(|link| {
+                    let link = link.replace("?", ".as_ref().unwrap_or(&Default::default())");
+                    let link_vec = link.split('$').collect::<Vec<&str>>();
+                    let mut handle = format!("model.{}_value()", link_vec[1].trim());
+                    if self.is_option() {
+                        handle.push_str(".unwrap_or_default()")
+                    }
+                    handle
+                })
+                .collect::<Vec<String>>()
+                .join("+"),
+        );
+    }
+
+    /// Convenience function to check if a field is a blink field
+    pub fn is_blink(&self) -> bool {
+        self.blink_type.is_some() && self.blink_prefix.is_some()
+    }
+
+    /// Convenience function to check if a field is an aggregated field.
+    pub fn is_aggr(&self) -> bool {
+        self.blink_type.is_some() && self.aggr_val.is_some()
+    }
+
+    /// If a field's type is option, we will parse the inner type of the field
+    fn parse_option(&mut self) {
+        match self.field_type {
+            syn::Type::Path(ref ty_path) if ty_path.path.segments[0].ident == "Option" => {
+                match ty_path.path.segments[0].arguments {
+                    syn::PathArguments::AngleBracketed(ref angle_args) => {
+                        match angle_args.args[0] {
+                            syn::GenericArgument::Type(ref ty) => {
+                                self.inner_type = Some(ty.clone())
+                            }
+                            _ => (),
+                        }
+                    }
+                    _ => (),
+                }
+            }
+            _ => (),
+        }
+    }
+
+    /// Convenience function to check if a field is an Option
+    pub fn is_option(&self) -> bool {
+        self.inner_type.is_some()
     }
 }
 
