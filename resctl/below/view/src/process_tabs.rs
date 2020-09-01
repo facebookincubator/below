@@ -35,6 +35,15 @@ pub enum ProcessOrders {
     CpuNumThreads,
     CpuTotal,
     Rss,
+    VmSize,
+    Lock,
+    Pin,
+    Anon,
+    File,
+    Shmem,
+    Pte,
+    Swap,
+    HugeTLB,
     MinorFaults,
     MajorFaults,
     Read,
@@ -268,6 +277,33 @@ pub struct ProcessMem {
     #[bttr(sort_tag = "ProcessOrders::Rss")]
     #[blink("SingleProcessModel$mem?.get_rss_bytes")]
     pub mem_rss: Option<u64>,
+    #[bttr(sort_tag = "ProcessOrders::VmSize")]
+    #[blink("SingleProcessModel$mem?.get_vm_size")]
+    pub vm_size: Option<u64>,
+    #[bttr(sort_tag = "ProcessOrders::Swap")]
+    #[blink("SingleProcessModel$mem?.get_swap")]
+    pub swap: Option<u64>,
+    #[bttr(sort_tag = "ProcessOrders::Anon")]
+    #[blink("SingleProcessModel$mem?.get_anon")]
+    pub anon: Option<u64>,
+    #[bttr(sort_tag = "ProcessOrders::File")]
+    #[blink("SingleProcessModel$mem?.get_file")]
+    pub file: Option<u64>,
+    #[bttr(sort_tag = "ProcessOrders::Shmem")]
+    #[blink("SingleProcessModel$mem?.get_shmem")]
+    pub shmem: Option<u64>,
+    #[bttr(sort_tag = "ProcessOrders::Pte")]
+    #[blink("SingleProcessModel$mem?.get_pte")]
+    pub pte: Option<u64>,
+    #[bttr(sort_tag = "ProcessOrders::Lock")]
+    #[blink("SingleProcessModel$mem?.get_lock")]
+    pub lock: Option<u64>,
+    #[bttr(sort_tag = "ProcessOrders::Pin")]
+    #[blink("SingleProcessModel$mem?.get_pin")]
+    pub pin: Option<u64>,
+    #[bttr(sort_tag = "ProcessOrders::HugeTLB")]
+    #[blink("SingleProcessModel$mem?.get_huge_tlb")]
+    pub huge_tlb: Option<u64>,
     #[bttr(sort_tag = "ProcessOrders::MinorFaults")]
     #[blink("SingleProcessModel$mem?.get_minorfaults_per_sec")]
     pub mem_minorfaults: Option<f64>,

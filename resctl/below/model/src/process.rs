@@ -161,23 +161,23 @@ pub struct ProcessMemoryModel {
         cmp = true
     )]
     pub rss_bytes: Option<u64>,
-    #[bttr(title = "VM Size")]
+    #[bttr(title = "VM Size", width = 11, decorator = "convert_bytes($ as f64)")]
     pub vm_size: Option<u64>,
-    #[bttr(title = "Lock")]
+    #[bttr(title = "Lock", width = 11, decorator = "convert_bytes($ as f64)")]
     pub lock: Option<u64>,
-    #[bttr(title = "Pin")]
+    #[bttr(title = "Pin", width = 11, decorator = "convert_bytes($ as f64)")]
     pub pin: Option<u64>,
-    #[bttr(title = "Anon")]
+    #[bttr(title = "Anon", width = 11, decorator = "convert_bytes($ as f64)")]
     pub anon: Option<u64>,
-    #[bttr(title = "File")]
+    #[bttr(title = "File", width = 11, decorator = "convert_bytes($ as f64)")]
     pub file: Option<u64>,
-    #[bttr(title = "Shmem")]
+    #[bttr(title = "Shmem", width = 11, decorator = "convert_bytes($ as f64)")]
     pub shmem: Option<u64>,
-    #[bttr(title = "PTE")]
+    #[bttr(title = "PTE", width = 11, decorator = "convert_bytes($ as f64)")]
     pub pte: Option<u64>,
-    #[bttr(title = "Swap")]
+    #[bttr(title = "Swap", width = 11, decorator = "convert_bytes($ as f64)")]
     pub swap: Option<u64>,
-    #[bttr(title = "Huge TLB")]
+    #[bttr(title = "Huge TLB", width = 11, decorator = "convert_bytes($ as f64)")]
     pub huge_tlb: Option<u64>,
 }
 
