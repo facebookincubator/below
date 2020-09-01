@@ -80,6 +80,199 @@ impl Model {
         }
     }
 
+    /// Generate get title fns for each field
+    /// More details in Function::gen_get_title_fn
+    pub fn generate_get_title_fns(&self) -> Tstream {
+        let get_title_fns = self.fields.iter().map(|f| Function::gen_get_title_fn(&f));
+        quote! {
+            #(#get_title_fns)*
+        }
+    }
+
+    /// Generate get_FIELD_str_impl function for all fields
+    pub fn generate_get_str_impl_fns(&self) -> Tstream {
+        let get_str_impl_fns = self
+            .fields
+            .iter()
+            .filter(|f| !f.is_blink())
+            .map(|f| Function::gen_get_str_impl(&f));
+        quote! {
+            #(#get_str_impl_fns)*
+        }
+    }
+
+    /// Generate get_FIELD_str and get_FIELD_str_impl function for all fields
+    pub fn generate_get_str_fns(&self) -> Tstream {
+        let get_str_fns = self.fields.iter().map(|f| Function::gen_get_str(&f));
+        quote! {
+            #(#get_str_fns)*
+        }
+    }
+
+    /// Unified code generation utility
+    /// It will generate code like:
+    /// ```ignore
+    /// fn get_title_line(model: &TestModel) -> String {
+    ///    let mut res = String::new();
+    ///    res.push_str(&Self::get_usage_pct_title_styled());
+    ///    res.push_str(" ");
+    ///    res.push_str(&Self::get_mem_high_title_styled(model));
+    ////   res.push_str(" ");
+    ///    res
+    /// }
+    /// ```
+    fn unified_line_generator_plain<P>(
+        &self,
+        fn_name: Tstream,
+        sep: Tstream,
+        sub_fn: &str,
+        predicate: P,
+    ) -> Tstream
+    where
+        P: Fn(&Field) -> bool,
+    {
+        let fields = self.fields.iter().filter(|f| predicate(f)).map(|f| {
+            let get_fn = f.build_self_caller(sub_fn);
+            quote! {
+                res.push_str(&#get_fn);
+                res.push_str(#sep);
+            }
+        });
+
+        let args = match &self.blink_type {
+            Some(blink_type) => quote! {&self, model: &#blink_type},
+            _ => quote! {&self},
+        };
+
+        quote! {
+            pub fn #fn_name(#args) -> String {
+                let mut res = String::new();
+                #(#fields)*
+                res
+            }
+        }
+    }
+
+    fn unified_line_generator_styled<P>(
+        &self,
+        fn_name: Tstream,
+        sep: Tstream,
+        sub_fn: &str,
+        predicate: P,
+    ) -> Tstream
+    where
+        P: Fn(&Field) -> bool,
+    {
+        let fields = self.fields.iter().filter(|f| predicate(f)).map(|f| {
+            let get_fn = f.build_self_caller(sub_fn);
+            quote! {
+                res.append(#get_fn);
+                res.append_plain(#sep);
+            }
+        });
+
+        let args = match &self.blink_type {
+            Some(blink_type) => quote! {&self, model: &#blink_type},
+            _ => quote! {&self},
+        };
+
+        quote! {
+            pub fn #fn_name(#args) -> StyledString {
+                let mut res = StyledString::new();
+                #(#fields)*
+                res
+            }
+        }
+    }
+
+    /// Generate get_title_line fn
+    pub fn generate_get_title_line(&self) -> Tstream {
+        self.unified_line_generator_plain(
+            quote! {get_title_line},
+            quote! {" "},
+            "title_styled",
+            |f| f.field_attr.title.is_some() || f.is_blink(),
+        )
+    }
+
+    /// Generate get_field_line fn
+    pub fn generate_get_field_line(&self) -> Tstream {
+        self.unified_line_generator_styled(
+            quote! {get_field_line},
+            quote! {" "},
+            "str_styled",
+            |f| f.field_attr.title.is_some() || f.is_blink(),
+        )
+    }
+
+    /// Generate get_title_pipe fn
+    pub fn generate_get_title_pipe(&self) -> Tstream {
+        self.unified_line_generator_plain(
+            quote! {get_title_pipe},
+            quote! {"|"},
+            "title_styled",
+            |f| f.field_attr.title.is_some() || f.is_blink(),
+        )
+    }
+
+    /// Generate get_csv_title fn
+    pub fn generate_get_csv_title(&self) -> Tstream {
+        self.unified_line_generator_plain(quote! {get_csv_title}, quote! {","}, "title", |f| {
+            f.field_attr.title.is_some() || f.is_blink()
+        })
+    }
+
+    /// Generate get_csv_field fn
+    pub fn generate_get_csv_field(&self) -> Tstream {
+        self.unified_line_generator_plain(quote! {get_csv_field}, quote! {","}, "str", |f| {
+            f.field_attr.title.is_some() || f.is_blink()
+        })
+    }
+
+    /// Generate get_interleave_line fn
+    /// Example:
+    /// ```ignore
+    /// fn get_interleave_line(&self, sep: &str, line_sep: &str, model: &ModelType) -> Vec<StyledString> {
+    ///    let mut res: Vec<StyledString> = Vec::new();
+    ///    let mut line = StyledString::new();
+    ///    line.append_plain(&self.get_usage_pct_title_styled());
+    ///    line.append_plain(sep);
+    ///    line.append(&self.get_mem_high_title_styled(model));
+    ////   res.push(line);
+    ///    res
+    /// }
+    /// ```
+    pub fn generate_interleave(&self) -> Tstream {
+        let args = match &self.blink_type {
+            Some(blink_type) => quote! {&self, sep: &str, model: &#blink_type},
+            _ => quote! {&self, sep: &str},
+        };
+
+        let fields = self
+            .fields
+            .iter()
+            .filter(|f| f.field_attr.title.is_some() || f.is_blink())
+            .map(|f| {
+                let title_fn = f.build_self_caller("title_styled");
+                let field_fn = f.build_self_caller("str_styled");
+                quote! {
+                    let mut line = StyledString::new();
+                    line.append_plain(#title_fn);
+                    line.append_plain(sep);
+                    line.append(#field_fn);
+                    res.push(line);
+                }
+            });
+
+        quote! {
+            pub fn get_interleave_line(#args) -> Vec<StyledString> {
+                let mut res: Vec<StyledString> = Vec::new();
+                #(#fields)*
+                res
+            }
+        }
+    }
+
     /// Generate compare function for each field
     pub fn generate_cmp_fns(&self) -> Tstream {
         let cmp_fns = self
