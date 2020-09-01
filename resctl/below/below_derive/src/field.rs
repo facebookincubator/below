@@ -47,7 +47,7 @@ pub struct Field {
     pub sort_tag_type: Option<Tstream>,
     // The sort tag enum value, more in the comment of `parse_sort_tag`
     pub sort_tag_val: Option<Tstream>,
-    // Parsed display related values. More in `parse_view_attr`
+    // Parsed display related values. More in `parse_decor`
     pub decor_value: Option<Tstream>,
     pub prefix: Tstream,
     pub depth: Tstream,
@@ -67,125 +67,139 @@ impl Field {
         field_type: syn::Type,
         attr: attr_new::BelowAttr,
     ) -> Field {
-        let mut field = Field {
-            name,
-            field_type,
-            inner_type: None,
-            field_attr: Default::default(),
-            view_attr: Default::default(),
-            aggr_val: None,
-            blink_type: None,
-            blink_prefix: None,
+        let inner_type = Self::parse_option(&field_type);
+        let is_option = inner_type.is_some();
+        let field_attr = attr.field.unwrap_or_default();
+        let view_attr = attr.view.unwrap_or_default();
+        let width = view_attr.width.unwrap_or(0);
+
+        Field {
+            name: name.clone(),
+            field_type: field_type.clone(),
+            inner_type: inner_type.clone(),
+            field_attr: field_attr.clone(),
+            view_attr: view_attr.clone(),
+            aggr_val: Self::parse_aggr_val(&field_attr.link, is_option),
+            blink_type: Self::parse_blink_type(&field_attr.link),
+            blink_prefix: Self::parse_blink_prefix(&field_attr.link, &name),
             sort_tag_type: None,
             sort_tag_val: None,
-            decor_value: None,
-            prefix: quote! {},
-            depth: quote! {},
-            width: quote! {},
-            unit: String::new(),
+            decor_value: Self::parse_decor(&view_attr, &inner_type, &field_type),
+            prefix: view_attr.prefix.clone().unwrap_or_else(|| quote! {""}),
+            depth: view_attr.depth.clone().unwrap_or_else(|| quote! {0}),
+            width: quote! {#width},
+            unit: view_attr.unit.clone().unwrap_or_else(|| "".into()),
             dfill_tag_title: None,
             dfill_tag_title_styled: None,
             dfill_tag_field: None,
             dfill_tag_field_styled: None,
-        };
-
-        field.parse_option();
-        field.parse_below_attribute(attr);
-        field.parse_blink();
-
-        field
+        }
     }
 
-    /// Parse field and view attributes.
-    fn parse_below_attribute(&mut self, attr: attr_new::BelowAttr) {
-        self.field_attr = attr.field.unwrap_or_default();
-        self.view_attr = attr.view.unwrap_or_default();
-    }
-
-    /// Parse `blink_type`, `blink_prefix` and `aggr_val` from `BelowAttr`
-    /// `blink_type`, `blink_prefix`, and `aggr_val` are parsed from the BelowFieldAttr::link,
-    /// which is in form of "Type$call_path". For example:
-    /// `CgroupModel$cpu?.get_cpu`
-    /// will be parsed to:
-    /// ```ignore
-    /// blink_type: "CgroupModel"
-    /// blink_prefix: "model.cpu.unwrap_or(&Default::default()).get_cpu"
-    /// ```
-    /// Multi blinks will aggregate the blink value, all of the blink val should have same type.
-    /// ```ignore
-    /// #[blink(CgroupModel$cpu?.get_system_usage)]
-    /// #[blink(CgroupModel$cpu?.get_user_usage)]
-    /// cpu_total
-    /// ```
-    /// Will generate:
-    /// ```ignore
-    /// blink_type: "CgroupModel"
-    /// blink_prefix: None
-    /// aggr_value:
-    ///     model.cpu.unwrap_or(&Default::default()).get_system_usage_value().unwrap_or_default()
-    ///      + model.cpu.unwrap_or(&Default::default()).get_user_usage_value().unwrap_or_default()
-    /// ```
-    ///
-    /// ## Char replacing:
-    /// * "?": indicates the marked value is an Option, will be replaced to `unwrap_or(&Default::default())`
-    ///
-    /// ## Note (single blink ONLY):
-    /// For convenience, will use current field name for prefix if the prefix is omitted. For example:
-    /// ```ignore
-    /// #[blink("CgroupModel$pressure?.")]
-    /// cpu_some_pressure
-    /// ```
-    /// is equal to
-    /// ```ignore
-    /// #[blink("CgroupModel$pressure?.get_cpu_some_pressure")]
-    /// cpu_some_pressure
-    /// ```
-    fn parse_blink(&mut self) {
-        if self.field_attr.link.is_empty() {
-            return;
+    // Parse `blink_type`, `blink_prefix` and `aggr_val` from `BelowAttr`
+    // `blink_type`, `blink_prefix`, and `aggr_val` are parsed from the BelowFieldAttr::link,
+    // which is in form of "Type$call_path". For example:
+    // `CgroupModel$cpu?.get_cpu`
+    // will be parsed to:
+    // ```ignore
+    // blink_type: "CgroupModel"
+    // blink_prefix: "model.cpu.unwrap_or(&Default::default()).get_cpu"
+    // ```
+    // Multi blinks will aggregate the blink value, all of the blink val should have same type.
+    // ```ignore
+    // #[blink(CgroupModel$cpu?.get_system_usage)]
+    // #[blink(CgroupModel$cpu?.get_user_usage)]
+    // cpu_total
+    // ```
+    // Will generate:
+    // ```ignore
+    // blink_type: "CgroupModel"
+    // blink_prefix: None
+    // aggr_value:
+    //     model.cpu.unwrap_or(&Default::default()).get_system_usage_value().unwrap_or_default()
+    //      + model.cpu.unwrap_or(&Default::default()).get_user_usage_value().unwrap_or_default()
+    // ```
+    //
+    // ## Char replacing:
+    // * "?": indicates the marked value is an Option, will be replaced to `unwrap_or(&Default::default())`
+    //
+    // ## Note (single blink ONLY):
+    // For convenience, will use current field name for prefix if the prefix is omitted. For example:
+    // ```ignore
+    // #[blink("CgroupModel$pressure?.")]
+    // cpu_some_pressure
+    // ```
+    // is equal to
+    // ```ignore
+    // #[blink("CgroupModel$pressure?.get_cpu_some_pressure")]
+    // cpu_some_pressure
+    // ```
+    fn get_blink_vec(blink: &[String]) -> Vec<String> {
+        if blink.is_empty() {
+            return vec![];
         }
 
         // "CgroupModel$cpu?.get_cpu" to
         // "CgroupModel$cpu.as_ref().unwrap_or(&Default::default()).get_cpu"
-        let link = self.field_attr.link[0].replace("?", ".as_ref().unwrap_or(&Default::default())");
-        let link_vec = link.split('$').collect::<Vec<&str>>();
+        let link = blink[0].replace("?", ".as_ref().unwrap_or(&Default::default())");
+        let link_vec = link
+            .split('$')
+            .map(|v| v.to_string())
+            .collect::<Vec<String>>();
 
         if link_vec.len() != 2 {
             unimplemented!("Link format error, expect \"ModelType$get_field_name\".");
         }
 
-        // ["CgroupModel", "cpu.as_ref().unwrap_or(...).get_cpu"]
-        self.blink_type = Some(link_vec[0].trim().to_string());
+        link_vec
+    }
 
-        // Pure blink
-        if self.field_attr.link.len() == 1 {
-            let mut blink_prefix = link_vec[1].trim().to_string();
-
-            // Handle omitted field name replacement.
-            if blink_prefix.is_empty() || blink_prefix.ends_with('.') {
-                blink_prefix.push_str(&format!("get_{}", self.name));
-            }
-            self.blink_prefix = Some(format!("model.{}", blink_prefix));
-            return;
+    fn parse_blink_type(blink: &[String]) -> Option<String> {
+        if blink.is_empty() {
+            return None;
         }
 
-        // Aggr
-        self.aggr_val = Some(
-            self.field_attr
-                .link
+        let link_vec = Self::get_blink_vec(blink);
+
+        // ["CgroupModel", "cpu.as_ref().unwrap_or(...).get_cpu"]
+        Some(link_vec[0].trim().to_string())
+    }
+
+    fn parse_blink_prefix(blink: &[String], name: &syn::Ident) -> Option<String> {
+        if blink.len() != 1 {
+            return None;
+        }
+
+        let link_vec = Self::get_blink_vec(blink);
+        let mut blink_prefix = link_vec[1].trim().to_string();
+
+        // Handle omitted field name replacement.
+        if blink_prefix.is_empty() || blink_prefix.ends_with('.') {
+            blink_prefix.push_str(&format!("get_{}", name));
+        }
+        Some(format!("model.{}", blink_prefix))
+    }
+
+    fn parse_aggr_val(blink: &[String], is_option: bool) -> Option<String> {
+        if blink.len() < 2 {
+            return None;
+        }
+
+        Some(
+            blink
                 .iter()
                 .map(|link| {
                     let link = link.replace("?", ".as_ref().unwrap_or(&Default::default())");
                     let link_vec = link.split('$').collect::<Vec<&str>>();
                     let mut handle = format!("model.{}_value()", link_vec[1].trim());
-                    if self.is_option() {
+                    if is_option {
                         handle.push_str(".unwrap_or_default()")
                     }
                     handle
                 })
                 .collect::<Vec<String>>()
                 .join("+"),
-        );
+        )
     }
 
     /// Convenience function to check if a field is a blink field
@@ -199,28 +213,60 @@ impl Field {
     }
 
     /// If a field's type is option, we will parse the inner type of the field
-    fn parse_option(&mut self) {
-        match self.field_type {
+    fn parse_option(field_type: &syn::Type) -> Option<syn::Type> {
+        match field_type {
             syn::Type::Path(ref ty_path) if ty_path.path.segments[0].ident == "Option" => {
                 match ty_path.path.segments[0].arguments {
                     syn::PathArguments::AngleBracketed(ref angle_args) => {
                         match angle_args.args[0] {
-                            syn::GenericArgument::Type(ref ty) => {
-                                self.inner_type = Some(ty.clone())
-                            }
-                            _ => (),
+                            syn::GenericArgument::Type(ref ty) => Some(ty.clone()),
+                            _ => None,
                         }
                     }
-                    _ => (),
+                    _ => None,
                 }
             }
-            _ => (),
+            _ => None,
         }
     }
 
     /// Convenience function to check if a field is an Option
     pub fn is_option(&self) -> bool {
         self.inner_type.is_some()
+    }
+
+    /// Convenience pre-processing function for parsing the view related attribute
+    /// decor_value: user input or empty. Replaced $ with v
+    ///   "v" here represents the parsed value after get. Possible code:
+    /// ```ignore
+    /// // field is an option
+    /// match self.get_field() {
+    ///     Some(v) => ...
+    ///     _ => format!("{}", none_mark)
+    /// }
+    ///
+    /// // field is not an option
+    /// let v = self.get_field()
+    /// ```
+    fn parse_decor(
+        view_attr: &attr_new::BelowViewAttr,
+        inner_type: &Option<syn::Type>,
+        field_type: &syn::Type,
+    ) -> Option<Tstream> {
+        if let Some(decor) = view_attr.decorator.as_ref() {
+            let decor_value = decor.replace("$", "v").parse::<Tstream>().unwrap();
+            let value_type = inner_type.as_ref().unwrap_or(&field_type);
+
+            Some(quote! {
+                (|v: #value_type| {
+                    let res = #decor_value;
+                    let res: Box<dyn std::fmt::Display> = Box::new(res);
+                    res
+                })
+            })
+        } else {
+            None
+        }
     }
 
     /// Unified function argument convention

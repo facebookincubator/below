@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BelowViewAttr {
     pub depth: Option<proc_macro2::TokenStream>,
     pub unit: Option<String>,
@@ -25,7 +25,7 @@ pub struct BelowViewAttr {
     pub highlight_if: Option<String>,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct BelowFieldAttr {
     pub title: Option<String>,
     pub link: Vec<String>,
