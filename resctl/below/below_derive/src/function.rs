@@ -257,20 +257,23 @@ impl Function {
     ///     prefix = "-->",
     ///     depth = 2,
     ///     width = 20,
-    ///     decorator = "if $ > 0 { $ * 2 } else { 0 }"
+    ///     decorator = "if $ > 0 { $ * 2 } else { 0 }",
+    ///     highlight_if = "$ > 10",
     /// )]
     /// field: i32
     /// ```
     /// Will generate:
     /// ```ignore
-    /// pub fn get_field_str_impl<P> (
+    /// pub fn get_field_str_impl<P, Q> (
     ///     &self,
     ///     decorator: Option<P>,
+    ///     highlight_if: Option<Q>,
     ///     unit: Option<&str>,
     ///     precision: Option<usize>,
-    /// ) -> String
+    /// ) -> (String, bool)
     /// where
-    ///     P: Fn(i32) -> Box<dyn std::fmt::Display>
+    ///     P: Fn(i32) -> Box<dyn std::fmt::Display>,
+    ///     Q: Fn(i32) -> bool
     /// {
     ///     let precision = precision.map_or(Some(2), |p| Some(p));
     ///     let v = self.get_field_value();
@@ -288,16 +291,22 @@ impl Function {
     ///         }
     ///     }
     ///
-    ///     format!(
+    ///     (format!(
     ///         "{}{}",
     ///         value,
     ///         unit.unwrap_or(#unit),
-    ///     )
+    ///     ),
+    ///     if let some(hval_fn) = highlight_if {
+    ///         hval_fn(v)
+    ///     } else {
+    ///         v > 10
+    ///     })
     /// }
     ///
-    /// pub fn get_field_str_styled_impl<P>(
+    /// pub fn get_field_str_styled_impl<P, Q>(
     ///     &self,
     ///     decorator: Option<P>,
+    ///     highlight_if: Option<Q>,
     ///     unit: Option<&str>,
     ///     precision: Option<usize>,
     ///     prefix: Option<&str>,
@@ -305,9 +314,10 @@ impl Function {
     ///     width: Option<usize>,
     /// ) -> StyledString
     /// where
-    ///     P: Fn(i32) -> Box<dyn std::fmt::Display>
+    ///     P: Fn(i32) -> Box<dyn std::fmt::Display>,
+    ///     Q: Fn(i32) -> bool
     /// {
-    ///     let value = self.get_field_str_impl(decorator, unit, precision);
+    ///     let (value, highlight) = self.get_field_str_impl(decorator, highlight_if, unit, precision);
     ///     let depth = depth.unwrap_or(#depth);
     ///     let width = width.unwrap_or(#width);
     ///     let width = if width == 0 {
@@ -318,13 +328,19 @@ impl Function {
     ///         0
     ///     };
     ///
-    ///     format!(
+    ///     let unhighlighted = format!(
     ///         "{:>depth$.depth$}{:width$.width$}",
     ///         prefix.unwrap_or(#prefix),
     ///         value,
     ///         depth = depth,
     ///         width = width,
-    ///     )
+    ///     );
+    ///
+    ///     if highlight {
+    ///         StyledString::styled(unhighlighted, cursive::theme::Color::Light(cursive::theme::BaseColor::Red))
+    ///     } else {
+    ///         StyledString::plain(unhighlighted)
+    ///     }
     /// }
     /// ```
     pub fn gen_get_str_impl(field: &Field) -> Tstream {
@@ -355,6 +371,13 @@ impl Function {
             },
         };
 
+        let hif_fn = match &field.highlight_if_value {
+            Some(h) => h.clone(),
+            _ => quote! {
+                (|_| false)
+            },
+        };
+
         let (args, args_val) = if field.is_aggr() {
             let aggr_type = field
                 .blink_type
@@ -368,7 +391,7 @@ impl Function {
         };
 
         let value = quote! {
-            let value = if let Some(p) = precision {
+            {let value = if let Some(p) = precision {
                 if let Some(decor_fn) = decorator {
                     format!("{:.precision$}", decor_fn(v), precision = p)
                 } else {
@@ -386,44 +409,56 @@ impl Function {
                 "{}{}",
                 value,
                 unit.unwrap_or(#unit)
-            )
+            )}
         };
 
         let str_impl_fn = if field.is_option() {
             quote! {
-                pub fn #fn_name<P> (
+                pub fn #fn_name<P, Q> (
                     &self,
                     decorator: Option<P>,
+                    highlight_if: Option<Q>,
                     unit: Option<&str>,
                     precision: Option<usize>,
                     #args
-                ) -> String
+                ) -> (String, bool)
                 where
-                    P: Fn(#value_type) -> Box<dyn std::fmt::Display>
+                    P: Fn(#value_type) -> Box<dyn std::fmt::Display>,
+                    Q: Fn(#value_type) -> bool
                 {
                     let precision = precision.map_or(#precision, |p| Some(p));
                     if let Some(v) = #get_fn {
-                        #value
+                        (#value, if let Some(hif_fn) = highlight_if {
+                            hif_fn(v)
+                        } else {
+                            #hif_fn(v)
+                        })
                     } else {
-                        #none_mark.into()
+                        (#none_mark.into(), false)
                     }
                 }
             }
         } else {
             quote! {
-                pub fn #fn_name<P> (
+                pub fn #fn_name<P, Q> (
                     &self,
                     decorator: Option<P>,
+                    highlight_if: Option<P, Q>,
                     unit: Option<&str>,
                     precision: Option<usize>,
                     #args
-                ) -> String
+                ) -> (String, bool)
                 where
-                    P: Fn(#value_type) -> Box<dyn std::fmt::Display>
+                    P: Fn(#value_type) -> Box<dyn std::fmt::Display>,
+                    Q: Fn(#value_type) -> bool
                 {
                     let precision = precision.map_or(#precision, |p| Some(p));
                     let v = #get_fn;
-                    #value
+                    (#value, if let Some(hif_fn) = highlight_if {
+                        hif_fn(v)
+                    } else {
+                        #hif_fn(v)
+                    })
                 }
             }
         };
@@ -431,9 +466,10 @@ impl Function {
         quote! {
             #str_impl_fn
 
-            pub fn #fn_name_styled<P>(
+            pub fn #fn_name_styled<P, Q>(
                 &self,
                 decorator: Option<P>,
+                highlight_if: Option<Q>,
                 unit: Option<&str>,
                 precision: Option<usize>,
                 prefix: Option<&str>,
@@ -442,9 +478,10 @@ impl Function {
                 #args
             ) -> StyledString
             where
-                P: Fn(#value_type) -> Box<dyn std::fmt::Display>
+                P: Fn(#value_type) -> Box<dyn std::fmt::Display>,
+                Q: Fn(#value_type) -> bool
             {
-                let value = self.#fn_name(decorator, unit, precision, #args_val);
+                let (value, highlight) = self.#fn_name(decorator, highlight_if, unit, precision, #args_val);
                 let depth = depth.unwrap_or(#depth);
                 let width = width.unwrap_or(#width);
                 let width = if width == 0 {
@@ -455,13 +492,18 @@ impl Function {
                     0
                 };
 
-                StyledString::plain(format!(
+                let unhighlighted = (format!(
                     "{:>depth$.depth$}{:width$.width$}",
                     prefix.unwrap_or(#prefix),
                     value,
                     depth = depth,
                     width = width,
-                ))
+                ));
+                if highlight {
+                    StyledString::styled(unhighlighted, cursive::theme::Color::Light(cursive::theme::BaseColor::Red))
+                } else {
+                    StyledString::plain(unhighlighted)
+                }
             }
         }
     }
@@ -517,11 +559,24 @@ impl Function {
         let value_type = field.inner_type.as_ref().unwrap_or(&field.field_type);
         quote! {
             pub fn #fn_name(#args) -> String {
-                    #impl_name(None::<Box<dyn Fn(#value_type) -> Box<dyn std::fmt::Display>>>, None, None, #args_val)
+                    #impl_name(
+                        None::<Box<dyn Fn(#value_type) -> Box<dyn std::fmt::Display>>>,
+                        None::<Box<dyn Fn(#value_type) -> bool>>,
+                        None,
+                        None,
+                        #args_val).0
             }
 
             pub fn #fn_name_styled(#args) -> StyledString {
-                    #impl_name_styled(None::<Box<dyn Fn(#value_type) -> Box<dyn std::fmt::Display>>>, None, None, None, None, None, #args_val)
+                    #impl_name_styled(
+                        None::<Box<dyn Fn(#value_type) -> Box<dyn std::fmt::Display>>>,
+                        None::<Box<dyn Fn(#value_type) -> bool>>,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        #args_val)
             }
         }
     }
@@ -600,6 +655,11 @@ impl Function {
             None => quote! {None::<Box<dyn Fn(#value_type) -> Box<dyn std::fmt::Display>>>},
         };
 
+        let hif_val = match &field.highlight_if_value {
+            Some(f) => quote! {Some(#f)},
+            None => quote! {None::<Box<dyn Fn(#value_type) -> bool>>},
+        };
+
         let args_val = if field.is_aggr() {
             quote! {model}
         } else {
@@ -608,11 +668,11 @@ impl Function {
 
         quote! {
             pub fn #fn_name(&self, model: &#blink_type) -> String {
-                #impl_name(#decor_value, #unit, #precision, #args_val)
+                #impl_name(#decor_value, #hif_val, #unit, #precision, #args_val).0
             }
 
             pub fn #fn_name_styled(&self, model: &#blink_type) -> StyledString {
-                #impl_name_styled(#decor_value, #unit, #precision, #prefix, #depth, #width, #args_val)
+                #impl_name_styled(#decor_value, #hif_val, #unit, #precision, #prefix, #depth, #width, #args_val)
             }
         }
     }

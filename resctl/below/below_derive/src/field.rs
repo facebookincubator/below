@@ -49,6 +49,7 @@ pub struct Field {
     pub sort_tag_val: Option<Tstream>,
     // Parsed display related values. More in `parse_decor`
     pub decor_value: Option<Tstream>,
+    pub highlight_if_value: Option<Tstream>,
     pub prefix: Tstream,
     pub depth: Tstream,
     pub width: Tstream,
@@ -90,6 +91,7 @@ impl Field {
             depth: view_attr.depth.clone().unwrap_or_else(|| quote! {0}),
             width: quote! {#width},
             unit: view_attr.unit.clone().unwrap_or_else(|| "".into()),
+            highlight_if_value: None,
             dfill_tag_title: None,
             dfill_tag_title_styled: None,
             dfill_tag_field: None,
@@ -285,6 +287,25 @@ impl Field {
                     let res = #decor_value;
                     let res: Box<dyn std::fmt::Display> = Box::new(res);
                     res
+                })
+            })
+        } else {
+            None
+        }
+    }
+
+    fn parse_highligh_if(
+        view_attr: &attr_new::BelowViewAttr,
+        inner_type: &Option<syn::Type>,
+        field_type: &syn::Type,
+    ) -> Option<Tstream> {
+        if let Some(hval) = view_attr.highlight_if.as_ref() {
+            let highlight_if_value = hval.replace("$", "v").parse::<Tstream>().unwrap();
+            let value_type = inner_type.as_ref().unwrap_or(&field_type);
+
+            Some(quote! {
+                (|v: #value_type| {
+                    #highlight_if_value
                 })
             })
         } else {
