@@ -95,6 +95,7 @@ impl Field {
             dfill_tag_field: None,
             dfill_tag_field_styled: None,
         }
+        .build_dfill_tags()
     }
 
     // Parse `blink_type`, `blink_prefix` and `aggr_val` from `BelowAttr`
@@ -369,6 +370,50 @@ impl Field {
         )
         .parse()
         .unwrap()
+    }
+
+    fn is_dfill_tagged(&self) -> bool {
+        self.field_attr.tag.is_some() || self.field_attr.class.is_some()
+    }
+
+    fn build_dfill_tags(mut self) -> Self {
+        if !self.is_dfill_tagged() {
+            return self;
+        }
+
+        self.dfill_tag_title = Some(
+            format!(
+                "Box::new(|data, model| {}.into())",
+                self.build_custom_caller("title", "data", CallSelf(true), None)
+            )
+            .parse()
+            .unwrap(),
+        );
+        self.dfill_tag_title_styled = Some(
+            format!(
+                "Box::new(|data, model| {}.into())",
+                self.build_custom_caller("title_styled", "data", CallSelf(true), None)
+            )
+            .parse()
+            .unwrap(),
+        );
+        self.dfill_tag_field = Some(
+            format!(
+                "Box::new(|data, model| {})",
+                self.build_custom_caller("str", "data", CallSelf(true), None)
+            )
+            .parse()
+            .unwrap(),
+        );
+        self.dfill_tag_field_styled = Some(
+            format!(
+                "Box::new(|data, model| {}.source().to_string())",
+                self.build_custom_caller("str_styled", "data", CallSelf(true), None)
+            )
+            .parse()
+            .unwrap(),
+        );
+        self
     }
 }
 
