@@ -130,4 +130,120 @@ impl Function {
             }
         }
     }
+
+    /// Generate title fns
+    /// * For direct field
+    ///   ```ignore
+    ///   #[bttr(title = "Title", width = 10)]
+    ///   field: String
+    ///   ```
+    ///   Will generate:
+    ///   ```ignore
+    ///   pub fn get_field_title(&self) -> &'static str {
+    ///       "Title"
+    ///   }
+    ///
+    ///   pub fn get_field_title_styled(&self) -> &'static str {
+    ///       "Title     "
+    ///   }
+    ///   ```
+    /// * For linked field
+    ///   ```ignore
+    ///   #[blink("Model$")]
+    ///   field: String
+    ///   ```
+    ///   Will generate:
+    ///   ```ignore
+    ///   pub fn get_field_title(&self, model: &Model) -> &'static str {
+    ///       model.get_field_title()
+    ///   }
+    ///
+    ///   pub fn get_field_title_styled(&self, model: &Model) -> &'static str {
+    ///       model.get_field_title_styled()
+    ///   }
+    ///   ```
+    pub fn gen_get_title_fn(field: &Field) -> Tstream {
+        let fn_name = field.build_fn_name("title");
+        let fn_name_styled = field.build_fn_name("title_styled");
+
+        // Parse title field from BelowAttr
+        // * Title has value
+        //   `format!("{:w$.w$}", &title, w = width)`
+        //   width is one of the following, order by priority:
+        //     * title_width
+        //     * width
+        //     * title.len()
+        // * Title doesn't have value
+        //     * For blink: {self.blink_prefix}_title
+        //     * All others: None
+        let title = field.field_attr.title.as_ref();
+        let args = field.get_common_args();
+
+        let mut styled_return_type = quote! {&'static str};
+
+        let (title, title_styled) = if let Some(t) = title {
+            let width = field
+                .view_attr
+                .title_width
+                .unwrap_or_else(|| field.view_attr.width.unwrap_or_else(|| 0));
+
+            let title_str = format!("\"{}\"", t).parse::<Tstream>().unwrap();
+
+            // For linked string, we use the longer one of the current title and linked title.
+            let styled_title_str = if field.is_blink() {
+                let linked_title = field.build_fn_interface("title_styled");
+                styled_return_type = quote! {String};
+                quote! {
+                    format!("{:w$.w$}", #title_str, w = if #width == 0 {
+                        std::cmp::max(#title_str.len(), #linked_title.len())
+                    } else {
+                        #width
+                    })
+                }
+            } else {
+                format!("\"{:w$.w$}\"", t, w = width)
+                    .parse::<Tstream>()
+                    .unwrap()
+            };
+
+            (title_str, styled_title_str)
+        } else if field.is_blink() {
+            let title_str = field.build_fn_interface("title");
+
+            let title_str_styled =
+                if field.view_attr.width.is_none() && field.view_attr.title_width.is_none() {
+                    field.build_fn_interface("title_styled")
+                } else {
+                    let width = field
+                        .view_attr
+                        .title_width
+                        .unwrap_or_else(|| field.view_attr.width.unwrap_or_else(|| 0));
+                    quote! {
+                        format!("\"{:w$.w$}\"", #title_str, w = #width)
+                    }
+                };
+            (title_str, title_str_styled)
+        } else {
+            // When calling title function for field that does not have title.
+            return quote! {
+                pub fn #fn_name(#args) -> &'static str {
+                    "unknown"
+                }
+
+                pub fn #fn_name_styled(#args) -> &'static str {
+                    "unknown"
+                }
+            };
+        };
+
+        quote! {
+            pub fn #fn_name(#args) -> &'static str {
+                #title
+            }
+
+            pub fn #fn_name_styled(#args) -> #styled_return_type {
+                #title_styled
+            }
+        }
+    }
 }
