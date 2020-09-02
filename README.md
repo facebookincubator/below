@@ -33,6 +33,11 @@ of [atop](https://linux.die.net/man/1/atop)'s design and style decisions.
 <img src="https://asciinema.org/a/355506.svg" width="500">
 </a>
 
+#### Comparison with alternative tools
+
+See [comparison.md](resctl/below/docs/comparison.md) for a feature comparison
+with alternative tools.
+
 ### procfs
 
 `procfs` is a rust library that parses
