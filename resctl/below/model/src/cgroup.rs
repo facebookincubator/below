@@ -69,6 +69,7 @@ impl CgroupModel {
                 (Some(prev_inode), Some(current_inode)) if prev_inode == current_inode => {
                     Some((s, d))
                 }
+                (None, None) => Some((s, d)),
                 _ => None,
             });
         let (cpu, io, io_total, recreate_flag) = if let Some((last, delta)) = last_if_inode_matches
