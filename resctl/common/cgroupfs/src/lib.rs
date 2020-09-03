@@ -73,6 +73,14 @@ impl CgroupReader {
         &self.relative_path
     }
 
+    pub fn read_inode_number(&self) -> Result<u64> {
+        let meta = self
+            .dir
+            .metadata(".")
+            .map_err(|e| self.io_error(self.dir.recover_path().unwrap_or_else(|_| "".into()), e))?;
+        Ok(meta.stat().st_ino)
+    }
+
     /// Read a stat from a file that has a single line
     fn read_singleline_stat_file(&self, file_name: &str) -> Result<u64> {
         let file = self

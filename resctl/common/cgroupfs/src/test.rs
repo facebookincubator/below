@@ -15,6 +15,7 @@
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::Write;
+use std::os::linux::fs::MetadataExt;
 use std::path::Path;
 
 use tempfile::TempDir;
@@ -53,6 +54,21 @@ impl TestCgroup {
         std::fs::create_dir(&path)
             .expect(&format!("Failed to create child cgroup {}", path.display()));
     }
+}
+
+#[test]
+fn test_read_inode_number() {
+    let cgroup = TestCgroup::new();
+    let cgroup_reader = cgroup.get_reader();
+    let inode = cgroup_reader
+        .read_inode_number()
+        .expect("Failed to read inode number");
+    assert_eq!(
+        inode,
+        std::fs::metadata(cgroup.path())
+            .expect("Failed to read inode number with fs::metadata")
+            .st_ino()
+    );
 }
 
 #[test]
