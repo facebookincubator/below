@@ -196,6 +196,7 @@ make_option! (CgroupField {
     "io": Io,
     "pressure": Pressure,
     "name": Name,
+    "inode_number": InodeNum,
     "full_path": FullPath,
     "cpu_usage": CpuUsage,
     "cpu_user": CpuUser,
@@ -559,7 +560,7 @@ pub enum DumpCommand {
     ///
     /// ********************** Available fields **********************
     ///
-    /// timestamp, datetime, name, full_path
+    /// timestamp, datetime, name, full_path, inode_number
     ///
     /// cpu_usage, cpu_user, cpu_system, cpu_nr_periods, cpu_nr_throttled
     ///

@@ -633,6 +633,10 @@ fn test_dump_proc_select() {
 
 fn traverse_cgroup_tree(model: &CgroupModel, jval: &mut Value) {
     assert_eq!(jval["Name"].as_str().unwrap(), model.get_name_str());
+    assert_eq!(
+        jval["Inode Number"].as_str().unwrap(),
+        model.get_inode_number_str()
+    );
 
     if let Some(cpu) = model.cpu.as_ref() {
         assert_eq!(jval["CPU Usage"].as_str().unwrap(), cpu.get_usage_pct_str());

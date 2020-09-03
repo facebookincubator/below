@@ -499,6 +499,9 @@ pub struct CgroupData {
     #[blink("CgroupModel$io_total?.get_rbytes_per_sec")]
     #[blink("CgroupModel$io_total?.get_wbytes_per_sec")]
     pub rw_total: Option<f64>,
+    #[blink("CgroupModel$get_inode_number")]
+    #[bttr(title = "Inode Number", width = 13, tag = "CgroupField::InodeNum")]
+    pub inode_num: Option<u64>,
     #[bttr(
         title = "Datetime",
         width = 19,
@@ -532,6 +535,7 @@ impl DumpType for Cgroup {
 make_dget!(
     Cgroup,
     CgroupField::Name,
+    CgroupField::InodeNum,
     CgroupField::Datetime,
     CgroupField::Cpu,
     CgroupField::Mem,
