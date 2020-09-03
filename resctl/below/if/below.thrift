@@ -39,6 +39,7 @@ struct CgroupSample {
   7: optional i64 memory_swap_current,
   8: optional i64 memory_high,
   9: optional cgroupfs.MemoryEvents memory_events,
+  10: optional i64 inode_number,
 }
 
 struct SystemSample {

@@ -20,6 +20,8 @@ pub struct CgroupModel {
     pub name: String,
     #[bttr(title = "Full Path", width = 50)]
     pub full_path: String,
+    #[bttr(title = "Inode Num")]
+    pub inode_number: Option<u64>,
     pub depth: u32,
     pub cpu: Option<CgroupCpuModel>,
     pub memory: Option<CgroupMemoryModel>,
@@ -28,6 +30,8 @@ pub struct CgroupModel {
     pub pressure: Option<CgroupPressureModel>,
     pub children: BTreeSet<CgroupModel>,
     pub count: u32,
+    // Indicate if such cgroup is created
+    pub recreate_flag: bool,
 }
 
 // We implement equality and ordering based on the cgroup name only so
@@ -60,7 +64,15 @@ impl CgroupModel {
         sample: &CgroupSample,
         last: Option<(&CgroupSample, Duration)>,
     ) -> CgroupModel {
-        let (cpu, io, io_total) = if let Some((last, delta)) = last {
+        let last_if_inode_matches =
+            last.and_then(|(s, d)| match (s.inode_number, sample.inode_number) {
+                (Some(prev_inode), Some(current_inode)) if prev_inode == current_inode => {
+                    Some((s, d))
+                }
+                _ => None,
+            });
+        let (cpu, io, io_total, recreate_flag) = if let Some((last, delta)) = last_if_inode_matches
+        {
             // We have cumulative data, create cpu, io models
             let cpu = match (last.cpu_stat.as_ref(), sample.cpu_stat.as_ref()) {
                 (Some(begin), Some(end)) => Some(CgroupCpuModel::new(begin, end, delta)),
@@ -87,10 +99,10 @@ impl CgroupModel {
                     .fold(CgroupIoModel::empty(), |acc, (_, model)| acc + model)
             });
 
-            (cpu, io, io_total)
+            (cpu, io, io_total, false)
         } else {
-            // No cumulative data
-            (None, None, None)
+            // No cumulative data or inode number is different
+            (None, None, None, last.is_some())
         };
 
         let memory = Some(CgroupMemoryModel::new(sample, last));
@@ -128,6 +140,7 @@ impl CgroupModel {
         CgroupModel {
             name,
             full_path,
+            inode_number: sample.inode_number.map(|ino| ino as u64),
             cpu,
             memory,
             io,
@@ -136,6 +149,7 @@ impl CgroupModel {
             children,
             count: nr_descendants + 1,
             depth,
+            recreate_flag,
         }
     }
 

@@ -178,7 +178,9 @@ fn default_cgroup_io_model() {
     let mut sample: Sample = Default::default();
     let mut last_sample: Sample = Default::default();
     sample.cgroup.io_stat = Some(BTreeMap::new());
+    sample.cgroup.inode_number = Some(123);
     last_sample.cgroup.io_stat = Some(BTreeMap::new());
+    last_sample.cgroup.inode_number = Some(123);
     let duration = Duration::from_secs(5);
 
     let model = Model::new(SystemTime::now(), &sample, Some((&last_sample, duration)));

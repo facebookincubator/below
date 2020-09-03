@@ -118,7 +118,7 @@ pub fn collect_sample(
 ) -> Result<Sample> {
     let mut reader = procfs::ProcReader::new();
     Ok(Sample {
-        cgroup: collect_cgroup_sample(&cgroupfs::CgroupReader::root()?, collect_io_stat)?,
+        cgroup: collect_cgroup_sample(&cgroupfs::CgroupReader::root()?, collect_io_stat, logger)?,
         processes: merge_procfs_and_exit_data(reader.read_all_pids()?, exit_data),
         netstats: match procfs::NetReader::new().and_then(|v| v.read_netstat()) {
             Ok(ns) => ns,
@@ -196,6 +196,7 @@ fn io_stat_wrap<S: Sized>(
 fn collect_cgroup_sample(
     reader: &cgroupfs::CgroupReader,
     collect_io_stat: bool,
+    logger: &slog::Logger,
 ) -> Result<CgroupSample> {
     let io_stat = if collect_io_stat {
         io_stat_wrap(reader.read_io_stat())?
@@ -220,7 +221,7 @@ fn collect_cgroup_sample(
             .map(|child_iter| {
                 child_iter
                     .map(|child| {
-                        collect_cgroup_sample(&child, collect_io_stat).map(|child_sample| {
+                        collect_cgroup_sample(&child, collect_io_stat, logger).map(|child_sample| {
                             (
                                 child
                                     .name()
@@ -238,6 +239,13 @@ fn collect_cgroup_sample(
         memory_swap_current: wrap(reader.read_memory_swap_current().map(|v| v as i64))?,
         memory_high: reader.read_memory_high()?,
         memory_events: wrap(reader.read_memory_events())?,
+        inode_number: match reader.read_inode_number() {
+            Ok(st_ino) => Some(st_ino as i64),
+            Err(e) => {
+                error!(logger, "Fail to collect inode number: {}", e);
+                None
+            }
+        },
     })
 }
 
