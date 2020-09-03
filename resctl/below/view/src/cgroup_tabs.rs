@@ -114,7 +114,12 @@ pub trait CgroupTab {
         let row = self.get_cgroup_field_line(&cgroup, offset);
         // Each row is (label, value), where label is visible and value is used
         // as identifier to correlate the row with its state in global data.
-        output.push((row, cgroup.full_path.clone()));
+        if cgroup.recreate_flag {
+            output.push((row, format!("[RECREATED] {}", cgroup.full_path.clone())));
+        } else {
+            output.push((row, cgroup.full_path.clone()));
+        }
+
         if collapsed {
             return;
         }
@@ -226,7 +231,7 @@ macro_rules! impl_cgroup_tab {
                 model: &CgroupModel,
                 offset: Option<usize>,
             ) -> StyledString {
-                match offset {
+                let mut res = match offset {
                     Some(offset) => {
                         let mut field_iter = self.get_field_vec(&model).into_iter();
                         let mut res = StyledString::new();
@@ -242,7 +247,16 @@ macro_rules! impl_cgroup_tab {
                         res
                     }
                     _ => self.get_field_line(&model),
+                };
+
+                if model.recreate_flag {
+                    res = StyledString::styled(
+                        res.source(),
+                        cursive::theme::Color::Light(cursive::theme::BaseColor::Green),
+                    );
                 }
+
+                res
             }
 
             fn sort_cgroup(
