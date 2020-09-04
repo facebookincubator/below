@@ -74,26 +74,34 @@ fn get_advance(
     dir: PathBuf,
     host: Option<String>,
     port: Option<u16>,
-    begin: &str,
-    end: &Option<String>,
+    opts: &command::GeneralOpt,
 ) -> Result<(SystemTime, Advance)> {
-    let time_begin = UNIX_EPOCH
+    let mut time_begin = UNIX_EPOCH
         + Duration::from_secs(
-            dateutil::HgTime::parse(&begin)
+            dateutil::HgTime::parse(&opts.begin)
                 .ok_or_else(|| anyhow!("Unrecognized begin format"))?
                 .unixtime,
         );
 
-    let time_end = if end.is_none() {
+    let mut time_end = if opts.end.is_none() {
         SystemTime::now()
     } else {
         UNIX_EPOCH
             + Duration::from_secs(
-                dateutil::HgTime::parse(end.as_ref().unwrap())
+                dateutil::HgTime::parse(opts.end.as_ref().unwrap())
                     .ok_or_else(|| anyhow!("Unrecognized end format"))?
                     .unixtime,
             )
     };
+
+    if let Some(days) = opts.yesterdays.as_ref() {
+        if days.is_empty() || days.find(|c: char| c != 'y').is_some() {
+            bail!("Unrecognized days adjuster format: {}", days);
+        }
+        let time_to_deduct = Duration::from_secs(days.chars().count() as u64 * 86400);
+        time_begin -= time_to_deduct;
+        time_end -= time_to_deduct;
+    }
 
     let mut advance = if let Some(host) = host {
         Advance::new_with_remote(logger, host, port, time_begin)?
@@ -115,7 +123,7 @@ pub fn run(
 ) -> Result<()> {
     match cmd {
         DumpCommand::System { fields, opts } => {
-            let (time_end, advance) = get_advance(logger, dir, host, port, &opts.begin, &opts.end)?;
+            let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let mut sys = system::System::new(opts, advance, time_end, None);
             sys.init(fields);
             sys.exec()
@@ -125,7 +133,7 @@ pub fn run(
             opts,
             select,
         } => {
-            let (time_end, advance) = get_advance(logger, dir, host, port, &opts.begin, &opts.end)?;
+            let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let mut disk = disk::Disk::new(opts, advance, time_end, select);
             disk.init(fields);
             disk.exec()
@@ -135,7 +143,7 @@ pub fn run(
             opts,
             select,
         } => {
-            let (time_end, advance) = get_advance(logger, dir, host, port, &opts.begin, &opts.end)?;
+            let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let mut process = process::Process::new(opts, advance, time_end, select);
             process.init(fields);
             process.exec()
@@ -145,7 +153,7 @@ pub fn run(
             opts,
             select,
         } => {
-            let (time_end, advance) = get_advance(logger, dir, host, port, &opts.begin, &opts.end)?;
+            let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let mut cgroup = cgroup::Cgroup::new(opts, advance, time_end, select);
             cgroup.init(fields);
             cgroup.exec()
@@ -155,7 +163,7 @@ pub fn run(
             opts,
             select,
         } => {
-            let (time_end, advance) = get_advance(logger, dir, host, port, &opts.begin, &opts.end)?;
+            let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let mut iface = iface::Iface::new(opts, advance, time_end, select);
             iface.init(fields);
             iface.exec()
@@ -165,7 +173,7 @@ pub fn run(
             opts,
             select,
         } => {
-            let (time_end, advance) = get_advance(logger, dir, host, port, &opts.begin, &opts.end)?;
+            let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let mut network = network::Network::new(opts, advance, time_end, select);
             network.init(fields);
             network.exec()
@@ -175,7 +183,7 @@ pub fn run(
             opts,
             select,
         } => {
-            let (time_end, advance) = get_advance(logger, dir, host, port, &opts.begin, &opts.end)?;
+            let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let mut transport = transport::Transport::new(opts, advance, time_end, select);
             transport.init(fields);
             transport.exec()

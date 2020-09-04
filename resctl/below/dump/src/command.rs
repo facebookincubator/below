@@ -419,6 +419,9 @@ pub struct GeneralOpt {
     /// Disable title in raw or csv format output
     #[structopt(long)]
     pub disable_title: bool,
+    /// Days adjuster, same as -r option in replay.
+    #[structopt(short = "r")]
+    pub yesterdays: Option<String>,
 }
 
 #[derive(Debug, StructOpt, Clone)]

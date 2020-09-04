@@ -116,6 +116,13 @@ enum Command {
         /// Override default port to connect remote viewing to
         #[structopt(long)]
         port: Option<u16>,
+        /// Days adjuster: y[y...] for yesterday (repeated).{n}Each "y" will deduct 1 day from the input of "--time/-t"
+        ///
+        /// Examples:{n}
+        /// * Yesterday at 2 pm: below replay -r y -t 2:00pm{n}
+        /// * 09/01/2020 17:00: below replay -r yy -t "09/03/2020 17:00"{n}
+        #[structopt(short = "r")]
+        yesterdays: Option<String>,
     },
     /// Debugging facilities (for development use)
     Debug {
@@ -371,13 +378,15 @@ fn real_main(init: init::InitToken) {
             ref time,
             ref host,
             ref port,
+            ref yesterdays,
         } => {
             let store_dir = below_config.store_dir.clone();
             let time = time.clone();
             let host = host.clone();
             let port = port.clone();
+            let days_adjuster = yesterdays.clone();
             run(init, debug, below_config, Service::Off, |logger, _errs| {
-                replay(logger, time, store_dir, host, port)
+                replay(logger, time, store_dir, host, port, days_adjuster)
             })
         }
         Command::Debug { ref cmd } => match cmd {
@@ -413,8 +422,9 @@ fn replay(
     dir: PathBuf,
     host: Option<String>,
     port: Option<u16>,
+    days_adjuster: Option<String>,
 ) -> Result<()> {
-    let timestamp = UNIX_EPOCH
+    let mut timestamp = UNIX_EPOCH
         + Duration::from_secs(
             dateutil::HgTime::parse(&time)
                 .ok_or_else(|| {
@@ -432,6 +442,13 @@ fn replay(
                 })?
                 .unixtime,
         );
+
+    if let Some(days) = days_adjuster {
+        if days.is_empty() || days.find(|c: char| c != 'y').is_some() {
+            bail!("Unrecognized days adjuster format: {}", days);
+        }
+        timestamp -= Duration::from_secs(days.chars().count() as u64 * 86400);
+    }
 
     let mut advance = if let Some(host) = host {
         Advance::new_with_remote(logger.clone(), host, port, timestamp)?
