@@ -78,7 +78,7 @@ impl Advance {
                 self.last_sample = Some(dataframe.sample);
                 self.last_sample_time = timestamp;
             }
-            Ok(None) => (),
+            Ok(None) => {}
             Err(e) => {
                 error!(self.logger, "{}", e.context("Failed to load from store"));
             }
@@ -104,7 +104,7 @@ impl Advance {
         self.last_sample_time = SystemTime::now() - Duration::from_secs(1);
         match self.advance(crate::Direction::Forward) {
             Some(model) => return Some(model),
-            None => (),
+            None => {}
         }
         // Otherwise, we get the previous sample.
         self.last_sample_time = SystemTime::now();
@@ -115,7 +115,7 @@ impl Advance {
         self.last_sample_time += duration.into();
         match self.advance(Direction::Forward) {
             Some(model) => return Some(model),
-            None => (),
+            None => {}
         }
 
         // If sample is not available, get the latest sample
@@ -127,7 +127,7 @@ impl Advance {
         self.last_sample_time -= duration.into();
         match self.advance(Direction::Reverse) {
             Some(model) => return Some(model),
-            None => (),
+            None => {}
         }
 
         // If sample is not available, get the earlist sample

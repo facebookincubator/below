@@ -214,7 +214,10 @@ fn test_bdecor_interleave() {
         string_lines += line.source();
         string_lines += "\n";
     }
-    assert_eq!(string_lines, "Usage  : 12.6%  \nUser   : 1.1%   \nSystem : 2.2%   \nL1 Cach:   -->10\nField A: 1.1    \nField B : 2.2     \nAggr : 3.30 \n");
+    assert_eq!(
+        string_lines,
+        "Usage  : 12.6%  \nUser   : 1.1%   \nSystem : 2.2%   \nL1 Cach:   -->10\nField A: 1.1    \nField B : 2.2     \nAggr : 3.30 \n"
+    );
 }
 
 #[test]
@@ -240,7 +243,7 @@ fn compound_decorator() {
         fn flush(&mut self) -> io::Result<()> {
             Ok(())
         }
-    };
+    }
 
     struct FakeTermIO(Sender<bool>);
     impl io::Write for FakeTermIO {
@@ -259,7 +262,7 @@ fn compound_decorator() {
         fn flush(&mut self) -> io::Result<()> {
             Ok(())
         }
-    };
+    }
 
     let (ftx, frx) = channel::<bool>();
     let (ttx, trx) = channel::<bool>();

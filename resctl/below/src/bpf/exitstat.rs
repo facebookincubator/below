@@ -159,7 +159,7 @@ impl ExitstatDriver {
         loop {
             let ret = perf.poll(Duration::from_millis(100));
             match ret {
-                Ok(()) => (),
+                Ok(()) => {}
                 Err(e) => {
                     bail!("Error polling perf buffer: {}", e);
                 }

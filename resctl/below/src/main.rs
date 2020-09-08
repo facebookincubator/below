@@ -181,7 +181,7 @@ fn create_log_dir(path: &PathBuf) -> Result<()> {
 
     if !path.is_dir() {
         match fs::create_dir_all(path) {
-            Ok(()) => (),
+            Ok(()) => {}
             Err(e) => {
                 bail!(
                     "Failed to create dir {}: {}\nTry sudo.",
@@ -198,7 +198,7 @@ fn create_log_dir(path: &PathBuf) -> Result<()> {
     if perm.mode() & 0o777 != 0o777 {
         perm.set_mode(0o777);
         match dir.set_permissions(perm) {
-            Ok(()) => (),
+            Ok(()) => {}
             Err(e) => {
                 bail!(
                     "Failed to set permissions on {}: {}",
@@ -223,7 +223,7 @@ fn start_exitstat(
     let (bpf_err_send, bpf_err_recv) = channel();
     thread::spawn(move || {
         match exit_driver.drive() {
-            Ok(_) => (),
+            Ok(_) => {}
             Err(e) => bpf_err_send.send(e).unwrap(),
         };
     });
@@ -237,7 +237,7 @@ fn check_for_exitstat_errors(logger: &slog::Logger, receiver: &Receiver<Error>) 
     // be sure what kind of kernel we're running on and if it's new enough.
     match receiver.try_recv() {
         Ok(e) => error!(logger, "{}", e),
-        Err(TryRecvError::Empty) => (),
+        Err(TryRecvError::Empty) => {}
         Err(TryRecvError::Disconnected) => {
             warn!(logger, "bpf error channel disconnected");
             return true;
@@ -460,12 +460,17 @@ fn replay(
     // this should have no effect.
     advance.initialize();
     let mut view = match advance.advance(store::Direction::Forward) {
-        Some(model) => view::View::new_with_advance(model, view::ViewMode::Replay(Rc::new(RefCell::new(advance)))),
-        None => return Err(anyhow!(
-            "No initial model could be found!\n\
+        Some(model) => view::View::new_with_advance(
+            model,
+            view::ViewMode::Replay(Rc::new(RefCell::new(advance))),
+        ),
+        None => {
+            return Err(anyhow!(
+                "No initial model could be found!\n\
             You may have provided a time in the future or no data was recorded during the provided time.\n\
             Please check your input and timezone."
-        )),
+            ));
+        }
     };
     view.register_replay_event();
     logutil::set_current_log_target(logutil::TargetLog::File);
@@ -497,7 +502,7 @@ fn record(
         // Anything that comes over the error channel is an error
         match errs.try_recv() {
             Ok(e) => bail!(e),
-            Err(TryRecvError::Empty) => (),
+            Err(TryRecvError::Empty) => {}
             Err(TryRecvError::Disconnected) => bail!("error channel disconnected"),
         };
 
@@ -558,7 +563,7 @@ fn live_local(logger: slog::Logger, interval: Duration, debug: bool, dir: PathBu
                 &e
             );
         }
-        _ => (),
+        _ => {}
     };
 
     let (exit_buffer, bpf_errs) = start_exitstat(logger.clone(), debug);
@@ -636,7 +641,7 @@ fn live_remote(
             if let view::ViewMode::LiveRemote(adv) = view_state.mode.clone() {
                 match adv.borrow_mut().advance(store::Direction::Forward) {
                     Some(data) => view_state.update(data),
-                    None => (),
+                    None => {}
                 }
             }
         });

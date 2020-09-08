@@ -217,7 +217,7 @@ impl ProcessView {
                     });
                 cmd_palette.set_info(cgroup.to_string())
             }
-            _ => (),
+            _ => {}
         }
     }
 

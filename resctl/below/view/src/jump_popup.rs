@@ -47,7 +47,7 @@ fn advance_helper(
             // This will be unlikely to happen: Only if there's no recorded data.
             // But when execution reaches here, there should be at least one sample. So
             // silently doing nothing.
-            None => (),
+            None => {}
         },
         (Ok(d), Direction::Reverse) => match adv.borrow_mut().jump_sample_backward(d) {
             Some(data) => c
@@ -57,7 +57,7 @@ fn advance_helper(
             // This will be unlikely to happen: Only if there's no recorded data.
             // But when execution reaches here, there should be at least one sample. So
             // silently doing nothing.
-            None => (),
+            None => {}
         },
         _ => match dateutil::HgTime::parse(input) {
             // Jump for absolute time

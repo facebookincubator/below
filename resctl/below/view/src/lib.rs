@@ -259,7 +259,7 @@ impl View {
                     println!("Demacia");
                     c.add_layer(jump_popup::new(adv, Direction::Forward));
                 }
-                _ => (),
+                _ => {}
             }
         });
 
@@ -274,7 +274,7 @@ impl View {
                 ViewMode::Pause(adv) | ViewMode::Replay(adv) => {
                     c.add_layer(jump_popup::new(adv, Direction::Reverse));
                 }
-                _ => (),
+                _ => {}
             }
         });
     }
@@ -288,7 +288,7 @@ impl View {
                     let mut adv = adv.borrow_mut();
                     advance!(c, adv, Direction::Forward);
                 }
-                _ => (),
+                _ => {}
             }
         });
 
@@ -300,7 +300,7 @@ impl View {
                     let mut adv = adv.borrow_mut();
                     advance!(c, adv, Direction::Reverse);
                 }
-                _ => (),
+                _ => {}
             }
         });
         self.register_jump_event();
@@ -332,7 +332,7 @@ impl View {
                     view_state.mode = ViewMode::LiveRemote(adv.clone());
                 }
                 ViewMode::LiveRemote(adv) => view_state.mode = ViewMode::Pause(adv.clone()),
-                _ => (),
+                _ => {}
             }
             refresh(c);
         });
@@ -527,7 +527,7 @@ impl View {
                                                 .expect("Failed to find cgroup view");
                                             (*stack.get_mut()).move_to_front(cgroup_pos);
                                         }
-                                        MainViewState::Core => (),
+                                        MainViewState::Core => {}
                                     }
                                 },
                             )

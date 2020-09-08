@@ -661,7 +661,7 @@ impl ProcReader {
                     if e.raw_os_error()
                         .map_or(false, |ec| ec == 2 || ec == 3 /* ENOENT or ESRCH */) =>
                 {
-                    continue
+                    continue;
                 }
                 ent => ent.map_err(|e| Error::IoError(self.path.clone(), e))?,
             };
@@ -688,7 +688,7 @@ impl ProcReader {
                     if e.raw_os_error()
                         .map_or(false, |ec| ec == 2 || ec == 3 /* ENOENT or ESRCH */) =>
                 {
-                    continue
+                    continue;
                 }
                 res => pidinfo.stat = res?,
             }
@@ -698,7 +698,7 @@ impl ProcReader {
                     if e.raw_os_error()
                         .map_or(false, |ec| ec == 2 || ec == 3 /* ENOENT or ESRCH */) =>
                 {
-                    continue
+                    continue;
                 }
                 res => pidinfo.mem = res?,
             }
@@ -709,7 +709,7 @@ impl ProcReader {
                         ec == 2 || ec == 3 /* ENOENT or ESRCH */
                     }) =>
                 {
-                    continue
+                    continue;
                 }
                 Err(Error::IoError(_, ref e))
                     if e.raw_os_error().map_or(false, |ec| {
@@ -726,7 +726,7 @@ impl ProcReader {
                     if e.raw_os_error()
                         .map_or(false, |ec| ec == 2 || ec == 3 /* ENOENT or ESRCH */) =>
                 {
-                    continue
+                    continue;
                 }
                 res => pidinfo.cgroup = res?,
             }
@@ -736,7 +736,7 @@ impl ProcReader {
                     if e.raw_os_error()
                         .map_or(false, |ec| ec == 2 || ec == 3 /* ENOENT or ESRCH */) =>
                 {
-                    continue
+                    continue;
                 }
                 res => pidinfo.cmdline_vec = res?,
             }

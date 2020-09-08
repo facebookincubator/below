@@ -408,7 +408,7 @@ pub fn read_next_sample<P: AsRef<Path>>(
                 return Err(e).context(format!(
                     "Failed while opening data file {}",
                     data_path.display()
-                ))
+                ));
             }
         };
 

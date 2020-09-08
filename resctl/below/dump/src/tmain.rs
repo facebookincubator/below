@@ -151,7 +151,7 @@ where
                     if e.downcast_ref::<std::io::Error>()
                         .map_or_else(|| false, |e| e.kind() == std::io::ErrorKind::BrokenPipe) =>
                 {
-                    return Ok(())
+                    return Ok(());
                 }
                 Err(e) => return Err(e),
             };

@@ -230,7 +230,7 @@ impl CgroupView {
             view.get_detail_view().selection(),
         ) {
             (false, Some(selection)) => cmd_palette.set_info(selection.to_string()),
-            _ => (),
+            _ => {}
         }
     }
 
