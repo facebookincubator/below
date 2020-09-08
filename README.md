@@ -49,9 +49,16 @@ with alternative tools.
 [cgroup2](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html)
 control files.
 
-## Building
+## Installing
 
-See [building.md](resctl/below/docs/building.md).
+```shell
+$ podman run --privileged --cgroupns=host --pid=host -it below/below:latest
+```
+
+See [docker.md](resctl/below/docs/docker.md) for more details.
+
+Alternatively, see [building.md](resctl/below/docs/building.md) for non-docker
+build instructions.
 
 ## Contributing
 
