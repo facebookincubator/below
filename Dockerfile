@@ -1,5 +1,10 @@
 FROM ubuntu:latest
 
+# Default locale is "POSIX" which doesn't seem to play well with UTF-8. Cursive
+# uses UTF-8 to draw lines so we need to set this locale otherwise our lines
+# will be garbled. See https://github.com/gyscos/cursive/issues/13 .
+ENV LANG C.UTF-8
+
 RUN apt-get update
 RUN apt-get install -y \
   build-essential \
