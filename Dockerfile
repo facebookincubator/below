@@ -1,9 +1,4 @@
-FROM ubuntu:latest
-
-# Default locale is "POSIX" which doesn't seem to play well with UTF-8. Cursive
-# uses UTF-8 to draw lines so we need to set this locale otherwise our lines
-# will be garbled. See https://github.com/gyscos/cursive/issues/13 .
-ENV LANG C.UTF-8
+FROM ubuntu:latest AS build
 
 RUN apt-get update
 RUN apt-get install -y \
@@ -38,4 +33,23 @@ RUN bash /rustup.sh -y --default-toolchain nightly
 WORKDIR resctl
 RUN /root/.cargo/bin/cargo build --release --package below
 
-ENTRYPOINT ["/resctl/target/release/below"]
+# Now create stage 2 image. We drop all the build dependencies and only install
+# runtime dependencies. This will create a smaller image suitable for
+# distribution.
+
+FROM ubuntu:latest
+
+# Default locale is "POSIX" which doesn't seem to play well with UTF-8. Cursive
+# uses UTF-8 to draw lines so we need to set this locale otherwise our lines
+# will be garbled. See https://github.com/gyscos/cursive/issues/13 .
+ENV LANG C.UTF-8
+
+RUN apt-get update
+RUN apt-get install -y \
+  libelf1 \
+  libncursesw5 \
+  zlib1g
+
+COPY --from=build /resctl/target/release/below /below
+
+ENTRYPOINT ["/below"]
