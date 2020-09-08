@@ -467,8 +467,9 @@ fn replay(
         None => {
             return Err(anyhow!(
                 "No initial model could be found!\n\
-            You may have provided a time in the future or no data was recorded during the provided time.\n\
-            Please check your input and timezone."
+            You may have provided a time in the future or no data was recorded during the provided time. \
+            Please check your input and timezone.\n\
+            If you are using remote, please make sure the below service on target host is running."
             ));
         }
     };
