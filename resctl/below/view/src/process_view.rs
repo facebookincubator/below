@@ -122,16 +122,16 @@ impl ProcessView {
         let mut list = SelectView::<String>::new();
         list.set_on_select(|c, pid: &String| {
             c.call_on_name(Self::get_view_name(), |view: &mut ViewType| {
-                let cgroup = view
+                let cmdline = view
                     .state
                     .borrow()
                     .get_model()
                     .processes
                     .get(&pid.parse::<i32>().unwrap_or(0))
                     .map_or("?".to_string(), |spm| {
-                        spm.cgroup.clone().unwrap_or_else(|| "?".to_string())
+                        spm.cmdline.clone().unwrap_or_else(|| "?".to_string())
                     });
-                view.get_cmd_palette().set_info(cgroup);
+                view.get_cmd_palette().set_info(cmdline);
             });
         });
 
@@ -206,16 +206,16 @@ impl ProcessView {
             view.get_detail_view().selection(),
         ) {
             (false, Some(selection)) => {
-                let cgroup = view
+                let cmdline = view
                     .state
                     .borrow()
                     .get_model()
                     .processes
                     .get(&selection.parse::<i32>().unwrap_or(0))
                     .map_or("?".to_string(), |spm| {
-                        spm.cgroup.clone().unwrap_or_else(|| "?".to_string())
+                        spm.cmdline.clone().unwrap_or_else(|| "?".to_string())
                     });
-                cmd_palette.set_info(cgroup.to_string())
+                cmd_palette.set_info(cmdline)
             }
             _ => {}
         }
