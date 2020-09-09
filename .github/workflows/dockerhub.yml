@@ -1,0 +1,29 @@
+name: dockerhub
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build_push:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build docker image
+      run: >
+        docker build
+        -t below
+        .
+    - name: Tag docker image
+      run: docker tag below below/below:latest
+    - name: Authenticate with docker registry
+      if: >
+        github.ref == 'refs/heads/master' &&
+        github.repository == 'facebookincubator/resctl'
+      env:
+        DOCKER_USER: ${{ secrets.DOCKER_USER }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
+    - name: Push docker image
+      run: docker push below/below:latest
