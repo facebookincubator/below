@@ -7,6 +7,7 @@ on:
 
 jobs:
   build_push:
+    if: github.repository == 'facebookincubator/resctl'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -18,9 +19,6 @@ jobs:
     - name: Tag docker image
       run: docker tag below below/below:latest
     - name: Authenticate with docker registry
-      if: >
-        github.ref == 'refs/heads/master' &&
-        github.repository == 'facebookincubator/resctl'
       env:
         DOCKER_USER: ${{ secrets.DOCKER_USER }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
