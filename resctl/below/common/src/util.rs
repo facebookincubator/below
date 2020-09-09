@@ -49,11 +49,7 @@ pub fn convert_bytes(val: f64) -> String {
 }
 
 pub fn get_prefix(collapsed: bool) -> &'static str {
-    if collapsed {
-        "└+ "
-    } else {
-        "└─ "
-    }
+    if collapsed { "└+ " } else { "└─ " }
 }
 
 /// Fold a long string to a fixed size string and keep the front and back

@@ -634,20 +634,22 @@ fn live_remote(
 
     let sink = view.cb_sink().clone();
 
-    thread::spawn(move || loop {
-        thread::sleep(interval);
-        let data_plane = Box::new(move |s: &mut Cursive| {
-            let view_state = s.user_data::<ViewState>().expect("user data not set");
+    thread::spawn(move || {
+        loop {
+            thread::sleep(interval);
+            let data_plane = Box::new(move |s: &mut Cursive| {
+                let view_state = s.user_data::<ViewState>().expect("user data not set");
 
-            if let view::ViewMode::LiveRemote(adv) = view_state.mode.clone() {
-                match adv.borrow_mut().advance(store::Direction::Forward) {
-                    Some(data) => view_state.update(data),
-                    None => {}
+                if let view::ViewMode::LiveRemote(adv) = view_state.mode.clone() {
+                    match adv.borrow_mut().advance(store::Direction::Forward) {
+                        Some(data) => view_state.update(data),
+                        None => {}
+                    }
                 }
+            });
+            if sink.send(data_plane).is_err() {
+                return;
             }
-        });
-        if sink.send(data_plane).is_err() {
-            return;
         }
     });
 

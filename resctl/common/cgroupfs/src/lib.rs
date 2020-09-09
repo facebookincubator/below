@@ -201,17 +201,19 @@ impl CgroupReader {
             .dir
             .list_dir(".")
             .map_err(|e| self.io_error("", e))?
-            .filter_map(move |entry| match entry {
-                Ok(entry) if entry.simple_type() == Some(SimpleType::Dir) => {
-                    let dir = match self.dir.sub_dir(entry.file_name()) {
-                        Ok(d) => d,
-                        Err(_) => return None,
-                    };
-                    let mut relative_path = self.relative_path.clone();
-                    relative_path.push(entry.file_name());
-                    Some(CgroupReader { relative_path, dir })
+            .filter_map(move |entry| {
+                match entry {
+                    Ok(entry) if entry.simple_type() == Some(SimpleType::Dir) => {
+                        let dir = match self.dir.sub_dir(entry.file_name()) {
+                            Ok(d) => d,
+                            Err(_) => return None,
+                        };
+                        let mut relative_path = self.relative_path.clone();
+                        relative_path.push(entry.file_name());
+                        Some(CgroupReader { relative_path, dir })
+                    }
+                    _ => None,
                 }
-                _ => None,
             }))
     }
 

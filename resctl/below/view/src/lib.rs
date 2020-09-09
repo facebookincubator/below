@@ -508,29 +508,26 @@ impl View {
                                 _ => return,
                             };
 
-                            c.call_on_name(
-                                "main_view_stack",
-                                |stack: &mut NamedView<StackView>| {
-                                    match &next_state {
-                                        MainViewState::Process
-                                        | MainViewState::ProcessZoomedIntoCgroup => {
-                                            // Bring process_view to front
-                                            let process_pos = (*stack.get_mut())
-                                                .find_layer_from_name("process_view_panel")
-                                                .expect("Failed to find process view");
-                                            (*stack.get_mut()).move_to_front(process_pos);
-                                        }
-                                        MainViewState::Cgroup => {
-                                            // Bring cgroup_view to front
-                                            let cgroup_pos = (*stack.get_mut())
-                                                .find_layer_from_name("cgroup_view_panel")
-                                                .expect("Failed to find cgroup view");
-                                            (*stack.get_mut()).move_to_front(cgroup_pos);
-                                        }
-                                        MainViewState::Core => {}
+                            c.call_on_name("main_view_stack", |stack: &mut NamedView<StackView>| {
+                                match &next_state {
+                                    MainViewState::Process
+                                    | MainViewState::ProcessZoomedIntoCgroup => {
+                                        // Bring process_view to front
+                                        let process_pos = (*stack.get_mut())
+                                            .find_layer_from_name("process_view_panel")
+                                            .expect("Failed to find process view");
+                                        (*stack.get_mut()).move_to_front(process_pos);
                                     }
-                                },
-                            )
+                                    MainViewState::Cgroup => {
+                                        // Bring cgroup_view to front
+                                        let cgroup_pos = (*stack.get_mut())
+                                            .find_layer_from_name("cgroup_view_panel")
+                                            .expect("Failed to find cgroup view");
+                                        (*stack.get_mut()).move_to_front(cgroup_pos);
+                                    }
+                                    MainViewState::Core => {}
+                                }
+                            })
                             .expect("failed to find main_view_stack");
 
                             // Set next state
