@@ -51,8 +51,24 @@ control files.
 
 ## Installing
 
+Live view of system:
+
 ```shell
 $ podman run --privileged --cgroupns=host --pid=host -it below/below:latest
+```
+
+Run recording daemon:
+
+```shell
+$ sudo cp resctl/below/etc/below.service /etc/systemd/system
+$ sudo systemctl daemon-reload
+$ sudo systemctl start below
+```
+
+Replay historical data:
+
+```shell
+$ podman run --mount='type=bind,src=/var/log/below,dst=/var/log/below' -it below/below replay -t "3m ago"
 ```
 
 See [docker.md](resctl/below/docs/docker.md) for more details.
