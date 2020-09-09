@@ -20,25 +20,34 @@ use cursive::Cursive;
 
 use crate::ViewState;
 
+fn get_spacing() -> &'static str {
+    "     "
+}
+
 fn get_content(c: &mut Cursive) -> impl Into<StyledString> {
     let view_state = &c
         .user_data::<ViewState>()
         .expect("No data stored in Cursive object!");
     let datetime = DateTime::<Local>::from(view_state.timestamp);
-    let mut header_str = datetime.format("%m/%d/%Y %H:%M:%S\t").to_string();
-    header_str += format!(
-        "Elapsed: {}s\t{}\t",
+    let mut header_str = format!(
+        "{}{}",
+        datetime.format("%m/%d/%Y %H:%M:%S UTC%:z").to_string(),
+        get_spacing()
+    );
+    header_str += &format!(
+        "Elapsed: {}s{}{}{}",
         view_state.time_elapsed.as_secs(),
-        &view_state.system.borrow().hostname
-    )
-    .as_str();
+        get_spacing(),
+        &view_state.system.borrow().hostname,
+        get_spacing(),
+    );
 
     header_str += crate::get_version_str().as_str();
 
-    header_str += "\t ";
+    header_str += get_spacing();
     header_str += view_state.view_mode_str();
     if view_state.is_paused() {
-        header_str += "\t live-paused";
+        header_str += &format!("{} live-paused", get_spacing());
     }
 
     header_str
