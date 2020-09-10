@@ -339,10 +339,22 @@ impl ProcReader {
             let mut items = line.split_whitespace();
             if let Some(item) = items.next() {
                 match item {
-                    "pgpgin" => vmstat.pgpgin = parse_kb!(path, items.next(), line)?,
-                    "pgpgout" => vmstat.pgpgout = parse_kb!(path, items.next(), line)?,
-                    "pswpin" => vmstat.pswpin = parse_kb!(path, items.next(), line)?,
-                    "pswpout" => vmstat.pswpout = parse_kb!(path, items.next(), line)?,
+                    "pgpgin" => {
+                        vmstat.pgpgin =
+                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
+                    }
+                    "pgpgout" => {
+                        vmstat.pgpgout =
+                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
+                    }
+                    "pswpin" => {
+                        vmstat.pswpin =
+                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
+                    }
+                    "pswpout" => {
+                        vmstat.pswpout =
+                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
+                    }
                     "pgsteal_kswapd" => {
                         vmstat.pgsteal_kswapd =
                             parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)

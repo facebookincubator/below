@@ -428,10 +428,10 @@ swap_ra_hit 139012
     let reader = procfs.get_reader();
     let vmstat = reader.read_vmstat().expect("Failed to read vmstat file");
 
-    assert_eq!(vmstat.pgpgin, Some(5_245_063_123 * 1024));
-    assert_eq!(vmstat.pgpgout, Some(13_772_335_013 * 1024));
-    assert_eq!(vmstat.pswpin, Some(2_090_956 * 1024));
-    assert_eq!(vmstat.pswpout, Some(3_637_759 * 1024));
+    assert_eq!(vmstat.pgpgin, Some(5_245_063_123));
+    assert_eq!(vmstat.pgpgout, Some(13_772_335_013));
+    assert_eq!(vmstat.pswpin, Some(2_090_956));
+    assert_eq!(vmstat.pswpout, Some(3_637_759));
     assert_eq!(vmstat.pgsteal_kswapd, Some(1_709_049_230));
     assert_eq!(vmstat.pgsteal_direct, Some(5_652_651));
     assert_eq!(vmstat.pgscan_kswapd, Some(1_743_683_511));
