@@ -439,28 +439,28 @@ pub struct VmModel {
     #[bttr(
         title = "Page In",
         width = 20,
-        decorator = "convert_bytes($ as f64)",
+        decorator = "convert_bytes(4096.0 * $)",
         unit = "/s"
     )]
     pub pgpgin_per_sec: Option<f64>,
     #[bttr(
         title = "Page Out",
         width = 20,
-        decorator = "convert_bytes($ as f64)",
+        decorator = "convert_bytes(4096.0 * $)",
         unit = "/s"
     )]
     pub pgpgout_per_sec: Option<f64>,
     #[bttr(
         title = "Swap In",
         width = 20,
-        decorator = "convert_bytes($ as f64)",
+        decorator = "convert_bytes(4096.0 * $)",
         unit = "/s"
     )]
     pub pswpin_per_sec: Option<f64>,
     #[bttr(
         title = "Swap Out",
         width = 20,
-        decorator = "convert_bytes($ as f64)",
+        decorator = "convert_bytes(4096.0 * $)",
         unit = "/s"
     )]
     pub pswpout_per_sec: Option<f64>,

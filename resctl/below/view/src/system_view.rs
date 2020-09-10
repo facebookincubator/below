@@ -120,40 +120,36 @@ gen_row_impl!(SysMem, MemoryModel, "Mem");
 struct SysVM {
     #[bttr(
         title = "Page In",
-        decorator = "convert_bytes($)",
+        decorator = "convert_bytes(4096.0 * $)",
         width = 10,
         title_width = 9,
-        decorator = "convert_bytes($)",
         unit = "/s"
     )]
     #[blink("VmModel$get_pgpgin_per_sec")]
     pub page_in: Option<f64>,
     #[bttr(
         title = "Page Out",
-        decorator = "convert_bytes($)",
+        decorator = "convert_bytes(4096.0 * $)",
         width = 10,
         title_width = 9,
-        decorator = "convert_bytes($)",
         unit = "/s"
     )]
     #[blink("VmModel$get_pgpgout_per_sec")]
     pub page_out: Option<f64>,
     #[bttr(
         title = "Swap In",
-        decorator = "convert_bytes($)",
+        decorator = "convert_bytes(4096.0 * $)",
         width = 10,
         title_width = 9,
-        decorator = "convert_bytes($)",
         unit = "/s"
     )]
     #[blink("VmModel$get_pswpin_per_sec")]
     pub swap_in: Option<f64>,
     #[bttr(
         title = "Swap Out",
-        decorator = "convert_bytes($)",
+        decorator = "convert_bytes(4096.0 * $)",
         width = 10,
         title_width = 9,
-        decorator = "convert_bytes($)",
         unit = "/s"
     )]
     #[blink("VmModel$get_pswpout_per_sec")]
