@@ -119,7 +119,7 @@ impl CpuModel {
 #[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
 pub struct SingleCpuModel {
     #[bttr(
-        title = "idx",
+        title = "CPU",
         width = 10,
         decorator = "if self.idx == -1 { \"total\".into() } else { self.idx.to_string() }"
     )]
