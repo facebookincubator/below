@@ -367,6 +367,10 @@ impl View {
         self.inner.add_global_callback(Event::Refresh, |c| {
             refresh(c);
         });
+        self.inner.add_global_callback(Event::CtrlChar('r'), |c| {
+            c.clear();
+            refresh(c);
+        });
 
         let status_bar = status_bar::new(&mut self.inner);
         let system_view = system_view::new(&mut self.inner);
