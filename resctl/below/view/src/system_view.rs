@@ -166,7 +166,7 @@ impl SysIo {
 
         disks
             .iter()
-            .filter(|(disk_name, _)| !disk_name.chars().last().unwrap().is_digit(10))
+            .filter(|(_, sdm)| sdm.minor == Some(0))
             .for_each(|(disk_name, sdm)| {
                 disk_stat.push_str(&format!(
                     "{:9.9}{:<10.10}{:7.7}",
