@@ -161,6 +161,13 @@ pub enum Service {
     Off,
 }
 
+// Whether or not to redirect log to stderr on fs failure
+#[derive(PartialEq)]
+pub enum RedirectLogOnFail {
+    On,
+    Off,
+}
+
 fn bump_memlock_rlimit() -> Result<()> {
     let rlimit = libc::rlimit {
         rlim_cur: 128 << 20,
@@ -252,6 +259,7 @@ fn run<F>(
     debug: bool,
     below_config: BelowConfig,
     service: Service,
+    redirect: RedirectLogOnFail,
     command: F,
 ) -> i32
 where
@@ -266,7 +274,7 @@ where
         return 1;
     }
 
-    let logger = logging::setup(init, log_dir, debug);
+    let logger = logging::setup(init, log_dir, debug, redirect);
     setup_log_on_panic(logger.clone());
     #[cfg(fbcode_build)]
     facebook::init(
@@ -333,16 +341,23 @@ fn real_main(init: init::InitToken) {
             let store_dir = below_config.store_dir.clone();
             let host = host.clone();
             let port = port.clone();
-            run(init, debug, below_config, Service::Off, |logger, _errs| {
-                live(
-                    logger,
-                    Duration::from_secs(*interval_s as u64),
-                    debug,
-                    store_dir,
-                    host,
-                    port,
-                )
-            })
+            run(
+                init,
+                debug,
+                below_config,
+                Service::Off,
+                RedirectLogOnFail::On,
+                |logger, _errs| {
+                    live(
+                        logger,
+                        Duration::from_secs(*interval_s as u64),
+                        debug,
+                        store_dir,
+                        host,
+                        port,
+                    )
+                },
+            )
         }
         Command::Record {
             ref interval_s,
@@ -359,6 +374,7 @@ fn real_main(init: init::InitToken) {
                 debug,
                 below_config,
                 Service::On(*port),
+                RedirectLogOnFail::Off,
                 |logger, errs| {
                     record(
                         logger,
@@ -385,18 +401,28 @@ fn real_main(init: init::InitToken) {
             let host = host.clone();
             let port = port.clone();
             let days_adjuster = yesterdays.clone();
-            run(init, debug, below_config, Service::Off, |logger, _errs| {
-                replay(logger, time, store_dir, host, port, days_adjuster)
-            })
+            run(
+                init,
+                debug,
+                below_config,
+                Service::Off,
+                RedirectLogOnFail::Off,
+                |logger, _errs| replay(logger, time, store_dir, host, port, days_adjuster),
+            )
         }
         Command::Debug { ref cmd } => match cmd {
             DebugCommand::DumpStore { ref time, ref json } => {
                 let time = time.clone();
                 let json = json.clone();
                 let store_dir = below_config.store_dir.clone();
-                run(init, debug, below_config, Service::Off, |logger, _errs| {
-                    dump_store(logger, time, store_dir, json)
-                })
+                run(
+                    init,
+                    debug,
+                    below_config,
+                    Service::Off,
+                    RedirectLogOnFail::Off,
+                    |logger, _errs| dump_store(logger, time, store_dir, json),
+                )
             }
         },
         Command::Dump {
@@ -408,9 +434,14 @@ fn real_main(init: init::InitToken) {
             let host = host.clone();
             let port = port.clone();
             let cmd = cmd.clone();
-            run(init, debug, below_config, Service::Off, |logger, _errs| {
-                dump::run(logger, store_dir, host, port, cmd)
-            })
+            run(
+                init,
+                debug,
+                below_config,
+                Service::Off,
+                RedirectLogOnFail::Off,
+                |logger, _errs| dump::run(logger, store_dir, host, port, cmd),
+            )
         }
     };
     exit(rc);
