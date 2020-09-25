@@ -131,6 +131,7 @@ where
 
         let json = self.get_opts().output_format == Some(OutputFormat::Json);
         let csv = self.get_opts().output_format == Some(OutputFormat::Csv);
+        let br = self.get_opts().br.clone();
 
         let mut round = 0;
 
@@ -169,8 +170,10 @@ where
                 continue;
             }
 
-            if !csv {
+            if json {
                 write!(output, "\n")?;
+            } else if br.is_some() && !csv {
+                write!(output, "{}\n", br.as_ref().unwrap())?;
             }
         }
 

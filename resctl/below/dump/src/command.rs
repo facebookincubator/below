@@ -422,6 +422,9 @@ pub struct GeneralOpt {
     /// Days adjuster, same as -r option in replay.
     #[structopt(short = "r")]
     pub yesterdays: Option<String>,
+    /// Line break symbol between samples
+    #[structopt(long)]
+    pub br: Option<String>,
 }
 
 #[derive(Debug, StructOpt, Clone)]
