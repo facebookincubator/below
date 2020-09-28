@@ -21,7 +21,7 @@ use below_derive::BelowDecor;
 
 #[derive(BelowDecor, Default)]
 pub struct ProcessData {
-    #[bttr(dfill_struct = "Process")]
+    #[bttr(dfill_struct = "Process", raw = "self.raw")]
     #[bttr(title = "Pid", tag = "ProcField::Pid", cmp = true)]
     #[blink("SingleProcessModel$get_pid")]
     pub pid: Option<i32>,
@@ -230,6 +230,7 @@ pub struct ProcessData {
     datetime: i64,
     #[bttr(title = "Timestamp", width = 10, tag = "ProcField::Timestamp")]
     timestamp: i64,
+    raw: bool,
 }
 
 type TitleFtype = Box<dyn Fn(&ProcessData, &SingleProcessModel) -> String>;
@@ -277,7 +278,7 @@ impl Dump for Process {
         time_end: SystemTime,
         select: Option<ProcField>,
     ) -> Self {
-        Self {
+        let mut process = Self {
             data: Default::default(),
             opts,
             advance,
@@ -285,7 +286,9 @@ impl Dump for Process {
             select,
             title_fns: vec![],
             field_fns: vec![],
-        }
+        };
+        process.data.raw = process.opts.raw;
+        process
     }
 
     fn advance_timestamp(&mut self, model: &model::Model) -> Result<()> {

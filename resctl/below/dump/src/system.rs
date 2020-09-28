@@ -21,7 +21,7 @@ use below_derive::BelowDecor;
 #[derive(BelowDecor, Default)]
 pub struct SystemData {
     // Syslevel cpu
-    #[bttr(dfill_struct = "System")]
+    #[bttr(dfill_struct = "System", raw = "self.raw")]
     #[bttr(tag = "SysField::Hostname")]
     #[blink("SystemModel$get_hostname")]
     pub hostname: String,
@@ -415,6 +415,7 @@ pub struct SystemData {
     datetime: i64,
     #[bttr(title = "Timestamp", width = 10, tag = "SysField::Timestamp")]
     timestamp: i64,
+    raw: bool,
 }
 
 type TitleFtype = Box<dyn Fn(&SystemData, &SystemModel) -> String>;
@@ -450,14 +451,16 @@ impl Dprint for System {}
 
 impl Dump for System {
     fn new(opts: GeneralOpt, advance: Advance, time_end: SystemTime, _: Option<SysField>) -> Self {
-        Self {
+        let mut system = Self {
             data: Default::default(),
             opts,
             advance,
             time_end,
             title_fns: vec![],
             field_fns: vec![],
-        }
+        };
+        system.data.raw = system.opts.raw;
+        system
     }
 
     fn advance_timestamp(&mut self, model: &model::Model) -> Result<()> {

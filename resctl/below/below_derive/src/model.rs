@@ -16,6 +16,7 @@ use crate::*;
 use attr::*;
 use field::*;
 use function::Function;
+
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
@@ -65,6 +66,7 @@ enum DfillType {
 impl Model {
     /// Generate new model from the fields
     pub fn new_with_members(fields: &syn::FieldsNamed) -> Model {
+        let mut raw_stream = None;
         let mut model = Model {
             fields: fields
                 .named
@@ -73,7 +75,11 @@ impl Model {
                     let name = f.ident.clone().expect("Failed unwrap field name.");
                     let attr = parse_attribute(&f.attrs, &name);
                     if attr.field.is_some() || attr.view.is_some() {
-                        Some(Rc::new(Field::new_with_attr(name, f.ty.clone(), attr)))
+                        let field = Field::new_with_attr(name, f.ty.clone(), attr);
+                        if field.view_attr.raw.is_some() {
+                            raw_stream = field.view_attr.raw.clone();
+                        }
+                        Some(Rc::new(field))
                     } else {
                         None
                     }
@@ -100,6 +106,12 @@ impl Model {
         });
 
         model.process_tags_and_class();
+
+        if let Some(raw) = raw_stream.as_ref() {
+            model.fields.iter_mut().for_each(|f| {
+                f.raw.replace(raw.clone());
+            });
+        }
 
         model
     }

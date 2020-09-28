@@ -427,6 +427,9 @@ pub struct GeneralOpt {
     /// Line break symbol between samples
     #[structopt(long)]
     pub br: Option<String>,
+    /// Dump raw data without units or conversion
+    #[structopt(long)]
+    pub raw: bool,
 }
 
 #[derive(Debug, StructOpt, Clone)]

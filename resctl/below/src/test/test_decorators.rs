@@ -28,6 +28,10 @@ fn highlight_if_function(item: &f64) -> Option<cursive::theme::BaseColor> {
     }
 }
 
+fn two_times(item: f64) -> String {
+    (item * 2_f64).to_string()
+}
+
 #[derive(BelowDecor)]
 struct SubField {
     #[bttr(title = "Field A", width = 7)]
@@ -54,6 +58,8 @@ struct TestModel {
         width = 7,
         cmp = true,
         title_width = 7,
+        decorator = "two_times($)",
+        raw = "self.raw",
         highlight_if = "highlight_if_function(&$)"
     )]
     usage_pct: Option<f64>,
@@ -87,6 +93,7 @@ struct TestModel {
     #[blink("SubField$get_field_b")]
     pub aggr: Option<f64>,
     pub no_show: Option<f64>,
+    raw: bool,
 }
 
 impl TestModel {
@@ -101,6 +108,7 @@ impl TestModel {
             route: None,
             aggr: None,
             no_show: None,
+            raw: false,
         }
     }
 }
@@ -112,9 +120,9 @@ fn test_bdecor_field_function() {
     assert_eq!(model.get_usage_pct_value().unwrap(), 12.6);
     assert_eq!(model.get_system_pct_value().unwrap(), 2.222);
     assert_eq!(model.get_cache_usage_value().unwrap(), 100.0);
-    assert_eq!(model.get_usage_pct_str_styled().source(), "12.6%  ");
+    assert_eq!(model.get_usage_pct_str_styled().source(), "25.2%  ");
     assert_eq!(model.get_system_pct_str_styled().source(), "2.2%   ");
-    assert_eq!(model.get_usage_pct_str(), "12.6%");
+    assert_eq!(model.get_usage_pct_str(), "25.2%");
     assert_eq!(model.get_system_pct_str(), "2.2%");
     assert_eq!(model.get_aggr_str_styled(&subfield).source(), "3.30 ");
     assert_eq!(model.get_aggr_str(&subfield), "3.30");
@@ -130,11 +138,11 @@ fn test_bdecor_field_function() {
     assert_eq!(model.get_route_str(&subfield), "2.2");
     assert_eq!(
         model.get_field_line(&subfield).source(),
-        "12.6%   1.1%    0.0       -->10 1.1     2.2      3.30  "
+        "25.2%   1.1%    0.0       -->10 1.1     2.2      3.30  "
     );
     assert_eq!(
         model.get_csv_field(&subfield),
-        "12.6%,1.1%,0.0,100 MB,1.1,2.2,3.30,"
+        "25.2%,1.1%,0.0,100 MB,1.1,2.2,3.30,"
     );
     assert_eq!(model.something_else, Some(0.0));
 }
@@ -144,7 +152,6 @@ fn test_bdecor_field_highlight() {
     let mut model = TestModel::new();
 
     // Test regular function call
-    assert_eq!(model.get_usage_pct_str(), "12.6%");
     let usage_pct = model.get_usage_pct_str_styled();
     assert_eq!(
         usage_pct,
@@ -229,8 +236,18 @@ fn test_bdecor_interleave() {
     }
     assert_eq!(
         string_lines,
-        "Usage  : 12.6%  \nUser   : 1.1%   \nSystem : 2.2%   \nL1 Cach:   -->10\nField A: 1.1    \nField B : 2.2     \nAggr : 3.30 \n"
+        "Usage  : 25.2%  \nUser   : 1.1%   \nSystem : 2.2%   \nL1 Cach:   -->10\nField A: 1.1    \nField B : 2.2     \nAggr : 3.30 \n"
     );
+}
+
+#[test]
+fn test_bdecor_raw() {
+    let mut model = TestModel::new();
+    assert_eq!(model.get_usage_pct_str_styled().source(), "25.2%  ");
+    assert_eq!(model.get_usage_pct_str(), "25.2%");
+    model.raw = true;
+    assert_eq!(model.get_usage_pct_str_styled().source(), "12.6   ");
+    assert_eq!(model.get_usage_pct_str(), "12.6");
 }
 
 #[test]

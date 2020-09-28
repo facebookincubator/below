@@ -41,9 +41,11 @@
 //!       to the value of this field, will replace $ with the field name.
 //!     * precision: usize -- Defines what's the displaying precision when
 //!       the value is f64
-//!     * highlight_if: TokenStream -- Highlight field in COLOR if function
-//!       returns Some(COLOR). Will replace `$` with the field name. The function
-//!       should return cursive::theme::BaseColor
+//!     * highlight_if: Highlight field in COLOR if function returns Some(COLOR).
+//!       Will replace `$` with the field name. The function should return
+//!       cursive::theme::BaseColor
+//!     * raw: TokenStream -- If set, will not generate unit and decorator related
+//!       code.
 //!
 //! * Field related attributes defines how you want to change the field.
 //!   If a field does not have any field attribute, `BelowDecor` will not

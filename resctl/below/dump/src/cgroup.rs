@@ -22,7 +22,7 @@ use std::iter::FromIterator;
 
 #[derive(BelowDecor, Default)]
 pub struct CgroupData {
-    #[bttr(dfill_struct = "Cgroup")]
+    #[bttr(dfill_struct = "Cgroup", raw = "self.raw")]
     #[blink("CgroupModel$get_name")]
     #[bttr(
         title = "Name",
@@ -511,6 +511,7 @@ pub struct CgroupData {
     datetime: i64,
     #[bttr(title = "Timestamp", width = 10, tag = "CgroupField::Timestamp")]
     timestamp: i64,
+    raw: bool,
 }
 
 type TitleFtype = Box<dyn Fn(&CgroupData, &CgroupModel) -> String>;
@@ -553,7 +554,7 @@ impl Dump for Cgroup {
         time_end: SystemTime,
         select: Option<CgroupField>,
     ) -> Self {
-        Self {
+        let mut cgroup = Self {
             data: Default::default(),
             opts,
             advance,
@@ -561,7 +562,9 @@ impl Dump for Cgroup {
             select,
             title_fns: vec![],
             field_fns: vec![],
-        }
+        };
+        cgroup.data.raw = cgroup.opts.raw;
+        cgroup
     }
 
     fn advance_timestamp(&mut self, model: &model::Model) -> Result<()> {

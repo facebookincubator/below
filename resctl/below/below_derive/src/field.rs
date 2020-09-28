@@ -15,6 +15,8 @@
 use crate::*;
 use attr::*;
 
+use std::cell::RefCell;
+
 /// Struct to indicate if a function is called on `self` object.
 pub struct CallSelf(pub bool);
 
@@ -58,6 +60,7 @@ pub struct Field {
     pub dfill_tag_title_styled: Option<Tstream>,
     pub dfill_tag_field: Option<Tstream>,
     pub dfill_tag_field_styled: Option<Tstream>,
+    pub raw: RefCell<Tstream>,
 }
 
 impl Field {
@@ -91,6 +94,7 @@ impl Field {
             dfill_tag_title_styled: None,
             dfill_tag_field: None,
             dfill_tag_field_styled: None,
+            raw: RefCell::new(quote! {false}),
         }
         .build_dfill_tags()
     }

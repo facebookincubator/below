@@ -20,7 +20,7 @@ use below_derive::BelowDecor;
 
 #[derive(BelowDecor, Default)]
 pub struct NetworkData {
-    #[bttr(dfill_struct = "Network")]
+    #[bttr(dfill_struct = "Network", raw = "self.raw")]
     #[bttr(
         title = "IpForwPkts/s",
         tag = "NetworkField::ForwPkts",
@@ -289,6 +289,7 @@ pub struct NetworkData {
     datetime: i64,
     #[bttr(title = "Timestamp", width = 10, tag = "NetworkField::Timestamp")]
     timestamp: i64,
+    raw: bool,
 }
 
 type TitleFtype = Box<dyn Fn(&NetworkData, &NetworkModel) -> String>;
@@ -328,14 +329,16 @@ impl Dump for Network {
         time_end: SystemTime,
         _: Option<NetworkField>,
     ) -> Self {
-        Self {
+        let mut network = Self {
             data: Default::default(),
             opts,
             advance,
             time_end,
             title_fns: vec![],
             field_fns: vec![],
-        }
+        };
+        network.data.raw = network.opts.raw;
+        network
     }
 
     fn advance_timestamp(&mut self, model: &model::Model) -> Result<()> {

@@ -361,14 +361,16 @@ impl Function {
 
         let value_type = field.inner_type.as_ref().unwrap_or(&field.field_type);
 
+        let default_decor: Tstream = quote! {
+            (|v| {
+                let res: Box<dyn std::fmt::Display> = Box::new(v);
+                res
+            })
+        };
+
         let decor_value = match &field.decor_value {
             Some(d) => d.clone(),
-            _ => quote! {
-                (|v| {
-                    let res: Box<dyn std::fmt::Display> = Box::new(v);
-                    res
-                })
-            },
+            _ => default_decor,
         };
 
         let hif_fn = match &field.highlight_if_value {
@@ -533,6 +535,7 @@ impl Function {
     ///     prefix = "-->",
     ///     depth = 2,
     ///     width = 20,
+    ///     raw = "1 == 1",
     ///     decorator = "if $ > 0 { $ * 2 } else { 0 }"
     /// )]
     /// field: i32
@@ -540,7 +543,11 @@ impl Function {
     /// Will Generate:
     /// ```ignore
     /// fn get_field_str(&self) -> String {
-    ///     self.get_field_str_impl(None, None, None)
+    ///     if 1 == 1 {
+    ///         self.get_field_str_impl(Some(|v| {Box::new(v)}), None, Some(""), None)
+    ///     } else {
+    ///         self.get_field_str_impl(None, None, None, None)
+    ///     }
     /// }
     /// ```
     fn gen_get_str_direct(
@@ -558,26 +565,31 @@ impl Function {
         };
 
         let value_type = field.inner_type.as_ref().unwrap_or(&field.field_type);
+        let decor_val = quote! {None::<Box<dyn Fn(#value_type) -> Box<dyn std::fmt::Display>>>};
+        let highligh_val =
+            quote! {None::<Box<dyn Fn(#value_type) -> Option<cursive::theme::BaseColor>>>};
+        let raw = field.raw.borrow().clone();
+        let default_decor: Tstream = quote! {
+            (|v| {
+                let res: Box<dyn std::fmt::Display> = Box::new(v);
+                res
+            })
+        };
         quote! {
             pub fn #fn_name(#args) -> String {
-                    #impl_name(
-                        None::<Box<dyn Fn(#value_type) -> Box<dyn std::fmt::Display>>>,
-                        None::<Box<dyn Fn(#value_type) -> Option<cursive::theme::BaseColor>>>,
-                        None,
-                        None,
-                        #args_val).0
+                if #raw {
+                    #impl_name(Some(#default_decor), #highligh_val, Some(""), None, #args_val).0
+                } else {
+                    #impl_name(#decor_val, #highligh_val, None, None, #args_val).0
+                }
             }
 
             pub fn #fn_name_styled(#args) -> StyledString {
-                    #impl_name_styled(
-                        None::<Box<dyn Fn(#value_type) -> Box<dyn std::fmt::Display>>>,
-                        None::<Box<dyn Fn(#value_type) -> Option<cursive::theme::BaseColor>>>,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        #args_val)
+                if #raw {
+                    #impl_name_styled(Some(#default_decor), #highligh_val, Some(""), None, None, None, None, #args_val)
+                } else {
+                    #impl_name_styled(#decor_val, #highligh_val, None, None, None, None, None, #args_val)
+                }
             }
         }
     }
@@ -592,6 +604,7 @@ impl Function {
     ///     prefix = "-->",
     ///     depth = 2,
     ///     width = 20,
+    ///     raw = "1 == 1",
     ///     decorator = "if $ > 0 { $ * 2 } else { 0 }"
     /// )]
     /// #[blink(ModelType$.)]
@@ -600,7 +613,11 @@ impl Function {
     /// Will Generate:
     /// ```ignore
     /// fn get_field_str(&self, model:&ModelType) -> String {
-    ///     model.get_field_str_impl(Some(|v: i32| if v > 0 { v * 2} else { 0 }), Some("/s"), Some(2))
+    ///     if 1 == 1 {
+    ///         model.get_field_str_impl(Some(|v| {Box::new(v)}), None, Some(""), Some(2))
+    ///     } else {
+    ///         model.get_field_str_impl(Some(|v: i32| if v > 0 { v * 2} else { 0 }), None, Some("/s"), Some(2))
+    ///     }
     /// }
     /// ```
     fn gen_get_str_blink(
@@ -667,13 +684,28 @@ impl Function {
             quote! {}
         };
 
+        let raw = field.raw.borrow().clone();
+        let default_decor: Tstream = quote! {
+            (|v| {
+                let res: Box<dyn std::fmt::Display> = Box::new(v);
+                res
+            })
+        };
         quote! {
             pub fn #fn_name(&self, model: &#blink_type) -> String {
-                #impl_name(#decor_value, #hif_val, #unit, #precision, #args_val).0
+                if #raw {
+                    #impl_name(Some(#default_decor), #hif_val, Some(""), #precision, #args_val).0
+                } else {
+                    #impl_name(#decor_value, #hif_val, #unit, #precision, #args_val).0
+                }
             }
 
             pub fn #fn_name_styled(&self, model: &#blink_type) -> StyledString {
-                #impl_name_styled(#decor_value, #hif_val, #unit, #precision, #prefix, #depth, #width, #args_val)
+                if #raw {
+                    #impl_name_styled(Some(#default_decor), #hif_val, Some(""), #precision, #prefix, #depth, #width, #args_val)
+                } else {
+                    #impl_name_styled(#decor_value, #hif_val, #unit, #precision, #prefix, #depth, #width, #args_val)
+                }
             }
         }
     }

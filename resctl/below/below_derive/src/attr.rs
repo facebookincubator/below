@@ -14,6 +14,7 @@
 
 #[derive(Debug, Clone)]
 pub struct BelowViewAttr {
+    pub raw: Option<proc_macro2::TokenStream>,
     pub depth: Option<proc_macro2::TokenStream>,
     pub unit: Option<String>,
     pub prefix: Option<proc_macro2::TokenStream>,
@@ -48,6 +49,7 @@ pub struct BelowAttr {
 impl std::default::Default for BelowViewAttr {
     fn default() -> Self {
         Self {
+            raw: None,
             depth: None,
             unit: None,
             prefix: None,
@@ -165,6 +167,13 @@ pub fn parse_attribute(attrs: &[syn::Attribute], field_name: &syn::Ident) -> Bel
                     bvttr.decorator = match &nv.lit {
                         syn::Lit::Str(ls) => Some(ls.value()),
                         _ => unimplemented!("{}: decorator has to be a string", field_name),
+                    }
+                }
+                "raw" => {
+                    view_flag = true;
+                    bvttr.raw = match &nv.lit {
+                        syn::Lit::Str(ls) => Some(ls.value().parse().unwrap()),
+                        _ => unimplemented!("{}: raw has to be a string", field_name),
                     }
                 }
                 "depth" => {
