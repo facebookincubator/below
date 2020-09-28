@@ -20,6 +20,8 @@ use cursive::theme::BaseColor;
 pub struct SystemModel {
     #[bttr(title = "Hostname", width = 20)]
     pub hostname: String,
+    #[bttr(title = "Kernel Version", width = 50)]
+    pub kernel_version: Option<String>,
     pub cpu: CpuModel,
     pub mem: MemoryModel,
     pub vm: VmModel,
@@ -58,6 +60,7 @@ impl SystemModel {
 
         SystemModel {
             hostname: sample.hostname.clone(),
+            kernel_version: sample.kernel_version.clone(),
             cpu,
             mem,
             vm,

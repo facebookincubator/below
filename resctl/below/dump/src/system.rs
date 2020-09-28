@@ -25,6 +25,9 @@ pub struct SystemData {
     #[bttr(tag = "SysField::Hostname")]
     #[blink("SystemModel$get_hostname")]
     pub hostname: String,
+    #[bttr(tag = "SysField::KernelVersion", class = "SysField::Stat")]
+    #[blink("SystemModel$")]
+    pub kernel_version: Option<String>,
     #[bttr(tag = "SysField::TotalInterruptCt", class = "SysField::Stat")]
     #[blink("SystemModel$cpu.get_total_interrupt_ct")]
     pub total_interrupt_ct: Option<i64>,

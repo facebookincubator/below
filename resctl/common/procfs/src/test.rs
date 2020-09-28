@@ -44,11 +44,17 @@ impl TestProcfs {
         ProcReader::new_with_custom_procfs(self.path().to_path_buf())
     }
 
+    fn create_dir<P: AsRef<Path>>(&self, p: P) {
+        let path = self.path().join(p);
+        std::fs::create_dir_all(&path)
+            .unwrap_or_else(|_| panic!("Failed to create dir {}", path.display()))
+    }
+
     fn create_file_with_content_full_path<P: AsRef<Path>>(&self, path: P, content: &[u8]) {
-        let mut file =
-            File::create(&path).expect(&format!("Failed to create {}", path.as_ref().display()));
+        let mut file = File::create(&path)
+            .unwrap_or_else(|_| panic!("Failed to create {}", path.as_ref().display()));
         file.write_all(content)
-            .expect(&format!("Failed to write to {}", path.as_ref().display()));
+            .unwrap_or_else(|_| panic!("Failed to write to {}", path.as_ref().display()));
     }
 
     fn create_file_with_content<P: AsRef<Path>>(&self, p: P, content: &[u8]) {
@@ -115,6 +121,19 @@ impl TestProcfs {
         let path = interface_dir.join(p);
         self.create_file_with_content_full_path(path, content.to_string().as_bytes());
     }
+}
+
+#[test]
+fn test_kernel_version() {
+    let version = b"1.2.3";
+    let procfs = TestProcfs::new();
+    procfs.create_dir("sys/kernel");
+    procfs.create_file_with_content("sys/kernel/osrelease", version);
+    let reader = procfs.get_reader();
+    let kernel_version = reader
+        .read_kernel_version()
+        .expect("Fail to read kernel version");
+    assert_eq!(kernel_version, "1.2.3");
 }
 
 #[test]

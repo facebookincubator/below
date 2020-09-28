@@ -59,6 +59,7 @@ make_option! (SysField {
     "mem": Mem,
     "vm": Vm,
     "hostname": Hostname,
+    "kernel_version": KernelVersion,
     "total_interrupt_ct": TotalInterruptCt,
     "context_switches": ContextSwitches,
     "boot_time_epoch_secs": BootTimeEpochSecs,
@@ -434,7 +435,7 @@ pub enum DumpCommand {
     /// ********************** Available fields **********************
     ///
     /// timestamp, datetime, hostname, total_interrupt_ct, context_switches, boot_time_epoch_secs,
-    /// total_procs, running_procs, blocked_procs
+    /// total_procs, running_procs, blocked_procs, kernel_version
     ///
     /// cpu_usage, cpu_user, cpu_idle, cpu_system, cpu_nice, cpu_iowait, cpu_irq, cpu_softirq, cpu_stolen,
     /// cpu_guest, cpu_guest_nice

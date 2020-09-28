@@ -132,6 +132,13 @@ pub fn collect_sample(
             meminfo: reader.read_meminfo()?,
             vmstat: reader.read_vmstat()?,
             hostname: get_hostname()?,
+            kernel_version: match reader.read_kernel_version() {
+                Ok(k) => Some(k),
+                Err(e) => {
+                    error!(logger, "{}", e);
+                    None
+                }
+            },
             disks: match (disable_disk_stat, reader.read_disk_stats()) {
                 (false, Ok(disks)) => disks
                     .into_iter()

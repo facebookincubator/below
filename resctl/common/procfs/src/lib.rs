@@ -194,6 +194,14 @@ impl ProcReader {
         Ok(cpu)
     }
 
+    pub fn read_kernel_version(&self) -> Result<String> {
+        let path = self.path.join("sys/kernel/osrelease");
+        match std::fs::read_to_string(&path) {
+            Ok(kernel_version) => Ok(kernel_version.trim_matches('\n').trim().into()),
+            Err(e) => Err(Error::IoError(path, e)),
+        }
+    }
+
     pub fn read_stat(&self) -> Result<Stat> {
         let path = self.path.join("stat");
         let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;

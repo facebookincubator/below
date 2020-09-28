@@ -48,4 +48,5 @@ struct SystemSample {
   3: procfs.VmStat vmstat
   4: string hostname,
   5: procfs.DiskMap disks,
+  6: optional string kernel_version,
 }
