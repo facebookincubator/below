@@ -94,6 +94,9 @@ enum Command {
         /// Flag to disable disk_stat collection.
         #[structopt(long)]
         disable_disk_stat: bool,
+        /// Flag to disable bpftrace exitstats
+        #[structopt(long)]
+        disable_exitstats: bool,
     },
     /// Replay historical data (interactive)
     Replay {
@@ -224,7 +227,7 @@ fn create_log_dir(path: &PathBuf) -> Result<()> {
 fn start_exitstat(
     logger: slog::Logger,
     debug: bool,
-) -> (Arc<Mutex<procfs::PidMap>>, Receiver<Error>) {
+) -> (Arc<Mutex<procfs::PidMap>>, Option<Receiver<Error>>) {
     let mut exit_driver = bpf::exitstat::ExitstatDriver::new(logger, debug);
     let exit_buffer = exit_driver.get_buffer();
     let (bpf_err_send, bpf_err_recv) = channel();
@@ -235,7 +238,7 @@ fn start_exitstat(
         };
     });
 
-    (exit_buffer, bpf_err_recv)
+    (exit_buffer, Some(bpf_err_recv))
 }
 
 /// Returns true if other end disconnected, false otherwise
@@ -366,6 +369,7 @@ fn real_main(init: init::InitToken) {
             ref port,
             ref skew_detection_threshold_ms,
             ref disable_disk_stat,
+            ref disable_exitstats,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
             let store_dir = below_config.store_dir.clone();
@@ -386,6 +390,7 @@ fn real_main(init: init::InitToken) {
                         Duration::from_millis(*skew_detection_threshold_ms),
                         debug,
                         *disable_disk_stat,
+                        *disable_exitstats,
                     )
                 },
             )
@@ -519,27 +524,41 @@ fn record(
     skew_detection_threshold: Duration,
     debug: bool,
     disable_disk_stat: bool,
+    disable_exitstats: bool,
 ) -> Result<()> {
     debug!(logger, "Starting up!");
 
-    bump_memlock_rlimit()?;
+    if !disable_exitstats {
+        bump_memlock_rlimit()?;
+    }
 
     let mut store = store::StoreWriter::new(&dir)?;
     let mut stats = statistics::Statistics::new();
 
-    let (exit_buffer, bpf_errs) = start_exitstat(logger.clone(), debug);
+    let (exit_buffer, bpf_errs) = if disable_exitstats {
+        (Arc::new(Mutex::new(procfs::PidMap::new())), None)
+    } else {
+        start_exitstat(logger.clone(), debug)
+    };
     let mut bpf_err_warned = false;
 
     loop {
-        // Anything that comes over the error channel is an error
-        match errs.try_recv() {
-            Ok(e) => bail!(e),
-            Err(TryRecvError::Empty) => {}
-            Err(TryRecvError::Disconnected) => bail!("error channel disconnected"),
-        };
+        if !disable_exitstats {
+            // Anything that comes over the error channel is an error
+            match errs.try_recv() {
+                Ok(e) => bail!(e),
+                Err(TryRecvError::Empty) => {}
+                Err(TryRecvError::Disconnected) => bail!("error channel disconnected"),
+            };
 
-        if !bpf_err_warned {
-            bpf_err_warned = check_for_exitstat_errors(&logger, &bpf_errs);
+            if !bpf_err_warned {
+                bpf_err_warned = check_for_exitstat_errors(
+                    &logger,
+                    bpf_errs
+                        .as_ref()
+                        .expect("Failed to unwrap bpf_errs receiver"),
+                );
+            }
         }
 
         let collect_instant = Instant::now();
@@ -611,7 +630,12 @@ fn live_local(logger: slog::Logger, interval: Duration, debug: bool, dir: PathBu
     thread::spawn(move || {
         loop {
             if !bpf_err_warned {
-                bpf_err_warned = check_for_exitstat_errors(&logger, &bpf_errs);
+                bpf_err_warned = check_for_exitstat_errors(
+                    &logger,
+                    bpf_errs
+                        .as_ref()
+                        .expect("Failed to unwrap bpf_errs receiver"),
+                );
             }
 
             thread::sleep(interval);
