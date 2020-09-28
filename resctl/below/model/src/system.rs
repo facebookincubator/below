@@ -14,6 +14,8 @@
 
 use super::*;
 
+use cursive::theme::BaseColor;
+
 #[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
 pub struct SystemModel {
     #[bttr(title = "Hostname", width = 20)]
@@ -223,7 +225,7 @@ pub struct MemoryModel {
         title = "Free",
         decorator = "convert_bytes($ as f64)",
         width = 20,
-        highlight_if = "(|| $ < (2 << 20))()"
+        highlight_if = "if $ < (2 << 20) {Some(BaseColor::Red)} else {None}"
     )]
     pub free: Option<u64>,
     #[bttr(title = "Available", width = 20, decorator = "convert_bytes($ as f64)")]

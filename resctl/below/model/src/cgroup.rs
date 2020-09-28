@@ -536,8 +536,12 @@ impl CgroupMemoryModel {
     }
 }
 
-fn is_pressure_significant(p: f64) -> bool {
-    p > 40.0
+fn is_pressure_significant(p: f64) -> Option<cursive::theme::BaseColor> {
+    if p > 40.0 {
+        Some(cursive::theme::BaseColor::Red)
+    } else {
+        None
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, BelowDecor)]

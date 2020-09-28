@@ -18,8 +18,14 @@ fn decor_function(item: &f64) -> String {
     format!("{} MB", item)
 }
 
-fn highlight_if_function(item: &f64) -> bool {
-    *item > 0.0
+fn highlight_if_function(item: &f64) -> Option<cursive::theme::BaseColor> {
+    if *item > 10.0 {
+        Some(BaseColor::Green)
+    } else if *item > 0.0 {
+        Some(BaseColor::Red)
+    } else {
+        None
+    }
 }
 
 #[derive(BelowDecor)]
@@ -60,7 +66,7 @@ struct TestModel {
         none_mark = "0.0",
         width = 7,
         precision = 1,
-        highlight_if = "(|| $ > 0.0)()"
+        highlight_if = "if $ > 0.0 {Some(BaseColor::Red)} else {None}"
     )]
     system_pct: Option<f64>,
     #[bttr(
@@ -135,17 +141,24 @@ fn test_bdecor_field_function() {
 
 #[test]
 fn test_bdecor_field_highlight() {
-    let model = TestModel::new();
+    let mut model = TestModel::new();
 
     // Test regular function call
     assert_eq!(model.get_usage_pct_str(), "12.6%");
+    let usage_pct = model.get_usage_pct_str_styled();
     assert_eq!(
-        model.get_usage_pct_str_styled(),
-        StyledString::styled("12.6%  ", Color::Light(BaseColor::Red))
+        usage_pct,
+        StyledString::styled(usage_pct.source(), Color::Light(BaseColor::Green))
     );
-    assert_ne!(
-        model.get_usage_pct_str_styled(),
-        StyledString::plain("12.6%  ")
+    assert_ne!(usage_pct, StyledString::plain(usage_pct.source()));
+    model.usage_pct = Some(8.0);
+    let usage_pct = model.get_usage_pct_str_styled();
+    assert_eq!(
+        usage_pct,
+        StyledString::styled(
+            usage_pct.source(),
+            cursive::theme::Color::Light(BaseColor::Red)
+        )
     );
 
     // Test lambda

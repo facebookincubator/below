@@ -95,6 +95,10 @@ pub fn translate_datetime(timestamp: &i64) -> String {
         .to_string()
 }
 
-pub fn is_cpu_significant(v: f64) -> bool {
-    v > 100.0
+pub fn is_cpu_significant(v: f64) -> Option<cursive::theme::BaseColor> {
+    if v > 100.0 {
+        Some(cursive::theme::BaseColor::Red)
+    } else {
+        None
+    }
 }

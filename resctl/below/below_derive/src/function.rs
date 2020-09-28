@@ -258,7 +258,7 @@ impl Function {
     ///     depth = 2,
     ///     width = 20,
     ///     decorator = "if $ > 0 { $ * 2 } else { 0 }",
-    ///     highlight_if = "$ > 10",
+    ///     highlight_if = "if $ > 10 {Some(cursive::theme::BaseColor::Red)} else {None}",
     /// )]
     /// field: i32
     /// ```
@@ -270,10 +270,10 @@ impl Function {
     ///     highlight_if: Option<Q>,
     ///     unit: Option<&str>,
     ///     precision: Option<usize>,
-    /// ) -> (String, bool)
+    /// ) -> (String, Option<cursive::theme::BaseColor>)
     /// where
     ///     P: Fn(i32) -> Box<dyn std::fmt::Display>,
-    ///     Q: Fn(i32) -> bool
+    ///     Q: Fn(i32) -> Option<cursive::theme::BaseColor>
     /// {
     ///     let precision = precision.map_or(Some(2), |p| Some(p));
     ///     let v = self.get_field_value();
@@ -315,7 +315,7 @@ impl Function {
     /// ) -> StyledString
     /// where
     ///     P: Fn(i32) -> Box<dyn std::fmt::Display>,
-    ///     Q: Fn(i32) -> bool
+    ///     Q: Fn(i32) -> Option<cursive::theme::BaseColor>
     /// {
     ///     let (value, highlight) = self.get_field_str_impl(decorator, highlight_if, unit, precision);
     ///     let depth = depth.unwrap_or(#depth);
@@ -374,7 +374,7 @@ impl Function {
         let hif_fn = match &field.highlight_if_value {
             Some(h) => h.clone(),
             _ => quote! {
-                (|_| false)
+                (|_| None)
             },
         };
 
@@ -421,10 +421,10 @@ impl Function {
                     unit: Option<&str>,
                     precision: Option<usize>,
                     #args
-                ) -> (String, bool)
+                ) -> (String, Option<cursive::theme::BaseColor>)
                 where
                     P: Fn(#value_type) -> Box<dyn std::fmt::Display>,
-                    Q: Fn(#value_type) -> bool
+                    Q: Fn(#value_type) -> Option<cursive::theme::BaseColor>
                 {
                     let precision = precision.map_or(#precision, |p| Some(p));
                     if let Some(v) = #get_fn {
@@ -435,7 +435,7 @@ impl Function {
                             #hif_fn(v)
                         })
                     } else {
-                        (#none_mark.into(), false)
+                        (#none_mark.into(), None)
                     }
                 }
             }
@@ -448,10 +448,10 @@ impl Function {
                     unit: Option<&str>,
                     precision: Option<usize>,
                     #args
-                ) -> (String, bool)
+                ) -> (String, Option<cursive::theme::BaseColor>)
                 where
                     P: Fn(#value_type) -> Box<dyn std::fmt::Display>,
-                    Q: Fn(#value_type) -> bool
+                    Q: Fn(#value_type) -> Option<cursive::theme::BaseColor>
                 {
                     let precision = precision.map_or(#precision, |p| Some(p));
                     let v = #get_fn;
@@ -480,9 +480,9 @@ impl Function {
             ) -> StyledString
             where
                 P: Fn(#value_type) -> Box<dyn std::fmt::Display>,
-                Q: Fn(#value_type) -> bool
+                Q: Fn(#value_type) -> Option<cursive::theme::BaseColor>
             {
-                let (value, highlight) = self.#fn_name(decorator, highlight_if, unit, precision, #args_val);
+                let (value, highlight_color) = self.#fn_name(decorator, highlight_if, unit, precision, #args_val);
                 let depth = depth.unwrap_or(#depth);
                 let width = width.unwrap_or(#width);
                 let width = if width == 0 {
@@ -500,8 +500,8 @@ impl Function {
                     depth = depth,
                     width = width,
                 ));
-                if highlight {
-                    StyledString::styled(unhighlighted, cursive::theme::Color::Light(cursive::theme::BaseColor::Red))
+                if let Some(color) = highlight_color {
+                    StyledString::styled(unhighlighted, cursive::theme::Color::Light(color))
                 } else {
                     StyledString::plain(unhighlighted)
                 }
@@ -562,7 +562,7 @@ impl Function {
             pub fn #fn_name(#args) -> String {
                     #impl_name(
                         None::<Box<dyn Fn(#value_type) -> Box<dyn std::fmt::Display>>>,
-                        None::<Box<dyn Fn(#value_type) -> bool>>,
+                        None::<Box<dyn Fn(#value_type) -> Option<cursive::theme::BaseColor>>>,
                         None,
                         None,
                         #args_val).0
@@ -571,7 +571,7 @@ impl Function {
             pub fn #fn_name_styled(#args) -> StyledString {
                     #impl_name_styled(
                         None::<Box<dyn Fn(#value_type) -> Box<dyn std::fmt::Display>>>,
-                        None::<Box<dyn Fn(#value_type) -> bool>>,
+                        None::<Box<dyn Fn(#value_type) -> Option<cursive::theme::BaseColor>>>,
                         None,
                         None,
                         None,
@@ -658,7 +658,7 @@ impl Function {
 
         let hif_val = match &field.highlight_if_value {
             Some(f) => quote! {Some(#f)},
-            None => quote! {None::<Box<dyn Fn(#value_type) -> bool>>},
+            None => quote! {None::<Box<dyn Fn(#value_type) -> Option<cursive::theme::BaseColor>>>},
         };
 
         let args_val = if field.is_aggr() {
