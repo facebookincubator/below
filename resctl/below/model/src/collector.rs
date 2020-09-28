@@ -71,6 +71,25 @@ pub fn get_hostname() -> Result<String> {
     Err(anyhow!("Could not get hostname"))
 }
 
+#[cfg(fbcode_build)]
+pub fn get_os_release() -> Result<String> {
+    match std::fs::read_to_string("/etc/centos-release") {
+        Ok(o) => Ok(o.trim_matches('\n').trim().into()),
+        Err(e) => bail!("Fail to get centos release: {}", e),
+    }
+}
+
+#[cfg(not(fbcode_build))]
+pub fn get_os_release() -> Result<String> {
+    let info = os_info::get();
+    Ok(format!(
+        "{} {} {}",
+        info.os_type(),
+        info.version(),
+        info.bitness()
+    ))
+}
+
 fn merge_procfs_and_exit_data(
     mut procfs_data: procfs::PidMap,
     exit_data: &Arc<Mutex<procfs::PidMap>>,
@@ -134,6 +153,13 @@ pub fn collect_sample(
             hostname: get_hostname()?,
             kernel_version: match reader.read_kernel_version() {
                 Ok(k) => Some(k),
+                Err(e) => {
+                    error!(logger, "{}", e);
+                    None
+                }
+            },
+            os_release: match get_os_release() {
+                Ok(o) => Some(o),
                 Err(e) => {
                     error!(logger, "{}", e);
                     None

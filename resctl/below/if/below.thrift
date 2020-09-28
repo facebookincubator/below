@@ -49,4 +49,5 @@ struct SystemSample {
   4: string hostname,
   5: procfs.DiskMap disks,
   6: optional string kernel_version,
+  7: optional string os_release,
 }

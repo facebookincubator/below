@@ -15,7 +15,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::{Duration, Instant, SystemTime};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use cursive::utils::markup::StyledString;
 
 use below_derive::BelowDecor;

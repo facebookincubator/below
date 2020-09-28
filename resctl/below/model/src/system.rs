@@ -22,6 +22,8 @@ pub struct SystemModel {
     pub hostname: String,
     #[bttr(title = "Kernel Version", width = 50)]
     pub kernel_version: Option<String>,
+    #[bttr(title = "OS Release", width = 50)]
+    pub os_release: Option<String>,
     pub cpu: CpuModel,
     pub mem: MemoryModel,
     pub vm: VmModel,
@@ -61,6 +63,7 @@ impl SystemModel {
         SystemModel {
             hostname: sample.hostname.clone(),
             kernel_version: sample.kernel_version.clone(),
+            os_release: sample.os_release.clone(),
             cpu,
             mem,
             vm,
