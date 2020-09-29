@@ -23,13 +23,16 @@ make_event_controller!(
     "jump_forward",
     Event::Char('j'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
-    |c: &mut Cursive, _cmd_vec: &[&str]| {
+    |c: &mut Cursive, cmd_vec: &[&str]| {
         let mode = c
             .user_data::<ViewState>()
             .expect("user data not set")
             .mode
             .clone();
         match mode {
+            ViewMode::Pause(adv) | ViewMode::Replay(adv) if cmd_vec.len() > 1 => {
+                jump_popup::advance_helper(&adv, Direction::Forward, c, &cmd_vec[1..].join(" "));
+            }
             ViewMode::Pause(adv) | ViewMode::Replay(adv) => {
                 c.add_layer(jump_popup::new(adv, Direction::Forward));
             }
@@ -44,13 +47,16 @@ make_event_controller!(
     "jump_backward",
     Event::Char('J'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
-    |c: &mut Cursive, _cmd_vec: &[&str]| {
+    |c: &mut Cursive, cmd_vec: &[&str]| {
         let mode = c
             .user_data::<ViewState>()
             .expect("user data not set")
             .mode
             .clone();
         match mode {
+            ViewMode::Pause(adv) | ViewMode::Replay(adv) if cmd_vec.len() > 1 => {
+                jump_popup::advance_helper(&adv, Direction::Reverse, c, &cmd_vec[1..].join(" "));
+            }
             ViewMode::Pause(adv) | ViewMode::Replay(adv) => {
                 c.add_layer(jump_popup::new(adv, Direction::Reverse));
             }

@@ -25,7 +25,7 @@ use store::{advance, Direction};
 
 use crate::ViewState;
 
-fn advance_helper(
+pub fn advance_helper(
     adv: &Rc<RefCell<advance::Advance>>,
     direction: Direction,
     c: &mut Cursive,
