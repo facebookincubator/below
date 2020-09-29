@@ -37,8 +37,11 @@ pub struct CoreState {
     pub model: Rc<RefCell<SystemModel>>,
 }
 
+pub enum CoreOrder {}
+
 impl StateCommon for CoreState {
     type ModelType = SystemModel;
+    type TagType = CoreOrder;
     fn get_filter(&mut self) -> &mut Option<String> {
         &mut self.filter
     }

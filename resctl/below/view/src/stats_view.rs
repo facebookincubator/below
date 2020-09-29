@@ -30,6 +30,25 @@ use crate::controllers::Controllers;
 use crate::tab_view::TabView;
 use common::logutil::{get_last_log_to_display, CPMsgRecord};
 
+macro_rules! make_sort_order {
+    ($name:ident {$($str_field:tt: $enum_field:ident,)*}) => {
+        #[derive(Copy, Clone, PartialEq)]
+        pub enum $name {
+            Keep,
+            $($enum_field,)*
+        }
+
+        impl From<&str> for $name {
+            fn from(order_str: &str) -> Self {
+                match order_str.to_lowercase().as_str() {
+                    $($str_field => $name::$enum_field,)*
+                    _ => $name::Keep
+                }
+            }
+        }
+    }
+}
+
 /// A trait that defines common state data querying or event handling.
 ///
 /// This trait must be implemented by all view state. It will help to expose
@@ -37,11 +56,18 @@ use common::logutil::{get_last_log_to_display, CPMsgRecord};
 /// a view to have required data in order to fit itself inside the StatsView.
 pub trait StateCommon {
     type ModelType;
+    type TagType;
     /// Expose the filter data for StatsView to implement common '/' fitlering.
     fn get_filter(&mut self) -> &mut Option<String>;
     /// Set the sorting tag to common state
     /// Return true on success, false if current tab doest support sorting.
-    fn set_sort_tag(&mut self, _tab: &str, _idx: usize, _reverse: bool) -> bool {
+    fn set_sort_tag(&mut self, _tag: Self::TagType, _reverse: &mut bool) -> bool {
+        false
+    }
+    fn set_sort_string(&mut self, _selection: &str, _reverse: &mut bool) -> bool {
+        false
+    }
+    fn set_sort_tag_from_tab_idx(&mut self, _tab: &str, _idx: usize, _reverse: &mut bool) -> bool {
         false
     }
     fn get_model(&self) -> Ref<Self::ModelType>;

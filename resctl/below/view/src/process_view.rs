@@ -46,20 +46,37 @@ pub struct ProcessState {
 
 impl StateCommon for ProcessState {
     type ModelType = ProcessModel;
+    type TagType = ProcessOrders;
     fn get_filter(&mut self) -> &mut Option<String> {
         &mut self.filter
     }
 
-    fn set_sort_tag(&mut self, tab: &str, idx: usize, reverse: bool) -> bool {
-        self.sort_order = self
+    fn set_sort_tag(&mut self, sort_order: Self::TagType, reverse: &mut bool) -> bool {
+        if self.sort_order == sort_order && sort_order != ProcessOrders::Keep {
+            *reverse = !*reverse;
+        } else {
+            *reverse = true;
+            self.sort_order = sort_order;
+        }
+        self.reverse = *reverse;
+        self.sort_order != ProcessOrders::Keep
+    }
+
+    fn set_sort_tag_from_tab_idx(&mut self, tab: &str, idx: usize, reverse: &mut bool) -> bool {
+        let sort_order = self
             .sort_tags
             .get(tab)
             .unwrap_or_else(|| panic!("Fail to find tab: {}", tab))
             .get(idx)
             .expect("Out of title scope")
             .clone();
-        self.reverse = reverse;
-        self.sort_order != ProcessOrders::Keep
+
+        self.set_sort_tag(sort_order, reverse)
+    }
+
+    fn set_sort_string(&mut self, selection: &str, reverse: &mut bool) -> bool {
+        let sort_order: ProcessOrders = selection.into();
+        self.set_sort_tag(sort_order, reverse)
     }
 
     fn get_model(&self) -> Ref<Self::ModelType> {
