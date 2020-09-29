@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use ::cursive::view::{Identifiable, Scrollable, View};
-use cursive::event::{Event, EventResult, EventTrigger, Key};
+use cursive::event::{Event, EventResult, EventTrigger};
 use cursive::utils::markup::StyledString;
 use cursive::view::ViewWrapper;
 use cursive::views::{
@@ -26,7 +26,7 @@ use cursive::views::{
 use cursive::Cursive;
 
 use crate::command_palette::CommandPalette;
-use crate::filter_popup;
+use crate::controllers::Controllers;
 use crate::tab_view::TabView;
 use common::logutil::{get_last_log_to_display, CPMsgRecord};
 
@@ -111,7 +111,8 @@ pub struct StatsView<V: 'static + ViewBridge> {
     tab_view_map: HashMap<String, V>,
     detailed_view: OnEventView<Panel<LinearLayout>>,
     pub state: Rc<RefCell<V::StateType>>,
-    reverse_sort: bool,
+    pub reverse_sort: bool,
+    pub event_controllers: Rc<RefCell<HashMap<Event, Controllers>>>,
 }
 
 impl<V: 'static + ViewBridge> ViewWrapper for StatsView<V> {
@@ -121,67 +122,26 @@ impl<V: 'static + ViewBridge> ViewWrapper for StatsView<V> {
     // event if there's a match. Otherwise, it will pass the event to the
     // concrete event handler.
     fn wrap_on_event(&mut self, ch: Event) -> EventResult {
-        match ch {
-            Event::Key(Key::Tab) => {
-                self.get_tab_view().on_tab();
-                self.update_title();
-                EventResult::with_cb(|c| Self::refresh_myself(c))
-            }
-            Event::Shift(Key::Tab) => {
-                self.get_tab_view().on_shift_tab();
-                self.update_title();
-                EventResult::with_cb(|c| Self::refresh_myself(c))
-            }
-            Event::Char('.') => {
-                let x = self.get_title_view().on_tab();
-                self.set_horizontal_offset(x);
-                EventResult::with_cb(move |c| Self::refresh_myself(c))
-            }
-            Event::Char(',') => {
-                let x = self.get_title_view().on_shift_tab();
-                self.set_horizontal_offset(x);
-                EventResult::with_cb(move |c| Self::refresh_myself(c))
-            }
-            Event::Key(Key::Right) => {
-                let screen_width = self.get_screen_width();
-                self.get_title_view().on_right(screen_width);
-                EventResult::with_cb(move |c| Self::refresh_myself(c))
-            }
-            Event::Key(Key::Left) => {
-                self.get_title_view().on_left();
-                EventResult::with_cb(move |c| Self::refresh_myself(c))
-            }
-            Event::Char('S') => {
-                let tab_view = self.get_tab_view();
-                let tab = tab_view.get_cur_selected();
-                let title_view = self.get_title_view();
-                let title_idx = title_view.current_selected;
-                let title = title_view.get_cur_selected().to_string();
-                let sort_res =
-                    self.state
-                        .borrow_mut()
-                        .set_sort_tag(tab, title_idx, self.reverse_sort);
-                self.reverse_sort = !self.reverse_sort;
-                EventResult::with_cb(move |c| {
-                    if sort_res {
-                        Self::refresh_myself(c);
-                    } else {
-                        Self::cp_warn(
-                            c,
-                            format!("\"{}\" is not sortable currently.", title.trim()),
-                        );
-                    }
-                })
-            }
-            Event::Char('/') => {
-                let state = self.state.clone();
-                EventResult::with_cb(move |c| {
-                    c.add_layer(filter_popup::new(state.clone(), Self::refresh_myself));
-                })
-            }
-            _ => self
-                .with_view_mut(|v| v.on_event(ch))
-                .unwrap_or(EventResult::Ignored),
+        // if stats view is in cmd mode, pass all event to cmd_palette
+        let cmd_mode = self.get_cmd_palette().is_cmd_mode();
+        if cmd_mode {
+            return self.get_cmd_palette().on_event(ch);
+        }
+
+        let controller = self
+            .event_controllers
+            .borrow()
+            .get(&ch)
+            .unwrap_or(&Controllers::Unknown)
+            .clone();
+
+        // Unmapped event goes to the parent view.
+        if controller == Controllers::Unknown {
+            self.with_view_mut(|v| v.on_event(ch))
+                .unwrap_or(EventResult::Ignored)
+        } else {
+            controller.handle(self, &[]);
+            EventResult::with_cb(move |c| controller.callback::<V>(c, &[]))
         }
     }
 }
@@ -194,6 +154,8 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         tab_view_map: HashMap<String, V>,
         list: impl View,
         state: V::StateType,
+        event_controllers: Rc<RefCell<HashMap<Event, Controllers>>>,
+        cmd_controllers: Rc<RefCell<HashMap<&'static str, Controllers>>>,
     ) -> Self {
         let mut tab_titles_map = HashMap::new();
         // Generating titles. The get_title_vec will call BelowDerive's get_title_pipe()
@@ -232,7 +194,10 @@ impl<V: 'static + ViewBridge> StatsView<V> {
                         .scroll_x(true)
                         .scroll_y(false),
                 )
-                .child(CommandPalette::new("<root>").with_name(format!("{}_cmd_palette", &name))),
+                .child(
+                    CommandPalette::new::<V>(name, "<root>", cmd_controllers)
+                        .with_name(format!("{}_cmd_palette", &name)),
+                ),
         ));
 
         Self {
@@ -241,11 +206,12 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             detailed_view,
             state: Rc::new(RefCell::new(state)),
             reverse_sort: true,
+            event_controllers,
         }
     }
 
     // When a user switch tab, we need to reset the title state.
-    fn update_title(&mut self) {
+    pub fn update_title(&mut self) {
         let cur_tab = self.get_tab_view().get_cur_selected().to_string();
         let mut title_view = self.get_title_view();
         title_view.tabs = self
@@ -338,7 +304,7 @@ impl<V: 'static + ViewBridge> StatsView<V> {
     }
 
     // convenience function to get screen width
-    fn get_screen_width(&mut self) -> usize {
+    pub fn get_screen_width(&mut self) -> usize {
         self.get_scroll_view().content_viewport().width()
     }
 
@@ -376,33 +342,35 @@ impl<V: 'static + ViewBridge> StatsView<V> {
     }
 
     // Chaining call. Use for construction to get initial data.
-    #[allow(unused)]
     pub fn feed_data(mut self, c: &mut Cursive) -> Self {
         self.refresh(c);
         self
     }
 
-    // Locates the view with its defined name and refresh it.
-    // This is a convenience function for refresh without need of anobject.
-    fn refresh_myself(c: &mut Cursive) {
+    /// Convenience function to get StatsView
+    pub fn get_view(c: &mut Cursive) -> ViewRef<Self> {
         c.find_name::<Self>(V::get_view_name())
             .expect("Fail to find view with name")
-            .refresh(c)
+    }
+
+    // Locates the view with its defined name and refresh it.
+    // This is a convenience function for refresh without need of anobject.
+    pub fn refresh_myself(c: &mut Cursive) {
+        Self::get_view(c).refresh(c)
+    }
+
+    pub fn set_alert(&mut self, msg: &str) {
+        self.get_cmd_palette()
+            .set_alert(CPMsgRecord::construct_msg(slog::Level::Warning, &msg));
     }
 
     /// Convenience function to raise warning. Only to CommandPalette.
-    pub fn cp_warn(c: &mut Cursive, msg: String) {
-        c.find_name::<Self>(V::get_view_name())
-            .expect("Fail to find view with name")
-            .get_cmd_palette()
-            .set_alert(CPMsgRecord::construct_msg(slog::Level::Warning, &msg));
+    pub fn cp_warn(c: &mut Cursive, msg: &str) {
+        Self::get_view(c).set_alert(msg);
     }
 
     /// Convenience function to set filter to CommandPalette.
     pub fn cp_filter(c: &mut Cursive, filter: Option<String>) {
-        c.find_name::<Self>(V::get_view_name())
-            .expect("Fail to find view with name")
-            .get_cmd_palette()
-            .set_filter(filter);
+        Self::get_view(c).get_cmd_palette().set_filter(filter);
     }
 }

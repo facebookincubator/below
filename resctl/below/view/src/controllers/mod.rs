@@ -11,8 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#![allow(dead_code)]
-#![allow(unused_imports)]
 
 //! Controllers module is used for how below will react on a user's input.
 //!
@@ -81,7 +79,7 @@ use toml::value::Value;
 mod controller_infra;
 // mod content_controllers;
 // mod sample_controllers;
-// mod view_controllers;
+mod view_controllers;
 
 use crate::stats_view::{StateCommon, StatsView, ViewBridge};
 use crate::{refresh, ViewState};
@@ -89,31 +87,31 @@ use crate::{refresh, ViewState};
 // use content_controllers::*;
 use controller_infra::*;
 // use sample_controllers::*;
-// use view_controllers::*;
+use view_controllers::*;
 
 pub use controller_infra::str_to_event;
 
 use std::collections::HashMap;
 
-// make_controllers!(
-//     CmdPalette: InvokeCmdPalette,
-//     NextTab: NextTabImpl,
-//     PrevTab: PrevTabImpl,
-//     NextCol: NextColImpl,
-//     PrevCol: PrevColImpl,
-//     Right: RightImpl,
-//     Left: LeftImpl,
-//     SortCol: SortByColumn,
-//     Filter: FilterPopup,
-//     JForward: JumpForward,
-//     JBackward: JumpBackward,
-//     NSample: NextSample,
-//     PSample: PrevSample,
-//     Pause: PauseImpl,
-//     Quit: QuitImpl,
-//     Help: HelpMenu,
-//     Process: ProcessView,
-//     Cgroup: CgroupView,
-//     System: SystemView,
-//     Zoom: ZoomView,
-// );
+make_controllers!(
+    CmdPalette: InvokeCmdPalette,
+    //     NextTab: NextTabImpl,
+    //     PrevTab: PrevTabImpl,
+    //     NextCol: NextColImpl,
+    //     PrevCol: PrevColImpl,
+    //     Right: RightImpl,
+    //     Left: LeftImpl,
+    //     SortCol: SortByColumn,
+    //     Filter: FilterPopup,
+    //     JForward: JumpForward,
+    //     JBackward: JumpBackward,
+    //     NSample: NextSample,
+    //     PSample: PrevSample,
+    //     Pause: PauseImpl,
+    Quit: QuitImpl,
+    Help: HelpMenu,
+    //     Process: ProcessView,
+    //     Cgroup: CgroupView,
+    //     System: SystemView,
+    //     Zoom: ZoomView,
+);

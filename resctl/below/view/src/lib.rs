@@ -51,21 +51,21 @@
 ///   the following selectable view. A user can press `,` or `.` to switch between different columns and press `s`
 ///   or `S` to sort in ascending or descending order.
 use std::cell::RefCell;
-use std::path::PathBuf;
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
-use cursive::event::{Event, EventResult, EventTrigger};
+use cursive::event::Event;
 use cursive::theme::{BaseColor, Color, PaletteColor};
 use cursive::view::Identifiable;
-use cursive::views::{LinearLayout, NamedView, OnEventView, Panel, ResizedView, StackView};
+use cursive::views::{LinearLayout, OnEventView, Panel, ResizedView, StackView};
 use cursive::Cursive;
+use toml::value::Value;
 
 use common::open_source_shim;
 use model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
 use store::advance::Advance;
-use store::Direction;
 
 open_source_shim!();
 
@@ -84,6 +84,8 @@ mod status_bar;
 mod system_view;
 mod tab_view;
 
+const BELOW_CMD_RC: &str = "/.config/below/cmdrc";
+
 pub struct View {
     inner: Cursive,
 }
@@ -95,7 +97,6 @@ macro_rules! advance {
                 $c.user_data::<ViewState>()
                     .expect("No user data set")
                     .update(data);
-                refresh($c);
             }
             None => view_warn!(
                 $c,
@@ -120,18 +121,17 @@ macro_rules! view_warn {
             .clone();
         let msg = format!($($args)*);
         match state {
-            crate::MainViewState::Cgroup => crate::cgroup_view::ViewType::cp_warn($c, msg),
+            crate::MainViewState::Cgroup => crate::cgroup_view::ViewType::cp_warn($c, &msg),
             crate::MainViewState::Process | crate::MainViewState::ProcessZoomedIntoCgroup => {
-                crate::process_view::ViewType::cp_warn($c, msg)
+                crate::process_view::ViewType::cp_warn($c, &msg)
             }
-            crate::MainViewState::Core => crate::core_view::ViewType::cp_warn($c, msg),
+            crate::MainViewState::Core => crate::core_view::ViewType::cp_warn($c, &msg),
         }
     }};
 }
 
 // controllers depends on Advance
 pub mod controllers;
-
 // Jump popup depends on view_warn
 mod jump_popup;
 
@@ -145,8 +145,7 @@ pub enum MainViewState {
 
 #[derive(Clone)]
 pub enum ViewMode {
-    Live,
-    LiveRemote(Rc<RefCell<Advance>>),
+    Live(Rc<RefCell<Advance>>),
     Pause(Rc<RefCell<Advance>>),
     Replay(Rc<RefCell<Advance>>),
 }
@@ -179,6 +178,8 @@ pub struct ViewState {
     pub network: Rc<RefCell<NetworkModel>>,
     pub main_view_state: MainViewState,
     pub mode: ViewMode,
+    pub event_controllers: Rc<RefCell<HashMap<Event, controllers::Controllers>>>,
+    pub cmd_controllers: Rc<RefCell<HashMap<&'static str, controllers::Controllers>>>,
 }
 
 impl ViewState {
@@ -191,7 +192,7 @@ impl ViewState {
         self.network.replace(model.network);
     }
 
-    pub fn new(main_view_state: MainViewState, model: Model) -> Self {
+    pub fn new_with_advance(main_view_state: MainViewState, model: Model, mode: ViewMode) -> Self {
         Self {
             time_elapsed: model.time_elapsed,
             timestamp: model.timestamp,
@@ -200,20 +201,15 @@ impl ViewState {
             process: Rc::new(RefCell::new(model.process)),
             network: Rc::new(RefCell::new(model.network)),
             main_view_state,
-            mode: ViewMode::Live,
+            mode,
+            event_controllers: Rc::new(RefCell::new(HashMap::new())),
+            cmd_controllers: Rc::new(RefCell::new(controllers::make_cmd_controller_map())),
         }
-    }
-
-    pub fn new_with_advance(main_view_state: MainViewState, model: Model, mode: ViewMode) -> Self {
-        let mut view_state = ViewState::new(main_view_state, model);
-        view_state.mode = mode;
-        view_state
     }
 
     pub fn view_mode_str(&self) -> &'static str {
         match self.mode {
-            ViewMode::Live => "live",
-            ViewMode::LiveRemote(_) => "live-remote",
+            ViewMode::Live(_) => "live",
             ViewMode::Pause(_) => "live-paused",
             ViewMode::Replay(_) => "replay",
         }
@@ -228,12 +224,6 @@ impl ViewState {
 }
 
 impl View {
-    pub fn new(model: model::Model) -> View {
-        let mut inner = Cursive::default();
-        inner.set_user_data(ViewState::new(MainViewState::Cgroup, model));
-        View { inner }
-    }
-
     pub fn new_with_advance(model: model::Model, mode: ViewMode) -> View {
         let mut inner = Cursive::default();
         inner.set_user_data(ViewState::new_with_advance(
@@ -249,97 +239,40 @@ impl View {
         self.inner.cb_sink()
     }
 
-    pub fn register_jump_event(&mut self) {
-        // Jump forward
-        self.inner.add_global_callback('j', |c| {
-            let mode = c
-                .user_data::<ViewState>()
-                .expect("user data not set")
-                .mode
-                .clone();
-            match mode {
-                ViewMode::Pause(adv) | ViewMode::Replay(adv) => {
-                    println!("Demacia");
-                    c.add_layer(jump_popup::new(adv, Direction::Forward));
-                }
-                _ => {}
-            }
-        });
+    fn verify_cmd_override(c: &mut Cursive) {
+        let file_name = format!(
+            "{}{}",
+            std::env::var("HOME").unwrap_or_else(|_| "".into()),
+            BELOW_CMD_RC
+        );
 
-        // Jump backward
-        self.inner.add_global_callback('J', |c| {
-            let mode = c
-                .user_data::<ViewState>()
-                .expect("user data not set")
-                .mode
-                .clone();
-            match mode {
-                ViewMode::Pause(adv) | ViewMode::Replay(adv) => {
-                    c.add_layer(jump_popup::new(adv, Direction::Reverse));
-                }
-                _ => {}
-            }
-        });
+        match std::fs::read_to_string(file_name) {
+            Ok(cmdrc_str) => match cmdrc_str.parse::<Value>() {
+                Ok(_) => {}
+                Err(e) => view_warn!(c, "Failed to parse cmd map: {}", e),
+            },
+            _ => {}
+        };
     }
 
-    pub fn register_replay_event(&mut self) {
-        // Move sample forward
-        self.inner.add_global_callback('t', |c| {
-            let view_state = c.user_data::<ViewState>().expect("user data not set");
-            match view_state.mode.clone() {
-                ViewMode::Pause(adv) | ViewMode::Replay(adv) => {
-                    let mut adv = adv.borrow_mut();
-                    advance!(c, adv, Direction::Forward);
-                }
-                _ => {}
-            }
-        });
+    // Function to generate event_controller_map, we cannot make
+    // event_controller_map during ViewState construction since it
+    // depends on CommandPalette to construct for raising errors
+    fn generate_event_controller_map(c: &mut Cursive) {
+        let event_controller_map = controllers::make_event_controller_map(
+            c,
+            &format!(
+                "{}{}",
+                // Try to get home dir, otherwise let the TOML parsing fail
+                std::env::var("HOME").unwrap_or_else(|_| "".into()),
+                BELOW_CMD_RC
+            ),
+        );
 
-        // Move sample backward
-        self.inner.add_global_callback('T', move |c| {
-            let view_state = c.user_data::<ViewState>().expect("user data not set");
-            match view_state.mode.clone() {
-                ViewMode::Pause(adv) | ViewMode::Replay(adv) => {
-                    let mut adv = adv.borrow_mut();
-                    advance!(c, adv, Direction::Reverse);
-                }
-                _ => {}
-            }
-        });
-        self.register_jump_event();
-    }
-
-    pub fn register_live_local_event(&mut self, logger: slog::Logger, dir: PathBuf) {
-        self.inner.add_global_callback(Event::Char(' '), move |c| {
-            let mut view_state = c.user_data::<ViewState>().expect("user data not set");
-            if view_state.is_paused() {
-                view_state.mode = ViewMode::Live;
-            } else {
-                let mut adv = Advance::new(logger.clone(), dir.clone(), SystemTime::now());
-                adv.initialize();
-                view_state.mode = ViewMode::Pause(Rc::new(RefCell::new(adv)));
-            }
-            refresh(c);
-        });
-        self.register_replay_event();
-    }
-
-    pub fn register_live_remote_event(&mut self) {
-        self.inner.add_global_callback(Event::Char(' '), move |c| {
-            let mut view_state = c.user_data::<ViewState>().expect("user data not set");
-
-            match &view_state.mode {
-                ViewMode::Pause(adv) => {
-                    // On resume, we need to jump to latest sample
-                    adv.borrow_mut().get_latest_sample();
-                    view_state.mode = ViewMode::LiveRemote(adv.clone());
-                }
-                ViewMode::LiveRemote(adv) => view_state.mode = ViewMode::Pause(adv.clone()),
-                _ => {}
-            }
-            refresh(c);
-        });
-        self.register_replay_event();
+        c.user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .event_controllers
+            .replace(event_controller_map);
     }
 
     pub fn run(&mut self) -> Result<()> {
@@ -353,14 +286,6 @@ impl View {
 
         self.inner.set_theme(theme);
 
-        self.inner.add_global_callback('q', Cursive::quit);
-        self.inner.add_global_callback('?', |s| {
-            s.add_fullscreen_layer(ResizedView::with_full_screen(
-                OnEventView::new(help_menu::new()).on_event(EventTrigger::from('q').or('?'), |s| {
-                    s.pop_layer();
-                }),
-            ))
-        });
         self.inner
             .add_global_callback(Event::CtrlChar('z'), |_| unsafe {
                 if libc::raise(libc::SIGTSTP) != 0 {
@@ -399,152 +324,6 @@ impl View {
                                 ))
                                 .with_name("main_view_stack"),
                         )
-                        .on_pre_event_inner('p', |stack, _| {
-                            let position = (*stack.get_mut())
-                                .find_layer_from_name("process_view_panel")
-                                .expect("Failed to find process view");
-                            (*stack.get_mut()).move_to_front(position);
-
-                            Some(EventResult::with_cb(|c| {
-                                let current_state = c
-                                    .user_data::<ViewState>()
-                                    .expect("No data stored in Cursive object!")
-                                    .main_view_state
-                                    .clone();
-
-                                // If the previous state is zoom state, we need to clear the zoom state
-                                if current_state == MainViewState::ProcessZoomedIntoCgroup {
-                                    process_view::ProcessView::get_process_view(c)
-                                        .state
-                                        .borrow_mut()
-                                        .reset_state_for_quiting_zoom();
-                                }
-                                c.user_data::<ViewState>()
-                                    .expect("No data stored in Cursive object!")
-                                    .main_view_state = MainViewState::Process;
-                            }))
-                        })
-                        .on_pre_event_inner('c', |stack, _| {
-                            let position = (*stack.get_mut())
-                                .find_layer_from_name("cgroup_view_panel")
-                                .expect("Failed to find cgroup view");
-                            (*stack.get_mut()).move_to_front(position);
-
-                            Some(EventResult::with_cb(|c| {
-                                let current_state = c
-                                    .user_data::<ViewState>()
-                                    .expect("No data stored in Cursive object!")
-                                    .main_view_state
-                                    .clone();
-
-                                // If the previous state is zoom state, we need to clear the zoom state
-                                if current_state == MainViewState::ProcessZoomedIntoCgroup {
-                                    process_view::ProcessView::get_process_view(c)
-                                        .state
-                                        .borrow_mut()
-                                        .reset_state_for_quiting_zoom();
-                                }
-                                c.user_data::<ViewState>()
-                                    .expect("No data stored in Cursive object!")
-                                    .main_view_state = MainViewState::Cgroup;
-                            }))
-                        })
-                        .on_pre_event_inner('s', |stack, _| {
-                            let position = (*stack.get_mut())
-                                .find_layer_from_name("core_view_panel")
-                                .expect("Failed to find core view");
-                            (*stack.get_mut()).move_to_front(position);
-
-                            Some(EventResult::with_cb(|c| {
-                                let current_state = c
-                                    .user_data::<ViewState>()
-                                    .expect("No data stored in Cursive object!")
-                                    .main_view_state
-                                    .clone();
-
-                                // If the previous state is zoom state, we need to clear the zoom state
-                                if current_state == MainViewState::ProcessZoomedIntoCgroup {
-                                    process_view::ProcessView::get_process_view(c)
-                                        .state
-                                        .borrow_mut()
-                                        .reset_state_for_quiting_zoom();
-                                }
-                                c.user_data::<ViewState>()
-                                    .expect("No data stored in Cursive object!")
-                                    .main_view_state = MainViewState::Core;
-                            }))
-                        })
-                        .on_pre_event('z', |c| {
-                            let current_selection = cgroup_view::CgroupView::get_cgroup_view(c)
-                                .state
-                                .borrow()
-                                .current_selected_cgroup
-                                .clone();
-
-                            let current_state = c
-                                .user_data::<ViewState>()
-                                .expect("No data stored in Cursive object!")
-                                .main_view_state
-                                .clone();
-
-                            let next_state = match current_state {
-                                // Pressing 'z' in zoomed view should remove zoom
-                                // and bring user back to cgroup view
-                                MainViewState::ProcessZoomedIntoCgroup => {
-                                    process_view::ProcessView::get_process_view(c)
-                                        .state
-                                        .borrow_mut()
-                                        .reset_state_for_quiting_zoom();
-                                    MainViewState::Cgroup
-                                }
-                                MainViewState::Cgroup => {
-                                    process_view::ProcessView::get_process_view(c)
-                                        .state
-                                        .borrow_mut()
-                                        .handle_state_for_entering_zoom(current_selection);
-                                    MainViewState::ProcessZoomedIntoCgroup
-                                }
-                                // Pressing 'z' in process view should do nothing
-                                MainViewState::Process => {
-                                    process_view::ProcessView::get_process_view(c)
-                                        .state
-                                        .borrow_mut()
-                                        .cgroup_filter = None;
-                                    MainViewState::Process
-                                }
-                                _ => return,
-                            };
-
-                            c.call_on_name("main_view_stack", |stack: &mut NamedView<StackView>| {
-                                match &next_state {
-                                    MainViewState::Process
-                                    | MainViewState::ProcessZoomedIntoCgroup => {
-                                        // Bring process_view to front
-                                        let process_pos = (*stack.get_mut())
-                                            .find_layer_from_name("process_view_panel")
-                                            .expect("Failed to find process view");
-                                        (*stack.get_mut()).move_to_front(process_pos);
-                                    }
-                                    MainViewState::Cgroup => {
-                                        // Bring cgroup_view to front
-                                        let cgroup_pos = (*stack.get_mut())
-                                            .find_layer_from_name("cgroup_view_panel")
-                                            .expect("Failed to find cgroup view");
-                                        (*stack.get_mut()).move_to_front(cgroup_pos);
-                                    }
-                                    MainViewState::Core => {}
-                                }
-                            })
-                            .expect("failed to find main_view_stack");
-
-                            // Set next state
-                            c.user_data::<ViewState>()
-                                .expect("No data stored in Cursive object!")
-                                .main_view_state = next_state;
-
-                            // Redraw screen now so we don't have to wait until next tick
-                            refresh(c)
-                        })
                         .with_name("dynamic_view"),
                     ),
             ));
@@ -553,6 +332,9 @@ impl View {
             .focus_name("dynamic_view")
             .expect("Could not set focus at initialization!");
 
+        // Raise warning message if failed to map the customzied command.
+        Self::verify_cmd_override(&mut self.inner);
+        Self::generate_event_controller_map(&mut self.inner);
         self.inner.run();
 
         Ok(())

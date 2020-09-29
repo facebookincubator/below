@@ -12,19 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use cursive::event::{Event, EventResult};
 use cursive::theme::ColorStyle;
 use cursive::vec::Vec2;
+use cursive::views::{EditView, NamedView};
+use cursive::Cursive;
 use cursive::Printer;
 use cursive::View;
+
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
+
+use crate::controllers::Controllers;
+use crate::stats_view::{StatsView, ViewBridge};
 
 /// Command palette will have different mode:
 /// Info is used to show info like full cgroup path.
 /// Alert is used to show error messages.
+/// Command is used to turn command palette in Command mode.
 // TODO: command mode for command palette.
 #[derive(PartialEq)]
 enum CPMode {
     Info,
     Alert,
+    Command,
 }
 
 /// TextView that used to display extra information
@@ -36,6 +48,8 @@ pub struct CommandPalette {
     content: String,
     filter: Option<String>,
     mode: CPMode,
+    cmd_view: RefCell<EditView>,
+    cmd_controllers: Rc<RefCell<HashMap<&'static str, Controllers>>>,
 }
 
 impl View for CommandPalette {
@@ -46,17 +60,31 @@ impl View for CommandPalette {
             printer.print((printer.size.x - filter.len(), 0), &filter);
         }
 
-        // Message should adapt the screen size
-        let mut msg_len_left = self.content.len();
-        let mut idx = 0;
-        let mut line = 1;
-        while msg_len_left > printer.size.x {
-            self.print(printer, (0, line), idx);
-            msg_len_left -= printer.size.x;
-            idx += printer.size.x;
-            line += 1;
+        match self.mode {
+            CPMode::Command => {
+                printer.print((0, 1), ":");
+                let inner_printer = printer.offset((1, 1));
+                self.cmd_view.borrow_mut().layout(inner_printer.size);
+                self.cmd_view.borrow().draw(&inner_printer);
+            }
+            _ => {
+                // Message should adapt the screen size
+                let mut msg_len_left = self.content.len();
+                let mut idx = 0;
+                let mut line = 1;
+                while msg_len_left > printer.size.x {
+                    self.print(printer, (0, line), idx);
+                    msg_len_left -= printer.size.x;
+                    idx += printer.size.x;
+                    line += 1;
+                }
+                self.print(printer, (0, line), idx);
+            }
         }
-        self.print(printer, (0, line), idx);
+    }
+
+    fn on_event(&mut self, event: Event) -> EventResult {
+        self.cmd_view.borrow_mut().on_event(event)
     }
 
     fn required_size(&mut self, constraint: Vec2) -> Vec2 {
@@ -66,18 +94,82 @@ impl View for CommandPalette {
 
 impl CommandPalette {
     /// Create a new CommandPalette
-    pub fn new<T: Into<String>>(content: T) -> Self {
+    pub fn new<V: 'static + ViewBridge>(
+        name: &'static str,
+        content: &str,
+        cmd_controllers: Rc<RefCell<HashMap<&'static str, Controllers>>>,
+    ) -> Self {
         Self {
             content: content.into(),
             filter: None,
             mode: CPMode::Info,
+            cmd_view: RefCell::new(
+                EditView::new()
+                    .on_submit(move |c, cmd| Self::run_cmd::<V>(name, c, cmd))
+                    .style(ColorStyle::terminal_default()),
+            ),
+            cmd_controllers,
         }
+    }
+
+    /// Run the captured command
+    // In this function, we should avoid borrowing command palette object, since
+    // it will cause a double mut borrow in the handler.
+    pub fn run_cmd<V: 'static + ViewBridge>(name: &'static str, c: &mut Cursive, cmd: &str) {
+        let cmd_vec = cmd.trim().split(' ').collect::<Vec<&str>>();
+        let controller = c
+            .find_name::<Self>(&format!("{}_cmd_palette", name))
+            .expect("Fail to get cmd_palette")
+            .cmd_controllers
+            .borrow()
+            .get(cmd_vec[0])
+            .unwrap_or(&Controllers::Unknown)
+            .clone();
+
+        match controller {
+            Controllers::Unknown => {
+                let mut cp = c
+                    .find_name::<Self>(&format!("{}_cmd_palette", name))
+                    .expect("Fail to get cmd_palette");
+                cp.mode = CPMode::Alert;
+                cp.content = "Unknown Command".into();
+                cp.cmd_view.borrow_mut().set_content("");
+            }
+            _ => {
+                controller.handle(&mut StatsView::<V>::get_view(c), &cmd_vec);
+                controller.callback::<V>(c, &cmd_vec);
+                c.call_on_name(
+                    &format!("{}_cmd_palette", name),
+                    |cp: &mut NamedView<CommandPalette>| {
+                        cp.get_mut().reset_cmd();
+                    },
+                );
+            }
+        }
+    }
+
+    pub fn reset_cmd(&mut self) {
+        self.mode = CPMode::Info;
+        self.cmd_view.borrow_mut().set_content("");
+    }
+
+    /// Turn cmd_palette into command input mode
+    pub fn invoke_cmd(&mut self) {
+        self.mode = CPMode::Command;
+        self.content = "".into()
+    }
+
+    /// Check if command palette is in command mode
+    pub fn is_cmd_mode(&self) -> bool {
+        self.mode == CPMode::Command
     }
 
     /// Set the display info
     pub fn set_info<T: Into<String>>(&mut self, content: T) {
         self.content = content.into();
-        self.mode = CPMode::Info;
+        if self.mode != CPMode::Command {
+            self.mode = CPMode::Info;
+        }
     }
 
     /// Set alert
@@ -85,10 +177,12 @@ impl CommandPalette {
     pub fn set_alert<T: Into<String>>(&mut self, content: T) {
         if self.mode == CPMode::Alert {
             // Attach to current alert if it is not consumed.
-            self.content = format!("{}\n{}", self.content, content.into());
+            self.content = format!("{} |=| {}", self.content, content.into());
         } else {
             self.content = content.into();
-            self.mode = CPMode::Alert;
+            if self.mode != CPMode::Command {
+                self.mode = CPMode::Alert;
+            }
         }
     }
 
@@ -118,6 +212,7 @@ impl CommandPalette {
         match self.mode {
             CPMode::Info => self.print_info(printer, pos.into(), idx),
             CPMode::Alert => self.print_alert(printer, pos.into(), idx),
+            _ => {}
         }
     }
 

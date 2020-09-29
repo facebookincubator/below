@@ -141,17 +141,17 @@ impl ProcessView {
         tabs_map.insert("CPU".into(), ProcessView::Cpu(Default::default()));
         tabs_map.insert("Mem".into(), ProcessView::Mem(Default::default()));
         tabs_map.insert("I/O".into(), ProcessView::Io(Default::default()));
+        let user_data = c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive Object!");
         StatsView::new(
             "process",
             tabs,
             tabs_map,
             list,
-            ProcessState::new(
-                c.user_data::<ViewState>()
-                    .expect("No data stored in Cursive Object!")
-                    .process
-                    .clone(),
-            ),
+            ProcessState::new(user_data.process.clone()),
+            user_data.event_controllers.clone(),
+            user_data.cmd_controllers.clone(),
         )
         .feed_data(c)
         .on_event('P', |c| {
@@ -192,8 +192,7 @@ impl ProcessView {
     }
 
     pub fn get_process_view(c: &mut Cursive) -> ViewRef<ViewType> {
-        c.find_name::<ViewType>(Self::get_view_name())
-            .expect("Fail to find process_view by its name")
+        ViewType::get_view(c)
     }
 
     pub fn refresh(c: &mut Cursive) {

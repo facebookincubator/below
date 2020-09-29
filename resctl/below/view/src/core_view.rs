@@ -92,26 +92,24 @@ impl CoreView {
         tabs_map.insert("Mem".into(), CoreView::Mem(Default::default()));
         tabs_map.insert("Vm".into(), CoreView::Vm(Default::default()));
         tabs_map.insert("Disk".into(), CoreView::Disk(Default::default()));
-
+        let user_data = c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive Object!");
         StatsView::new(
             "core",
             tabs,
             tabs_map,
             list,
-            CoreState::new(
-                c.user_data::<ViewState>()
-                    .expect("No data stored in Cursive Object!")
-                    .system
-                    .clone(),
-            ),
+            CoreState::new(user_data.system.clone()),
+            user_data.event_controllers.clone(),
+            user_data.cmd_controllers.clone(),
         )
         .feed_data(c)
         .with_name(Self::get_view_name())
     }
 
     pub fn get_core_view(c: &mut Cursive) -> ViewRef<ViewType> {
-        c.find_name::<ViewType>(Self::get_view_name())
-            .expect("Fail to find core_view by its name")
+        ViewType::get_view(c)
     }
 
     pub fn refresh(c: &mut Cursive) {

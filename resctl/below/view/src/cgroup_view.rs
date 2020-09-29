@@ -175,17 +175,17 @@ impl CgroupView {
         tabs_map.insert("Mem".into(), CgroupView::Mem(Default::default()));
         tabs_map.insert("I/O".into(), CgroupView::Io(Default::default()));
         tabs_map.insert("Pressure".into(), CgroupView::Pressure(Default::default()));
+        let user_data = c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive Object!");
         StatsView::new(
             "Cgroup",
             tabs,
             tabs_map,
             list,
-            CgroupState::new(
-                c.user_data::<ViewState>()
-                    .expect("No data stored in Cursive Object!")
-                    .cgroup
-                    .clone(),
-            ),
+            CgroupState::new(user_data.cgroup.clone()),
+            user_data.event_controllers.clone(),
+            user_data.cmd_controllers.clone(),
         )
         .feed_data(c)
         .on_event('C', |c| {
@@ -216,8 +216,7 @@ impl CgroupView {
     }
 
     pub fn get_cgroup_view(c: &mut Cursive) -> ViewRef<ViewType> {
-        c.find_name::<ViewType>(Self::get_view_name())
-            .expect("Fail to find cgroup_view by its name")
+        ViewType::get_view(c)
     }
 
     pub fn refresh(c: &mut Cursive) {

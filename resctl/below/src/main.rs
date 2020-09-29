@@ -508,7 +508,6 @@ fn replay(
             ));
         }
     };
-    view.register_replay_event();
     logutil::set_current_log_target(logutil::TargetLog::File);
     view.run()
 }
@@ -642,8 +641,13 @@ fn live_local(
 
     let mut collector = model::Collector::new(exit_buffer);
     logutil::set_current_log_target(logutil::TargetLog::File);
-    let mut view = view::View::new(collector.update_model(&logger)?);
-    view.register_live_local_event(logger.clone(), below_config.store_dir);
+    // Prepare advance obj for pause mode
+    let mut adv = Advance::new(logger.clone(), below_config.store_dir, SystemTime::now());
+    adv.initialize();
+    let mut view = view::View::new_with_advance(
+        collector.update_model(&logger)?,
+        view::ViewMode::Live(Rc::new(RefCell::new(adv))),
+    );
 
     let sink = view.cb_sink().clone();
 
@@ -700,12 +704,10 @@ fn live_remote(
     let mut view = match advance.get_latest_sample() {
         Some(model) => view::View::new_with_advance(
             model,
-            view::ViewMode::LiveRemote(Rc::new(RefCell::new(advance))),
+            view::ViewMode::Live(Rc::new(RefCell::new(advance))),
         ),
         None => return Err(anyhow!("No data could be found!")),
     };
-
-    view.register_live_remote_event();
 
     let sink = view.cb_sink().clone();
 
@@ -715,7 +717,7 @@ fn live_remote(
             let data_plane = Box::new(move |s: &mut Cursive| {
                 let view_state = s.user_data::<ViewState>().expect("user data not set");
 
-                if let view::ViewMode::LiveRemote(adv) = view_state.mode.clone() {
+                if let view::ViewMode::Live(adv) = view_state.mode.clone() {
                     match adv.borrow_mut().advance(store::Direction::Forward) {
                         Some(data) => view_state.update(data),
                         None => {}

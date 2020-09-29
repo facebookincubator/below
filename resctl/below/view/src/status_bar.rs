@@ -46,9 +46,6 @@ fn get_content(c: &mut Cursive) -> impl Into<StyledString> {
 
     header_str += get_spacing();
     header_str += view_state.view_mode_str();
-    if view_state.is_paused() {
-        header_str += &format!("{} live-paused", get_spacing());
-    }
 
     header_str
 }
