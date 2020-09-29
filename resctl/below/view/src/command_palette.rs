@@ -83,8 +83,13 @@ impl CommandPalette {
     /// Set alert
     /// This will preempt the command palette mode.
     pub fn set_alert<T: Into<String>>(&mut self, content: T) {
-        self.content = content.into();
-        self.mode = CPMode::Alert;
+        if self.mode == CPMode::Alert {
+            // Attach to current alert if it is not consumed.
+            self.content = format!("{}\n{}", self.content, content.into());
+        } else {
+            self.content = content.into();
+            self.mode = CPMode::Alert;
+        }
     }
 
     pub fn set_filter(&mut self, filter: Option<String>) {

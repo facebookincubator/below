@@ -41,3 +41,4 @@ futures = { version = "0.3.5", features = ["async-await", "compat"] }
 maplit = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
 tempdir = "0.3"
+tempfile = "3.1"

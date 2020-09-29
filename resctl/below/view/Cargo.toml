@@ -18,3 +18,4 @@ cursive = { git = "https://github.com/gyscos/cursive", rev = "750a7af6c79946ba7c
 humantime = "1.3"
 libc = "0.2"
 slog = { version = "2.5", features = ["max_level_debug"] }
+toml = "=0.5.6"

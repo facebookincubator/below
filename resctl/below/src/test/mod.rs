@@ -36,6 +36,7 @@ use below_derive::BelowDecor;
 use below_thrift::types::Sample;
 use below_thrift::DataFrame;
 
+mod test_command;
 mod test_config;
 mod test_decorators;
 mod test_dump;

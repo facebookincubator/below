@@ -129,6 +129,9 @@ macro_rules! view_warn {
     }};
 }
 
+// controllers depends on Advance
+pub mod controllers;
+
 // Jump popup depends on view_warn
 mod jump_popup;
 
