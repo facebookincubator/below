@@ -103,6 +103,7 @@ make_controllers!(
     Left: LeftImpl,
     SortCol: SortByColumn,
     Filter: FilterPopup,
+    CFilter: ClearFilter,
     JForward: JumpForward,
     JBackward: JumpBackward,
     NSample: NextSample,

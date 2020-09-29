@@ -36,6 +36,10 @@ fn test_default_cmd_controllers() {
     assert_eq!(cmd_controllers.get("sort"), Some(&Controllers::SortCol));
     assert_eq!(cmd_controllers.get("filter"), Some(&Controllers::Filter));
     assert_eq!(
+        cmd_controllers.get("clear_filter"),
+        Some(&Controllers::CFilter)
+    );
+    assert_eq!(
         cmd_controllers.get("jump_forward"),
         Some(&Controllers::JForward)
     );
@@ -72,6 +76,7 @@ fn test_cmd_shortcut() {
     assert_eq!(cmd_controllers.get("pc"), Some(&Controllers::PrevCol));
     assert_eq!(cmd_controllers.get("s"), Some(&Controllers::SortCol));
     assert_eq!(cmd_controllers.get("f"), Some(&Controllers::Filter));
+    assert_eq!(cmd_controllers.get("cf"), Some(&Controllers::CFilter));
     assert_eq!(cmd_controllers.get("jf"), Some(&Controllers::JForward));
     assert_eq!(cmd_controllers.get("jb"), Some(&Controllers::JBackward));
     assert_eq!(cmd_controllers.get("ns"), Some(&Controllers::NSample));
@@ -121,6 +126,10 @@ fn test_default_event_controllers() {
     assert_eq!(
         event_controllers.get(&Event::Char('/')),
         Some(&Controllers::Filter)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::CtrlChar('l')),
+        Some(&Controllers::CFilter)
     );
     assert_eq!(
         event_controllers.get(&Event::Char('j')),
@@ -246,6 +255,7 @@ prev_sample = 'r'
 pause_resume = 's'
 sort = 't'
 filter = 'u'
+clear_filter = 'v'
 ";
     let mut cmdrc = NamedTempFile::new().expect("Fail to create tmp file for event controllers");
     cmdrc
@@ -295,6 +305,10 @@ filter = 'u'
     assert_eq!(
         event_controllers.get(&Event::Char('u')),
         Some(&Controllers::Filter)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('v')),
+        Some(&Controllers::CFilter)
     );
     assert_eq!(
         event_controllers.get(&Event::Char('o')),

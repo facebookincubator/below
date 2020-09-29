@@ -71,3 +71,18 @@ make_event_controller!(
         }
     }
 );
+
+// Clear filter
+make_event_controller!(
+    ClearFilter,
+    "clear_filter",
+    "cf",
+    Event::CtrlChar('l'),
+    |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        let state = StatsView::<T>::get_view(c).state.clone();
+        *state.borrow_mut().get_filter() = None;
+        StatsView::<T>::cp_filter(c, None);
+        StatsView::<T>::refresh_myself(c);
+    }
+);

@@ -148,6 +148,11 @@ impl<V: 'static + ViewBridge> ViewWrapper for StatsView<V> {
     // event if there's a match. Otherwise, it will pass the event to the
     // concrete event handler.
     fn wrap_on_event(&mut self, ch: Event) -> EventResult {
+        // Refresh event will be handled at root
+        if ch == Event::Refresh {
+            return EventResult::Ignored;
+        }
+
         // if stats view is in cmd mode, pass all event to cmd_palette
         let cmd_mode = self.get_cmd_palette().is_cmd_mode();
         if cmd_mode {
