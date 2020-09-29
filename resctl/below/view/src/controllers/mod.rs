@@ -78,7 +78,7 @@ use toml::value::Value;
 #[macro_use]
 mod controller_infra;
 // mod content_controllers;
-// mod sample_controllers;
+mod sample_controllers;
 mod view_controllers;
 
 use crate::stats_view::{StateCommon, StatsView, ViewBridge};
@@ -86,7 +86,7 @@ use crate::{refresh, ViewState};
 
 // use content_controllers::*;
 use controller_infra::*;
-// use sample_controllers::*;
+use sample_controllers::*;
 use view_controllers::*;
 
 pub use controller_infra::str_to_event;
@@ -101,13 +101,13 @@ make_controllers!(
     PrevCol: PrevColImpl,
     Right: RightImpl,
     Left: LeftImpl,
-    //     SortCol: SortByColumn,
-    //     Filter: FilterPopup,
-    //     JForward: JumpForward,
-    //     JBackward: JumpBackward,
-    //     NSample: NextSample,
-    //     PSample: PrevSample,
-    //     Pause: PauseImpl,
+    // SortCol: SortByColumn,
+    // Filter: FilterPopup,
+    JForward: JumpForward,
+    JBackward: JumpBackward,
+    NSample: NextSample,
+    PSample: PrevSample,
+    Pause: PauseImpl,
     Quit: QuitImpl,
     Help: HelpMenu,
     Process: ProcessView,
