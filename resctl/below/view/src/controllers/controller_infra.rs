@@ -124,6 +124,9 @@ pub trait EventController {
     /// Return the command for this controller
     fn command() -> &'static str;
 
+    // A short version of cmd
+    fn cmd_shortcut() -> &'static str;
+
     /// Return the Event trigger for this controller
     fn default_event() -> Event;
 
@@ -138,16 +141,21 @@ pub trait EventController {
 /// # Argument
 /// * name - Struct name
 /// * cmd - command string
+/// * cmd_short - command shortcut string, empty string "" means no need for short cut
 /// * event - event trigger. Will be replaced with custom command from cmdrc
 /// * handle - handler closure for view level processing
 /// * callback - callback closure for cursive level processing
 macro_rules! make_event_controller {
-    ($name:ident, $cmd:expr, $event:expr, $handle:expr) => {
+    ($name:ident, $cmd:expr, $cmd_short:expr, $event:expr, $handle:expr) => {
         pub struct $name;
 
         impl EventController for $name {
             fn command() -> &'static str {
                 $cmd
+            }
+
+            fn cmd_shortcut() -> &'static str {
+                $cmd_short
             }
 
             fn default_event() -> Event {
@@ -160,12 +168,16 @@ macro_rules! make_event_controller {
         }
     };
 
-    ($name:ident, $cmd:expr, $event:expr, $handle:expr, $callback:expr) => {
+    ($name:ident, $cmd:expr, $cmd_short:expr, $event:expr, $handle:expr, $callback:expr) => {
         pub struct $name;
 
         impl EventController for $name {
             fn command() -> &'static str {
                 $cmd
+            }
+
+            fn cmd_shortcut() -> &'static str {
+                $cmd_short
             }
 
             fn default_event() -> Event {
@@ -266,6 +278,13 @@ macro_rules! make_controllers {
                     $struct_item::command(),
                     Controllers::$enum_item
                 );
+
+                if !$struct_item::cmd_shortcut().is_empty() {
+                    res.insert(
+                        $struct_item::cmd_shortcut(),
+                        Controllers::$enum_item
+                    );
+                }
             )*
             res
         }

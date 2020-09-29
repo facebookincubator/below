@@ -55,12 +55,30 @@ fn test_default_cmd_controllers() {
         cmd_controllers.get("pause_resume"),
         Some(&Controllers::Pause)
     );
-    assert_eq!(cmd_controllers.get("q"), Some(&Controllers::Quit));
+    assert_eq!(cmd_controllers.get("quit"), Some(&Controllers::Quit));
     assert_eq!(cmd_controllers.get("help"), Some(&Controllers::Help));
     assert_eq!(cmd_controllers.get("process"), Some(&Controllers::Process));
     assert_eq!(cmd_controllers.get("cgroup"), Some(&Controllers::Cgroup));
     assert_eq!(cmd_controllers.get("system"), Some(&Controllers::System));
     assert_eq!(cmd_controllers.get("zoom"), Some(&Controllers::Zoom));
+}
+
+#[test]
+fn test_cmd_shortcut() {
+    let cmd_controllers = make_cmd_controller_map();
+    assert_eq!(cmd_controllers.get("nt"), Some(&Controllers::NextTab));
+    assert_eq!(cmd_controllers.get("pt"), Some(&Controllers::PrevTab));
+    assert_eq!(cmd_controllers.get("nc"), Some(&Controllers::NextCol));
+    assert_eq!(cmd_controllers.get("pc"), Some(&Controllers::PrevCol));
+    assert_eq!(cmd_controllers.get("s"), Some(&Controllers::SortCol));
+    assert_eq!(cmd_controllers.get("f"), Some(&Controllers::Filter));
+    assert_eq!(cmd_controllers.get("jf"), Some(&Controllers::JForward));
+    assert_eq!(cmd_controllers.get("jb"), Some(&Controllers::JBackward));
+    assert_eq!(cmd_controllers.get("ns"), Some(&Controllers::NSample));
+    assert_eq!(cmd_controllers.get("ps"), Some(&Controllers::PSample));
+    assert_eq!(cmd_controllers.get("pr"), Some(&Controllers::Pause));
+    assert_eq!(cmd_controllers.get("q"), Some(&Controllers::Quit));
+    assert_eq!(cmd_controllers.get("h"), Some(&Controllers::Help));
 }
 
 #[test]
@@ -215,7 +233,7 @@ next_col = 'd'
 prev_col = 'e'
 right = 'f'
 left = 'g'
-q = 'h'
+quit = 'h'
 help = 'i'
 process = 'j'
 cgroup = 'k'

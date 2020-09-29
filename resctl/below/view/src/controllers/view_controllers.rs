@@ -21,6 +21,7 @@ use cursive::views::{NamedView, OnEventView, ResizedView, StackView};
 make_event_controller!(
     InvokeCmdPalette,
     "invoke_cmd_palette",
+    "",
     Event::Char(':'),
     |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
         view.get_cmd_palette().invoke_cmd();
@@ -31,6 +32,7 @@ make_event_controller!(
 make_event_controller!(
     NextTabImpl,
     "next_tab",
+    "nt",
     Event::Key(Key::Tab),
     |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
         view.get_tab_view().on_tab();
@@ -45,6 +47,7 @@ make_event_controller!(
 make_event_controller!(
     PrevTabImpl,
     "prev_tab",
+    "pt",
     Event::Shift(Key::Tab),
     |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
         view.get_tab_view().on_shift_tab();
@@ -59,6 +62,7 @@ make_event_controller!(
 make_event_controller!(
     NextColImpl,
     "next_col",
+    "nc",
     Event::Char('.'),
     |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
         let x = view.get_title_view().on_tab();
@@ -73,6 +77,7 @@ make_event_controller!(
 make_event_controller!(
     PrevColImpl,
     "prev_col",
+    "pc",
     Event::Char(','),
     |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
         let x = view.get_title_view().on_shift_tab();
@@ -87,6 +92,7 @@ make_event_controller!(
 make_event_controller!(
     RightImpl,
     "right",
+    "",
     Event::Key(Key::Right),
     |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
         let screen_width = view.get_screen_width();
@@ -101,6 +107,7 @@ make_event_controller!(
 make_event_controller!(
     LeftImpl,
     "left",
+    "",
     Event::Key(Key::Left),
     |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
         view.get_title_view().on_left();
@@ -113,6 +120,7 @@ make_event_controller!(
 // quit
 make_event_controller!(
     QuitImpl,
+    "quit",
     "q",
     Event::Char('q'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
@@ -125,6 +133,7 @@ make_event_controller!(
 make_event_controller!(
     HelpMenu,
     "help",
+    "h",
     Event::Char('?'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
@@ -143,6 +152,7 @@ make_event_controller!(
 make_event_controller!(
     ProcessView,
     "process",
+    "",
     Event::Char('p'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
@@ -176,6 +186,7 @@ make_event_controller!(
 make_event_controller!(
     CgroupView,
     "cgroup",
+    "",
     Event::Char('c'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
@@ -209,6 +220,7 @@ make_event_controller!(
 make_event_controller!(
     SystemView,
     "system",
+    "",
     Event::Char('s'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
@@ -242,6 +254,7 @@ make_event_controller!(
 make_event_controller!(
     ZoomView,
     "zoom",
+    "",
     Event::Char('z'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {

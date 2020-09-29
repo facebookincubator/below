@@ -19,6 +19,7 @@ use crate::filter_popup;
 make_event_controller!(
     SortByColumn,
     "sort",
+    "s",
     Event::Char('S'),
     |view: &mut StatsView<T>, cmd_vec: &[&str]| {
         let (sort_res, title) = if cmd_vec.len() > 1 {
@@ -54,6 +55,7 @@ make_event_controller!(
 make_event_controller!(
     FilterPopup,
     "filter",
+    "f",
     Event::Char('/'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, cmd_vec: &[&str]| {

@@ -21,6 +21,7 @@ use store::Direction;
 make_event_controller!(
     JumpForward,
     "jump_forward",
+    "jf",
     Event::Char('j'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, cmd_vec: &[&str]| {
@@ -45,6 +46,7 @@ make_event_controller!(
 make_event_controller!(
     JumpBackward,
     "jump_backward",
+    "jb",
     Event::Char('J'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, cmd_vec: &[&str]| {
@@ -69,6 +71,7 @@ make_event_controller!(
 make_event_controller!(
     NextSample,
     "next_sample",
+    "ns",
     Event::Char('t'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
@@ -93,6 +96,7 @@ make_event_controller!(
 make_event_controller!(
     PrevSample,
     "prev_sample",
+    "ps",
     Event::Char('T'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
@@ -117,6 +121,7 @@ make_event_controller!(
 make_event_controller!(
     PauseImpl,
     "pause_resume",
+    "pr",
     Event::Char(' '),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
