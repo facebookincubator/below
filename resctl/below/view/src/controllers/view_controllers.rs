@@ -27,6 +27,89 @@ make_event_controller!(
     }
 );
 
+// Next Tab
+make_event_controller!(
+    NextTabImpl,
+    "next_tab",
+    Event::Key(Key::Tab),
+    |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
+        view.get_tab_view().on_tab();
+        view.update_title();
+    },
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        StatsView::<T>::refresh_myself(c);
+    }
+);
+
+// Prev Tab
+make_event_controller!(
+    PrevTabImpl,
+    "prev_tab",
+    Event::Shift(Key::Tab),
+    |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
+        view.get_tab_view().on_shift_tab();
+        view.update_title();
+    },
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        StatsView::<T>::refresh_myself(c);
+    }
+);
+
+// Next column
+make_event_controller!(
+    NextColImpl,
+    "next_col",
+    Event::Char('.'),
+    |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
+        let x = view.get_title_view().on_tab();
+        view.set_horizontal_offset(x);
+    },
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        StatsView::<T>::refresh_myself(c);
+    }
+);
+
+// Prev column
+make_event_controller!(
+    PrevColImpl,
+    "prev_col",
+    Event::Char(','),
+    |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
+        let x = view.get_title_view().on_shift_tab();
+        view.set_horizontal_offset(x);
+    },
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        StatsView::<T>::refresh_myself(c);
+    }
+);
+
+// Right handler impl
+make_event_controller!(
+    RightImpl,
+    "right",
+    Event::Key(Key::Right),
+    |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
+        let screen_width = view.get_screen_width();
+        view.get_title_view().on_right(screen_width);
+    },
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        StatsView::<T>::refresh_myself(c);
+    }
+);
+
+// Left handler impl
+make_event_controller!(
+    LeftImpl,
+    "left",
+    Event::Key(Key::Left),
+    |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
+        view.get_title_view().on_left();
+    },
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        StatsView::<T>::refresh_myself(c);
+    }
+);
+
 // quit
 make_event_controller!(
     QuitImpl,

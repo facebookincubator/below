@@ -95,12 +95,12 @@ use std::collections::HashMap;
 
 make_controllers!(
     CmdPalette: InvokeCmdPalette,
-    //     NextTab: NextTabImpl,
-    //     PrevTab: PrevTabImpl,
-    //     NextCol: NextColImpl,
-    //     PrevCol: PrevColImpl,
-    //     Right: RightImpl,
-    //     Left: LeftImpl,
+    NextTab: NextTabImpl,
+    PrevTab: PrevTabImpl,
+    NextCol: NextColImpl,
+    PrevCol: PrevColImpl,
+    Right: RightImpl,
+    Left: LeftImpl,
     //     SortCol: SortByColumn,
     //     Filter: FilterPopup,
     //     JForward: JumpForward,
