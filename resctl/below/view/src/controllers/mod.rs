@@ -110,8 +110,8 @@ make_controllers!(
     //     Pause: PauseImpl,
     Quit: QuitImpl,
     Help: HelpMenu,
-    //     Process: ProcessView,
-    //     Cgroup: CgroupView,
-    //     System: SystemView,
-    //     Zoom: ZoomView,
+    Process: ProcessView,
+    Cgroup: CgroupView,
+    System: SystemView,
+    Zoom: ZoomView,
 );

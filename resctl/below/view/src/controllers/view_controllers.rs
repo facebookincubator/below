@@ -138,3 +138,180 @@ make_event_controller!(
         ))
     }
 );
+
+// Invoke Process View
+make_event_controller!(
+    ProcessView,
+    "process",
+    Event::Char('p'),
+    |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        c.call_on_name("main_view_stack", |stack: &mut NamedView<StackView>| {
+            let position = (*stack.get_mut())
+                .find_layer_from_name("process_view_panel")
+                .expect("Failed to find process view");
+            (*stack.get_mut()).move_to_front(position);
+        });
+
+        let current_state = c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .main_view_state
+            .clone();
+
+        // If the previous state is zoom state, we need to clear the zoom state
+        if current_state == MainViewState::ProcessZoomedIntoCgroup {
+            crate::process_view::ProcessView::get_process_view(c)
+                .state
+                .borrow_mut()
+                .reset_state_for_quiting_zoom();
+        }
+        c.user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .main_view_state = MainViewState::Process;
+    }
+);
+
+// Invoke Cgroup View
+make_event_controller!(
+    CgroupView,
+    "cgroup",
+    Event::Char('c'),
+    |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        c.call_on_name("main_view_stack", |stack: &mut NamedView<StackView>| {
+            let position = (*stack.get_mut())
+                .find_layer_from_name("cgroup_view_panel")
+                .expect("Failed to find cgroup view");
+            (*stack.get_mut()).move_to_front(position);
+        });
+
+        let current_state = c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .main_view_state
+            .clone();
+
+        // If the previous state is zoom state, we need to clear the zoom state
+        if current_state == MainViewState::ProcessZoomedIntoCgroup {
+            crate::process_view::ProcessView::get_process_view(c)
+                .state
+                .borrow_mut()
+                .reset_state_for_quiting_zoom();
+        }
+        c.user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .main_view_state = MainViewState::Cgroup;
+    }
+);
+
+// Invoke System View
+make_event_controller!(
+    SystemView,
+    "system",
+    Event::Char('s'),
+    |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        c.call_on_name("main_view_stack", |stack: &mut NamedView<StackView>| {
+            let position = (*stack.get_mut())
+                .find_layer_from_name("core_view_panel")
+                .expect("Failed to find core view");
+            (*stack.get_mut()).move_to_front(position);
+        });
+
+        let current_state = c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .main_view_state
+            .clone();
+
+        // If the previous state is zoom state, we need to clear the zoom state
+        if current_state == MainViewState::ProcessZoomedIntoCgroup {
+            crate::process_view::ProcessView::get_process_view(c)
+                .state
+                .borrow_mut()
+                .reset_state_for_quiting_zoom();
+        }
+        c.user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .main_view_state = MainViewState::Core;
+    }
+);
+
+// Zoom in View
+make_event_controller!(
+    ZoomView,
+    "zoom",
+    Event::Char('z'),
+    |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        let current_selection = crate::cgroup_view::CgroupView::get_cgroup_view(c)
+            .state
+            .borrow()
+            .current_selected_cgroup
+            .clone();
+
+        let current_state = c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .main_view_state
+            .clone();
+
+        let next_state = match current_state {
+            // Pressing 'z' in zoomed view should remove zoom
+            // and bring user back to cgroup view
+            MainViewState::ProcessZoomedIntoCgroup => {
+                crate::process_view::ProcessView::get_process_view(c)
+                    .state
+                    .borrow_mut()
+                    .reset_state_for_quiting_zoom();
+                MainViewState::Cgroup
+            }
+            MainViewState::Cgroup => {
+                crate::process_view::ProcessView::get_process_view(c)
+                    .state
+                    .borrow_mut()
+                    .handle_state_for_entering_zoom(current_selection);
+                MainViewState::ProcessZoomedIntoCgroup
+            }
+            // Pressing 'z' in process view should do nothing
+            MainViewState::Process => {
+                crate::process_view::ProcessView::get_process_view(c)
+                    .state
+                    .borrow_mut()
+                    .cgroup_filter = None;
+                MainViewState::Process
+            }
+            _ => return,
+        };
+
+        c.call_on_name("main_view_stack", |stack: &mut NamedView<StackView>| {
+            match &next_state {
+                MainViewState::Process | MainViewState::ProcessZoomedIntoCgroup => {
+                    // Bring process_view to front
+                    let process_pos = (*stack.get_mut())
+                        .find_layer_from_name("process_view_panel")
+                        .expect("Failed to find process view");
+                    (*stack.get_mut()).move_to_front(process_pos);
+                }
+                MainViewState::Cgroup => {
+                    // Bring cgroup_view to front
+                    let cgroup_pos = (*stack.get_mut())
+                        .find_layer_from_name("cgroup_view_panel")
+                        .expect("Failed to find cgroup view");
+                    (*stack.get_mut()).move_to_front(cgroup_pos);
+                }
+                MainViewState::Core => {}
+            }
+        })
+        .expect("failed to find main_view_stack");
+
+        // Set next state
+        c.user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .main_view_state = next_state;
+
+        // Redraw screen now so we don't have to wait until next tick
+        refresh(c)
+    }
+);
