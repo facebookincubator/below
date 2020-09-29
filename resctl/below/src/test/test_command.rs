@@ -13,11 +13,142 @@
 // limitations under the License.
 
 use cursive::event::{Event, Key};
+use cursive::Cursive;
 use tempfile::NamedTempFile;
 
 use std::io::Write;
 
 use view::controllers::*;
+
+#[test]
+fn test_default_cmd_controllers() {
+    let cmd_controllers = make_cmd_controller_map();
+    assert_eq!(
+        cmd_controllers.get("invoke_cmd_palette"),
+        Some(&Controllers::CmdPalette)
+    );
+    assert_eq!(cmd_controllers.get("next_tab"), Some(&Controllers::NextTab));
+    assert_eq!(cmd_controllers.get("prev_tab"), Some(&Controllers::PrevTab));
+    assert_eq!(cmd_controllers.get("next_col"), Some(&Controllers::NextCol));
+    assert_eq!(cmd_controllers.get("prev_col"), Some(&Controllers::PrevCol));
+    assert_eq!(cmd_controllers.get("right"), Some(&Controllers::Right));
+    assert_eq!(cmd_controllers.get("left"), Some(&Controllers::Left));
+    assert_eq!(cmd_controllers.get("sort"), Some(&Controllers::SortCol));
+    assert_eq!(cmd_controllers.get("filter"), Some(&Controllers::Filter));
+    assert_eq!(
+        cmd_controllers.get("jump_forward"),
+        Some(&Controllers::JForward)
+    );
+    assert_eq!(
+        cmd_controllers.get("jump_backward"),
+        Some(&Controllers::JBackward)
+    );
+    assert_eq!(
+        cmd_controllers.get("next_sample"),
+        Some(&Controllers::NSample)
+    );
+    assert_eq!(
+        cmd_controllers.get("prev_sample"),
+        Some(&Controllers::PSample)
+    );
+    assert_eq!(
+        cmd_controllers.get("pause_resume"),
+        Some(&Controllers::Pause)
+    );
+    assert_eq!(cmd_controllers.get("q"), Some(&Controllers::Quit));
+    assert_eq!(cmd_controllers.get("help"), Some(&Controllers::Help));
+    assert_eq!(cmd_controllers.get("process"), Some(&Controllers::Process));
+    assert_eq!(cmd_controllers.get("cgroup"), Some(&Controllers::Cgroup));
+    assert_eq!(cmd_controllers.get("system"), Some(&Controllers::System));
+    assert_eq!(cmd_controllers.get("zoom"), Some(&Controllers::Zoom));
+}
+
+#[test]
+fn test_default_event_controllers() {
+    let mut cursive = Cursive::dummy();
+    let event_controllers = make_event_controller_map(&mut cursive, "");
+
+    assert_eq!(
+        event_controllers.get(&Event::Char(':')),
+        Some(&Controllers::CmdPalette)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Key(Key::Tab)),
+        Some(&Controllers::NextTab)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Shift(Key::Tab)),
+        Some(&Controllers::PrevTab)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('.')),
+        Some(&Controllers::NextCol)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char(',')),
+        Some(&Controllers::PrevCol)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Key(Key::Right)),
+        Some(&Controllers::Right)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Key(Key::Left)),
+        Some(&Controllers::Left)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('S')),
+        Some(&Controllers::SortCol)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('/')),
+        Some(&Controllers::Filter)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('j')),
+        Some(&Controllers::JForward)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('J')),
+        Some(&Controllers::JBackward)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('t')),
+        Some(&Controllers::NSample)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('T')),
+        Some(&Controllers::PSample)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char(' ')),
+        Some(&Controllers::Pause)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('q')),
+        Some(&Controllers::Quit)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('?')),
+        Some(&Controllers::Help)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('p')),
+        Some(&Controllers::Process)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('c')),
+        Some(&Controllers::Cgroup)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('s')),
+        Some(&Controllers::System)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('z')),
+        Some(&Controllers::Zoom)
+    );
+}
 
 #[test]
 fn test_str_to_event_valid() {
@@ -73,4 +204,122 @@ fn test_str_to_event_invalid() {
     assert_eq!(str_to_event("cd"), None);
     assert_eq!(str_to_event("ctrl-lll"), None);
     assert_eq!(str_to_event("ctrl-shift-enter"), None);
+}
+
+#[test]
+fn test_event_trigger_override() {
+    let cmdrc_str = b"invoke_cmd_palette = 'a'
+next_tab = 'b'
+prev_tab = 'c'
+next_col = 'd'
+prev_col = 'e'
+right = 'f'
+left = 'g'
+q = 'h'
+help = 'i'
+process = 'j'
+cgroup = 'k'
+system = 'l'
+zoom = 'm'
+jump_forward = 'o'
+jump_backward = 'p'
+next_sample = 'q'
+prev_sample = 'r'
+pause_resume = 's'
+sort = 't'
+filter = 'u'
+";
+    let mut cmdrc = NamedTempFile::new().expect("Fail to create tmp file for event controllers");
+    cmdrc
+        .write_all(cmdrc_str)
+        .expect("Fail to write cmdrc file");
+    let mut cursive = Cursive::dummy();
+    let event_controllers = make_event_controller_map(
+        &mut cursive,
+        cmdrc
+            .path()
+            .to_str()
+            .expect("Fail to convert path string for event controllers"),
+    );
+
+    assert_eq!(
+        event_controllers.get(&Event::Char('a')),
+        Some(&Controllers::CmdPalette)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('b')),
+        Some(&Controllers::NextTab)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('c')),
+        Some(&Controllers::PrevTab)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('d')),
+        Some(&Controllers::NextCol)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('e')),
+        Some(&Controllers::PrevCol)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('f')),
+        Some(&Controllers::Right)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('g')),
+        Some(&Controllers::Left)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('t')),
+        Some(&Controllers::SortCol)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('u')),
+        Some(&Controllers::Filter)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('o')),
+        Some(&Controllers::JForward)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('p')),
+        Some(&Controllers::JBackward)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('q')),
+        Some(&Controllers::NSample)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('r')),
+        Some(&Controllers::PSample)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('s')),
+        Some(&Controllers::Pause)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('h')),
+        Some(&Controllers::Quit)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('i')),
+        Some(&Controllers::Help)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('j')),
+        Some(&Controllers::Process)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('k')),
+        Some(&Controllers::Cgroup)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('l')),
+        Some(&Controllers::System)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('m')),
+        Some(&Controllers::Zoom)
+    );
 }
