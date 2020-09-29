@@ -1,6 +1,6 @@
 # Below Configuration
 
-Below is expecting a `toml` configuration file to define its `log` and `store` path. The default location of this configuration path is `/etc/below/below.conf`. You can always override the default configuration path with `--config` CLI argument. 
+Below is expecting a `toml` configuration file to define its `log` and `store` path. The default location of this configuration path is `/etc/below/below.conf`. You can always override the default configuration path with `--config` CLI argument.
 
 ## Example
 ```
@@ -8,11 +8,13 @@ Below is expecting a `toml` configuration file to define its `log` and `store` p
 
 log_dir = "/var/log/below"
 store_dir = "/var/log/below/store"
+cgroup_filter_out = "user.slice.*"
 ```
 
 ## Attributes
-* `log_dir` -- Takes a string path and uses as the logging directory, default to `/var/log/below`. 
+* `log_dir` -- Takes a string path and uses as the logging directory, default to `/var/log/below`.
 * `store_dir` -- Takes a string path and uses as the store directory, default to `/var/log/below/store`.
+* `cgroup_filter_out` -- Takes a regex string and below will no longer collect cgroup data if cgroup full path match the regex.
 
 ## To override the default value
 1. Edit `/etc/below/below.conf` with desired value.

@@ -16,6 +16,7 @@ use std::sync::{Arc, Mutex};
 
 use super::*;
 use procfs::DiskStat;
+use regex::Regex;
 use slog::{self, error};
 
 /// Collects data samples and maintains the latest data
@@ -35,7 +36,7 @@ impl Collector {
     /// Collect a new `Sample`, returning an updated Model
     pub fn update_model(&mut self, logger: &slog::Logger) -> Result<Model> {
         let now = Instant::now();
-        let sample = collect_sample(&self.exit_data, true, logger, false)?;
+        let sample = collect_sample(&self.exit_data, true, logger, false, &None)?;
         let last = self.last.replace((sample, now));
         let model = Model::new(
             SystemTime::now(),
@@ -134,10 +135,16 @@ pub fn collect_sample(
     collect_io_stat: bool,
     logger: &slog::Logger,
     disable_disk_stat: bool,
+    cgroup_re: &Option<Regex>,
 ) -> Result<Sample> {
     let mut reader = procfs::ProcReader::new();
     Ok(Sample {
-        cgroup: collect_cgroup_sample(&cgroupfs::CgroupReader::root()?, collect_io_stat, logger)?,
+        cgroup: collect_cgroup_sample(
+            &cgroupfs::CgroupReader::root()?,
+            collect_io_stat,
+            logger,
+            &cgroup_re,
+        )?,
         processes: merge_procfs_and_exit_data(reader.read_all_pids()?, exit_data),
         netstats: match procfs::NetReader::new().and_then(|v| v.read_netstat()) {
             Ok(ns) => ns,
@@ -230,6 +237,7 @@ fn collect_cgroup_sample(
     reader: &cgroupfs::CgroupReader,
     collect_io_stat: bool,
     logger: &slog::Logger,
+    cgroup_re: &Option<Regex>,
 ) -> Result<CgroupSample> {
     let io_stat = if collect_io_stat {
         io_stat_wrap(reader.read_io_stat())?
@@ -253,18 +261,27 @@ fn collect_cgroup_sample(
             .context("Failed to get iterator over cgroup children")?
             .map(|child_iter| {
                 child_iter
+                    .filter(|child| {
+                        if let Some(cgroup_re) = cgroup_re.as_ref() {
+                            !cgroup_re.is_match(&child.name().to_string_lossy())
+                        } else {
+                            true
+                        }
+                    })
                     .map(|child| {
-                        collect_cgroup_sample(&child, collect_io_stat, logger).map(|child_sample| {
-                            (
-                                child
-                                    .name()
-                                    .file_name()
-                                    .expect("Unexpected .. in cgroup path")
-                                    .to_string_lossy()
-                                    .to_string(),
-                                child_sample,
-                            )
-                        })
+                        collect_cgroup_sample(&child, collect_io_stat, logger, cgroup_re).map(
+                            |child_sample| {
+                                (
+                                    child
+                                        .name()
+                                        .file_name()
+                                        .expect("Unexpected .. in cgroup path")
+                                        .to_string_lossy()
+                                        .to_string(),
+                                    child_sample,
+                                )
+                            },
+                        )
                     })
                     .collect::<Result<BTreeMap<String, CgroupSample>>>()
             })

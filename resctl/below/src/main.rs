@@ -30,6 +30,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, Context, Error, Result};
 use cursive::Cursive;
+use regex::Regex;
 use slog::{self, debug, error, warn};
 use structopt::StructOpt;
 
@@ -266,7 +267,7 @@ fn run<F>(
     command: F,
 ) -> i32
 where
-    F: FnOnce(slog::Logger, Receiver<Error>) -> Result<()>,
+    F: FnOnce(BelowConfig, slog::Logger, Receiver<Error>) -> Result<()>,
 {
     let (err_sender, err_receiver) = channel();
     let mut log_dir = below_config.log_dir.clone();
@@ -287,7 +288,7 @@ where
         below_config.store_dir.clone(),
         err_sender,
     );
-    let res = command(logger.clone(), err_receiver);
+    let res = command(below_config, logger.clone(), err_receiver);
 
     match res {
         Ok(_) => 0,
@@ -341,7 +342,6 @@ fn real_main(init: init::InitToken) {
             ref host,
             ref port,
         } => {
-            let store_dir = below_config.store_dir.clone();
             let host = host.clone();
             let port = port.clone();
             run(
@@ -350,12 +350,12 @@ fn real_main(init: init::InitToken) {
                 below_config,
                 Service::Off,
                 RedirectLogOnFail::On,
-                |logger, _errs| {
+                |below_config, logger, _errs| {
                     live(
                         logger,
                         Duration::from_secs(*interval_s as u64),
                         debug,
-                        store_dir,
+                        below_config,
                         host,
                         port,
                     )
@@ -372,19 +372,18 @@ fn real_main(init: init::InitToken) {
             ref disable_exitstats,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
-            let store_dir = below_config.store_dir.clone();
             run(
                 init,
                 debug,
                 below_config,
                 Service::On(*port),
                 RedirectLogOnFail::Off,
-                |logger, errs| {
+                |below_config, logger, errs| {
                     record(
                         logger,
                         errs,
                         Duration::from_secs(*interval_s as u64),
-                        store_dir,
+                        below_config,
                         retain_for_s.map(|r| Duration::from_secs(r as u64)),
                         *collect_io_stat,
                         Duration::from_millis(*skew_detection_threshold_ms),
@@ -401,7 +400,6 @@ fn real_main(init: init::InitToken) {
             ref port,
             ref yesterdays,
         } => {
-            let store_dir = below_config.store_dir.clone();
             let time = time.clone();
             let host = host.clone();
             let port = port.clone();
@@ -412,21 +410,22 @@ fn real_main(init: init::InitToken) {
                 below_config,
                 Service::Off,
                 RedirectLogOnFail::Off,
-                |logger, _errs| replay(logger, time, store_dir, host, port, days_adjuster),
+                |below_config, logger, _errs| {
+                    replay(logger, time, below_config, host, port, days_adjuster)
+                },
             )
         }
         Command::Debug { ref cmd } => match cmd {
             DebugCommand::DumpStore { ref time, ref json } => {
                 let time = time.clone();
                 let json = json.clone();
-                let store_dir = below_config.store_dir.clone();
                 run(
                     init,
                     debug,
                     below_config,
                     Service::Off,
                     RedirectLogOnFail::Off,
-                    |logger, _errs| dump_store(logger, time, store_dir, json),
+                    |below_config, logger, _errs| dump_store(logger, time, below_config, json),
                 )
             }
         },
@@ -445,7 +444,7 @@ fn real_main(init: init::InitToken) {
                 below_config,
                 Service::Off,
                 RedirectLogOnFail::Off,
-                |logger, _errs| dump::run(logger, store_dir, host, port, cmd),
+                |_below_config, logger, _errs| dump::run(logger, store_dir, host, port, cmd),
             )
         }
     };
@@ -455,7 +454,7 @@ fn real_main(init: init::InitToken) {
 fn replay(
     logger: slog::Logger,
     time: String,
-    dir: PathBuf,
+    below_config: BelowConfig,
     host: Option<String>,
     port: Option<u16>,
     days_adjuster: Option<String>,
@@ -489,7 +488,7 @@ fn replay(
     let mut advance = if let Some(host) = host {
         Advance::new_with_remote(logger.clone(), host, port, timestamp)?
     } else {
-        Advance::new(logger.clone(), dir, timestamp)
+        Advance::new(logger.clone(), below_config.store_dir, timestamp)
     };
 
     // Fill the last_sample for forward iteration. If no previous sample exists,
@@ -518,7 +517,7 @@ fn record(
     logger: slog::Logger,
     errs: Receiver<Error>,
     interval: Duration,
-    dir: PathBuf,
+    below_config: BelowConfig,
     retain: Option<Duration>,
     collect_io_stat: bool,
     skew_detection_threshold: Duration,
@@ -532,7 +531,7 @@ fn record(
         bump_memlock_rlimit()?;
     }
 
-    let mut store = store::StoreWriter::new(&dir)?;
+    let mut store = store::StoreWriter::new(&below_config.store_dir)?;
     let mut stats = statistics::Statistics::new();
 
     let (exit_buffer, bpf_errs) = if disable_exitstats {
@@ -562,8 +561,24 @@ fn record(
         }
 
         let collect_instant = Instant::now();
-        let collected_sample =
-            model::collect_sample(&exit_buffer, collect_io_stat, &logger, disable_disk_stat);
+
+        // Handle cgroup filter from conf and generate Regex
+        let cgroup_re = if !below_config.cgroup_filter_out.is_empty() {
+            Some(
+                Regex::new(&below_config.cgroup_filter_out)
+                    .expect("Failed to generate regex from cgroup_filter_out in below.conf"),
+            )
+        } else {
+            None
+        };
+
+        let collected_sample = model::collect_sample(
+            &exit_buffer,
+            collect_io_stat,
+            &logger,
+            disable_disk_stat,
+            &cgroup_re,
+        );
         let post_collect_sys_time = SystemTime::now();
         let post_collect_instant = Instant::now();
 
@@ -594,7 +609,7 @@ fn record(
                 .context("Failed to discard earlier data")?;
         }
 
-        stats.report_store_size(dir.as_path());
+        stats.report_store_size(below_config.store_dir.as_path());
 
         let collect_duration = Instant::now().duration_since(collect_instant);
         if collect_duration < interval {
@@ -603,7 +618,12 @@ fn record(
     }
 }
 
-fn live_local(logger: slog::Logger, interval: Duration, debug: bool, dir: PathBuf) -> Result<()> {
+fn live_local(
+    logger: slog::Logger,
+    interval: Duration,
+    debug: bool,
+    below_config: BelowConfig,
+) -> Result<()> {
     match bump_memlock_rlimit() {
         Err(e) => {
             warn!(
@@ -623,7 +643,7 @@ fn live_local(logger: slog::Logger, interval: Duration, debug: bool, dir: PathBu
     let mut collector = model::Collector::new(exit_buffer);
     logutil::set_current_log_target(logutil::TargetLog::File);
     let mut view = view::View::new(collector.update_model(&logger)?);
-    view.register_live_local_event(logger.clone(), dir);
+    view.register_live_local_event(logger.clone(), below_config.store_dir);
 
     let sink = view.cb_sink().clone();
 
@@ -716,18 +736,23 @@ fn live(
     logger: slog::Logger,
     interval: Duration,
     debug: bool,
-    dir: PathBuf,
+    below_config: BelowConfig,
     host: Option<String>,
     port: Option<u16>,
 ) -> Result<()> {
     if let Some(host) = host {
         live_remote(logger, interval, host, port)
     } else {
-        live_local(logger, interval, debug, dir)
+        live_local(logger, interval, debug, below_config)
     }
 }
 
-fn dump_store(logger: slog::Logger, time: String, path: PathBuf, json: bool) -> Result<()> {
+fn dump_store(
+    logger: slog::Logger,
+    time: String,
+    below_config: BelowConfig,
+    json: bool,
+) -> Result<()> {
     let timestamp = UNIX_EPOCH
         + Duration::from_secs(
             dateutil::HgTime::parse(&time)
@@ -736,7 +761,7 @@ fn dump_store(logger: slog::Logger, time: String, path: PathBuf, json: bool) -> 
         );
 
     let (ts, df) = match store::read_next_sample(
-        &path,
+        &below_config.store_dir,
         timestamp,
         store::Direction::Forward,
         logger.clone(),

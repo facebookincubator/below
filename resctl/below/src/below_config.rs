@@ -30,6 +30,7 @@ const BELOW_DEFAULT_STORE: &str = "/var/log/below/store";
 pub struct BelowConfig {
     pub log_dir: PathBuf,
     pub store_dir: PathBuf,
+    pub cgroup_filter_out: String,
 }
 
 impl Default for BelowConfig {
@@ -37,6 +38,7 @@ impl Default for BelowConfig {
         BelowConfig {
             log_dir: BELOW_DEFAULT_LOG.into(),
             store_dir: BELOW_DEFAULT_STORE.into(),
+            cgroup_filter_out: String::new(),
         }
     }
 }
