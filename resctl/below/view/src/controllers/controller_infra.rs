@@ -281,35 +281,62 @@ macro_rules! make_controllers {
         }
 
         /// Map the controller enum to event trigger
-        pub fn make_event_controller_map(c: &mut Cursive, file_name: &str) -> HashMap<Event, Controllers> {
-            let cmdrc = match std::fs::read_to_string(file_name) {
-                Ok(cmdrc_str) => cmdrc_str.parse::<Value>().unwrap_or(Value::Integer(1)),
-                _ => Value::Integer(0)
-            };
+        pub fn make_event_controller_map(c: &mut Cursive, cmdrc: &Option<Value>) -> HashMap<Event, Controllers> {
+            let mut res: HashMap<Event, Controllers> = HashMap::new();
 
-            let mut res = HashMap::new();
+            // Generate default hashmap
             $(
                 res.insert(
-                    cmdrc.get($struct_item::command()).map_or($struct_item::default_event(), |v| {
-                        v.as_str().map_or(
-                            $struct_item::default_event(),
-                            |v| {
-                                if let Some(evt) = str_to_event(v) {
-                                    evt
-                                } else {
-                                    view_warn!(
-                                        c,
-                                        "Fail to parse command from cmdrc: {} --> {}",
-                                        $struct_item::command(),
-                                        v
-                                    );
-                                    $struct_item::default_event()
-                                }
-                            })
-                    }),
+                    $struct_item::default_event(),
                     Controllers::$enum_item
                 );
             )*
+
+            // Replace value with cmdrc
+            cmdrc.as_ref().map(|value| {
+                let cmd_controllers = c
+                    .user_data::<crate::ViewState>()
+                    .expect("No user data set")
+                    .cmd_controllers
+                    .clone();
+
+                value.as_table().map(|table| table.iter().for_each(|(k, v)| {
+                    if let Some(v_str) = v.as_str() {
+                        match (cmd_controllers.borrow().get::<str>(k), str_to_event(v_str)) {
+                            (Some(controller), Some(event)) => {
+                                match res.get(&event) {
+                                    // If the controller which using such event will not be replaced,
+                                    // we raise warning
+                                    Some(ctrller) if !table.contains_key(ctrller.command()) => {
+                                        view_warn!(
+                                            c,
+                                            "Event {} has been used by: {}",
+                                            v_str,
+                                            ctrller.command()
+                                        );
+                                    }
+                                    _ => {
+                                        res.insert(event, controller.clone());
+                                    }
+                                }
+                            },
+                            (None, _) => {
+                                view_warn!(c, "Unrecogonized command: {}", k);
+                            },
+                            (_, None) => {
+                                view_warn!(
+                                    c,
+                                    "Fail to parse command from cmdrc: {} --> {}",
+                                    k,
+                                    v_str
+                                );
+                            }
+                        }
+                    } else {
+                        view_warn!(c, "Failed to parse the value of {} in str", k);
+                    }
+                }))
+            });
 
             res
         }

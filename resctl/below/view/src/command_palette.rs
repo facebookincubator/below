@@ -278,4 +278,8 @@ impl CommandPalette {
     pub fn is_alerting(&self) -> bool {
         self.mode == CPMode::Alert
     }
+
+    pub fn get_content<'a>(&'a self) -> &'a str {
+        &self.content
+    }
 }

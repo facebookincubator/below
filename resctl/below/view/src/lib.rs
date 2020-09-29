@@ -70,10 +70,10 @@ use store::advance::Advance;
 open_source_shim!();
 
 #[macro_use]
-mod stats_view;
+pub mod stats_view;
 mod cgroup_tabs;
-mod cgroup_view;
-mod command_palette;
+pub mod cgroup_view;
+pub mod command_palette;
 mod core_tabs;
 mod core_view;
 mod filter_popup;
@@ -239,35 +239,23 @@ impl View {
         self.inner.cb_sink()
     }
 
-    fn verify_cmd_override(c: &mut Cursive) {
-        let file_name = format!(
-            "{}{}",
-            std::env::var("HOME").unwrap_or_else(|_| "".into()),
-            BELOW_CMD_RC
-        );
-
-        match std::fs::read_to_string(file_name) {
-            Ok(cmdrc_str) => match cmdrc_str.parse::<Value>() {
-                Ok(_) => {}
-                Err(e) => view_warn!(c, "Failed to parse cmd map: {}", e),
-            },
-            _ => {}
-        };
-    }
-
     // Function to generate event_controller_map, we cannot make
     // event_controller_map during ViewState construction since it
     // depends on CommandPalette to construct for raising errors
-    fn generate_event_controller_map(c: &mut Cursive) {
-        let event_controller_map = controllers::make_event_controller_map(
-            c,
-            &format!(
-                "{}{}",
-                // Try to get home dir, otherwise let the TOML parsing fail
-                std::env::var("HOME").unwrap_or_else(|_| "".into()),
-                BELOW_CMD_RC
-            ),
-        );
+    pub fn generate_event_controller_map(c: &mut Cursive, filename: String) {
+        // Verify cmdrc file format
+        let cmdrc_opt = match std::fs::read_to_string(filename) {
+            Ok(cmdrc_str) => match cmdrc_str.parse::<Value>() {
+                Ok(cmdrc) => Some(cmdrc),
+                Err(e) => {
+                    view_warn!(c, "Failed to parse cmdrc: {}", e);
+                    None
+                }
+            },
+            _ => None,
+        };
+
+        let event_controller_map = controllers::make_event_controller_map(c, &cmdrc_opt);
 
         c.user_data::<ViewState>()
             .expect("No data stored in Cursive object!")
@@ -333,8 +321,14 @@ impl View {
             .expect("Could not set focus at initialization!");
 
         // Raise warning message if failed to map the customzied command.
-        Self::verify_cmd_override(&mut self.inner);
-        Self::generate_event_controller_map(&mut self.inner);
+        Self::generate_event_controller_map(
+            &mut self.inner,
+            format!(
+                "{}{}",
+                std::env::var("HOME").unwrap_or_else(|_| "".into()),
+                BELOW_CMD_RC
+            ),
+        );
         self.inner.run();
 
         Ok(())
