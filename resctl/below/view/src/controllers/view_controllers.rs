@@ -137,8 +137,13 @@ make_event_controller!(
     Event::Char('?'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
+        let event_map = c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .event_controllers
+            .clone();
         c.add_fullscreen_layer(ResizedView::with_full_screen(
-            OnEventView::new(crate::help_menu::new()).on_event(
+            OnEventView::new(crate::help_menu::new(event_map)).on_event(
                 EventTrigger::from('q').or('?'),
                 |c| {
                     c.pop_layer();

@@ -89,7 +89,7 @@ use controller_infra::*;
 use sample_controllers::*;
 use view_controllers::*;
 
-pub use controller_infra::str_to_event;
+pub use controller_infra::{event_to_string, str_to_event};
 
 use std::collections::HashMap;
 

@@ -234,6 +234,46 @@ fn test_str_to_event_invalid() {
 }
 
 #[test]
+fn test_event_to_str() {
+    assert_eq!(event_to_string(&Event::Char('c')), "'c'");
+    assert_eq!(event_to_string(&Event::Key(Key::Tab)), "<Tab>");
+    assert_eq!(event_to_string(&Event::Key(Key::Enter)), "<Enter>");
+    assert_eq!(event_to_string(&Event::Key(Key::Backspace)), "<Backspace>");
+    assert_eq!(event_to_string(&Event::Key(Key::Left)), "<Left>");
+    assert_eq!(event_to_string(&Event::Key(Key::Right)), "<Right>");
+    assert_eq!(event_to_string(&Event::Key(Key::Up)), "<Up>");
+    assert_eq!(event_to_string(&Event::Key(Key::Down)), "<Down>");
+    assert_eq!(event_to_string(&Event::Key(Key::Ins)), "<Ins>");
+    assert_eq!(event_to_string(&Event::Key(Key::Del)), "<Del>");
+    assert_eq!(event_to_string(&Event::Key(Key::Home)), "<Home>");
+    assert_eq!(event_to_string(&Event::Key(Key::End)), "<End>");
+    assert_eq!(event_to_string(&Event::Key(Key::PageUp)), "<PageUp>");
+    assert_eq!(event_to_string(&Event::Key(Key::PageDown)), "<PageDown>");
+    assert_eq!(
+        event_to_string(&Event::Key(Key::PauseBreak)),
+        "<PauseBreak>"
+    );
+    assert_eq!(event_to_string(&Event::Key(Key::Esc)), "<Esc>");
+    assert_eq!(event_to_string(&Event::CtrlChar('c')), "<Ctrl> 'c'");
+    assert_eq!(event_to_string(&Event::Ctrl(Key::Enter)), "<Ctrl><Enter>");
+    assert_eq!(event_to_string(&Event::AltChar('c')), "<Alt> 'c'");
+    assert_eq!(event_to_string(&Event::Alt(Key::Enter)), "<Alt><Enter>");
+    assert_eq!(event_to_string(&Event::Shift(Key::Enter)), "<Shift><Enter>");
+    assert_eq!(
+        event_to_string(&Event::AltShift(Key::Enter)),
+        "<Alt><Shift><Enter>"
+    );
+    assert_eq!(
+        event_to_string(&Event::CtrlShift(Key::Enter)),
+        "<Ctrl><Shift><Enter>"
+    );
+    assert_eq!(
+        event_to_string(&Event::CtrlAlt(Key::Enter)),
+        "<Ctrl><Alt><Enter>"
+    );
+}
+
+#[test]
 fn test_event_trigger_override() {
     let cmdrc_str = b"invoke_cmd_palette = 'a'
 next_tab = 'b'

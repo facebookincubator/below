@@ -36,6 +36,27 @@ fn str_to_key(cmd: &str) -> Option<Key> {
     }
 }
 
+fn key_to_str(key: &Key) -> &'static str {
+    match key {
+        Key::Tab => "Tab",
+        Key::Enter => "Enter",
+        Key::Backspace => "Backspace",
+        Key::Left => "Left",
+        Key::Right => "Right",
+        Key::Up => "Up",
+        Key::Down => "Down",
+        Key::Ins => "Ins",
+        Key::Del => "Del",
+        Key::Home => "Home",
+        Key::End => "End",
+        Key::PageUp => "PageUp",
+        Key::PageDown => "PageDown",
+        Key::PauseBreak => "PauseBreak",
+        Key::Esc => "Esc",
+        _ => "Unknown",
+    }
+}
+
 /// Convert a command to Cursive event.
 // This fn is used while parsing the user's cmdrc file and generate
 // a customized command-event map
@@ -115,6 +136,22 @@ pub fn str_to_event(cmd: &str) -> Option<Event> {
             _ => None,
         },
         _ => None,
+    }
+}
+
+pub fn event_to_string(event: &Event) -> String {
+    match event {
+        Event::Char(c) => format!("'{}'", c),
+        Event::CtrlChar(c) => format!("<Ctrl> '{}'", c),
+        Event::AltChar(c) => format!("<Alt> '{}'", c),
+        Event::Key(key) => format!("<{}>", key_to_str(key)),
+        Event::Shift(key) => format!("<Shift><{}>", key_to_str(key)),
+        Event::Alt(key) => format!("<Alt><{}>", key_to_str(key)),
+        Event::AltShift(key) => format!("<Alt><Shift><{}>", key_to_str(key)),
+        Event::Ctrl(key) => format!("<Ctrl><{}>", key_to_str(key)),
+        Event::CtrlShift(key) => format!("<Ctrl><Shift><{}>", key_to_str(key)),
+        Event::CtrlAlt(key) => format!("<Ctrl><Alt><{}>", key_to_str(key)),
+        _ => "Unknown".into(),
     }
 }
 
@@ -200,7 +237,7 @@ macro_rules! make_event_controller {
 // struct that implement the EventController trait.
 macro_rules! make_controllers {
     ($($enum_item:tt: $struct_item:tt,)*) => {
-        #[derive(Clone, PartialEq, Debug)]
+        #[derive(Clone, PartialEq, Debug, Hash, Eq)]
         pub enum Controllers {
             Unknown,
             $($enum_item,)*
@@ -211,6 +248,13 @@ macro_rules! make_controllers {
                 match self {
                     Controllers::Unknown => "",
                     $(Controllers::$enum_item => $struct_item::command(),)*
+                }
+            }
+
+            pub fn cmd_shortcut(&self) -> &'static str {
+                match self {
+                    Controllers::Unknown => "",
+                    $(Controllers::$enum_item => $struct_item::cmd_shortcut(),)*
                 }
             }
 
