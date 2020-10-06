@@ -225,7 +225,7 @@ impl ViewState {
 
 impl View {
     pub fn new_with_advance(model: model::Model, mode: ViewMode) -> View {
-        let mut inner = Cursive::default();
+        let mut inner = cursive::default();
         inner.set_user_data(ViewState::new_with_advance(
             MainViewState::Cgroup,
             model,
