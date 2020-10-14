@@ -17,12 +17,14 @@ use std::fs::File;
 use std::hash::Hash;
 use std::io::{self, Write};
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, Result};
 use cursive::utils::markup::StyledString;
 use regex::Regex;
 use serde_json::{json, Value};
+use toml::value::Value as TValue;
 
 use common::dateutil;
 use common::util::translate_datetime;
@@ -54,6 +56,8 @@ use fill::Dfill;
 use get::Dget;
 use print::Dprint;
 use tmain::{Dump, IterExecResult};
+
+const BELOW_DUMP_RC: &str = "/.config/below/dumprc";
 
 // The DumpType trait is the key of how we make our dump generic.
 // Basically, the DumpType trait will be required by all dump related
@@ -114,6 +118,46 @@ fn get_advance(
     Ok((time_end, advance))
 }
 
+/// Try to read $HOME/.config/below/dumprc file and generate a list of keys which will
+/// be used as fields. Any errors happen in this function will directly trigger a panic.
+pub fn parse_pattern<T: FromStr>(
+    filename: String,
+    pattern_key: String,
+    section_key: &str,
+) -> Option<Vec<T>> {
+    let dumprc_map = match std::fs::read_to_string(filename) {
+        Ok(dumprc_str) => match dumprc_str.parse::<TValue>() {
+            Ok(dumprc) => dumprc
+                .as_table()
+                .expect("Failed to parse dumprc: File may be empty.")
+                .to_owned(),
+            Err(e) => panic!("Failed to parse dumprc file: {}", e),
+        },
+        Err(e) => panic!("Failed to read dumprc file: {}", e),
+    };
+
+    Some(
+        dumprc_map
+            .get(section_key)
+            .unwrap_or_else(|| panic!("Failed to get section key: [{}]", section_key))
+            .get(&pattern_key)
+            .unwrap_or_else(|| panic!("Failed to get pattern key: {}", pattern_key))
+            .as_array()
+            .unwrap_or_else(|| panic!("Failed to parse pattern {} value to array.", pattern_key))
+            .iter()
+            .map(|field| {
+                T::from_str(
+                    field.as_str().unwrap_or_else(|| {
+                        panic!("Failed to parse field key {} into string", field)
+                    }),
+                )
+                .or_else(|_| Err(format!("Failed to parse field key: {}", field)))
+                .unwrap()
+            })
+            .collect(),
+    )
+}
+
 pub fn run(
     logger: slog::Logger,
     dir: PathBuf,
@@ -121,71 +165,115 @@ pub fn run(
     port: Option<u16>,
     cmd: DumpCommand,
 ) -> Result<()> {
+    let filename = format!(
+        "{}{}",
+        std::env::var("HOME").expect("Fail to obtain HOME env var"),
+        BELOW_DUMP_RC
+    );
+
     match cmd {
-        DumpCommand::System { fields, opts } => {
+        DumpCommand::System {
+            fields,
+            opts,
+            pattern,
+        } => {
             let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let mut sys = system::System::new(opts, advance, time_end, None);
-            sys.init(fields);
+            if let Some(pattern_key) = pattern {
+                sys.init(parse_pattern(filename, pattern_key, "system"));
+            } else {
+                sys.init(fields);
+            }
             sys.exec()
         }
         DumpCommand::Disk {
             fields,
             opts,
             select,
+            pattern,
         } => {
             let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let mut disk = disk::Disk::new(opts, advance, time_end, select);
-            disk.init(fields);
+            if let Some(pattern_key) = pattern {
+                disk.init(parse_pattern(filename, pattern_key, "disk"));
+            } else {
+                disk.init(fields);
+            }
             disk.exec()
         }
         DumpCommand::Process {
             fields,
             opts,
             select,
+            pattern,
         } => {
             let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let mut process = process::Process::new(opts, advance, time_end, select);
-            process.init(fields);
+            if let Some(pattern_key) = pattern {
+                process.init(parse_pattern(filename, pattern_key, "process"));
+            } else {
+                process.init(fields);
+            }
             process.exec()
         }
         DumpCommand::Cgroup {
             fields,
             opts,
             select,
+            pattern,
         } => {
             let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let mut cgroup = cgroup::Cgroup::new(opts, advance, time_end, select);
-            cgroup.init(fields);
+            if let Some(pattern_key) = pattern {
+                cgroup.init(parse_pattern(filename, pattern_key, "cgroup"));
+            } else {
+                cgroup.init(fields);
+            }
             cgroup.exec()
         }
         DumpCommand::Iface {
             fields,
             opts,
             select,
+            pattern,
         } => {
             let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let mut iface = iface::Iface::new(opts, advance, time_end, select);
-            iface.init(fields);
+            if let Some(pattern_key) = pattern {
+                iface.init(parse_pattern(filename, pattern_key, "iface"));
+            } else {
+                iface.init(fields);
+            }
             iface.exec()
         }
         DumpCommand::Network {
             fields,
             opts,
             select,
+            pattern,
         } => {
             let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let mut network = network::Network::new(opts, advance, time_end, select);
-            network.init(fields);
+            if let Some(pattern_key) = pattern {
+                network.init(parse_pattern(filename, pattern_key, "network"));
+            } else {
+                network.init(fields);
+            }
             network.exec()
         }
         DumpCommand::Transport {
             fields,
             opts,
             select,
+            pattern,
         } => {
             let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let mut transport = transport::Transport::new(opts, advance, time_end, select);
-            transport.init(fields);
+            if let Some(pattern_key) = pattern {
+                transport.init(parse_pattern(filename, pattern_key, "transport"));
+            } else {
+                transport.init(fields);
+            }
             transport.exec()
         }
     }

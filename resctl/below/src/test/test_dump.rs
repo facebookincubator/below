@@ -1539,3 +1539,44 @@ fn test_dump_disk_content() {
         }
     }
 }
+
+#[test]
+fn test_parse_pattern() {
+    let tempdir = TempDir::new("below_dump_pattern").expect("Failed to create temp dir");
+    let path = tempdir.path().join("dumprc");
+
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(&path)
+        .expect("Fail to open dumprc in tempdir");
+    let dumprc_str = r#"
+[system]
+demacia = ["datetime", "os_release"]
+
+[process]
+proc = ["datetime", "mem_anon"]
+"#;
+    file.write_all(dumprc_str.as_bytes())
+        .expect("Faild to write temp dumprc file during testing ignore");
+    file.flush().expect("Failed to flush during testing ignore");
+
+    let sys_res = parse_pattern::<SysField>(
+        path.to_string_lossy().to_string(),
+        "demacia".into(),
+        "system",
+    )
+    .expect("Failed to parse system pattern");
+
+    assert_eq!(sys_res[0], SysField::Datetime);
+    assert_eq!(sys_res[1], SysField::OSRelease);
+
+    let proc_res =
+        parse_pattern::<ProcField>(path.to_string_lossy().to_string(), "proc".into(), "process")
+            .expect("Failed to parse process pattern");
+
+    assert_eq!(proc_res[0], ProcField::Datetime);
+    assert_eq!(proc_res[1], ProcField::Anon);
+}

@@ -475,6 +475,9 @@ pub enum DumpCommand {
         fields: Option<Vec<SysField>>,
         #[structopt(flatten)]
         opts: GeneralOpt,
+        /// Saved pattern in the dumprc file under [system] section.
+        #[structopt(long, short, conflicts_with("fields"))]
+        pattern: Option<String>,
     },
     /// Dump disk stats
     ///
@@ -520,6 +523,9 @@ pub enum DumpCommand {
         /// Select field for operation, use with --sort, --rsort, --filter, --top
         #[structopt(long, short)]
         select: Option<DiskField>,
+        /// Saved pattern in the dumprc file under [disk] section.
+        #[structopt(long, short, conflicts_with("fields"))]
+        pattern: Option<String>,
     },
     /// Dump process stats
     ///
@@ -566,6 +572,9 @@ pub enum DumpCommand {
         /// Select field for operation, use with --sort, --rsort, --filter, --top
         #[structopt(long, short)]
         select: Option<ProcField>,
+        /// Saved pattern in the dumprc file under [process] section.
+        #[structopt(long, short, conflicts_with("fields"))]
+        pattern: Option<String>,
     },
     /// Dump cgroup stats
     ///
@@ -621,6 +630,9 @@ pub enum DumpCommand {
         /// Select field for operation, use with --sort, --rsort, --filter, --top
         #[structopt(long, short)]
         select: Option<CgroupField>,
+        /// Saved pattern in the dumprc file under [cgroup] section.
+        #[structopt(long, short, conflicts_with("fields"))]
+        pattern: Option<String>,
     },
     /// Dump the link layer iface stats
     ///
@@ -666,6 +678,9 @@ pub enum DumpCommand {
         /// Select field for operation, use with --filter
         #[structopt(long, short)]
         select: Option<IfaceField>,
+        /// Saved pattern in the dumprc file under [iface] section.
+        #[structopt(long, short, conflicts_with("fields"))]
+        pattern: Option<String>,
     },
     /// Dump the network layer stats including ip and icmp
     ///
@@ -710,6 +725,9 @@ pub enum DumpCommand {
         /// Select field for operation, use with --filter
         #[structopt(long, short)]
         select: Option<NetworkField>,
+        /// Saved pattern in the dumprc file under [network] section.
+        #[structopt(long, short, conflicts_with("fields"))]
+        pattern: Option<String>,
     },
     /// Dump the transport layer stats including tcp and udp
     ///
@@ -750,5 +768,8 @@ pub enum DumpCommand {
         /// Select field for operation, use with --filter
         #[structopt(long, short)]
         select: Option<TransportField>,
+        /// Saved pattern in the dumprc file under [transport] section.
+        #[structopt(long, short, conflicts_with("fields"))]
+        pattern: Option<String>,
     },
 }
