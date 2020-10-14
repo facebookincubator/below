@@ -79,6 +79,8 @@ pub fn advance_helper(
             }
         },
     };
+
+    crate::refresh(c);
 }
 
 pub fn new(adv: Rc<RefCell<advance::Advance>>, direction: Direction) -> impl View {

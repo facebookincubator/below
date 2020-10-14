@@ -88,6 +88,7 @@ make_event_controller!(
             _ => {}
         };
         crate::status_bar::refresh(c);
+        crate::system_view::refresh(c);
         StatsView::<T>::refresh_myself(c);
     }
 );
@@ -113,6 +114,7 @@ make_event_controller!(
             _ => {}
         }
         crate::status_bar::refresh(c);
+        crate::system_view::refresh(c);
         StatsView::<T>::refresh_myself(c);
     }
 );
