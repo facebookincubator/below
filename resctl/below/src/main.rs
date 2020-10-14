@@ -101,18 +101,14 @@ enum Command {
     },
     /// Replay historical data (interactive)
     Replay {
-        /// Time string specifying the replay starting point, e.g. "1 day ago"
-        ///
-        /// Keywords: now, today, yesterday
-        ///
-        /// Relative: {humantime} ago, e.g. "2 days 3 hr 15m 10sec ago"
-        ///
-        /// Relative short: Mixed {time_digit}{time_unit_char} E.g. 10m, 3d2h, 5h30s. Case insensitive.
-        ///
-        /// Absolute: "Jan 01 23:59", "01/01/1970 11:59PM", "1970-01-01 23:59:59"
-        ///
+        /// Time string specifying the replay starting point, e.g. "1 day ago"{n}
+        /// Keywords: now, today, yesterday{n}
+        /// Relative: {humantime} ago, e.g. "2 days 3 hr 15m 10sec ago"{n}
+        /// Relative short: Mixed {time_digit}{time_unit_char} E.g. 10m, 3d2h, 5h30s. Case insensitive.{n}
+        /// Absolute: "Jan 01 23:59", "01/01/1970 11:59PM", "1970-01-01 23:59:59"{n}
         /// Unix Epoch: 1589808367
-        #[structopt(short, long)]
+        /// _
+        #[structopt(short, long, verbatim_doc_comment)]
         time: String,
         /// Supply hostname to activate remote viewing
         #[structopt(long)]
@@ -120,12 +116,12 @@ enum Command {
         /// Override default port to connect remote viewing to
         #[structopt(long)]
         port: Option<u16>,
-        /// Days adjuster: y[y...] for yesterday (repeated).{n}Each "y" will deduct 1 day from the input of "--time/-t"
-        ///
-        /// Examples:{n}
-        /// * Yesterday at 2 pm: below replay -r y -t 2:00pm{n}
-        /// * 09/01/2020 17:00: below replay -r yy -t "09/03/2020 17:00"{n}
-        #[structopt(short = "r")]
+        /// Days adjuster: y[y...] for yesterday (repeated).
+        /// Each "y" will deduct 1 day from the input of "--time/-t"{n}
+        /// Examples:
+        /// * Yesterday at 2 pm: below replay -r y -t 2:00pm
+        /// * 09/01/2020 17:00: below replay -r yy -t "09/03/2020 17:00"
+        #[structopt(short = "r", verbatim_doc_comment)]
         yesterdays: Option<String>,
     },
     /// Debugging facilities (for development use)
