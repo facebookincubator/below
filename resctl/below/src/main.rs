@@ -536,6 +536,16 @@ fn record(
     };
     let mut bpf_err_warned = false;
 
+    // Handle cgroup filter from conf and generate Regex
+    let cgroup_re = if !below_config.cgroup_filter_out.is_empty() {
+        Some(
+            Regex::new(&below_config.cgroup_filter_out)
+                .expect("Failed to generate regex from cgroup_filter_out in below.conf"),
+        )
+    } else {
+        None
+    };
+
     loop {
         if !disable_exitstats {
             // Anything that comes over the error channel is an error
@@ -556,16 +566,6 @@ fn record(
         }
 
         let collect_instant = Instant::now();
-
-        // Handle cgroup filter from conf and generate Regex
-        let cgroup_re = if !below_config.cgroup_filter_out.is_empty() {
-            Some(
-                Regex::new(&below_config.cgroup_filter_out)
-                    .expect("Failed to generate regex from cgroup_filter_out in below.conf"),
-            )
-        } else {
-            None
-        };
 
         let collected_sample = model::collect_sample(
             &exit_buffer,
