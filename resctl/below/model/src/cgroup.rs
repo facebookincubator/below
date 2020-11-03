@@ -403,6 +403,16 @@ pub struct CgroupMemoryModel {
         decorator = "if $ == -1 { \"max\".to_string() } else { convert_bytes($ as f64) }"
     )]
     pub memory_high: Option<i64>,
+    #[bttr(title = "Events Low", width = 11)]
+    pub events_low: Option<u64>,
+    #[bttr(title = "Events High", width = 12)]
+    pub events_high: Option<u64>,
+    #[bttr(title = "Events Max", width = 11)]
+    pub events_max: Option<u64>,
+    #[bttr(title = "Events OOM", width = 11)]
+    pub events_oom: Option<u64>,
+    #[bttr(title = "Events Kill", width = 12)]
+    pub events_oom_kill: Option<u64>,
 }
 
 impl std::ops::Add for CgroupMemoryModel {
@@ -447,6 +457,11 @@ impl std::ops::Add for CgroupMemoryModel {
             thp_fault_alloc: opt_add(self.thp_fault_alloc, other.thp_fault_alloc),
             thp_collapse_alloc: opt_add(self.thp_collapse_alloc, other.thp_collapse_alloc),
             memory_high: None,
+            events_low: opt_add(self.events_low, other.events_low),
+            events_high: opt_add(self.events_high, other.events_high),
+            events_max: opt_add(self.events_max, other.events_max),
+            events_oom: opt_add(self.events_oom, other.events_oom),
+            events_oom_kill: opt_add(self.events_oom_kill, other.events_oom_kill),
         }
     }
 }
@@ -462,6 +477,13 @@ impl CgroupMemoryModel {
             memory_high: sample.memory_high,
             ..Default::default()
         };
+        if let Some(events) = &sample.memory_events {
+            model.events_low = events.low.map(|v| v as u64);
+            model.events_high = events.high.map(|v| v as u64);
+            model.events_max = events.max.map(|v| v as u64);
+            model.events_oom = events.oom.map(|v| v as u64);
+            model.events_oom_kill = events.oom_kill.map(|v| v as u64);
+        }
         if let Some(stat) = &sample.memory_stat {
             model.anon = stat.anon.map(|v| v as u64);
             model.file = stat.file.map(|v| v as u64);

@@ -392,6 +392,51 @@ pub struct CgroupData {
         class_detail = true
     )]
     pub mem_high: Option<i64>,
+    #[blink("CgroupModel$memory?.get_events_low")]
+    #[bttr(
+        title = "Events Low",
+        tag = "CgroupField::MemEventsLow",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
+    )]
+    pub memory_events_low: Option<u64>,
+    #[blink("CgroupModel$memory?.get_events_high")]
+    #[bttr(
+        title = "Events High",
+        tag = "CgroupField::MemEventsHigh",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
+    )]
+    pub memory_events_high: Option<u64>,
+    #[blink("CgroupModel$memory?.get_events_max")]
+    #[bttr(
+        title = "Events Max",
+        tag = "CgroupField::MemEventsMax",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
+    )]
+    pub memory_events_max: Option<u64>,
+    #[blink("CgroupModel$memory?.get_events_oom")]
+    #[bttr(
+        title = "Events OOM",
+        tag = "CgroupField::MemEventsOom",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
+    )]
+    pub memory_events_oom: Option<u64>,
+    #[blink("CgroupModel$memory?.get_events_oom_kill")]
+    #[bttr(
+        title = "Events Kill",
+        tag = "CgroupField::MemEventsOomKill",
+        cmp = true,
+        class = "CgroupField::Mem",
+        class_detail = true
+    )]
+    pub memory_events_oom_kill: Option<u64>,
     #[blink("CgroupModel$pressure?.get_cpu_some_pct")]
     #[bttr(
         title = "CPU Pressure",

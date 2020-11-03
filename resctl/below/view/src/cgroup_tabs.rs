@@ -464,6 +464,16 @@ pub struct CgroupMem {
     #[blink("CgroupModel$memory?.get_thp_collapse_alloc")]
     #[bttr(sort_tag = "CgroupOrders::THPCollapseAlloc")]
     pub thp_collapse_alloc: Option<u64>,
+    #[blink("CgroupModel$memory?.get_events_low")]
+    pub events_low: Option<u64>,
+    #[blink("CgroupModel$memory?.get_events_high")]
+    pub events_high: Option<u64>,
+    #[blink("CgroupModel$memory?.get_events_max")]
+    pub events_max: Option<u64>,
+    #[blink("CgroupModel$memory?.get_events_oom")]
+    pub events_oom: Option<u64>,
+    #[blink("CgroupModel$memory?.get_events_oom_kill")]
+    pub events_oom_kill: Option<u64>,
     depth: usize,
     collapse: bool,
 }

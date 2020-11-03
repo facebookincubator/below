@@ -837,6 +837,27 @@ fn traverse_cgroup_tree(model: &CgroupModel, jval: &mut Value) {
                 mem.get_memory_high_str()
             );
         }
+
+        assert_eq!(
+            jval["Events Low"].as_str().unwrap(),
+            mem.get_events_low_str()
+        );
+        assert_eq!(
+            jval["Events High"].as_str().unwrap(),
+            mem.get_events_high_str()
+        );
+        assert_eq!(
+            jval["Events Max"].as_str().unwrap(),
+            mem.get_events_max_str()
+        );
+        assert_eq!(
+            jval["Events OOM"].as_str().unwrap(),
+            mem.get_events_oom_str()
+        );
+        assert_eq!(
+            jval["Events Kill"].as_str().unwrap(),
+            mem.get_events_oom_kill_str()
+        );
     }
 
     if let Some(pressure) = model.pressure.as_ref() {

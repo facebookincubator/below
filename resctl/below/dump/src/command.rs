@@ -240,6 +240,11 @@ make_option! (CgroupField {
     "mem_thp_fault_alloc": MemTHPFaultAlloc,
     "mem_thp_collapse_alloc": MemTHPCollapseAlloc,
     "mem_high": MemHigh,
+    "mem_events_low": MemEventsLow,
+    "mem_events_high": MemEventsHigh,
+    "mem_events_max": MemEventsMax,
+    "mem_events_oom": MemEventsOom,
+    "mem_events_oom_kill": MemEventsOomKill,
     "io_read": IoRead,
     "io_write": IoWrite,
     "io_rios": IoRiops,
@@ -587,7 +592,8 @@ pub enum DumpCommand {
     /// mem_total, mem_anon, mem_file, mem_kernel, mem_slab, mem_sock, mem_shem,
     /// mem_file_mapped, mem_file_dirty, mem_file_writeback, mem_anon_thp, mem_inactive_anon,
     /// mem_active_anon, mem_inactive_file, mem_active_file, mem_unevictable, mem_slab_reclaimable,
-    /// mem_slab_unreclaimable, mem_high
+    /// mem_slab_unreclaimable, mem_high, mem_events_low, mem_events_high, mem_events_max,
+    /// mem_events_oom, mem_events_oom_kill,
     ///
     /// io_read, io_write, io_wios, io_rios, io_dbps, io_diops, io_total
     ///
