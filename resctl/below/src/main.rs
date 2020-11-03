@@ -169,13 +169,17 @@ pub enum RedirectLogOnFail {
 }
 
 fn bump_memlock_rlimit() -> Result<()> {
-    let rlimit = libc::rlimit {
-        rlim_cur: 128 << 20,
-        rlim_max: 128 << 20,
-    };
+    // TODO(T78976996) remove the fbcode_gate once we can exit stats is
+    // enabled for opensource
+    if cfg!(fbcode_build) {
+        let rlimit = libc::rlimit {
+            rlim_cur: 128 << 20,
+            rlim_max: 128 << 20,
+        };
 
-    if unsafe { libc::setrlimit(libc::RLIMIT_MEMLOCK, &rlimit) } != 0 {
-        bail!("Failed to increase rlimit");
+        if unsafe { libc::setrlimit(libc::RLIMIT_MEMLOCK, &rlimit) } != 0 {
+            bail!("Failed to increase rlimit");
+        }
     }
 
     Ok(())
@@ -225,31 +229,42 @@ fn start_exitstat(
     logger: slog::Logger,
     debug: bool,
 ) -> (Arc<Mutex<procfs::PidMap>>, Option<Receiver<Error>>) {
-    let mut exit_driver = bpf::exitstat::ExitstatDriver::new(logger, debug);
-    let exit_buffer = exit_driver.get_buffer();
-    let (bpf_err_send, bpf_err_recv) = channel();
-    thread::spawn(move || {
-        match exit_driver.drive() {
-            Ok(_) => {}
-            Err(e) => bpf_err_send.send(e).unwrap(),
-        };
-    });
+    // TODO(T78976996) remove the fbcode_gate once we can exit stats is
+    // enabled for opensource
+    if cfg!(fbcode_build) {
+        let mut exit_driver = bpf::exitstat::ExitstatDriver::new(logger, debug);
+        let exit_buffer = exit_driver.get_buffer();
+        let (bpf_err_send, bpf_err_recv) = channel();
+        thread::spawn(move || {
+            match exit_driver.drive() {
+                Ok(_) => {}
+                Err(e) => bpf_err_send.send(e).unwrap(),
+            };
+        });
 
-    (exit_buffer, Some(bpf_err_recv))
+        (exit_buffer, Some(bpf_err_recv))
+    } else {
+        (Arc::new(Mutex::new(procfs::PidMap::new())), None)
+    }
 }
 
 /// Returns true if other end disconnected, false otherwise
 fn check_for_exitstat_errors(logger: &slog::Logger, receiver: &Receiver<Error>) -> bool {
-    // Print an error but don't exit on bpf issues. Do this b/c we can't always
-    // be sure what kind of kernel we're running on and if it's new enough.
-    match receiver.try_recv() {
-        Ok(e) => error!(logger, "{}", e),
-        Err(TryRecvError::Empty) => {}
-        Err(TryRecvError::Disconnected) => {
-            warn!(logger, "bpf error channel disconnected");
-            return true;
-        }
-    };
+    // TODO(T78976996) remove the fbcode_gate once we can exit stats is
+    // enabled for opensource
+    // This code path will unlikely to execute for non fbcode_build
+    if cfg!(fbcode_build) {
+        // Print an error but don't exit on bpf issues. Do this b/c we can't always
+        // be sure what kind of kernel we're running on and if it's new enough.
+        match receiver.try_recv() {
+            Ok(e) => error!(logger, "{}", e),
+            Err(TryRecvError::Empty) => {}
+            Err(TryRecvError::Disconnected) => {
+                warn!(logger, "bpf error channel disconnected");
+                return true;
+            }
+        };
+    }
 
     false
 }
