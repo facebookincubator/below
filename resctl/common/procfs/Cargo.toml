@@ -3,7 +3,7 @@ name = "procfs"
 edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
-license = "Apache 2.0"
+license = "Apache-2.0"
 include = ["src/lib.rs"]
 
 [dependencies]
