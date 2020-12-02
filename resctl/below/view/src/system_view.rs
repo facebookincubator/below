@@ -162,7 +162,7 @@ struct SysIo;
 
 impl SysIo {
     fn get_row(disks: &BTreeMap<String, SingleDiskModel>) -> StyledString {
-        let mut disk_stat = format!("{:8.8}\t", "I/O");
+        let mut disk_stat = format!("{:8.8}{:7.7}", "I/O", "");
 
         disks
             .iter()
@@ -184,7 +184,7 @@ struct SysIface;
 
 impl SysIface {
     fn get_row(net: &NetworkModel) -> StyledString {
-        let mut network = format!("{:8.8}\t", "Iface");
+        let mut network = format!("{:8.8}{:7.7}", "Iface", "");
 
         net.interfaces.iter().for_each(|(interface, snm)| {
             network.push_str(&format!(
