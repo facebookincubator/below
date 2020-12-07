@@ -93,13 +93,9 @@ pub fn get_os_release() -> Result<String> {
 
 fn merge_procfs_and_exit_data(
     mut procfs_data: procfs::PidMap,
-    exit_data: &Arc<Mutex<procfs::PidMap>>,
+    exit_data: procfs::PidMap,
 ) -> procfs::PidMap {
-    // Take mutex, then take all values out of shared map and replace with default map
-    let exit_pidmap =
-        std::mem::take(&mut *exit_data.lock().expect("tried to acquire poisoned lock"));
-
-    exit_pidmap
+    exit_data
         .iter()
         // If `procfs_data` already has the pid, then we use the procfs data because the time delta
         // between the two collection points is negligible and procfs collected data is more
@@ -138,6 +134,13 @@ pub fn collect_sample(
     cgroup_re: &Option<Regex>,
 ) -> Result<Sample> {
     let mut reader = procfs::ProcReader::new();
+
+    // Take mutex, then take all values out of shared map and replace with default map
+    //
+    // NB: unconditionally drain the exit buffer otherwise we can leak the entries
+    let exit_pidmap =
+        std::mem::take(&mut *exit_data.lock().expect("tried to acquire poisoned lock"));
+
     Ok(Sample {
         cgroup: collect_cgroup_sample(
             &cgroupfs::CgroupReader::root()?,
@@ -145,7 +148,7 @@ pub fn collect_sample(
             logger,
             &cgroup_re,
         )?,
-        processes: merge_procfs_and_exit_data(reader.read_all_pids()?, exit_data),
+        processes: merge_procfs_and_exit_data(reader.read_all_pids()?, exit_pidmap),
         netstats: match procfs::NetReader::new().and_then(|v| v.read_netstat()) {
             Ok(ns) => ns,
             Err(e) => {
