@@ -8,6 +8,7 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 below-thrift = { path = "if" }
+cgroupfs = { path = "../common/cgroupfs" }
 common = { path = "common" }
 dump = { path = "dump" }
 model = { path = "model" }
@@ -36,9 +37,7 @@ walkdir = "2.2.9"
 
 [dev-dependencies]
 below_derive = { path = "below_derive" }
-cgroupfs = { path = "../common/cgroupfs" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 maplit = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
 tempdir = "0.3"
-tempfile = "3.1"

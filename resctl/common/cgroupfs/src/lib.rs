@@ -18,6 +18,7 @@ use std::ffi::OsStr;
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
 
+use nix::sys::statfs::{fstatfs, CGROUP2_SUPER_MAGIC};
 use openat::{AsPath, Dir, SimpleType};
 use thiserror::Error;
 
@@ -39,6 +40,8 @@ pub enum Error {
     IoError(PathBuf, #[source] std::io::Error),
     #[error("Unexpected line ({1}) in file: {0:?}")]
     UnexpectedLine(PathBuf, String),
+    #[error("Not cgroup2 filesystem: {0:?}")]
+    NotCgroup2(PathBuf),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -54,12 +57,38 @@ impl CgroupReader {
     }
 
     pub fn new_with_relative_path(root: PathBuf, relative_path: PathBuf) -> Result<CgroupReader> {
+        CgroupReader::new_with_relative_path_inner(root, relative_path, true)
+    }
+
+    fn new_with_relative_path_inner(
+        root: PathBuf,
+        relative_path: PathBuf,
+        validate: bool,
+    ) -> Result<CgroupReader> {
         let mut path = root.clone();
         match relative_path.strip_prefix("/") {
             Ok(p) => path.push(p),
             _ => path.push(&relative_path),
         };
-        let dir = Dir::open(&path).map_err(|e| Error::IoError(path, e))?;
+        let dir = Dir::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
+
+        // Check that it's a cgroup2 fs
+        if validate {
+            let statfs = match fstatfs(&dir) {
+                Ok(s) => s,
+                Err(e) => {
+                    return Err(Error::IoError(
+                        path,
+                        std::io::Error::new(ErrorKind::Other, format!("Failed to fstatfs: {}", e)),
+                    ));
+                }
+            };
+
+            if statfs.filesystem_type() != CGROUP2_SUPER_MAGIC {
+                return Err(Error::NotCgroup2(path));
+            }
+        }
+
         Ok(CgroupReader { relative_path, dir })
     }
 

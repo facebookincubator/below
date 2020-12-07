@@ -16,7 +16,7 @@ use std::ffi::OsStr;
 use std::fs::File;
 use std::io::Write;
 use std::os::linux::fs::MetadataExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use tempfile::TempDir;
 
@@ -39,7 +39,16 @@ impl TestCgroup {
     }
 
     fn get_reader(&self) -> CgroupReader {
-        CgroupReader::new(self.path().to_path_buf()).expect("Failed to construct reader")
+        CgroupReader::new_with_relative_path_inner(
+            self.path().to_path_buf(),
+            PathBuf::from(OsStr::new("")),
+            false,
+        )
+        .expect("Failed to construct reader")
+    }
+
+    fn get_reader_validate(&self) -> Result<CgroupReader, Error> {
+        CgroupReader::new(self.path().to_path_buf())
     }
 
     fn create_file_with_content<P: AsRef<Path>>(&self, p: P, content: &[u8]) {
@@ -497,4 +506,10 @@ fn test_child_cgroup_iter_empty() {
 fn test_root_cgroup_name_is_empty() {
     let root = TestCgroup::new();
     assert_eq!(root.get_reader().name(), OsStr::new(""));
+}
+
+#[test]
+fn test_validate_cgroup2_fs() {
+    let root = TestCgroup::new();
+    assert!(root.get_reader_validate().is_err());
 }

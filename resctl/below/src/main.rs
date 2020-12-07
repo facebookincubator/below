@@ -610,7 +610,16 @@ fn record(
                     error!(logger, "{}", e);
                 }
             }
-            Err(e) => error!(logger, "{}", e),
+            Err(e) => {
+                // Handle cgroupfs errors
+                match e.downcast_ref::<cgroupfs::Error>() {
+                    // Unrecoverable error -- below only supports cgroup2
+                    Some(e @ cgroupfs::Error::NotCgroup2(_)) => bail!("{}", e),
+                    _ => {}
+                };
+
+                error!(logger, "{}", e);
+            }
         };
 
         if let Some(retention) = retain {
