@@ -58,7 +58,7 @@ pub fn get_prefix(collapsed: bool) -> &'static str {
 /// 3 '.'s to replace the omitted content. If the width is less than 3, it will
 /// return the original string. This function will also take a stop_filter closure
 /// as an indicator of where to split the string. Please note that, this function
-/// will take the minial value of (width - 3)/2 and first index that hit the stop_filter
+/// will take the minimal value of (width - 3)/2 and first index that hit the stop_filter
 /// as the front half cutting point.
 ///
 /// # Arguments
