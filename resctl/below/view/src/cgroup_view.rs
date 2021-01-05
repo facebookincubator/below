@@ -22,11 +22,17 @@ use cursive::views::{NamedView, SelectView, ViewRef};
 use cursive::Cursive;
 
 use crate::cgroup_tabs::{
-    CgroupCPU, CgroupGeneral, CgroupIO, CgroupMem, CgroupOrders, CgroupPressure, CgroupTab,
+    default_tabs::{
+        CGROUP_CPU_TAB, CGROUP_GENERAL_TAB, CGROUP_IO_TAB, CGROUP_MEM_TAB, CGROUP_PRESSURE_TAB,
+    },
+    CgroupTab,
 };
 use crate::stats_view::{StateCommon, StatsView, ViewBridge};
 use crate::ViewState;
-use model::CgroupModel;
+use model::{
+    CgroupCpuModelFieldId, CgroupIoModelFieldId, CgroupMemoryModelFieldId, CgroupModel,
+    CgroupModelFieldId,
+};
 
 pub type ViewType = StatsView<CgroupView>;
 
@@ -38,8 +44,8 @@ pub struct CgroupState {
     pub collapsed_cgroups: Rc<RefCell<HashSet<String>>>,
     pub current_selected_cgroup: String,
     pub filter: Option<String>,
-    pub sort_order: CgroupOrders,
-    pub sort_tags: HashMap<String, Vec<CgroupOrders>>,
+    pub sort_order: Option<CgroupModelFieldId>,
+    pub sort_tags: HashMap<String, &'static CgroupTab>,
     pub reverse: bool,
     pub model: Rc<RefCell<CgroupModel>>,
     pub collapse_all_top_level_cgroup: bool,
@@ -47,38 +53,46 @@ pub struct CgroupState {
 
 impl StateCommon for CgroupState {
     type ModelType = CgroupModel;
-    type TagType = CgroupOrders;
+    type TagType = CgroupModelFieldId;
     fn get_filter(&mut self) -> &mut Option<String> {
         &mut self.filter
     }
 
     fn set_sort_tag(&mut self, sort_order: Self::TagType, reverse: &mut bool) -> bool {
-        if self.sort_order == sort_order && sort_order != CgroupOrders::Keep {
+        let sort_order = Some(sort_order);
+        if self.sort_order == sort_order {
             *reverse = !*reverse;
         } else {
             *reverse = true;
             self.sort_order = sort_order;
         }
         self.reverse = *reverse;
-        self.sort_order != CgroupOrders::Keep
+        true
     }
 
     fn set_sort_tag_from_tab_idx(&mut self, tab: &str, idx: usize, reverse: &mut bool) -> bool {
-        let sort_order = self
-            .sort_tags
-            .get(tab)
-            .unwrap_or_else(|| panic!("Fail to find tab: {}", tab))
-            .get(idx)
-            .expect("Out of title scope")
-            .clone();
+        let sort_order = match idx {
+            0 => Self::TagType::Name,
+            _ => self
+                .sort_tags
+                .get(tab)
+                .unwrap_or_else(|| panic!("Fail to find tab: {}", tab))
+                .view_items
+                .get(idx - 1)
+                .expect("Out of title scope")
+                .field_id
+                .to_owned(),
+        };
 
         self.set_sort_tag(sort_order, reverse)
     }
 
     fn set_sort_string(&mut self, selection: &str, reverse: &mut bool) -> bool {
-        let sort_order: CgroupOrders = selection.into();
-
-        self.set_sort_tag(sort_order, reverse)
+        use std::str::FromStr;
+        match Self::TagType::from_str(selection) {
+            Ok(field_id) => self.set_sort_tag(field_id, reverse),
+            Err(_) => false,
+        }
     }
 
     fn get_model(&self) -> Ref<Self::ModelType> {
@@ -91,16 +105,16 @@ impl StateCommon for CgroupState {
 
     fn new(model: Rc<RefCell<Self::ModelType>>) -> Self {
         let mut sort_tags = HashMap::new();
-        sort_tags.insert("General".into(), CgroupGeneral::get_sort_tag_vec());
-        sort_tags.insert("CPU".into(), CgroupCPU::get_sort_tag_vec());
-        sort_tags.insert("Mem".into(), CgroupMem::get_sort_tag_vec());
-        sort_tags.insert("I/O".into(), CgroupIO::get_sort_tag_vec());
-        sort_tags.insert("Pressure".into(), CgroupPressure::get_sort_tag_vec());
+        sort_tags.insert("General".into(), &*CGROUP_GENERAL_TAB);
+        sort_tags.insert("CPU".into(), &*CGROUP_CPU_TAB);
+        sort_tags.insert("Mem".into(), &*CGROUP_MEM_TAB);
+        sort_tags.insert("I/O".into(), &*CGROUP_IO_TAB);
+        sort_tags.insert("Pressure".into(), &*CGROUP_PRESSURE_TAB);
         Self {
             collapsed_cgroups: Rc::new(RefCell::new(HashSet::new())),
             current_selected_cgroup: "<root>".into(),
             filter: None,
-            sort_order: CgroupOrders::Keep,
+            sort_order: None,
             sort_tags,
             reverse: false,
             model,
@@ -110,8 +124,8 @@ impl StateCommon for CgroupState {
 }
 
 impl CgroupState {
-    fn set_sort_order(&mut self, tag: CgroupOrders) {
-        self.sort_order = tag;
+    fn set_sort_order(&mut self, tag: CgroupModelFieldId) {
+        self.sort_order = Some(tag);
     }
 
     fn set_reverse(&mut self, reverse: bool) {
@@ -123,12 +137,9 @@ impl CgroupState {
     }
 }
 
-pub enum CgroupView {
-    General(CgroupGeneral),
-    Cpu(CgroupCPU),
-    Mem(CgroupMem),
-    Io(CgroupIO),
-    Pressure(CgroupPressure),
+// TODO: Make CgroupView a collection of CgroupTab
+pub struct CgroupView {
+    tab: &'static CgroupTab,
 }
 
 impl CgroupView {
@@ -188,11 +199,36 @@ impl CgroupView {
             "Pressure".into(),
         ];
         let mut tabs_map: HashMap<String, CgroupView> = HashMap::new();
-        tabs_map.insert("General".into(), CgroupView::General(Default::default()));
-        tabs_map.insert("CPU".into(), CgroupView::Cpu(Default::default()));
-        tabs_map.insert("Mem".into(), CgroupView::Mem(Default::default()));
-        tabs_map.insert("I/O".into(), CgroupView::Io(Default::default()));
-        tabs_map.insert("Pressure".into(), CgroupView::Pressure(Default::default()));
+        tabs_map.insert(
+            "General".into(),
+            CgroupView {
+                tab: &*CGROUP_GENERAL_TAB,
+            },
+        );
+        tabs_map.insert(
+            "CPU".into(),
+            CgroupView {
+                tab: &*CGROUP_CPU_TAB,
+            },
+        );
+        tabs_map.insert(
+            "Mem".into(),
+            CgroupView {
+                tab: &*CGROUP_MEM_TAB,
+            },
+        );
+        tabs_map.insert(
+            "I/O".into(),
+            CgroupView {
+                tab: &*CGROUP_IO_TAB,
+            },
+        );
+        tabs_map.insert(
+            "Pressure".into(),
+            CgroupView {
+                tab: &*CGROUP_PRESSURE_TAB,
+            },
+        );
         let user_data = c
             .user_data::<ViewState>()
             .expect("No data stored in Cursive Object!");
@@ -210,7 +246,7 @@ impl CgroupView {
             let mut view = Self::get_cgroup_view(c);
             view.state
                 .borrow_mut()
-                .set_sort_order(CgroupOrders::UsagePct);
+                .set_sort_order(CgroupModelFieldId::Cpu(CgroupCpuModelFieldId::UsagePct));
             view.state.borrow_mut().set_reverse(true);
             view.refresh(c)
         })
@@ -218,7 +254,7 @@ impl CgroupView {
             let mut view = Self::get_cgroup_view(c);
             view.state
                 .borrow_mut()
-                .set_sort_order(CgroupOrders::MemoryTotal);
+                .set_sort_order(CgroupModelFieldId::Mem(CgroupMemoryModelFieldId::Total));
             view.state.borrow_mut().set_reverse(true);
             view.refresh(c)
         })
@@ -226,7 +262,7 @@ impl CgroupView {
             let mut view = Self::get_cgroup_view(c);
             view.state
                 .borrow_mut()
-                .set_sort_order(CgroupOrders::RwTotal);
+                .set_sort_order(CgroupModelFieldId::Io(CgroupIoModelFieldId::RwbytesPerSec));
             view.state.borrow_mut().set_reverse(true);
             view.refresh(c)
         })
@@ -250,16 +286,6 @@ impl CgroupView {
             _ => {}
         }
     }
-
-    fn get_inner(&self) -> Box<dyn CgroupTab> {
-        match self {
-            Self::General(inner) => Box::new(inner.clone()),
-            Self::Cpu(inner) => Box::new(inner.clone()),
-            Self::Mem(inner) => Box::new(inner.clone()),
-            Self::Io(inner) => Box::new(inner.clone()),
-            Self::Pressure(inner) => Box::new(inner.clone()),
-        }
-    }
 }
 
 impl ViewBridge for CgroupView {
@@ -269,8 +295,7 @@ impl ViewBridge for CgroupView {
         "cgroup_view"
     }
     fn get_title_vec(&self) -> Vec<String> {
-        let model: CgroupModel = Default::default();
-        self.get_inner().get_title_vec(&model)
+        self.tab.get_title_vec()
     }
 
     fn get_rows(
@@ -278,6 +303,6 @@ impl ViewBridge for CgroupView {
         state: &Self::StateType,
         offset: Option<usize>,
     ) -> Vec<(StyledString, String)> {
-        self.get_inner().get_rows(state, offset)
+        self.tab.get_rows(state, offset)
     }
 }

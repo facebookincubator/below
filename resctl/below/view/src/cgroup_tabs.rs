@@ -16,139 +16,118 @@ use std::collections::HashSet;
 use std::iter::FromIterator;
 
 use crate::cgroup_view::CgroupState;
+use crate::render::ViewItem;
 use crate::stats_view::StateCommon;
 
-use below_derive::BelowDecor;
-use common::util::{convert_bytes, fold_string, get_prefix};
-use model::CgroupModel;
+use model::{sort_queriables, CgroupModel};
 
 use cursive::utils::markup::StyledString;
 
-// All available sorting tags
-make_sort_order! (CgroupOrders {
-    "cpu_usage": UsagePct,
-    "cpu_user": UserPct,
-    "cpu_sys": SysPct,
-    "nr_periods": NrPeriodsPerSec,
-    "nr_throttled": NrThrottledPerSec,
-    "throttled": ThrottledPct,
-    "mem_total": MemoryTotal,
-    "swap": MemorySwap,
-    "anon": Anon,
-    "file": File,
-    "kernel_stack": KernelStack,
-    "slab": Slab,
-    "sock": Sock,
-    "shmem": Shmem,
-    "file_mapped": FileMapped,
-    "file_dirty": FileDirty,
-    "file_writeback": FileWriteback,
-    "anon_thp": AnonThp,
-    "inactive_anon": InactiveAnon,
-    "active_anon": ActiveAnon,
-    "inactive_file": InactiveFile,
-    "active_file": ActiveFile,
-    "unevictable": Unevictable,
-    "slab_reclaimable": SlabReclaimable,
-    "slab_unreclaimable": SlabUnreclaimable,
-    "pgfault": Pgfault,
-    "pgmajfault": Pgmajfault,
-    "workingset_refault": WorkingsetRefault,
-    "workingset_activate": WorkingsetActivate,
-    "workingset_node_reclaim": WorkingsetNodereclaim,
-    "pgrefill": Pgrefill,
-    "pgscan": Pgscan,
-    "pgsteal": Pgsteal,
-    "pgactivate": Pgactivate,
-    "pgdeactivate": Pgdeactivate,
-    "pglazyfree": Pglazyfree,
-    "pglazyfreed": Pglazyfreed,
-    "thp_fault_alloc": THPFaultAlloc,
-    "thp_collapse_alloc": THPCollapseAlloc,
-    "cpu_some": CpuSomePct,
-    "mem_some": MemorySomePct,
-    "mem_full": MemoryFullPct,
-    "io_some": IoSomePct,
-    "io_full": IoFullPct,
-    "read_bps": RbytesPerSec,
-    "write_bps": WbytesPerSec,
-    "read_iops": RiosPerSec,
-    "write_iops": WiosPerSec,
-    "discard_bps": DbytesPerSec,
-    "discard_iops": DiosPerSec,
-    "rw_total": RwTotal,
-});
+/// Renders corresponding Fields From CgroupModel.
+type CgroupViewItem = ViewItem<model::CgroupModelFieldId>;
 
-impl Default for CgroupOrders {
-    fn default() -> Self {
-        CgroupOrders::Keep
-    }
+/// A collection of CgroupViewItem.
+#[derive(Clone)]
+pub struct CgroupTab {
+    pub view_items: Vec<CgroupViewItem>,
 }
 
-// Defines how to iterate through the cgroup and generate get_rows function for ViewBridge
-pub trait CgroupTab {
-    fn get_title_vec(&self, model: &CgroupModel) -> Vec<String>;
-    fn depth(&mut self) -> &mut usize;
-    fn collapse(&mut self) -> &mut bool;
-    fn get_cgroup_field_line(&self, model: &CgroupModel, offset: Option<usize>) -> StyledString;
-    fn sort_cgroup(&self, sort_order: CgroupOrders, cgroups: &mut Vec<&CgroupModel>, reverse: bool);
+/// Defines how to iterate through the cgroup and generate get_rows function for ViewBridge
+/// First ViewItem is always Name so it's not included in the view_items Vec.
+impl CgroupTab {
+    fn new(view_items: Vec<CgroupViewItem>) -> Self {
+        Self { view_items }
+    }
+
+    fn get_line(
+        &self,
+        model: &CgroupModel,
+        collapsed: bool,
+        offset: Option<usize>,
+    ) -> StyledString {
+        let mut line = if collapsed {
+            &*default_tabs::CGROUP_NAME_ITEM_COLLAPSED
+        } else {
+            &*default_tabs::CGROUP_NAME_ITEM
+        }
+        .render_indented(model);
+        line.append_plain(" ");
+
+        for item in self.view_items.iter().skip(offset.unwrap_or(0)) {
+            line.append(item.render(model));
+            line.append_plain(" ");
+        }
+
+        if model.recreate_flag {
+            line = StyledString::styled(
+                line.source(),
+                cursive::theme::Color::Light(cursive::theme::BaseColor::Green),
+            );
+        }
+
+        line
+    }
+
+    pub fn get_title_vec(&self) -> Vec<String> {
+        std::iter::once(&*default_tabs::CGROUP_NAME_ITEM)
+            .chain(self.view_items.iter())
+            .map(|item| item.config.render_title())
+            .collect()
+    }
+
     fn output_cgroup(
-        &mut self,
+        &self,
         cgroup: &CgroupModel,
         state: &CgroupState,
         filter_out_set: &Option<HashSet<String>>,
         output: &mut Vec<(StyledString, String)>,
         offset: Option<usize>,
     ) {
-        if let Some(set) = &filter_out_set {
-            if set.contains(&cgroup.full_path) {
-                return;
+        let mut cgroup_stack = vec![cgroup];
+        while let Some(cgroup) = cgroup_stack.pop() {
+            if let Some(set) = &filter_out_set {
+                if set.contains(&cgroup.full_path) {
+                    continue;
+                }
             }
-        }
 
-        let collapsed = state.collapsed_cgroups.borrow().contains(&cgroup.full_path);
-        *self.depth() = cgroup.depth as usize;
-        *self.collapse() = collapsed;
-        let row = self.get_cgroup_field_line(&cgroup, offset);
-        // Each row is (label, value), where label is visible and value is used
-        // as identifier to correlate the row with its state in global data.
-        if cgroup.recreate_flag {
-            output.push((row, format!("[RECREATED] {}", cgroup.full_path.clone())));
-        } else {
-            output.push((row, cgroup.full_path.clone()));
-        }
-
-        if collapsed {
-            return;
-        }
-
-        let mut children = Vec::from_iter(&cgroup.children);
-
-        // Here we map the sort order to an index (or for disk, do some custom sorting)
-        self.sort_cgroup(state.sort_order, &mut children, state.reverse);
-
-        // collapse_flag if set, we will insert all direct children to the collapsed_cgroups.
-        // In that case, we will stop at next level.
-        let collapse_flag =
-            if state.collapsed_cgroups.borrow().is_empty() && state.collapse_all_top_level_cgroup {
-                true
+            let collapsed = state.collapsed_cgroups.borrow().contains(&cgroup.full_path);
+            let row = self.get_line(&cgroup, collapsed, offset);
+            // Each row is (label, value), where label is visible and value is used
+            // as identifier to correlate the row with its state in global data.
+            if cgroup.recreate_flag {
+                output.push((row, format!("[RECREATED] {}", &cgroup.full_path)));
             } else {
-                false
-            };
-
-        for child_cgroup in &children {
-            if collapse_flag {
-                state
-                    .collapsed_cgroups
-                    .borrow_mut()
-                    .insert(child_cgroup.full_path.to_string());
+                output.push((row, cgroup.full_path.clone()));
             }
-            self.output_cgroup(child_cgroup, state, filter_out_set, output, offset);
+
+            if collapsed {
+                continue;
+            }
+
+            let mut children = Vec::from_iter(&cgroup.children);
+            if let Some(sort_order) = state.sort_order.as_ref() {
+                sort_queriables(&mut children, sort_order, state.reverse);
+            }
+
+            // Stop at next level (one below <root>)
+            if state.collapse_all_top_level_cgroup {
+                for child_cgroup in &children {
+                    state
+                        .collapsed_cgroups
+                        .borrow_mut()
+                        .insert(child_cgroup.full_path.clone());
+                }
+            }
+            // Push children in reverse order so the first one will be pop first
+            while let Some(child) = children.pop() {
+                cgroup_stack.push(child);
+            }
         }
     }
 
-    fn get_rows(
-        &mut self,
+    pub fn get_rows(
+        &self,
         state: &CgroupState,
         offset: Option<usize>,
     ) -> Vec<(StyledString, String)> {
@@ -209,347 +188,123 @@ pub fn calculate_filter_out_set(cgroup: &CgroupModel, filter: &str) -> HashSet<S
     set
 }
 
-// macro defines common implementation of CgroupTab.
-macro_rules! impl_cgroup_tab {
-    ($name:ident) => {
-        impl CgroupTab for $name {
-            fn get_title_vec(&self, model: &CgroupModel) -> Vec<String> {
-                let mut res: Vec<String> = self
-                    .get_title_pipe(&model)
-                    .trim()
-                    .split("|")
-                    .map(|s| s.to_string())
-                    .collect();
-                res.pop();
-                res
-            }
+pub mod default_tabs {
+    use super::*;
 
-            fn get_cgroup_field_line(
-                &self,
-                model: &CgroupModel,
-                offset: Option<usize>,
-            ) -> StyledString {
-                let mut res = match offset {
-                    Some(offset) => {
-                        let mut field_iter = self.get_field_vec(&model).into_iter();
-                        let mut res = StyledString::new();
-                        if let Some(name) = field_iter.next() {
-                            res.append(name);
-                            res.append_plain(" ")
-                        };
-
-                        field_iter.skip(offset).for_each(|item| {
-                            res.append(item);
-                            res.append_plain(" ")
-                        });
-                        res
-                    }
-                    _ => self.get_field_line(&model),
-                };
-
-                if model.recreate_flag {
-                    res = StyledString::styled(
-                        res.source(),
-                        cursive::theme::Color::Light(cursive::theme::BaseColor::Green),
-                    );
-                }
-
-                res
-            }
-
-            fn sort_cgroup(
-                &self,
-                sort_order: CgroupOrders,
-                cgroups: &mut Vec<&CgroupModel>,
-                reverse: bool,
-            ) {
-                self.sort(sort_order, cgroups, reverse)
-            }
-
-            fn depth(&mut self) -> &mut usize {
-                &mut self.depth
-            }
-
-            fn collapse(&mut self) -> &mut bool {
-                &mut self.collapse
-            }
-        }
+    use base_render::render_config as rc;
+    use common::util::get_prefix;
+    use model::CgroupCpuModelFieldId::{
+        NrPeriodsPerSec, NrThrottledPerSec, SystemPct, ThrottledPct, UsagePct, UserPct,
     };
+    use model::CgroupIoModelFieldId::{
+        DbytesPerSec, DiosPerSec, RbytesPerSec, RiosPerSec, RwbytesPerSec, WbytesPerSec, WiosPerSec,
+    };
+    use model::CgroupMemoryModelFieldId::{
+        ActiveAnon, ActiveFile, Anon, AnonThp, EventsHigh, EventsLow, EventsMax, EventsOom,
+        EventsOomKill, File, FileDirty, FileMapped, FileWriteback, InactiveAnon, InactiveFile,
+        KernelStack, Pgactivate, Pgdeactivate, Pgfault, Pglazyfree, Pglazyfreed, Pgmajfault,
+        Pgrefill, Pgscan, Pgsteal, Shmem, Slab, SlabReclaimable, SlabUnreclaimable, Sock, Swap,
+        ThpCollapseAlloc, ThpFaultAlloc, Total, Unevictable, WorkingsetActivate,
+        WorkingsetNodereclaim, WorkingsetRefault,
+    };
+    use model::CgroupModelFieldId::{Cpu, Io, Mem, Name, Pressure};
+    use model::CgroupPressureModelFieldId::{
+        CpuSomePct, IoFullPct, IoSomePct, MemoryFullPct, MemorySomePct,
+    };
+
+    use once_cell::sync::Lazy;
+
+    pub static CGROUP_NAME_ITEM: Lazy<CgroupViewItem> =
+        Lazy::new(|| ViewItem::from_default(Name).update(rc!(indented_prefix(get_prefix(false)))));
+    pub static CGROUP_NAME_ITEM_COLLAPSED: Lazy<CgroupViewItem> =
+        Lazy::new(|| ViewItem::from_default(Name).update(rc!(indented_prefix(get_prefix(true)))));
+
+    pub static CGROUP_GENERAL_TAB: Lazy<CgroupTab> = Lazy::new(|| {
+        CgroupTab::new(vec![
+            ViewItem::from_default(Cpu(UsagePct)).update(rc!(title("CPU"))),
+            ViewItem::from_default(Mem(Total)),
+            ViewItem::from_default(Pressure(CpuSomePct)),
+            ViewItem::from_default(Pressure(MemoryFullPct)),
+            ViewItem::from_default(Pressure(IoFullPct)),
+            ViewItem::from_default(Io(RbytesPerSec)),
+            ViewItem::from_default(Io(WbytesPerSec)),
+            ViewItem::from_default(Io(RwbytesPerSec)),
+        ])
+    });
+
+    pub static CGROUP_CPU_TAB: Lazy<CgroupTab> = Lazy::new(|| {
+        CgroupTab::new(vec![
+            ViewItem::from_default(Cpu(UsagePct)),
+            ViewItem::from_default(Cpu(UserPct)),
+            ViewItem::from_default(Cpu(SystemPct)),
+            ViewItem::from_default(Cpu(NrPeriodsPerSec)),
+            ViewItem::from_default(Cpu(NrThrottledPerSec)),
+            ViewItem::from_default(Cpu(ThrottledPct)),
+        ])
+    });
+
+    pub static CGROUP_MEM_TAB: Lazy<CgroupTab> = Lazy::new(|| {
+        CgroupTab::new(vec![
+            ViewItem::from_default(Mem(Total)),
+            ViewItem::from_default(Mem(Swap)),
+            ViewItem::from_default(Mem(Anon)),
+            ViewItem::from_default(Mem(File)),
+            ViewItem::from_default(Mem(KernelStack)),
+            ViewItem::from_default(Mem(Slab)),
+            ViewItem::from_default(Mem(Sock)),
+            ViewItem::from_default(Mem(Shmem)),
+            ViewItem::from_default(Mem(FileMapped)),
+            ViewItem::from_default(Mem(FileDirty)),
+            ViewItem::from_default(Mem(FileWriteback)),
+            ViewItem::from_default(Mem(AnonThp)),
+            ViewItem::from_default(Mem(InactiveAnon)),
+            ViewItem::from_default(Mem(ActiveAnon)),
+            ViewItem::from_default(Mem(InactiveFile)),
+            ViewItem::from_default(Mem(ActiveFile)),
+            ViewItem::from_default(Mem(Unevictable)),
+            ViewItem::from_default(Mem(SlabReclaimable)),
+            ViewItem::from_default(Mem(SlabUnreclaimable)),
+            ViewItem::from_default(Mem(Pgfault)),
+            ViewItem::from_default(Mem(Pgmajfault)),
+            ViewItem::from_default(Mem(WorkingsetRefault)),
+            ViewItem::from_default(Mem(WorkingsetActivate)),
+            ViewItem::from_default(Mem(WorkingsetNodereclaim)),
+            ViewItem::from_default(Mem(Pgrefill)),
+            ViewItem::from_default(Mem(Pgscan)),
+            ViewItem::from_default(Mem(Pgsteal)),
+            ViewItem::from_default(Mem(Pgactivate)),
+            ViewItem::from_default(Mem(Pgdeactivate)),
+            ViewItem::from_default(Mem(Pglazyfree)),
+            ViewItem::from_default(Mem(Pglazyfreed)),
+            ViewItem::from_default(Mem(ThpFaultAlloc)),
+            ViewItem::from_default(Mem(ThpCollapseAlloc)),
+            ViewItem::from_default(Mem(EventsLow)),
+            ViewItem::from_default(Mem(EventsHigh)),
+            ViewItem::from_default(Mem(EventsMax)),
+            ViewItem::from_default(Mem(EventsOom)),
+            ViewItem::from_default(Mem(EventsOomKill)),
+        ])
+    });
+
+    pub static CGROUP_IO_TAB: Lazy<CgroupTab> = Lazy::new(|| {
+        CgroupTab::new(vec![
+            ViewItem::from_default(Io(RbytesPerSec)),
+            ViewItem::from_default(Io(WbytesPerSec)),
+            ViewItem::from_default(Io(DbytesPerSec)),
+            ViewItem::from_default(Io(RiosPerSec)),
+            ViewItem::from_default(Io(WiosPerSec)),
+            ViewItem::from_default(Io(DiosPerSec)),
+            ViewItem::from_default(Io(RwbytesPerSec)),
+        ])
+    });
+
+    pub static CGROUP_PRESSURE_TAB: Lazy<CgroupTab> = Lazy::new(|| {
+        CgroupTab::new(vec![
+            ViewItem::from_default(Pressure(CpuSomePct)),
+            ViewItem::from_default(Pressure(MemorySomePct)),
+            ViewItem::from_default(Pressure(MemoryFullPct)),
+            ViewItem::from_default(Pressure(IoSomePct)),
+            ViewItem::from_default(Pressure(IoFullPct)),
+        ])
+    });
 }
-
-#[derive(BelowDecor, Default, Clone)]
-pub struct CgroupGeneral {
-    #[blink("CgroupModel$get_name")]
-    #[bttr(
-        depth = "self.depth * 3",
-        prefix = "get_prefix(self.collapse)",
-        decorator = "fold_string(&$, 50 - self.depth.clone() * 3, 0, |c: char| !char::is_alphanumeric(c))"
-    )]
-    pub name: String,
-    #[blink("CgroupModel$cpu?.get_usage_pct")]
-    #[bttr(title = "CPU", sort_tag = "CgroupOrders::UsagePct")]
-    pub cpu_usage_pct: Option<f64>,
-    #[blink("CgroupModel$memory?.get_total")]
-    #[bttr(sort_tag = "CgroupOrders::MemoryTotal")]
-    pub memory_total: Option<u64>,
-    #[blink("CgroupModel$pressure?.get_cpu_some_pct")]
-    #[bttr(sort_tag = "CgroupOrders::CpuSomePct")]
-    pub pressure_cpu_some_pct: Option<f64>,
-    #[blink("CgroupModel$pressure?.get_memory_full_pct")]
-    #[bttr(sort_tag = "CgroupOrders::MemoryFullPct")]
-    pub pressure_memory_full_pct: Option<f64>,
-    #[blink("CgroupModel$pressure?.get_io_full_pct")]
-    #[bttr(sort_tag = "CgroupOrders::IoFullPct")]
-    pub pressure_io_full_pct: Option<f64>,
-    #[blink("CgroupModel$io_total?.get_rbytes_per_sec")]
-    #[bttr(sort_tag = "CgroupOrders::RbytesPerSec")]
-    pub io_total_rbytes_per_sec: Option<f64>,
-    #[blink("CgroupModel$io_total?.get_wbytes_per_sec")]
-    #[bttr(sort_tag = "CgroupOrders::WbytesPerSec")]
-    pub io_total_wbytes_per_sec: Option<f64>,
-    #[bttr(
-        title = "RW Total",
-        width = 10,
-        sort_tag = "CgroupOrders::RwTotal",
-        decorator = "convert_bytes($ as f64)",
-        unit = "/s"
-    )]
-    #[blink("CgroupModel$io_total?.get_rbytes_per_sec")]
-    #[blink("CgroupModel$io_total?.get_wbytes_per_sec")]
-    pub disk: Option<f64>,
-    depth: usize,
-    collapse: bool,
-}
-
-impl_cgroup_tab!(CgroupGeneral);
-
-#[derive(BelowDecor, Default, Clone)]
-pub struct CgroupCPU {
-    #[blink("CgroupModel$get_name")]
-    #[bttr(
-        depth = "self.depth * 3",
-        prefix = "get_prefix(self.collapse)",
-        decorator = "fold_string(&$, 50 - self.depth * 3, 0, |c: char| !char::is_alphanumeric(c))"
-    )]
-    pub name: String,
-    #[blink("CgroupModel$cpu?.get_usage_pct")]
-    #[bttr(sort_tag = "CgroupOrders::UsagePct")]
-    pub usage_pct: Option<f64>,
-    #[blink("CgroupModel$cpu?.get_user_pct")]
-    #[bttr(sort_tag = "CgroupOrders::UserPct")]
-    pub user_pct: Option<f64>,
-    #[blink("CgroupModel$cpu?.get_system_pct")]
-    #[bttr(sort_tag = "CgroupOrders::SysPct")]
-    pub system_pct: Option<f64>,
-    #[blink("CgroupModel$cpu?.get_nr_periods_per_sec")]
-    #[bttr(sort_tag = "CgroupOrders::NrPeriodsPerSec")]
-    pub nr_periods_per_sec: Option<f64>,
-    #[blink("CgroupModel$cpu?.get_nr_throttled_per_sec")]
-    #[bttr(sort_tag = "CgroupOrders::NrThrottledPerSec")]
-    pub nr_throttled_per_sec: Option<f64>,
-    #[blink("CgroupModel$cpu?.get_throttled_pct")]
-    #[bttr(sort_tag = "CgroupOrders::ThrottledPct")]
-    pub throttled_pct: Option<f64>,
-    depth: usize,
-    collapse: bool,
-}
-
-impl_cgroup_tab!(CgroupCPU);
-
-#[derive(BelowDecor, Default, Clone)]
-pub struct CgroupMem {
-    #[blink("CgroupModel$get_name")]
-    #[bttr(
-        depth = "self.depth * 3",
-        prefix = "get_prefix(self.collapse)",
-        decorator = "fold_string(&$, 50 - self.depth * 3, 0, |c: char| !char::is_alphanumeric(c))"
-    )]
-    pub name: String,
-    #[blink("CgroupModel$memory?.get_total")]
-    #[bttr(sort_tag = "CgroupOrders::MemoryTotal")]
-    pub memory_total: Option<u64>,
-    #[blink("CgroupModel$memory?.get_swap")]
-    #[bttr(sort_tag = "CgroupOrders::MemorySwap")]
-    pub memory_swap: Option<u64>,
-    #[blink("CgroupModel$memory?.get_anon")]
-    #[bttr(sort_tag = "CgroupOrders::Anon")]
-    pub anon: Option<u64>,
-    #[blink("CgroupModel$memory?.get_file")]
-    #[bttr(sort_tag = "CgroupOrders::File")]
-    pub file: Option<u64>,
-    #[blink("CgroupModel$memory?.get_kernel_stack")]
-    #[bttr(sort_tag = "CgroupOrders::KernelStack")]
-    pub kernel_stack: Option<u64>,
-    #[blink("CgroupModel$memory?.get_slab")]
-    #[bttr(sort_tag = "CgroupOrders::Slab")]
-    pub slab: Option<u64>,
-    #[blink("CgroupModel$memory?.get_sock")]
-    #[bttr(sort_tag = "CgroupOrders::Sock")]
-    pub sock: Option<u64>,
-    #[blink("CgroupModel$memory?.get_shmem")]
-    #[bttr(sort_tag = "CgroupOrders::Shmem")]
-    pub shmem: Option<u64>,
-    #[blink("CgroupModel$memory?.get_file_mapped")]
-    #[bttr(sort_tag = "CgroupOrders::FileMapped")]
-    pub file_mapped: Option<u64>,
-    #[blink("CgroupModel$memory?.get_file_dirty")]
-    #[bttr(sort_tag = "CgroupOrders::FileDirty")]
-    pub file_dirty: Option<u64>,
-    #[blink("CgroupModel$memory?.get_file_writeback")]
-    #[bttr(sort_tag = "CgroupOrders::FileWriteback")]
-    pub file_writeback: Option<u64>,
-    #[blink("CgroupModel$memory?.get_anon_thp")]
-    #[bttr(sort_tag = "CgroupOrders::AnonThp")]
-    pub anon_thp: Option<u64>,
-    #[blink("CgroupModel$memory?.get_inactive_anon")]
-    #[bttr(sort_tag = "CgroupOrders::InactiveAnon")]
-    pub inactive_anon: Option<u64>,
-    #[blink("CgroupModel$memory?.get_active_anon")]
-    #[bttr(sort_tag = "CgroupOrders::ActiveAnon")]
-    pub active_anon: Option<u64>,
-    #[blink("CgroupModel$memory?.get_inactive_file")]
-    #[bttr(sort_tag = "CgroupOrders::InactiveFile")]
-    pub inactive_file: Option<u64>,
-    #[blink("CgroupModel$memory?.get_active_file")]
-    #[bttr(sort_tag = "CgroupOrders::ActiveFile")]
-    pub active_file: Option<u64>,
-    #[blink("CgroupModel$memory?.get_unevictable")]
-    #[bttr(sort_tag = "CgroupOrders::Unevictable")]
-    pub unevictable: Option<u64>,
-    #[blink("CgroupModel$memory?.get_slab_reclaimable")]
-    #[bttr(sort_tag = "CgroupOrders::SlabReclaimable")]
-    pub slab_reclaimable: Option<u64>,
-    #[blink("CgroupModel$memory?.get_slab_unreclaimable")]
-    #[bttr(sort_tag = "CgroupOrders::SlabUnreclaimable")]
-    pub slab_unreclaimable: Option<u64>,
-    #[blink("CgroupModel$memory?.get_pgfault")]
-    #[bttr(sort_tag = "CgroupOrders::Pgfault")]
-    pub pgfault: Option<u64>,
-    #[blink("CgroupModel$memory?.get_pgmajfault")]
-    #[bttr(sort_tag = "CgroupOrders::Pgmajfault")]
-    pub pgmajfault: Option<u64>,
-    #[blink("CgroupModel$memory?.get_workingset_refault")]
-    #[bttr(sort_tag = "CgroupOrders::WorkingsetRefault")]
-    pub workingset_refault: Option<u64>,
-    #[blink("CgroupModel$memory?.get_workingset_activate")]
-    #[bttr(sort_tag = "CgroupOrders::WorkingsetActivate")]
-    pub workingset_activate: Option<u64>,
-    #[blink("CgroupModel$memory?.get_workingset_nodereclaim")]
-    #[bttr(sort_tag = "CgroupOrders::WorkingsetNodereclaim")]
-    pub workingset_nodereclaim: Option<u64>,
-    #[blink("CgroupModel$memory?.get_pgrefill")]
-    #[bttr(sort_tag = "CgroupOrders::Pgrefill")]
-    pub pgrefill: Option<u64>,
-    #[blink("CgroupModel$memory?.get_pgscan")]
-    #[bttr(sort_tag = "CgroupOrders::Pgscan")]
-    pub pgscan: Option<u64>,
-    #[blink("CgroupModel$memory?.get_pgsteal")]
-    #[bttr(sort_tag = "CgroupOrders::Pgsteal")]
-    pub pgsteal: Option<u64>,
-    #[blink("CgroupModel$memory?.get_pgactivate")]
-    #[bttr(sort_tag = "CgroupOrders::Pgactivate")]
-    pub pgactivate: Option<u64>,
-    #[blink("CgroupModel$memory?.get_pgdeactivate")]
-    #[bttr(sort_tag = "CgroupOrders::Pgdeactivate")]
-    pub pgdeactivate: Option<u64>,
-    #[blink("CgroupModel$memory?.get_pglazyfree")]
-    #[bttr(sort_tag = "CgroupOrders::Pglazyfree")]
-    pub pglazyfree: Option<u64>,
-    #[blink("CgroupModel$memory?.get_pglazyfreed")]
-    #[bttr(sort_tag = "CgroupOrders::Pglazyfreed")]
-    pub pglazyfreed: Option<u64>,
-    #[blink("CgroupModel$memory?.get_thp_fault_alloc")]
-    #[bttr(sort_tag = "CgroupOrders::THPFaultAlloc")]
-    pub thp_fault_alloc: Option<u64>,
-    #[blink("CgroupModel$memory?.get_thp_collapse_alloc")]
-    #[bttr(sort_tag = "CgroupOrders::THPCollapseAlloc")]
-    pub thp_collapse_alloc: Option<u64>,
-    #[blink("CgroupModel$memory?.get_events_low")]
-    pub events_low: Option<u64>,
-    #[blink("CgroupModel$memory?.get_events_high")]
-    pub events_high: Option<u64>,
-    #[blink("CgroupModel$memory?.get_events_max")]
-    pub events_max: Option<u64>,
-    #[blink("CgroupModel$memory?.get_events_oom")]
-    pub events_oom: Option<u64>,
-    #[blink("CgroupModel$memory?.get_events_oom_kill")]
-    pub events_oom_kill: Option<u64>,
-    depth: usize,
-    collapse: bool,
-}
-
-impl_cgroup_tab!(CgroupMem);
-
-#[derive(BelowDecor, Default, Clone)]
-pub struct CgroupIO {
-    #[blink("CgroupModel$get_name")]
-    #[bttr(
-        depth = "self.depth * 3",
-        prefix = "get_prefix(self.collapse)",
-        decorator = "fold_string(&$, 50 - self.depth * 3, 0, |c: char| !char::is_alphanumeric(c))"
-    )]
-    pub name: String,
-    #[blink("CgroupModel$io_total?.get_rbytes_per_sec")]
-    #[bttr(sort_tag = "CgroupOrders::RbytesPerSec")]
-    pub rbytes_per_sec: Option<f64>,
-    #[blink("CgroupModel$io_total?.get_wbytes_per_sec")]
-    #[bttr(sort_tag = "CgroupOrders::WbytesPerSec")]
-    pub wbytes_per_sec: Option<f64>,
-    #[blink("CgroupModel$io_total?.get_dbytes_per_sec")]
-    #[bttr(sort_tag = "CgroupOrders::DbytesPerSec")]
-    pub dbytes_per_sec: Option<f64>,
-    #[blink("CgroupModel$io_total?.get_rios_per_sec")]
-    #[bttr(sort_tag = "CgroupOrders::RiosPerSec")]
-    pub rios_per_sec: Option<f64>,
-    #[blink("CgroupModel$io_total?.get_wios_per_sec")]
-    #[bttr(sort_tag = "CgroupOrders::WiosPerSec")]
-    pub wios_per_sec: Option<f64>,
-    #[blink("CgroupModel$io_total?.get_dios_per_sec")]
-    #[bttr(sort_tag = "CgroupOrders::DiosPerSec")]
-    pub dios_per_sec: Option<f64>,
-    #[bttr(
-        width = 16,
-        unit = "/s",
-        decorator = "convert_bytes($ as f64)",
-        title = "Read/Write Total",
-        sort_tag = "CgroupOrders::RwTotal"
-    )]
-    #[blink("CgroupModel$io_total?.get_rbytes_per_sec")]
-    #[blink("CgroupModel$io_total?.get_wbytes_per_sec")]
-    pub rw_total: Option<f64>,
-    depth: usize,
-    collapse: bool,
-}
-
-impl_cgroup_tab!(CgroupIO);
-
-#[derive(BelowDecor, Default, Clone)]
-pub struct CgroupPressure {
-    #[blink("CgroupModel$get_name")]
-    #[bttr(
-        depth = "self.depth * 3",
-        prefix = "get_prefix(self.collapse)",
-        decorator = "fold_string(&$, 50 - self.depth * 3, 0, |c: char| !char::is_alphanumeric(c))"
-    )]
-    pub name: String,
-    #[blink("CgroupModel$pressure?.get_cpu_some_pct")]
-    #[bttr(sort_tag = "CgroupOrders::CpuSomePct")]
-    pub cpu_some_pct: Option<f64>,
-    #[blink("CgroupModel$pressure?.get_memory_some_pct")]
-    #[bttr(sort_tag = "CgroupOrders::MemorySomePct")]
-    pub pressure_memory_some_pct: Option<f64>,
-    #[blink("CgroupModel$pressure?.get_memory_full_pct")]
-    #[bttr(sort_tag = "CgroupOrders::MemoryFullPct")]
-    pub pressure_memory_full_pct: Option<f64>,
-    #[blink("CgroupModel$pressure?.get_io_some_pct")]
-    #[bttr(sort_tag = "CgroupOrders::IoSomePct")]
-    pub pressure_io_some_pct: Option<f64>,
-    #[blink("CgroupModel$pressure?.get_io_full_pct")]
-    #[bttr(sort_tag = "CgroupOrders::IoFullPct")]
-    pub pressure_io_full_pct: Option<f64>,
-    pub rw_total: Option<f64>,
-    depth: usize,
-    collapse: bool,
-}
-
-impl_cgroup_tab!(CgroupPressure);

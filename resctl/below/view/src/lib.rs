@@ -66,6 +66,8 @@ use toml::value::Value;
 use common::open_source_shim;
 use model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
 use store::advance::Advance;
+#[macro_use]
+extern crate render as base_render;
 
 open_source_shim!();
 
@@ -76,10 +78,12 @@ pub mod cgroup_view;
 pub mod command_palette;
 mod core_tabs;
 mod core_view;
+mod default_styles;
 mod filter_popup;
 mod help_menu;
 mod process_tabs;
 mod process_view;
+mod render;
 mod status_bar;
 mod system_view;
 mod tab_view;
