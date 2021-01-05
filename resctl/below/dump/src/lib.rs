@@ -50,10 +50,7 @@ pub mod tmain;
 pub mod transport;
 
 pub use command::DumpCommand;
-use command::{
-    expand_fields, DiskField, GeneralOpt, IfaceField, NetworkField, OutputFormat, ProcField,
-    SysField, TransportField,
-};
+use command::{expand_fields, DiskField, GeneralOpt, OutputFormat, ProcField, SysField};
 use fill::Dfill;
 use get::Dget;
 use print::{Dprint, HasRenderConfigForDump};
@@ -100,6 +97,10 @@ pub enum DumpField<F: FieldId> {
 }
 
 pub type CgroupField = DumpField<model::CgroupModelFieldId>;
+pub type NetworkField = DumpField<model::NetworkModelFieldId>;
+pub type IfaceField = DumpField<model::SingleNetModelFieldId>;
+// Essentially the same as NetworkField
+pub type TransportField = DumpField<model::NetworkModelFieldId>;
 
 // The DumpType trait is the key of how we make our dump generic.
 // Basically, the DumpType trait will be required by all dump related
@@ -300,43 +301,101 @@ pub fn run(
             pattern,
         } => {
             let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
-            let mut iface = iface::Iface::new(opts, advance, time_end, select);
-            if let Some(pattern_key) = pattern {
-                iface.init(parse_pattern(filename, pattern_key, "iface"));
+            let default = opts.everything || opts.default;
+            let detail = opts.everything || opts.detail;
+            let fields = if let Some(pattern_key) = pattern {
+                parse_pattern(filename, pattern_key, "iface")
             } else {
-                iface.init(fields);
-            }
-            iface.exec()
+                fields
+            };
+            let fields = expand_fields(
+                match fields.as_ref() {
+                    Some(fields) if !default => fields,
+                    _ => command::DEFAULT_IFACE_FIELDS,
+                },
+                detail,
+            );
+            let iface = iface::Iface::new(&opts, select, fields);
+            let mut output: Box<dyn Write> = match opts.output.as_ref() {
+                Some(file_path) => Box::new(File::create(file_path)?),
+                None => Box::new(io::stdout()),
+            };
+            dump_timeseries(
+                advance,
+                time_end,
+                &iface,
+                output.as_mut(),
+                opts.output_format,
+                opts.br,
+            )
         }
         DumpCommand::Network {
             fields,
             opts,
-            select,
             pattern,
         } => {
             let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
-            let mut network = network::Network::new(opts, advance, time_end, select);
-            if let Some(pattern_key) = pattern {
-                network.init(parse_pattern(filename, pattern_key, "network"));
+            let default = opts.everything || opts.default;
+            let detail = opts.everything || opts.detail;
+            let fields = if let Some(pattern_key) = pattern {
+                parse_pattern(filename, pattern_key, "network")
             } else {
-                network.init(fields);
-            }
-            network.exec()
+                fields
+            };
+            let fields = expand_fields(
+                match fields.as_ref() {
+                    Some(fields) if !default => fields,
+                    _ => command::DEFAULT_NETWORK_FIELDS,
+                },
+                detail,
+            );
+            let network = network::Network::new(&opts, fields);
+            let mut output: Box<dyn Write> = match opts.output.as_ref() {
+                Some(file_path) => Box::new(File::create(file_path)?),
+                None => Box::new(io::stdout()),
+            };
+            dump_timeseries(
+                advance,
+                time_end,
+                &network,
+                output.as_mut(),
+                opts.output_format,
+                opts.br,
+            )
         }
         DumpCommand::Transport {
             fields,
             opts,
-            select,
             pattern,
         } => {
             let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
-            let mut transport = transport::Transport::new(opts, advance, time_end, select);
-            if let Some(pattern_key) = pattern {
-                transport.init(parse_pattern(filename, pattern_key, "transport"));
+            let default = opts.everything || opts.default;
+            let detail = opts.everything || opts.detail;
+            let fields = if let Some(pattern_key) = pattern {
+                parse_pattern(filename, pattern_key, "transport")
             } else {
-                transport.init(fields);
-            }
-            transport.exec()
+                fields
+            };
+            let fields = expand_fields(
+                match fields.as_ref() {
+                    Some(fields) if !default => fields,
+                    _ => command::DEFAULT_TRANSPORT_FIELDS,
+                },
+                detail,
+            );
+            let transport = transport::Transport::new(&opts, fields);
+            let mut output: Box<dyn Write> = match opts.output.as_ref() {
+                Some(file_path) => Box::new(File::create(file_path)?),
+                None => Box::new(io::stdout()),
+            };
+            dump_timeseries(
+                advance,
+                time_end,
+                &transport,
+                output.as_mut(),
+                opts.output_format,
+                opts.br,
+            )
         }
     }
 }

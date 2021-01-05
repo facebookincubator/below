@@ -767,22 +767,20 @@ fn test_dump_iface_content() {
     let mut collector = Collector::new(get_dummy_exit_data());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
-    let time = SystemTime::now();
-    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
 
     let mut opts: GeneralOpt = Default::default();
-    opts.everything = true;
+    let fields = command::expand_fields(command::DEFAULT_IFACE_FIELDS, true);
     opts.output_format = Some(OutputFormat::Json);
-    let mut iface_handle = iface::Iface::new(opts, advance, time, None);
-    iface_handle.init(None);
+    let iface_dumper = iface::Iface::new(&opts, None, fields);
 
     // update model again to populate net data
     let model = collector.update_model(&logger).expect("Fail to get model");
     let mut iface_content = StrIo::new();
     let mut round = 0;
-    iface_handle
-        .iterate_exec(&model, &mut iface_content, &mut round, false)
-        .expect("Fail to get json from iterate_exec");
+    let ctx = CommonFieldContext { timestamp: 0 };
+    iface_dumper
+        .dump_model(&ctx, &model, &mut iface_content, &mut round, false)
+        .expect("Failed to dump cgroup model");
 
     // verify json correctness
     assert!(!iface_content.content.is_empty());
@@ -792,7 +790,7 @@ fn test_dump_iface_content() {
     // verify content correctness, test first 5 should be enough
     let mut count = 5;
     for value in jval.as_array().unwrap() {
-        let iface = value["interface"].as_str().unwrap();
+        let iface = value["Interface"].as_str().unwrap();
         let snm = model
             .network
             .interfaces
@@ -812,11 +810,11 @@ fn test_dump_iface_content() {
             snm.get_throughput_per_sec_str()
         );
         assert_eq!(
-            value["RX pkts/s"].as_str().unwrap(),
+            value["RX Pkts/s"].as_str().unwrap(),
             snm.get_rx_packets_per_sec_str()
         );
         assert_eq!(
-            value["TX pkts/s"].as_str().unwrap(),
+            value["TX Pkts/s"].as_str().unwrap(),
             snm.get_tx_packets_per_sec_str()
         );
         assert_eq!(
@@ -923,189 +921,179 @@ fn test_dump_network_content() {
     let mut collector = Collector::new(get_dummy_exit_data());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
-    let time = SystemTime::now();
-    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
 
     let mut opts: GeneralOpt = Default::default();
-    opts.everything = true;
+    let fields = command::expand_fields(command::DEFAULT_NETWORK_FIELDS, true);
     opts.output_format = Some(OutputFormat::Json);
-    let mut network_handle = network::Network::new(opts, advance, time, None);
-    network_handle.init(None);
+    let network_dumper = network::Network::new(&opts, fields);
 
     // update model again to populate net data
     let model = collector.update_model(&logger).expect("Fail to get model");
     let mut network_content = StrIo::new();
     let mut round = 0;
-    network_handle
-        .iterate_exec(&model, &mut network_content, &mut round, false)
-        .expect("Fail to get json from iterate_exec");
+    let ctx = CommonFieldContext { timestamp: 0 };
+    network_dumper
+        .dump_model(&ctx, &model, &mut network_content, &mut round, false)
+        .expect("Failed to dump cgroup model");
 
     // verify json correctness
     assert!(!network_content.content.is_empty());
     let jval: Value =
         serde_json::from_str(&network_content.content).expect("Fail parse json of network dump");
 
-    // verify content correctness, test first 5 should be enough
-    let mut count = 5;
     let nm = model.network;
-    for value in jval.as_array().unwrap() {
-        // ip
-        assert_eq!(
-            value["IpInPkts/s"].as_str().unwrap(),
-            nm.ip.get_in_receives_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["IpForwPkts/s"].as_str().unwrap(),
-            nm.ip.get_forwarding_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["IpForwDatagrams/s"].as_str().unwrap(),
-            nm.ip.get_forw_datagrams_per_sec_str()
-        );
-        assert_eq!(
-            value["IpInDiscardPkts/s"].as_str().unwrap(),
-            nm.ip.get_in_discards_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["IpInDeliversPkts/s"].as_str().unwrap(),
-            nm.ip.get_in_delivers_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["IpOutReqs/s"].as_str().unwrap(),
-            nm.ip.get_out_requests_per_sec_str()
-        );
-        assert_eq!(
-            value["IpOutDiscardPkts/s"].as_str().unwrap(),
-            nm.ip.get_out_discards_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["IpOutNoRoutesPkts/s"].as_str().unwrap(),
-            nm.ip.get_out_no_routes_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["IpInMcastPkts/s"].as_str().unwrap(),
-            nm.ip.get_in_mcast_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["IpOutMcastPkts/s"].as_str().unwrap(),
-            nm.ip.get_out_mcast_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["IpInBcastPkts/s"].as_str().unwrap(),
-            nm.ip.get_in_bcast_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["IpOutBcastPkts/s"].as_str().unwrap(),
-            nm.ip.get_out_bcast_pkts_per_sec_str()
-        );
-        //ip6
-        assert_eq!(
-            value["Ip6InPkts/s"].as_str().unwrap(),
-            nm.ip6.get_in_receives_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["Ip6InHdrErrs"].as_str().unwrap(),
-            nm.ip6.get_in_hdr_errors_str()
-        );
-        assert_eq!(
-            value["Ip6InNoRoutesPkts/s"].as_str().unwrap(),
-            nm.ip6.get_in_no_routes_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["Ip6InAddrErrs"].as_str().unwrap(),
-            nm.ip6.get_in_addr_errors_str()
-        );
-        assert_eq!(
-            value["Ip6InDiscardsPkts/s"].as_str().unwrap(),
-            nm.ip6.get_in_discards_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["Ip6InDeliversPkts/s"].as_str().unwrap(),
-            nm.ip6.get_in_delivers_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["Ip6ForwDatagrams/s"].as_str().unwrap(),
-            nm.ip6.get_out_forw_datagrams_per_sec_str()
-        );
-        assert_eq!(
-            value["Ip6OutReqs/s"].as_str().unwrap(),
-            nm.ip6.get_out_requests_per_sec_str()
-        );
-        assert_eq!(
-            value["Ip6OutNoRoutesPkts/s"].as_str().unwrap(),
-            nm.ip6.get_out_no_routes_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["Ip6InMcastPkts/s"].as_str().unwrap(),
-            nm.ip6.get_in_mcast_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["Ip6OutMcastPkts/s"].as_str().unwrap(),
-            nm.ip6.get_out_mcast_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["Ip6InBcastOctets/s"].as_str().unwrap(),
-            nm.ip6.get_in_bcast_octets_per_sec_str()
-        );
-        assert_eq!(
-            value["Ip6OutBcastOctets/s"].as_str().unwrap(),
-            nm.ip6.get_out_bcast_octets_per_sec_str()
-        );
-        //Icmp
-        assert_eq!(
-            value["IcmpInMsg/s"].as_str().unwrap(),
-            nm.icmp.get_in_msgs_per_sec_str()
-        );
-        assert_eq!(
-            value["IcmpInErrs"].as_str().unwrap(),
-            nm.icmp.get_in_errors_str()
-        );
-        assert_eq!(
-            value["IcmpInDestUnreachs"].as_str().unwrap(),
-            nm.icmp.get_in_dest_unreachs_str()
-        );
-        assert_eq!(
-            value["IcmpOutMsg/s"].as_str().unwrap(),
-            nm.icmp.get_out_msgs_per_sec_str()
-        );
-        assert_eq!(
-            value["IcmpOutErrs"].as_str().unwrap(),
-            nm.icmp.get_out_errors_str()
-        );
-        assert_eq!(
-            value["IcmpOutDestUnreachs"].as_str().unwrap(),
-            nm.icmp.get_out_dest_unreachs_str()
-        );
-        //Icmp6
-        assert_eq!(
-            value["Icmp6InMsg/s"].as_str().unwrap(),
-            nm.icmp6.get_in_msgs_per_sec_str()
-        );
-        assert_eq!(
-            value["Icmp6InErrs"].as_str().unwrap(),
-            nm.icmp6.get_in_errors_str()
-        );
-        assert_eq!(
-            value["Icmp6InDestUnreachs"].as_str().unwrap(),
-            nm.icmp6.get_in_dest_unreachs_str()
-        );
-        assert_eq!(
-            value["Icmp6OutMsg/s"].as_str().unwrap(),
-            nm.icmp6.get_out_msgs_per_sec_str()
-        );
-        assert_eq!(
-            value["Icmp6OutErrs"].as_str().unwrap(),
-            nm.icmp6.get_out_errors_str()
-        );
-        assert_eq!(
-            value["Icmp6OutDestUnreachs"].as_str().unwrap(),
-            nm.icmp6.get_out_dest_unreachs_str()
-        );
-        count -= 1;
-        if count == 0 {
-            break;
-        }
-    }
+    // ip
+    assert_eq!(
+        jval["IpInPkts/s"].as_str().unwrap(),
+        nm.ip.get_in_receives_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["IpForwPkts/s"].as_str().unwrap(),
+        nm.ip.get_forwarding_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["IpForwDatagrams/s"].as_str().unwrap(),
+        nm.ip.get_forw_datagrams_per_sec_str()
+    );
+    assert_eq!(
+        jval["IpInDiscardPkts/s"].as_str().unwrap(),
+        nm.ip.get_in_discards_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["IpInDeliversPkts/s"].as_str().unwrap(),
+        nm.ip.get_in_delivers_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["IpOutReqs/s"].as_str().unwrap(),
+        nm.ip.get_out_requests_per_sec_str()
+    );
+    assert_eq!(
+        jval["IpOutDiscardPkts/s"].as_str().unwrap(),
+        nm.ip.get_out_discards_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["IpOutNoRoutesPkts/s"].as_str().unwrap(),
+        nm.ip.get_out_no_routes_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["IpInMcastPkts/s"].as_str().unwrap(),
+        nm.ip.get_in_mcast_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["IpOutMcastPkts/s"].as_str().unwrap(),
+        nm.ip.get_out_mcast_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["IpInBcastPkts/s"].as_str().unwrap(),
+        nm.ip.get_in_bcast_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["IpOutBcastPkts/s"].as_str().unwrap(),
+        nm.ip.get_out_bcast_pkts_per_sec_str()
+    );
+    //ip6
+    assert_eq!(
+        jval["Ip6InPkts/s"].as_str().unwrap(),
+        nm.ip6.get_in_receives_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["Ip6InHdrErrs"].as_str().unwrap(),
+        nm.ip6.get_in_hdr_errors_str()
+    );
+    assert_eq!(
+        jval["Ip6InNoRoutesPkts/s"].as_str().unwrap(),
+        nm.ip6.get_in_no_routes_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["Ip6InAddrErrs"].as_str().unwrap(),
+        nm.ip6.get_in_addr_errors_str()
+    );
+    assert_eq!(
+        jval["Ip6InDiscardsPkts/s"].as_str().unwrap(),
+        nm.ip6.get_in_discards_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["Ip6InDeliversPkts/s"].as_str().unwrap(),
+        nm.ip6.get_in_delivers_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["Ip6ForwDatagrams/s"].as_str().unwrap(),
+        nm.ip6.get_out_forw_datagrams_per_sec_str()
+    );
+    assert_eq!(
+        jval["Ip6OutReqs/s"].as_str().unwrap(),
+        nm.ip6.get_out_requests_per_sec_str()
+    );
+    assert_eq!(
+        jval["Ip6OutNoRoutesPkts/s"].as_str().unwrap(),
+        nm.ip6.get_out_no_routes_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["Ip6InMcastPkts/s"].as_str().unwrap(),
+        nm.ip6.get_in_mcast_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["Ip6OutMcastPkts/s"].as_str().unwrap(),
+        nm.ip6.get_out_mcast_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["Ip6InBcastOctets/s"].as_str().unwrap(),
+        nm.ip6.get_in_bcast_octets_per_sec_str()
+    );
+    assert_eq!(
+        jval["Ip6OutBcastOctets/s"].as_str().unwrap(),
+        nm.ip6.get_out_bcast_octets_per_sec_str()
+    );
+    //Icmp
+    assert_eq!(
+        jval["IcmpInMsg/s"].as_str().unwrap(),
+        nm.icmp.get_in_msgs_per_sec_str()
+    );
+    assert_eq!(
+        jval["IcmpInErrs"].as_str().unwrap(),
+        nm.icmp.get_in_errors_str()
+    );
+    assert_eq!(
+        jval["IcmpInDestUnreachs"].as_str().unwrap(),
+        nm.icmp.get_in_dest_unreachs_str()
+    );
+    assert_eq!(
+        jval["IcmpOutMsg/s"].as_str().unwrap(),
+        nm.icmp.get_out_msgs_per_sec_str()
+    );
+    assert_eq!(
+        jval["IcmpOutErrs"].as_str().unwrap(),
+        nm.icmp.get_out_errors_str()
+    );
+    assert_eq!(
+        jval["IcmpOutDestUnreachs"].as_str().unwrap(),
+        nm.icmp.get_out_dest_unreachs_str()
+    );
+    //Icmp6
+    assert_eq!(
+        jval["Icmp6InMsg/s"].as_str().unwrap(),
+        nm.icmp6.get_in_msgs_per_sec_str()
+    );
+    assert_eq!(
+        jval["Icmp6InErrs"].as_str().unwrap(),
+        nm.icmp6.get_in_errors_str()
+    );
+    assert_eq!(
+        jval["Icmp6InDestUnreachs"].as_str().unwrap(),
+        nm.icmp6.get_in_dest_unreachs_str()
+    );
+    assert_eq!(
+        jval["Icmp6OutMsg/s"].as_str().unwrap(),
+        nm.icmp6.get_out_msgs_per_sec_str()
+    );
+    assert_eq!(
+        jval["Icmp6OutErrs"].as_str().unwrap(),
+        nm.icmp6.get_out_errors_str()
+    );
+    assert_eq!(
+        jval["Icmp6OutDestUnreachs"].as_str().unwrap(),
+        nm.icmp6.get_out_dest_unreachs_str()
+    );
 }
 
 #[test]
@@ -1115,147 +1103,136 @@ fn test_dump_transport_content() {
     let mut collector = Collector::new(get_dummy_exit_data());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
-    let time = SystemTime::now();
-    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
 
     let mut opts: GeneralOpt = Default::default();
-    opts.everything = true;
+    let fields = command::expand_fields(command::DEFAULT_TRANSPORT_FIELDS, true);
     opts.output_format = Some(OutputFormat::Json);
-    let mut transport_handle = transport::Transport::new(opts, advance, time, None);
-    transport_handle.init(None);
+    let transport_dumper = transport::Transport::new(&opts, fields);
 
     // update model again to populate net data
     let model = collector.update_model(&logger).expect("Fail to get model");
     let mut transport_content = StrIo::new();
     let mut round = 0;
-    transport_handle
-        .iterate_exec(&model, &mut transport_content, &mut round, false)
-        .expect("Fail to get json from iterate_exec");
+    let ctx = CommonFieldContext { timestamp: 0 };
+    transport_dumper
+        .dump_model(&ctx, &model, &mut transport_content, &mut round, false)
+        .expect("Failed to dump cgroup model");
 
     // verify json correctness
     assert!(!transport_content.content.is_empty());
     let jval: Value =
         serde_json::from_str(&transport_content.content).expect("Fail parse json of network dump");
 
-    // verify content correctness, test first 5 should be enough
-    let mut count = 5;
     let nm = model.network;
-    for value in jval.as_array().unwrap() {
-        // ip
-        assert_eq!(
-            value["TcpActiveOpens/s"].as_str().unwrap(),
-            nm.tcp.get_active_opens_per_sec_str()
-        );
-        assert_eq!(
-            value["TcpPassiveOpens/s"].as_str().unwrap(),
-            nm.tcp.get_passive_opens_per_sec_str()
-        );
-        assert_eq!(
-            value["TcpAttemptFails/s"].as_str().unwrap(),
-            nm.tcp.get_attempt_fails_per_sec_str()
-        );
-        assert_eq!(
-            value["TcpEstabResets/s"].as_str().unwrap(),
-            nm.tcp.get_estab_resets_per_sec_str()
-        );
-        assert_eq!(
-            value["CurEstabConn"].as_str().unwrap(),
-            nm.tcp.get_curr_estab_conn_str()
-        );
-        assert_eq!(
-            value["TcpInSegs/s"].as_str().unwrap(),
-            nm.tcp.get_in_segs_per_sec_str()
-        );
-        assert_eq!(
-            value["TcpOutSegs/s"].as_str().unwrap(),
-            nm.tcp.get_out_segs_per_sec_str()
-        );
-        assert_eq!(
-            value["TcpRetransSegs/s"].as_str().unwrap(),
-            nm.tcp.get_retrans_segs_per_sec_str()
-        );
-        assert_eq!(
-            value["TcpRetransSegs"].as_str().unwrap(),
-            nm.tcp.get_retrans_segs_str()
-        );
-        assert_eq!(
-            value["TcpInErrors"].as_str().unwrap(),
-            nm.tcp.get_in_errs_str()
-        );
-        assert_eq!(
-            value["TcpOutRsts/s"].as_str().unwrap(),
-            nm.tcp.get_out_rsts_per_sec_str()
-        );
-        assert_eq!(
-            value["TcpInCsumErrors"].as_str().unwrap(),
-            nm.tcp.get_in_csum_errors_str()
-        );
-        assert_eq!(
-            value["UdpInPkts/s"].as_str().unwrap(),
-            nm.udp.get_in_datagrams_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["UdpNoPorts"].as_str().unwrap(),
-            nm.udp.get_no_ports_str()
-        );
-        assert_eq!(
-            value["UdpInErrs"].as_str().unwrap(),
-            nm.udp.get_in_errors_str()
-        );
-        assert_eq!(
-            value["UdpOutPkts/s"].as_str().unwrap(),
-            nm.udp.get_out_datagrams_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["UdpRcvbufErrs"].as_str().unwrap(),
-            nm.udp.get_rcvbuf_errors_str()
-        );
-        assert_eq!(
-            value["UdpSndBufErrs"].as_str().unwrap(),
-            nm.udp.get_sndbuf_errors_str()
-        );
-        assert_eq!(
-            value["UdpIgnoredMulti"].as_str().unwrap(),
-            nm.udp.get_ignored_multi_str()
-        );
-        assert_eq!(
-            value["Udp6InPkts/s"].as_str().unwrap(),
-            nm.udp6.get_in_datagrams_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["Udp6NoPorts"].as_str().unwrap(),
-            nm.udp6.get_no_ports_str()
-        );
-        assert_eq!(
-            value["Udp6InErrs"].as_str().unwrap(),
-            nm.udp6.get_in_errors_str()
-        );
-        assert_eq!(
-            value["Udp6OutPkts/s"].as_str().unwrap(),
-            nm.udp6.get_out_datagrams_pkts_per_sec_str()
-        );
-        assert_eq!(
-            value["Udp6RcvbufErrs"].as_str().unwrap(),
-            nm.udp6.get_rcvbuf_errors_str()
-        );
-        assert_eq!(
-            value["Udp6SndBufErrs"].as_str().unwrap(),
-            nm.udp6.get_sndbuf_errors_str()
-        );
-        assert_eq!(
-            value["Udp6InCsumErrs"].as_str().unwrap(),
-            nm.udp6.get_in_csum_errors_str()
-        );
-        assert_eq!(
-            value["Udp6IgnoredMulti"].as_str().unwrap(),
-            nm.udp6.get_ignored_multi_str()
-        );
-
-        count -= 1;
-        if count == 0 {
-            break;
-        }
-    }
+    // ip
+    assert_eq!(
+        jval["TcpActiveOpens/s"].as_str().unwrap(),
+        nm.tcp.get_active_opens_per_sec_str()
+    );
+    assert_eq!(
+        jval["TcpPassiveOpens/s"].as_str().unwrap(),
+        nm.tcp.get_passive_opens_per_sec_str()
+    );
+    assert_eq!(
+        jval["TcpAttemptFails/s"].as_str().unwrap(),
+        nm.tcp.get_attempt_fails_per_sec_str()
+    );
+    assert_eq!(
+        jval["TcpEstabResets/s"].as_str().unwrap(),
+        nm.tcp.get_estab_resets_per_sec_str()
+    );
+    assert_eq!(
+        jval["CurEstabConn"].as_str().unwrap(),
+        nm.tcp.get_curr_estab_conn_str()
+    );
+    assert_eq!(
+        jval["TcpInSegs/s"].as_str().unwrap(),
+        nm.tcp.get_in_segs_per_sec_str()
+    );
+    assert_eq!(
+        jval["TcpOutSegs/s"].as_str().unwrap(),
+        nm.tcp.get_out_segs_per_sec_str()
+    );
+    assert_eq!(
+        jval["TcpRetransSegs/s"].as_str().unwrap(),
+        nm.tcp.get_retrans_segs_per_sec_str()
+    );
+    assert_eq!(
+        jval["TcpRetransSegs"].as_str().unwrap(),
+        nm.tcp.get_retrans_segs_str()
+    );
+    assert_eq!(
+        jval["TcpInErrors"].as_str().unwrap(),
+        nm.tcp.get_in_errs_str()
+    );
+    assert_eq!(
+        jval["TcpOutRsts/s"].as_str().unwrap(),
+        nm.tcp.get_out_rsts_per_sec_str()
+    );
+    assert_eq!(
+        jval["TcpInCsumErrors"].as_str().unwrap(),
+        nm.tcp.get_in_csum_errors_str()
+    );
+    assert_eq!(
+        jval["UdpInPkts/s"].as_str().unwrap(),
+        nm.udp.get_in_datagrams_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["UdpNoPorts"].as_str().unwrap(),
+        nm.udp.get_no_ports_str()
+    );
+    assert_eq!(
+        jval["UdpInErrs"].as_str().unwrap(),
+        nm.udp.get_in_errors_str()
+    );
+    assert_eq!(
+        jval["UdpOutPkts/s"].as_str().unwrap(),
+        nm.udp.get_out_datagrams_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["UdpRcvbufErrs"].as_str().unwrap(),
+        nm.udp.get_rcvbuf_errors_str()
+    );
+    assert_eq!(
+        jval["UdpSndBufErrs"].as_str().unwrap(),
+        nm.udp.get_sndbuf_errors_str()
+    );
+    assert_eq!(
+        jval["UdpIgnoredMulti"].as_str().unwrap(),
+        nm.udp.get_ignored_multi_str()
+    );
+    assert_eq!(
+        jval["Udp6InPkts/s"].as_str().unwrap(),
+        nm.udp6.get_in_datagrams_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["Udp6NoPorts"].as_str().unwrap(),
+        nm.udp6.get_no_ports_str()
+    );
+    assert_eq!(
+        jval["Udp6InErrs"].as_str().unwrap(),
+        nm.udp6.get_in_errors_str()
+    );
+    assert_eq!(
+        jval["Udp6OutPkts/s"].as_str().unwrap(),
+        nm.udp6.get_out_datagrams_pkts_per_sec_str()
+    );
+    assert_eq!(
+        jval["Udp6RcvbufErrs"].as_str().unwrap(),
+        nm.udp6.get_rcvbuf_errors_str()
+    );
+    assert_eq!(
+        jval["Udp6SndBufErrs"].as_str().unwrap(),
+        nm.udp6.get_sndbuf_errors_str()
+    );
+    assert_eq!(
+        jval["Udp6InCsumErrs"].as_str().unwrap(),
+        nm.udp6.get_in_csum_errors_str()
+    );
+    assert_eq!(
+        jval["Udp6IgnoredMulti"].as_str().unwrap(),
+        nm.udp6.get_ignored_multi_str()
+    );
 }
 
 #[test]

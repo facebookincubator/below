@@ -14,15 +14,23 @@
 
 use super::*;
 
-#[derive(Default)]
+#[derive(Default, below_derive::Queriable)]
 pub struct NetworkModel {
+    #[queriable(ignore)]
     pub interfaces: BTreeMap<String, SingleNetModel>,
+    #[queriable(subquery)]
     pub tcp: TcpModel,
+    #[queriable(subquery)]
     pub ip: IpModel,
+    #[queriable(subquery)]
     pub ip6: Ip6Model,
+    #[queriable(subquery)]
     pub icmp: IcmpModel,
+    #[queriable(subquery)]
     pub icmp6: Icmp6Model,
+    #[queriable(subquery)]
     pub udp: UdpModel,
+    #[queriable(subquery)]
     pub udp6: Udp6Model,
 }
 
@@ -83,7 +91,7 @@ impl NetworkModel {
     }
 }
 
-#[derive(BelowDecor, Default)]
+#[derive(BelowDecor, Default, below_derive::Queriable)]
 pub struct TcpModel {
     #[bttr(title = "ActiveOpens/s", width = 20)]
     pub active_opens_per_sec: Option<u64>,
@@ -132,7 +140,7 @@ impl TcpModel {
     }
 }
 
-#[derive(BelowDecor, Default)]
+#[derive(BelowDecor, Default, below_derive::Queriable)]
 pub struct IpModel {
     #[bttr(title = "ForwPkts/s", unit = " pkts", width = 20)]
     pub forwarding_pkts_per_sec: Option<u64>,
@@ -207,7 +215,7 @@ impl IpModel {
     }
 }
 
-#[derive(BelowDecor, Default)]
+#[derive(BelowDecor, Default, below_derive::Queriable)]
 pub struct Ip6Model {
     #[bttr(title = "InPkts/s", unit = " pkts", width = 20)]
     pub in_receives_pkts_per_sec: Option<u64>,
@@ -269,7 +277,7 @@ impl Ip6Model {
     }
 }
 
-#[derive(BelowDecor, Default)]
+#[derive(BelowDecor, Default, below_derive::Queriable)]
 pub struct IcmpModel {
     #[bttr(title = "InMsg/s", unit = " msgs", width = 20)]
     pub in_msgs_per_sec: Option<u64>,
@@ -301,7 +309,7 @@ impl IcmpModel {
     }
 }
 
-#[derive(BelowDecor, Default)]
+#[derive(BelowDecor, Default, below_derive::Queriable)]
 pub struct Icmp6Model {
     #[bttr(title = "InMsg/s", unit = " msgs", width = 20)]
     pub in_msgs_per_sec: Option<u64>,
@@ -333,7 +341,7 @@ impl Icmp6Model {
     }
 }
 
-#[derive(BelowDecor, Default)]
+#[derive(BelowDecor, Default, below_derive::Queriable)]
 pub struct UdpModel {
     #[bttr(title = "InPkts/s", unit = " pkts", width = 20)]
     pub in_datagrams_pkts_per_sec: Option<u64>,
@@ -365,7 +373,7 @@ impl UdpModel {
     }
 }
 
-#[derive(BelowDecor, Default)]
+#[derive(BelowDecor, Default, below_derive::Queriable)]
 pub struct Udp6Model {
     #[bttr(title = "InPkts/s", unit = " pkts", width = 20)]
     pub in_datagrams_pkts_per_sec: Option<u64>,
@@ -403,7 +411,7 @@ impl Udp6Model {
     }
 }
 
-#[derive(BelowDecor, Default)]
+#[derive(BelowDecor, Default, below_derive::Queriable)]
 pub struct SingleNetModel {
     #[bttr(title = "Interface", width = 20)]
     pub interface: String,

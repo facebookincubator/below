@@ -40,3 +40,5 @@ impl HasViewStyle for model::CgroupPressureModel {
         Some(PRESSURE_HIGHLIGHT.clone())
     }
 }
+
+impl HasViewStyle for model::SingleNetModel {}

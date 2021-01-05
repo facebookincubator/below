@@ -121,7 +121,9 @@ impl CommonField {
 }
 
 pub trait HasRenderConfigForDump: HasRenderConfig {
-    fn get_render_config_for_dump(field_id: &Self::FieldId) -> RenderConfig;
+    fn get_render_config_for_dump(field_id: &Self::FieldId) -> RenderConfig {
+        Self::get_render_config(field_id)
+    }
 }
 
 impl<F> DumpField<F>

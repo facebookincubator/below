@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::{CommonField, DumpField};
-use model::{CgroupModelFieldId, FieldId};
+use model::{CgroupModelFieldId, FieldId, NetworkModelFieldId, SingleNetModelFieldId};
 
 use anyhow::{bail, Error, Result};
 use once_cell::sync::Lazy;
@@ -388,123 +388,290 @@ $ below dump cgroup -b "08:30:00" -e "08:30:30" -s cpu.usage_pct --rsort --top 5
     )
 });
 
-make_option! (IfaceField {
-    "timestamp": Timestamp,
-    "datetime": Datetime,
-    "rate": Rate,
-    "rx": Rx,
-    "tx": Tx,
-    "interface": Interface,
-    "rx_bytes_per_sec": RBps,
-    "tx_bytes_per_sec": TBps,
-    "throughput_per_sec": IOBps,
-    "rx_packets_per_sec": RPktps,
-    "tx_packets_per_sec": TPktps,
-    "collisions": Collisions,
-    "multicast": Multicast,
-    "rx_bytes": RxBytes,
-    "rx_compressed": RxCompressed,
-    "rx_crc_errors": RxCrcErr,
-    "rx_dropped": RxDropped,
-    "rx_errors": RxErr,
-    "rx_fifo_errors": RxFifoErr,
-    "rx_frame_errors": RxFrameErr,
-    "rx_length_errors": RxLengthErr,
-    "rx_missed_errors": RxMissedErr,
-    "rx_nohandler": RxNohandler,
-    "rx_over_errors": RxOverErr,
-    "rx_packets": RxPckt,
-    "tx_bytes": TxBytes,
-    "tx_aborted_errors": TxAbortedErr,
-    "tx_carrier_errors": TxCarrierErr,
-    "tx_compressed": TxCompressed,
-    "tx_dropped": TxDropped,
-    "tx_errors": TxErr,
-    "tx_fifo_errors": TxFifoErr,
-    "tx_heatbeat_errors": TxHeartBeatErr,
-    "tx_packets": TxPckt,
-    "tx_window_errors": TxWindowErr,
+/// Represents the iface sub-models of network model.
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    below_derive::EnumFromStr,
+    below_derive::EnumToString
+)]
+pub enum IfaceAggField {
+    Rate,
+    Rx,
+    Tx,
+}
+
+impl AggField<SingleNetModelFieldId> for IfaceAggField {
+    fn expand(&self, _detail: bool) -> Vec<SingleNetModelFieldId> {
+        use model::SingleNetModelFieldId::*;
+        match self {
+            Self::Rate => vec![
+                RxBytesPerSec,
+                TxBytesPerSec,
+                ThroughputPerSec,
+                RxPacketsPerSec,
+                TxPacketsPerSec,
+            ],
+            Self::Rx => vec![
+                RxBytes,
+                RxCompressed,
+                RxCrcErrors,
+                RxDropped,
+                RxErrors,
+                RxFifoErrors,
+                RxFrameErrors,
+                RxLengthErrors,
+                RxMissedErrors,
+                RxNohandler,
+                RxOverErrors,
+                RxPackets,
+            ],
+            Self::Tx => vec![
+                TxAbortedErrors,
+                TxBytes,
+                TxCarrierErrors,
+                TxCompressed,
+                TxDropped,
+                TxErrors,
+                TxFifoErrors,
+                TxHeartbeatErrors,
+                TxPackets,
+                TxWindowErrors,
+            ],
+        }
+    }
+}
+
+pub type IfaceOptionField = DumpOptionField<SingleNetModelFieldId, IfaceAggField>;
+
+pub static DEFAULT_IFACE_FIELDS: &[IfaceOptionField] = &[
+    DumpOptionField::Unit(DumpField::Common(CommonField::Datetime)),
+    DumpOptionField::Unit(DumpField::FieldId(SingleNetModelFieldId::Collisions)),
+    DumpOptionField::Unit(DumpField::FieldId(SingleNetModelFieldId::Multicast)),
+    DumpOptionField::Unit(DumpField::FieldId(SingleNetModelFieldId::Interface)),
+    DumpOptionField::Agg(IfaceAggField::Rate),
+    DumpOptionField::Agg(IfaceAggField::Rx),
+    DumpOptionField::Agg(IfaceAggField::Tx),
+    DumpOptionField::Unit(DumpField::Common(CommonField::Timestamp)),
+];
+
+const IFACE_ABOUT: &str = "Dump the link layer iface stats";
+
+/// Generated about message for Iface dump so supported fields are up-to-date.
+static IFACE_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+    format!(
+        r#"{about}
+
+********************** Available fields **********************
+
+{common_fields}, and expanded fields below.
+
+********************** Aggregated fields **********************
+
+* rate: includes [{agg_rate_fields}].
+
+* rx: includes [{agg_rx_fields}].
+
+* tx: incldues [{agg_tx_fields}].
+
+* --detail: no effect.
+
+* --default: includes [{default_fields}].
+
+* --everything: includes everything (equivalent to --default --detail).
+
+********************** Example Commands **********************
+
+Simple example:
+
+$ below dump iface -b "08:30:00" -e "08:30:30" -f interface rate -O csv
+
+Output stats for all iface stats matching pattern "eth*" for time slices
+from 08:30:00 to 08:30:30:
+
+$ below dump iface -b "08:30:00" -e "08:30:30" -s interface -F eth* -O json
+
+"#,
+        about = IFACE_ABOUT,
+        common_fields = join(CommonField::unit_variant_iter()),
+        agg_rate_fields = join(IfaceAggField::Rate.expand(false)),
+        agg_rx_fields = join(IfaceAggField::Rx.expand(false)),
+        agg_tx_fields = join(IfaceAggField::Tx.expand(false)),
+        default_fields = join(DEFAULT_IFACE_FIELDS.to_owned()),
+    )
 });
 
-make_option! (NetworkField {
-    "timestamp": Timestamp,
-    "datetime": Datetime,
-    "ip": Ip,
-    "ip6": Ip6,
-    "icmp": Icmp,
-    "Icmp6": Icmp6,
-    "ip_forwarding": ForwPkts,
-    "ip_in_receives": InRecvPkts,
-    "ip_forw_datagrams": ForwDgrm,
-    "ip_in_discards": InDiscards,
-    "ip_in_delivers": InDelivers,
-    "ip_out_requests": OutRequests,
-    "ip_out_discards": OutDiscards,
-    "ip_out_no_routes": OutNoRoutes,
-    "ip_in_mcast": InMcast,
-    "ip_out_mcast": OutMcast,
-    "ip_in_bcast": InBcast,
-    "ip_out_bcast": OutBcast,
-    "ip6_in_receives": InRecvPkts6,
-    "ip6_forw_datagrams": ForwDgrm6,
-    "ip6_in_discards": InDiscards6,
-    "ip6_in_delivers": InDelivers6,
-    "ip6_out_requests": OutRequests6,
-    "ip6_in_no_routes": InNoRoutes6,
-    "ip6_out_no_routes": OutNoRoutes6,
-    "ip6_in_hdr_err": InHdrErr6,
-    "ip6_in_addr_err": InAddrErr6,
-    "ip6_in_mcast": InMcast6,
-    "ip6_out_mcast": OutMcast6,
-    "ip6_in_bcast": InBcast6,
-    "ip6_out_bcast": OutBcast6,
-    "icmp_in_msgs": InMsg,
-    "icmp_in_errs": InErrs,
-    "icmp_in_dest_unreachs": InDestUnreachs,
-    "icmp_out_msg": OutMsg,
-    "icmp_out_errs": OutErrs,
-    "icmp_out_dest_unreachs": OutDestUnreachs,
-    "icmp6_in_msgs": InMsg6,
-    "icmp6_in_errs": InErrs6,
-    "icmp6_in_dest_unreachs": InDestUnreachs6,
-    "icmp6_out_msg": OutMsg6,
-    "icmp6_out_errs": OutErrs6,
-    "icmp6_out_dest_unreachs": OutDestUnreachs6,
+/// Represents the ip and icmp sub-models of the network model.
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    below_derive::EnumFromStr,
+    below_derive::EnumToString
+)]
+pub enum NetworkAggField {
+    Ip,
+    Ip6,
+    Icmp,
+    Icmp6,
+}
+
+impl AggField<NetworkModelFieldId> for NetworkAggField {
+    fn expand(&self, _detail: bool) -> Vec<NetworkModelFieldId> {
+        use model::NetworkModelFieldId as FieldId;
+        match self {
+            Self::Ip => model::IpModelFieldId::unit_variant_iter()
+                .map(FieldId::Ip)
+                .collect(),
+            Self::Ip6 => model::Ip6ModelFieldId::unit_variant_iter()
+                .map(FieldId::Ip6)
+                .collect(),
+            Self::Icmp => model::IcmpModelFieldId::unit_variant_iter()
+                .map(FieldId::Icmp)
+                .collect(),
+            Self::Icmp6 => model::Icmp6ModelFieldId::unit_variant_iter()
+                .map(FieldId::Icmp6)
+                .collect(),
+        }
+    }
+}
+
+pub type NetworkOptionField = DumpOptionField<NetworkModelFieldId, NetworkAggField>;
+
+pub static DEFAULT_NETWORK_FIELDS: &[NetworkOptionField] = &[
+    DumpOptionField::Unit(DumpField::Common(CommonField::Datetime)),
+    DumpOptionField::Agg(NetworkAggField::Ip),
+    DumpOptionField::Agg(NetworkAggField::Ip6),
+    DumpOptionField::Agg(NetworkAggField::Icmp),
+    DumpOptionField::Agg(NetworkAggField::Icmp6),
+    DumpOptionField::Unit(DumpField::Common(CommonField::Timestamp)),
+];
+
+const NETWORK_ABOUT: &str = "Dump the network layer stats including ip and icmp";
+
+/// Generated about message for Network dump so supported fields are up-to-date.
+static NETWORK_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+    format!(
+        r#"{about}
+
+********************** Available fields **********************
+
+{common_fields}, and expanded fields below.
+
+********************** Aggregated fields **********************
+
+* ip: includes [{agg_ip_fields}].
+
+* ip6: includes [{agg_ip6_fields}].
+
+* icmp: incldues [{agg_icmp_fields}].
+
+* icmp6: incldues [{agg_icmp6_fields}].
+
+* --detail: no effect.
+
+* --default: includes [{default_fields}].
+
+* --everything: includes everything (equivalent to --default --detail).
+
+********************** Example Commands **********************
+
+Example:
+
+$ below dump network -b "08:30:00" -e "08:30:30" -f ip ip6 -O json
+
+"#,
+        about = NETWORK_ABOUT,
+        common_fields = join(CommonField::unit_variant_iter()),
+        agg_ip_fields = join(NetworkAggField::Ip.expand(false)),
+        agg_ip6_fields = join(NetworkAggField::Ip6.expand(false)),
+        agg_icmp_fields = join(NetworkAggField::Icmp.expand(false)),
+        agg_icmp6_fields = join(NetworkAggField::Icmp6.expand(false)),
+        default_fields = join(DEFAULT_NETWORK_FIELDS.to_owned()),
+    )
 });
 
-make_option!(TransportField {
-    "timestamp": Timestamp,
-    "datetime": Datetime,
-    "tcp": Tcp,
-    "udp": Udp,
-    "udp6": Udp6,
-    "tcp_active_opens": ActiveOpens,
-    "tcp_passive_opens": PassiveOpens,
-    "tcp_attempt_fails": AttemptFailed,
-    "tcp_estab_reset": EstabReset,
-    "tcp_curr_estab": CurrEstab,
-    "tcp_in_segs": InSegs,
-    "tcp_out_segs": OutSegs,
-    "tcp_retrans_segs_per_sec": RetransSegsPS,
-    "tcp_retrans_segs": RetransSegs,
-    "tcp_in_errs": TcpInErrs,
-    "tcp_out_rsts": OutRsts,
-    "tcp_in_csum_errs": InCsumErrs,
-    "udp_in_datagrams": InDgrms,
-    "udp_no_ports": NoPorts,
-    "udp_in_errs": UdpInErrs,
-    "udp_out_datagrams": OutDgrms,
-    "udp_recv_buf_errs": RecvBufErrs,
-    "udp_snd_buf_errs": SndBufErrs,
-    "udp_ignored_multi": IgnoredMulti,
-    "udp6_in_datagrams": InDgrms6,
-    "udp6_no_ports": NoPorts6,
-    "udp6_in_errs": UdpInErrs6,
-    "udp6_out_datagrams": OutDgrms6,
-    "udp6_recv_buf_errs": RecvBufErrs6,
-    "udp6_snd_buf_errs": SndBufErrs6,
-    "udp6_in_csum_errs": InCsumErrs6,
-    "udp6_ignored_multi": IgnoredMulti6,
+/// Represents the tcp and udp sub-models of the network model.
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    below_derive::EnumFromStr,
+    below_derive::EnumToString
+)]
+pub enum TransportAggField {
+    Tcp,
+    Udp,
+    Udp6,
+}
+
+impl AggField<NetworkModelFieldId> for TransportAggField {
+    fn expand(&self, _detail: bool) -> Vec<NetworkModelFieldId> {
+        use model::NetworkModelFieldId as FieldId;
+        match self {
+            Self::Tcp => model::TcpModelFieldId::unit_variant_iter()
+                .map(FieldId::Tcp)
+                .collect(),
+            Self::Udp => model::UdpModelFieldId::unit_variant_iter()
+                .map(FieldId::Udp)
+                .collect(),
+            Self::Udp6 => model::Udp6ModelFieldId::unit_variant_iter()
+                .map(FieldId::Udp6)
+                .collect(),
+        }
+    }
+}
+
+pub type TransportOptionField = DumpOptionField<NetworkModelFieldId, TransportAggField>;
+
+pub static DEFAULT_TRANSPORT_FIELDS: &[TransportOptionField] = &[
+    DumpOptionField::Unit(DumpField::Common(CommonField::Datetime)),
+    DumpOptionField::Agg(TransportAggField::Tcp),
+    DumpOptionField::Agg(TransportAggField::Udp),
+    DumpOptionField::Agg(TransportAggField::Udp6),
+    DumpOptionField::Unit(DumpField::Common(CommonField::Timestamp)),
+];
+
+const TRANSPORT_ABOUT: &str = "Dump the transport layer stats including tcp and udp";
+
+/// Generated about message for Transport dump so supported fields are up-to-date.
+static TRANSPORT_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+    format!(
+        r#"{about}
+
+********************** Available fields **********************
+
+{common_fields}, and expanded fields below.
+
+********************** Aggregated fields **********************
+
+* tcp: includes [{agg_tcp_fields}].
+
+* udp: includes [{agg_udp_fields}].
+
+* udp6: incldues [{agg_udp6_fields}].
+
+* --detail: no effect.
+
+* --default: includes [{default_fields}].
+
+* --everything: includes everything (equivalent to --default --detail).
+
+********************** Example Commands **********************
+
+Example:
+
+$ below dump transport -b "08:30:00" -e "08:30:30" -f tcp udp -O json
+
+"#,
+        about = TRANSPORT_ABOUT,
+        common_fields = join(CommonField::unit_variant_iter()),
+        agg_tcp_fields = join(TransportAggField::Tcp.expand(false)),
+        agg_udp_fields = join(TransportAggField::Udp.expand(false)),
+        agg_udp6_fields = join(TransportAggField::Udp6.expand(false)),
+        default_fields = join(DEFAULT_TRANSPORT_FIELDS.to_owned()),
+    )
 });
 
 make_option! (OutputFormat {
@@ -724,140 +891,38 @@ pub enum DumpCommand {
         #[structopt(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
-    /// Dump the link layer iface stats
-    ///
-    /// ********************** Available fields **********************
-    ///
-    /// timestamp, datetime, interface
-    ///
-    /// rx_bytes_per_sec, tx_bytes_per_sec, throughput_per_sec, rx_packets_per_sec, tx_packets_per_sec,
-    /// collisions, multicast
-    ///
-    /// rx_bytes, rx_compressed, rx_crc_errors, rx_dropped, rx_errors, rx_fifo_errors, rx_frame_errors,
-    /// rx_length_errors, rx_missed_errors, rx_nohandler, rx_over_errors, rx_packets
-    ///
-    /// tx_bytes, tx_aborted_errors, tx_carrier_errors, tx_compressed, tx_dropped, tx_errors,
-    /// tx_fifo_errors, tx_heatbeat_errors, tx_packets, tx_window_errors
-    ///
-    /// ********************** Aggregated fields **********************
-    ///
-    /// * rate: includes [*_bytes_per_sec, throughput_per_sec]. Additionally includes [*_packets_per_sec] if --detail specified.
-    ///
-    /// * rx: includes [rx_bytes, rx_dropped, rx_errors]. Additionally includes [rx_*] if --detail specified.
-    ///
-    /// * tx: incldues [tx_bytes, tx_dropped, tx_errors]. Additionally includes [tx_*] if --detail specified.
-    ///
-    /// --default will have all of [interface, rate, rx, tx]. To display everything, use --everything.
-    ///
-    /// ********************** Example Commands **********************
-    ///
-    /// Simple example:
-    ///
-    /// $ below dump iface -b "08:30:00" -e "08:30:30" -f interface rate -O csv
-    ///
-    /// Output stats for all iface stats matching pattern "eth*" for time slices
-    /// from 08:30:00 to 08:30:30:
-    ///
-    /// $ below dump iface -b "08:30:00" -e "08:30:30" -s interface -F eth* -O json
+    #[structopt(about = IFACE_ABOUT, long_about = IFACE_LONG_ABOUT.as_str())]
     Iface {
         /// Select which fields to display and in what order.
         #[structopt(short, long)]
-        fields: Option<Vec<IfaceField>>,
+        fields: Option<Vec<IfaceOptionField>>,
         #[structopt(flatten)]
         opts: GeneralOpt,
         /// Select field for operation, use with --filter
         #[structopt(long, short)]
-        select: Option<IfaceField>,
+        select: Option<SingleNetModelFieldId>,
         /// Saved pattern in the dumprc file under [iface] section.
         #[structopt(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
-    /// Dump the network layer stats including ip and icmp
-    ///
-    /// ********************** Available fields **********************
-    ///
-    /// timestamp, datetime
-    ///
-    /// ip_forwarding, ip_in_receives, ip_forw_datagrams, ip_in_discards, ip_in_delivers, ip_out_requests,
-    /// ip_out_discards, ip_out_no_routes, ip_in_mcast, ip_out_mcast, ip_in_bcast, ip_out_bcast
-    ///
-    /// ip6_in_receives, ip6_forw_datagrams, ip6_in_discards, ip6_in_delivers, ip6_out_requests, ip6_in_no_routes,
-    /// ip6_out_no_routes, ip6_in_hdr_err, ip6_in_addr_err, ip6_in_mcast, ip6_out_mcast, ip6_in_bcast, ip6_in_bcast
-    ///
-    /// icmp_in_msgs, icmp_in_errs, icmp_in_dest_unreachs, icmp_out_msg, icmp_out_errs, icmp_out_dest_unreachs
-    ///
-    /// icmp6_in_msgs, icmp6_in_errs, icmp6_in_dest_unreachs, icmp6_out_msg, icmp6_out_errs, icmp6_out_dest_unreachs
-    ///
-    /// ********************** Aggregated fields **********************
-    ///
-    /// * ip: includes [ip_*].
-    ///
-    /// * ip6: includes [ip6_*].
-    ///
-    /// * icmp: includes [icmp_*].
-    ///
-    /// * icmp6: includes [icmp6_*].
-    ///
-    /// --default will have all of [ip, ip6, icmp, icmp6].
-    ///
-    /// ********************** Example Commands **********************
-    ///
-    /// Example:
-    ///
-    /// $ below dump network -b "08:30:00" -e "08:30:30" -f ip ip6 -O json
-    ///
+    #[structopt(about = NETWORK_ABOUT, long_about = NETWORK_LONG_ABOUT.as_str())]
     Network {
         /// Select which fields to display and in what order.
         #[structopt(short, long)]
-        fields: Option<Vec<NetworkField>>,
+        fields: Option<Vec<NetworkOptionField>>,
         #[structopt(flatten)]
         opts: GeneralOpt,
-        /// Select field for operation, use with --filter
-        #[structopt(long, short)]
-        select: Option<NetworkField>,
         /// Saved pattern in the dumprc file under [network] section.
         #[structopt(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
-    /// Dump the transport layer stats including tcp and udp
-    ///
-    /// ********************** Available fields **********************
-    ///
-    /// timestamp, datetime
-    ///
-    /// tcp_active_opens, tcp_passive_opens, tcp_attempt_fails, tcp_estab_reset, tcp_curr_estab, tcp_in_segs,
-    /// tcp_out_segs, tcp_retrans_segs_per_sec, tcp_retrans_segs, tcp_in_errs, tcp_out_rsts, tcp_in_csum_errs
-    ///
-    /// udp_in_datagrams, udp_no_ports, udp_in_errs, udp_out_datagrams, udp_recv_buf_errs, udp_snd_buf_errs, udp_ignored_multi
-    ///
-    /// udp6_in_datagrams, udp6_no_ports, udp6_in_errs, udp6_out_datagrams, udp6_recv_buf_errs, udp6_snd_buf_errs
-    /// udp6_ignored_multi
-    ///
-    /// ********************** Aggregated fields **********************
-    ///
-    /// * tcp: includes [tcp_*].
-    ///
-    /// * udp: includes [udp_*].
-    ///
-    /// * udp6: includes [udo6_*].
-    ///
-    /// --default will have all of [tcp, udp, udp6].
-    ///
-    /// ********************** Example Commands **********************
-    ///
-    /// Example:
-    ///
-    /// $ below dump transport -b "08:30:00" -e "08:30:30" -f tcp udp -O json
-    ///
+    #[structopt(about = TRANSPORT_ABOUT, long_about = TRANSPORT_LONG_ABOUT.as_str())]
     Transport {
         /// Select which fields to display and in what order.
         #[structopt(short, long)]
-        fields: Option<Vec<TransportField>>,
+        fields: Option<Vec<TransportOptionField>>,
         #[structopt(flatten)]
         opts: GeneralOpt,
-        /// Select field for operation, use with --filter
-        #[structopt(long, short)]
-        select: Option<TransportField>,
         /// Saved pattern in the dumprc file under [transport] section.
         #[structopt(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
