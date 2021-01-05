@@ -18,7 +18,7 @@ use std::time::{Duration, Instant, SystemTime};
 
 use anyhow::{anyhow, bail, Context, Result};
 use cursive::utils::markup::StyledString;
-use strum_macros::EnumString;
+use strum_macros::{EnumIter, EnumString};
 
 use below_derive::BelowDecor;
 use below_thrift::types::{CgroupSample, Sample, SystemSample};
@@ -185,8 +185,8 @@ pub fn sort_queriables<T: Queriable>(queriables: &mut [&T], field_id: &T::FieldI
     });
 }
 
-/// Some Model are recursive, i.e. containing sub-Models with its own type. Such
-/// Model has a depth value for illustrating the tree hierarchy.
+/// Models containing sub-Models with its own type, similar to a node in a tree.
+/// Such Model has a depth value for illustrating the tree hierarchy.
 pub trait Recursive {
     fn get_depth(&self) -> usize;
 }

@@ -13,18 +13,18 @@
 // limitations under the License.
 
 use std::io;
-use std::iter::FromIterator;
 use std::path::PathBuf;
 
 use serde_json::Value;
 
 use super::*;
-use command::{GeneralOpt, OutputFormat, ProcField, SysField};
+use command::{expand_fields, GeneralOpt, OutputFormat, ProcField, SysField};
 use common::util::convert_bytes;
 use dump::*;
 use get::Dget;
-use print::Dprint;
-use tmain::Dump;
+use model::Queriable;
+use print::{Dprint, HasRenderConfigForDump};
+use tmain::{Dump, Dumper};
 
 #[test]
 fn test_tmain_init() {
@@ -631,294 +631,30 @@ fn test_dump_proc_select() {
     }
 }
 
-fn traverse_cgroup_tree(model: &CgroupModel, jval: &mut Value) {
-    assert_eq!(jval["Name"].as_str().unwrap(), model.get_name_str());
-    assert_eq!(
-        jval["Inode Number"].as_str().unwrap(),
-        model.get_inode_number_str()
-    );
-
-    if let Some(cpu) = model.cpu.as_ref() {
-        assert_eq!(jval["CPU Usage"].as_str().unwrap(), cpu.get_usage_pct_str());
-        assert_eq!(jval["CPU User"].as_str().unwrap(), cpu.get_user_pct_str());
-        assert_eq!(jval["CPU Sys"].as_str().unwrap(), cpu.get_system_pct_str());
-        assert_eq!(
-            jval["Nr Period"].as_str().unwrap(),
-            cpu.get_nr_periods_per_sec_str()
-        );
-        assert_eq!(
-            jval["Nr Throttle"].as_str().unwrap(),
-            cpu.get_nr_throttled_per_sec_str()
-        );
-        assert_eq!(
-            jval["Throttle Pct"].as_str().unwrap(),
-            cpu.get_throttled_pct_str()
-        );
-    }
-
-    if let Some(mem) = model.memory.as_ref() {
-        assert_eq!(jval["Mem Total"].as_str().unwrap(), mem.get_total_str());
-        assert_eq!(
-            jval["Mem Swap"].as_str().unwrap(),
-            match mem.swap {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
+fn traverse_cgroup_tree(model: &CgroupModel, jval: &Value) {
+    for dump_field in expand_fields(command::DEFAULT_CGROUP_FIELDS, true) {
+        match dump_field {
+            DumpField::Common(_) => continue,
+            DumpField::FieldId(field_id) => {
+                let rc = CgroupModel::get_render_config_for_dump(&field_id);
+                assert_eq!(
+                    rc.render(model.query(&field_id), false),
+                    jval[rc.render_title(false)]
+                        .as_str()
+                        .unwrap_or("?")
+                        .to_owned(),
+                    "Model value and json value do not match for field: {}",
+                    field_id.to_string(),
+                );
             }
-        );
-        assert_eq!(
-            jval["Mem Anon"].as_str().unwrap(),
-            match mem.anon {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["Mem File"].as_str().unwrap(),
-            match mem.file {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["Kernel Stack"].as_str().unwrap(),
-            match mem.kernel_stack {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["Mem Slab"].as_str().unwrap(),
-            match mem.slab {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["Mem Sock"].as_str().unwrap(),
-            match mem.sock {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["Mem Shmem"].as_str().unwrap(),
-            match mem.shmem {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["File Mapped"].as_str().unwrap(),
-            match mem.file_mapped {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["File Dirty"].as_str().unwrap(),
-            match mem.file_dirty {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["File WB"].as_str().unwrap(),
-            match mem.file_writeback {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["Anon THP"].as_str().unwrap(),
-            match mem.anon_thp {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["Inactive Anon"].as_str().unwrap(),
-            match mem.inactive_anon {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["Active Anon"].as_str().unwrap(),
-            match mem.active_anon {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["Inactive File"].as_str().unwrap(),
-            match mem.inactive_file {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["Active File"].as_str().unwrap(),
-            match mem.active_file {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["Unevictable"].as_str().unwrap(),
-            match mem.unevictable {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["Slab Reclaimable"].as_str().unwrap(),
-            match mem.slab_reclaimable {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(
-            jval["Slab Unreclaimable"].as_str().unwrap(),
-            match mem.slab_unreclaimable {
-                Some(v) => convert_bytes(v as f64),
-                None => "?".into(),
-            }
-        );
-        assert_eq!(jval["Pgfault"].as_str().unwrap(), mem.get_pgfault_str());
-        assert_eq!(
-            jval["Pgmajfault"].as_str().unwrap(),
-            mem.get_pgmajfault_str()
-        );
-        assert_eq!(
-            jval["Workingset Refault"].as_str().unwrap(),
-            mem.get_workingset_refault_str()
-        );
-        assert_eq!(
-            jval["Workingset Activate"].as_str().unwrap(),
-            mem.get_workingset_activate_str()
-        );
-        assert_eq!(
-            jval["Workingset Nodereclaim"].as_str().unwrap(),
-            mem.get_workingset_nodereclaim_str()
-        );
-        assert_eq!(jval["Pgrefill"].as_str().unwrap(), mem.get_pgrefill_str());
-        assert_eq!(jval["Pgscan"].as_str().unwrap(), mem.get_pgscan_str());
-        assert_eq!(jval["Pgsteal"].as_str().unwrap(), mem.get_pgsteal_str());
-        assert_eq!(
-            jval["Pgactivate"].as_str().unwrap(),
-            mem.get_pgactivate_str()
-        );
-        assert_eq!(
-            jval["Pgdeactivate"].as_str().unwrap(),
-            mem.get_pgdeactivate_str()
-        );
-        assert_eq!(
-            jval["Pglazyfree"].as_str().unwrap(),
-            mem.get_pglazyfree_str()
-        );
-        assert_eq!(
-            jval["Pglazyfreed"].as_str().unwrap(),
-            mem.get_pglazyfreed_str()
-        );
-        assert_eq!(
-            jval["THP Fault Alloc"].as_str().unwrap(),
-            mem.get_thp_fault_alloc_str()
-        );
-        assert_eq!(
-            jval["THP Collapse Alloc"].as_str().unwrap(),
-            mem.get_thp_collapse_alloc_str()
-        );
-
-        if mem.get_memory_high_value() == Some(-1) {
-            assert_eq!(jval["Memory.High"].as_str().unwrap(), "max");
-        } else {
-            assert_eq!(
-                jval["Memory.High"].as_str().unwrap(),
-                mem.get_memory_high_str()
-            );
         }
-
-        assert_eq!(
-            jval["Events Low"].as_str().unwrap(),
-            mem.get_events_low_str()
-        );
-        assert_eq!(
-            jval["Events High"].as_str().unwrap(),
-            mem.get_events_high_str()
-        );
-        assert_eq!(
-            jval["Events Max"].as_str().unwrap(),
-            mem.get_events_max_str()
-        );
-        assert_eq!(
-            jval["Events OOM"].as_str().unwrap(),
-            mem.get_events_oom_str()
-        );
-        assert_eq!(
-            jval["Events Kill"].as_str().unwrap(),
-            mem.get_events_oom_kill_str()
-        );
     }
-
-    if let Some(pressure) = model.pressure.as_ref() {
-        assert_eq!(
-            jval["CPU Pressure"].as_str().unwrap(),
-            pressure.get_cpu_some_pct_str()
-        );
-        assert_eq!(
-            jval["Memory Some Pressure"].as_str().unwrap(),
-            format!("{:.2}%", pressure.memory_some_pct.unwrap_or_default())
-        );
-        assert_eq!(
-            jval["Memory Pressure"].as_str().unwrap(),
-            pressure.get_memory_full_pct_str()
-        );
-        assert_eq!(
-            jval["I/O Some Pressure"].as_str().unwrap(),
-            format!("{:.2}%", pressure.io_some_pct.unwrap_or_default())
-        );
-        assert_eq!(
-            jval["I/O Pressure"].as_str().unwrap(),
-            pressure.get_io_full_pct_str()
-        );
-    }
-
-    if let Some(io) = model.io_total.as_ref() {
-        assert_eq!(
-            jval["RBytes"].as_str().unwrap(),
-            io.get_rbytes_per_sec_str()
-        );
-        assert_eq!(
-            jval["WBytes"].as_str().unwrap(),
-            io.get_wbytes_per_sec_str()
-        );
-        assert_eq!(jval["R I/O"].as_str().unwrap(), io.get_rios_per_sec_str());
-        assert_eq!(jval["W I/O"].as_str().unwrap(), io.get_wios_per_sec_str());
-        assert_eq!(
-            jval["DBytes"].as_str().unwrap(),
-            format!("{}/s", convert_bytes(io.dbytes_per_sec.unwrap_or_default()))
-        );
-        assert_eq!(jval["D I/O"].as_str().unwrap(), io.get_dios_per_sec_str());
-        assert_eq!(
-            jval["RW Total"].as_str().unwrap(),
-            format!(
-                "{}/s",
-                convert_bytes(
-                    io.rbytes_per_sec.unwrap_or_default() + io.wbytes_per_sec.unwrap_or_default()
-                )
-            )
-        );
-    }
-
-    let jval_children = jval["children"].as_array_mut().unwrap();
-    let mut model_children = Vec::from_iter(&model.children);
-    jval_children.truncate(2);
-    model_children.truncate(2);
-
-    model_children
-        .iter_mut()
-        .zip(jval_children.iter_mut())
-        .for_each(|(model, jval)| traverse_cgroup_tree(model, jval));
+    model
+        .children
+        .iter()
+        .zip(jval["children"].as_array().unwrap().iter())
+        .take(2)
+        .for_each(|(child_model, child_jval)| traverse_cgroup_tree(child_model, child_jval));
 }
 
 #[test]
@@ -926,28 +662,102 @@ fn test_dump_cgroup_content() {
     let mut collector = Collector::new(get_dummy_exit_data());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
-    let time = SystemTime::now();
-    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
 
     let mut opts: GeneralOpt = Default::default();
-    opts.everything = true;
+    let fields = command::expand_fields(command::DEFAULT_CGROUP_FIELDS, true);
     opts.output_format = Some(OutputFormat::Json);
-    let mut cgroup_handle = cgroup::Cgroup::new(opts, advance, time, None);
-    cgroup_handle.init(None);
+    let cgroup_dumper = cgroup::Cgroup::new(&opts, None, fields);
 
     // update model again to populate cpu and io data
     let model = collector.update_model(&logger).expect("Fail to get model");
     let mut cgroup_content = StrIo::new();
     let mut round = 0;
-    cgroup_handle
-        .iterate_exec(&model, &mut cgroup_content, &mut round, false)
-        .expect("Fail to get json from iterate_exec");
+    let ctx = CommonFieldContext { timestamp: 0 };
+    cgroup_dumper
+        .dump_model(&ctx, &model, &mut cgroup_content, &mut round, false)
+        .expect("Failed to dump cgroup model");
 
     // verify json correctness
     assert!(!cgroup_content.content.is_empty());
     let mut jval: Value =
         serde_json::from_str(&cgroup_content.content).expect("Fail parse json of process dump");
     traverse_cgroup_tree(&model.cgroup, &mut jval);
+}
+
+#[test]
+fn test_dump_cgroup_titles() {
+    let titles = expand_fields(command::DEFAULT_CGROUP_FIELDS, true)
+        .iter()
+        .filter_map(|dump_field| match dump_field {
+            DumpField::Common(_) => None,
+            DumpField::FieldId(field_id) => {
+                let rc = CgroupModel::get_render_config_for_dump(&field_id);
+                Some(rc.render_title(false))
+            }
+        })
+        .collect::<Vec<_>>();
+    let expected_titles = vec![
+        "Name",
+        "Inode Number",
+        "CPU Usage",
+        "CPU User",
+        "CPU Sys",
+        "Nr Period",
+        "Nr Throttled",
+        "Throttled Pct",
+        "Mem Total",
+        "Mem Swap",
+        "Mem Anon",
+        "Mem File",
+        "Kernel Stack",
+        "Mem Slab",
+        "Mem Sock",
+        "Mem Shmem",
+        "File Mapped",
+        "File Dirty",
+        "File WB",
+        "Anon THP",
+        "Inactive Anon",
+        "Active Anon",
+        "Inactive File",
+        "Active File",
+        "Unevictable",
+        "Slab Reclaimable",
+        "Slab Unreclaimable",
+        "Pgfault",
+        "Pgmajfault",
+        "Workingset Refault",
+        "Workingset Activate",
+        "Workingset Nodereclaim",
+        "Pgrefill",
+        "Pgscan",
+        "Pgsteal",
+        "Pgactivate",
+        "Pgdeactivate",
+        "Pglazyfree",
+        "Pglazyfreed",
+        "THP Fault Alloc",
+        "THP Collapse Alloc",
+        "Memory High",
+        "Events Low",
+        "Events High",
+        "Events Max",
+        "Events OOM",
+        "Events Kill",
+        "RBytes",
+        "WBytes",
+        "R I/O",
+        "W I/O",
+        "DBytes",
+        "D I/O",
+        "RW Total",
+        "CPU Pressure",
+        "I/O Some Pressure",
+        "I/O Pressure",
+        "Memory Some Pressure",
+        "Memory Pressure",
+    ];
+    assert_eq!(titles, expected_titles);
 }
 
 #[test]

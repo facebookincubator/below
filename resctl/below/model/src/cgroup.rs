@@ -162,14 +162,20 @@ impl CgroupModel {
     }
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, EnumIter)]
 pub enum CgroupModelFieldId {
     Name,
     FullPath,
     InodeNumber,
+    // Disable for strum so we can iterate the above fields only. The aggregate
+    // fields below do not have default so we don't iterate over them.
+    #[strum(disabled)]
     Cpu(CgroupCpuModelFieldId),
+    #[strum(disabled)]
     Mem(CgroupMemoryModelFieldId),
+    #[strum(disabled)]
     Io(CgroupIoModelFieldId),
+    #[strum(disabled)]
     Pressure(CgroupPressureModelFieldId),
 }
 
@@ -197,6 +203,21 @@ impl std::str::FromStr for CgroupModelFieldId {
                 "inode_number" => Ok(InodeNumber),
                 _ => Err(Self::Err::VariantNotFound),
             }
+        }
+    }
+}
+
+impl std::string::ToString for CgroupModelFieldId {
+    fn to_string(&self) -> String {
+        use CgroupModelFieldId::*;
+        match self {
+            Name => "name".to_owned(),
+            FullPath => "full_path".to_owned(),
+            InodeNumber => "inode_number".to_owned(),
+            Cpu(field_id) => format!("cpu.{}", field_id.to_string()),
+            Mem(field_id) => format!("mem.{}", field_id.to_string()),
+            Io(field_id) => format!("io.{}", field_id.to_string()),
+            Pressure(field_id) => format!("pressure.{}", field_id.to_string()),
         }
     }
 }
@@ -275,7 +296,7 @@ impl CgroupCpuModel {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, EnumString)]
+#[derive(PartialEq, Debug, Clone, EnumString, EnumIter, strum_macros::ToString)]
 #[strum(serialize_all = "snake_case")]
 pub enum CgroupCpuModelFieldId {
     UsagePct,
@@ -385,7 +406,7 @@ impl std::ops::Add<&CgroupIoModel> for CgroupIoModel {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, EnumString)]
+#[derive(PartialEq, Debug, Clone, EnumString, EnumIter, strum_macros::ToString)]
 #[strum(serialize_all = "snake_case")]
 pub enum CgroupIoModelFieldId {
     RbytesPerSec,
@@ -691,7 +712,7 @@ impl CgroupMemoryModel {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, EnumString)]
+#[derive(PartialEq, Debug, Clone, EnumString, EnumIter, strum_macros::ToString)]
 #[strum(serialize_all = "snake_case")]
 pub enum CgroupMemoryModelFieldId {
     Total,
@@ -855,7 +876,7 @@ impl CgroupPressureModel {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, EnumString)]
+#[derive(PartialEq, Debug, Clone, EnumString, EnumIter, strum_macros::ToString)]
 #[strum(serialize_all = "snake_case")]
 pub enum CgroupPressureModelFieldId {
     CpuSomePct,

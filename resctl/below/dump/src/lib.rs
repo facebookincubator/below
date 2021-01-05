@@ -24,11 +24,14 @@ use anyhow::{anyhow, bail, Result};
 use cursive::utils::markup::StyledString;
 use regex::Regex;
 use serde_json::{json, Value};
+use strum_macros::{EnumIter, EnumString};
 use toml::value::Value as TValue;
 
 use common::dateutil;
 use common::util::translate_datetime;
-use model;
+use model::{Field, FieldId, Queriable};
+#[macro_use]
+extern crate render;
 
 use store::advance::Advance;
 use store::Direction;
@@ -49,15 +52,50 @@ pub mod transport;
 
 pub use command::DumpCommand;
 use command::{
-    CgroupField, DiskField, GeneralOpt, IfaceField, NetworkField, OutputFormat, ProcField,
+    expand_fields, DiskField, GeneralOpt, IfaceField, NetworkField, OutputFormat, ProcField,
     SysField, TransportField,
 };
 use fill::Dfill;
 use get::Dget;
-use print::Dprint;
-use tmain::{Dump, IterExecResult};
+use print::{Dprint, HasRenderConfigForDump};
+use tmain::{dump_timeseries, Dump, Dumper, IterExecResult};
 
 const BELOW_DUMP_RC: &str = "/.config/below/dumprc";
+
+/// Fields available to all commands. Each enum represents some semantics and
+/// knows how to extract relevant data from a CommonFieldContext.
+#[derive(Clone, Debug, EnumIter, EnumString, strum_macros::ToString)]
+#[strum(serialize_all = "snake_case")]
+pub enum CommonField {
+    Timestamp,
+    Datetime,
+}
+
+/// Context for initializing CommonFields.
+pub struct CommonFieldContext {
+    pub timestamp: i64,
+}
+
+impl CommonField {
+    pub fn get_field(&self, ctx: &CommonFieldContext) -> Option<Field> {
+        match self {
+            Self::Timestamp => Field::from(ctx.timestamp),
+            Self::Datetime => Field::from(translate_datetime(&ctx.timestamp)),
+        }
+        .into()
+    }
+}
+
+/// Generic field for dumping different types of models. It's either a
+/// CommonField or a FieldId that extracts a Field from a given model. It
+/// represents a unified interface for dumpable items.
+#[derive(Clone, Debug)]
+pub enum DumpField<F: FieldId> {
+    Common(CommonField),
+    FieldId(F),
+}
+
+pub type CgroupField = DumpField<model::CgroupModelFieldId>;
 
 // The DumpType trait is the key of how we make our dump generic.
 // Basically, the DumpType trait will be required by all dump related
@@ -223,13 +261,33 @@ pub fn run(
             pattern,
         } => {
             let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
-            let mut cgroup = cgroup::Cgroup::new(opts, advance, time_end, select);
-            if let Some(pattern_key) = pattern {
-                cgroup.init(parse_pattern(filename, pattern_key, "cgroup"));
+            let default = opts.everything || opts.default;
+            let detail = opts.everything || opts.detail;
+            let fields = if let Some(pattern_key) = pattern {
+                parse_pattern(filename, pattern_key, "cgroup")
             } else {
-                cgroup.init(fields);
-            }
-            cgroup.exec()
+                fields
+            };
+            let fields = expand_fields(
+                match fields.as_ref() {
+                    Some(fields) if !default => fields,
+                    _ => command::DEFAULT_CGROUP_FIELDS,
+                },
+                detail,
+            );
+            let cgroup = cgroup::Cgroup::new(&opts, select, fields);
+            let mut output: Box<dyn Write> = match opts.output.as_ref() {
+                Some(file_path) => Box::new(File::create(file_path)?),
+                None => Box::new(io::stdout()),
+            };
+            dump_timeseries(
+                advance,
+                time_end,
+                &cgroup,
+                output.as_mut(),
+                opts.output_format,
+                opts.br,
+            )
         }
         DumpCommand::Iface {
             fields,

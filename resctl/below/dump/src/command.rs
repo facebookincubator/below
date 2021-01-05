@@ -12,10 +12,88 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::{CommonField, DumpField};
+use model::{CgroupModelFieldId, FieldId};
+
 use anyhow::{bail, Error, Result};
+use once_cell::sync::Lazy;
 use regex::Regex;
 use std::str::FromStr;
+use std::string::ToString;
 use structopt::StructOpt;
+use strum::IntoEnumIterator;
+use strum_macros::EnumString;
+
+/// Field that represents a group of related FieldIds of a Queriable.
+/// Shorthand for specifying fields to dump.
+pub trait AggField<F: FieldId> {
+    fn expand(&self, detail: bool) -> Vec<F>;
+}
+
+/// Generic representation of fields accepted by different dump subcommands.
+/// Each DumpOptionField is either an aggregation of multiple FieldIds, or a
+/// "unit" field which could be either a CommonField or a FieldId.
+#[derive(Clone, Debug)]
+pub enum DumpOptionField<F: FieldId, A: AggField<F>> {
+    Unit(DumpField<F>),
+    Agg(A),
+}
+
+/// Expand the Agg fields and collect them with other Unit fields.
+pub fn expand_fields<F: FieldId + Clone, A: AggField<F>>(
+    fields: &[DumpOptionField<F, A>],
+    detail: bool,
+) -> Vec<DumpField<F>> {
+    let mut res = Vec::new();
+    for field in fields {
+        match field {
+            DumpOptionField::Unit(field) => res.push(field.clone()),
+            DumpOptionField::Agg(agg) => {
+                res.extend(agg.expand(detail).into_iter().map(DumpField::FieldId))
+            }
+        }
+    }
+    res
+}
+
+/// Used by structopt to parse user provided --fields.
+impl<F: FieldId + FromStr, A: AggField<F> + FromStr> FromStr for DumpOptionField<F, A> {
+    type Err = Error;
+
+    /// When parsing command line options into DumpOptionField, priority order
+    /// is CommonField, AggField, and then FieldId.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Ok(common) = CommonField::from_str(s) {
+            Ok(Self::Unit(DumpField::Common(common)))
+        } else if let Ok(agg) = A::from_str(s) {
+            Ok(Self::Agg(agg))
+        } else if let Ok(field_id) = F::from_str(s) {
+            Ok(Self::Unit(DumpField::FieldId(field_id)))
+        } else {
+            bail!("Variant not found: {}", s);
+        }
+    }
+}
+
+/// Used for generating help string that lists all supported fields.
+impl<F: FieldId + ToString, A: AggField<F> + ToString> ToString for DumpOptionField<F, A> {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Unit(DumpField::Common(common)) => common.to_string(),
+            Self::Unit(DumpField::FieldId(field_id)) => field_id.to_string(),
+            Self::Agg(agg) => agg.to_string(),
+        }
+    }
+}
+
+/// Join stringified items with ", ". Used for generating help string that lists
+/// all supported fields.
+fn join(iter: impl IntoIterator<Item = impl ToString>) -> String {
+    iter.into_iter()
+        .map(|v| v.to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
 
 // make_option macro will build a enum of tags that map to string values by
 // implementing the FromStr trait.
@@ -190,73 +268,125 @@ make_option! (ProcField {
     "exe": ExePath,
 });
 
-make_option! (CgroupField {
-    "timestamp": Timestamp,
-    "datetime": Datetime,
-    "cpu": Cpu,
-    "mem": Mem,
-    "io": Io,
-    "pressure": Pressure,
-    "name": Name,
-    "inode_number": InodeNum,
-    "full_path": FullPath,
-    "cpu_usage": CpuUsage,
-    "cpu_user": CpuUser,
-    "cpu_system": CpuSystem,
-    "cpu_nr_periods": CpuNrPeriods,
-    "cpu_nr_throttled": CpuNrThrottled,
-    "cpu_throttled": CpuThrottled,
-    "mem_total": MemTotal,
-    "mem_swap": MemSwap,
-    "mem_anon": MemAnon,
-    "mem_file": MemFile,
-    "mem_kernel": MemKernel,
-    "mem_slab": MemSlab,
-    "mem_sock": MemSock,
-    "mem_shmem": MemShem,
-    "mem_file_mapped": MemFileMapped,
-    "mem_file_dirty": MemFileDirty,
-    "mem_file_writeback": MemFileWriteBack,
-    "mem_anon_thp": MemAnonThp,
-    "mem_inactive_anon": MemInactiveAnon,
-    "mem_active_anon": MemActiveAnon,
-    "mem_inactive_file": MemInactiveFile,
-    "mem_active_file": MemActiveFile,
-    "mem_unevictable": MemUnevictable,
-    "mem_slab_reclaimable": MemSlabReclaimable,
-    "mem_slab_unreclaimable": MemSlabUnreclaimable,
-    "mem_pgfault": Pgfault,
-    "mem_pgmajfault": MemPgmajfault,
-    "mem_workingset_refault": MemWorkingsetRefault,
-    "mem_workingset_activate": MemWorkingsetActivate,
-    "mem_workingset_nodereclaim": MemWorkingsetNodereclaim,
-    "mem_pgrefill": MemPgrefill,
-    "mem_pgscan": MemPgscan,
-    "mem_pgsteal": MemPgsteal,
-    "mem_pgactivate": MemPgactivate,
-    "mem_pgdeactivate": MemPgdeactivate,
-    "mem_pglazyfree": MemPglazyfree,
-    "mem_pglazyfreed": MemPglazyfreed,
-    "mem_thp_fault_alloc": MemTHPFaultAlloc,
-    "mem_thp_collapse_alloc": MemTHPCollapseAlloc,
-    "mem_high": MemHigh,
-    "mem_events_low": MemEventsLow,
-    "mem_events_high": MemEventsHigh,
-    "mem_events_max": MemEventsMax,
-    "mem_events_oom": MemEventsOom,
-    "mem_events_oom_kill": MemEventsOomKill,
-    "io_read": IoRead,
-    "io_write": IoWrite,
-    "io_rios": IoRiops,
-    "io_wios": IoWiops,
-    "io_dbps": IoDbps,
-    "io_diops": IoDiops,
-    "io_total": IoTotal,
-    "pressure_cpu_some": CpuSome,
-    "pressure_io_some": IoSome,
-    "pressure_io_full": IoFull,
-    "pressure_mem_full": MemFull,
-    "pressure_mem_some": MemSome,
+/// Represents the four sub-model of CgroupModel.
+#[derive(Clone, Debug, EnumString, strum_macros::ToString)]
+#[strum(serialize_all = "snake_case")]
+pub enum CgroupAggField {
+    Cpu,
+    Mem,
+    Io,
+    Pressure,
+}
+
+impl AggField<CgroupModelFieldId> for CgroupAggField {
+    fn expand(&self, detail: bool) -> Vec<CgroupModelFieldId> {
+        use model::CgroupCpuModelFieldId as Cpu;
+        use model::CgroupIoModelFieldId as Io;
+        use model::CgroupMemoryModelFieldId as Mem;
+        use model::CgroupModelFieldId as FieldId;
+        use model::CgroupPressureModelFieldId as Pressure;
+
+        if detail {
+            match self {
+                Self::Cpu => Cpu::iter().map(FieldId::Cpu).collect(),
+                Self::Mem => Mem::iter().map(FieldId::Mem).collect(),
+                Self::Io => Io::iter().map(FieldId::Io).collect(),
+                Self::Pressure => Pressure::iter().map(FieldId::Pressure).collect(),
+            }
+        } else {
+            // Default fields for each group
+            match self {
+                Self::Cpu => vec![FieldId::Cpu(Cpu::UsagePct)],
+                Self::Mem => vec![FieldId::Mem(Mem::Total)],
+                Self::Io => vec![FieldId::Io(Io::RbytesPerSec), FieldId::Io(Io::WbytesPerSec)],
+                Self::Pressure => vec![
+                    FieldId::Pressure(Pressure::CpuSomePct),
+                    FieldId::Pressure(Pressure::MemoryFullPct),
+                    FieldId::Pressure(Pressure::IoFullPct),
+                ],
+            }
+        }
+    }
+}
+
+pub type CgroupOptionField = DumpOptionField<CgroupModelFieldId, CgroupAggField>;
+
+pub static DEFAULT_CGROUP_FIELDS: &[CgroupOptionField] = &[
+    DumpOptionField::Unit(DumpField::FieldId(CgroupModelFieldId::Name)),
+    DumpOptionField::Unit(DumpField::FieldId(CgroupModelFieldId::InodeNumber)),
+    DumpOptionField::Unit(DumpField::Common(CommonField::Datetime)),
+    DumpOptionField::Agg(CgroupAggField::Cpu),
+    DumpOptionField::Agg(CgroupAggField::Mem),
+    DumpOptionField::Agg(CgroupAggField::Io),
+    DumpOptionField::Agg(CgroupAggField::Pressure),
+    DumpOptionField::Unit(DumpField::Common(CommonField::Timestamp)),
+];
+
+const CGROUP_ABOUT: &str = "Dump cgroup stats";
+
+/// Generated about message for Cgroup dump so supported fields are up-to-date.
+static CGROUP_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+    format!(
+        r#"{about}
+
+********************** Available fields **********************
+
+{common_fields}, {cgroup_fields}
+
+{all_cpu_fields}
+
+{all_memory_fields}
+
+{all_io_fields}
+
+{all_pressure_fields}
+
+********************** Aggregated fields **********************
+
+* cpu: includes [{agg_cpu_fields}].
+
+* mem: includes [{agg_memory_fields}].
+
+* io: incldues [{agg_io_fields}].
+
+* pressure: includes [{agg_pressure_fields}].
+
+* --detail: includes [<agg_field>.*] for each given aggregated field.
+
+* --default: includes [{default_fields}].
+
+* --everything: includes everything (equivalent to --default --detail).
+
+********************** Example Commands **********************
+
+Simple example:
+
+$ below dump cgroup -b "08:30:00" -e "08:30:30" -f name cpu -O csv
+
+Output stats for all cgroups matching pattern "below*" for time slices
+from 08:30:00 to 08:30:30:
+
+$ below dump cgroup -b "08:30:00" -e "08:30:30" -s name -F below* -O json
+
+Output stats for top 5 CPU intense cgroups for each time slice
+from 08:30:00 to 08:30:30 recursively:
+
+$ below dump cgroup -b "08:30:00" -e "08:30:30" -s cpu.usage_pct --rsort --top 5
+
+"#,
+        about = CGROUP_ABOUT,
+        common_fields = join(CommonField::iter()),
+        cgroup_fields = join(CgroupModelFieldId::iter()),
+        all_cpu_fields = join(CgroupAggField::Cpu.expand(true)),
+        all_memory_fields = join(CgroupAggField::Mem.expand(true)),
+        all_io_fields = join(CgroupAggField::Io.expand(true)),
+        all_pressure_fields = join(CgroupAggField::Pressure.expand(true)),
+        agg_cpu_fields = join(CgroupAggField::Cpu.expand(false)),
+        agg_memory_fields = join(CgroupAggField::Mem.expand(false)),
+        agg_io_fields = join(CgroupAggField::Io.expand(false)),
+        agg_pressure_fields = join(CgroupAggField::Pressure.expand(false)),
+        default_fields = join(DEFAULT_CGROUP_FIELDS.to_owned()),
+    )
 });
 
 make_option! (IfaceField {
@@ -581,61 +711,16 @@ pub enum DumpCommand {
         #[structopt(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
-    /// Dump cgroup stats
-    ///
-    /// ********************** Available fields **********************
-    ///
-    /// timestamp, datetime, name, full_path, inode_number
-    ///
-    /// cpu_usage, cpu_user, cpu_system, cpu_nr_periods, cpu_nr_throttled
-    ///
-    /// mem_total, mem_anon, mem_file, mem_kernel, mem_slab, mem_sock, mem_shem,
-    /// mem_file_mapped, mem_file_dirty, mem_file_writeback, mem_anon_thp, mem_inactive_anon,
-    /// mem_active_anon, mem_inactive_file, mem_active_file, mem_unevictable, mem_slab_reclaimable,
-    /// mem_slab_unreclaimable, mem_high, mem_events_low, mem_events_high, mem_events_max,
-    /// mem_events_oom, mem_events_oom_kill,
-    ///
-    /// io_read, io_write, io_wios, io_rios, io_dbps, io_diops, io_total
-    ///
-    /// pressure_cpu_some, pressure_io_some, pressure_io_full, pressure_mem_some, pressure_mem_full
-    ///
-    /// ********************** Aggregated fields **********************
-    ///
-    /// * cpu: includes [cpu_usage]. Additionally includes [cpu_*] if --detail specified.
-    ///
-    /// * mem: includes [mem_total]. Additionally includes [mem_*] if --detail specified.
-    ///
-    /// * io: incldues [io_read, io_write]. Additionally includes [io_*] if --detail specified.
-    ///
-    /// * pressure: includes [pressure_cpu_some, pressure_mem_full, pressure_io_full],
-    /// Additionally includes [pressure_*] if --detail specified
-    ///
-    /// --default will have all of [name, cpu, mem, io, pressure]. To display everything, use --everything.
-    ///
-    /// ********************** Example Commands **********************
-    ///
-    /// Simple example:
-    ///
-    /// $ below dump cgroup -b "08:30:00" -e "08:30:30" -f name cpu -O csv
-    ///
-    /// Output stats for all cgroups matching pattern "below*" for time slices
-    /// from 08:30:00 to 08:30:30:
-    ///
-    /// $ below dump cgroup -b "08:30:00" -e "08:30:30" -s name -F below* -O json
-    ///
-    /// Output stats for top 5 CPU intense cgroups for each time slice
-    /// from 08:30:00 to 08:30:30 recursively:
-    ///
-    /// $ below dump cgroup -b "08:30:00" -e "08:30:30" -s cpu_usage --rsort --top 5
+    #[structopt(about = CGROUP_ABOUT, long_about = CGROUP_LONG_ABOUT.as_str())]
     Cgroup {
         /// Select which fields to display and in what order.
         #[structopt(short, long)]
-        fields: Option<Vec<CgroupField>>,
+        fields: Option<Vec<CgroupOptionField>>,
         #[structopt(flatten)]
         opts: GeneralOpt,
         /// Select field for operation, use with --sort, --rsort, --filter, --top
         #[structopt(long, short)]
-        select: Option<CgroupField>,
+        select: Option<CgroupModelFieldId>,
         /// Saved pattern in the dumprc file under [cgroup] section.
         #[structopt(long, short, conflicts_with("fields"))]
         pattern: Option<String>,

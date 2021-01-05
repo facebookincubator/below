@@ -198,3 +198,95 @@ where
         }
     }
 }
+
+/// Dumps (a portion of) the Model to some output in specific format.
+pub trait Dumper {
+    fn dump_model(
+        &self,
+        ctx: &CommonFieldContext,
+        model: &model::Model,
+        output: &mut dyn Write,
+        round: &mut usize,
+        //  comma_flag is for JSON output, if it set to true, we will have a "," before the output JSON.
+        // This is because in case of filter and delete empty val, we have no idea if the current
+        // value is the LAST value.
+        comma_flag: bool,
+    ) -> Result<IterExecResult>;
+}
+
+/// Called by dump commands to dump Models in continuous time steps. The actual
+/// dump logic for different Models in each time step is handled by specific
+/// Dumper implementations. This function is responsible for retrieving Models
+/// and handling formatting between time steps.
+pub fn dump_timeseries(
+    mut advance: Advance,
+    time_end: SystemTime,
+    dumper: &dyn Dumper,
+    output: &mut dyn Write,
+    output_format: Option<OutputFormat>,
+    br: Option<String>,
+) -> Result<()> {
+    let mut model = match advance.advance(Direction::Forward) {
+        Some(m) => m,
+        None => bail!("No initial model could be found!"),
+    };
+
+    let json = output_format == Some(OutputFormat::Json);
+    let csv = output_format == Some(OutputFormat::Csv);
+
+    let mut round = 0;
+
+    if json {
+        write!(output, "[")?;
+    }
+
+    loop {
+        let ctx = CommonFieldContext {
+            timestamp: model
+                .timestamp
+                .duration_since(SystemTime::UNIX_EPOCH)?
+                .as_secs() as i64,
+        };
+        // Base on the exec result, we will determine if we need to generate the line breaker, etc
+        let comma_flag = round != 0;
+        let res = match dumper.dump_model(&ctx, &model, output, &mut round, comma_flag) {
+            Ok(res) => res,
+            Err(e) => {
+                // Swallow BrokenPipe error for write. Rust runtime will ignore SIGPIPE by default and
+                // propagating EPIPE upwards to the application in the form of an IoError::BrokenPipe.
+                if e.downcast_ref::<std::io::Error>()
+                    .map_or(false, |e| e.kind() == std::io::ErrorKind::BrokenPipe)
+                {
+                    return Ok(());
+                } else {
+                    return Err(e);
+                }
+            }
+        };
+
+        if advance.get_next_ts() > time_end {
+            break;
+        }
+
+        model = match advance.advance(Direction::Forward) {
+            Some(m) => m,
+            None => break,
+        };
+
+        if res == IterExecResult::Skip {
+            continue;
+        }
+
+        if json {
+            write!(output, "\n")?;
+        } else if br.is_some() && !csv {
+            write!(output, "{}\n", br.as_ref().unwrap())?;
+        }
+    }
+
+    if json {
+        write!(output, "]")?;
+    }
+
+    Ok(())
+}
