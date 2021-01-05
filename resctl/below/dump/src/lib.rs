@@ -21,7 +21,6 @@ use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, Result};
-use cursive::utils::markup::StyledString;
 use regex::Regex;
 use serde_json::{json, Value};
 use toml::value::Value as TValue;
@@ -50,11 +49,11 @@ pub mod tmain;
 pub mod transport;
 
 pub use command::DumpCommand;
-use command::{expand_fields, GeneralOpt, OutputFormat, ProcField};
+use command::{expand_fields, GeneralOpt, OutputFormat};
 use fill::Dfill;
 use get::Dget;
 use print::{Dprint, HasRenderConfigForDump};
-use tmain::{dump_timeseries, Dump, Dumper, IterExecResult};
+use tmain::{dump_timeseries, Dumper, IterExecResult};
 
 const BELOW_DUMP_RC: &str = "/.config/below/dumprc";
 
@@ -98,6 +97,7 @@ pub enum DumpField<F: FieldId> {
 }
 
 pub type CgroupField = DumpField<model::CgroupModelFieldId>;
+pub type ProcessField = DumpField<model::SingleProcessModelFieldId>;
 pub type SystemField = DumpField<model::SystemModelFieldId>;
 pub type DiskField = DumpField<model::SingleDiskModelFieldId>;
 pub type NetworkField = DumpField<model::NetworkModelFieldId>;
@@ -294,13 +294,33 @@ pub fn run(
             pattern,
         } => {
             let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
-            let mut process = process::Process::new(opts, advance, time_end, select);
-            if let Some(pattern_key) = pattern {
-                process.init(parse_pattern(filename, pattern_key, "process"));
+            let default = opts.everything || opts.default;
+            let detail = opts.everything || opts.detail;
+            let fields = if let Some(pattern_key) = pattern {
+                parse_pattern(filename, pattern_key, "process")
             } else {
-                process.init(fields);
-            }
-            process.exec()
+                fields
+            };
+            let fields = expand_fields(
+                match fields.as_ref() {
+                    Some(fields) if !default => fields,
+                    _ => command::DEFAULT_PROCESS_FIELDS,
+                },
+                detail,
+            );
+            let process = process::Process::new(&opts, select, fields);
+            let mut output: Box<dyn Write> = match opts.output.as_ref() {
+                Some(file_path) => Box::new(File::create(file_path)?),
+                None => Box::new(io::stdout()),
+            };
+            dump_timeseries(
+                advance,
+                time_end,
+                &process,
+                output.as_mut(),
+                opts.output_format,
+                opts.br,
+            )
         }
         DumpCommand::Cgroup {
             fields,

@@ -43,6 +43,26 @@ impl HasViewStyle for model::CgroupPressureModel {
 
 impl HasViewStyle for model::SingleNetModel {}
 
+impl HasViewStyle for model::SingleProcessModel {
+    fn get_view_style(field_id: &Self::FieldId) -> Option<ViewStyle> {
+        use model::SingleProcessModelFieldId::Cpu;
+        match field_id {
+            Cpu(field_id) => model::ProcessCpuModel::get_view_style(field_id),
+            _ => None,
+        }
+    }
+}
+
+impl HasViewStyle for model::ProcessCpuModel {
+    fn get_view_style(field_id: &Self::FieldId) -> Option<ViewStyle> {
+        use model::ProcessCpuModelFieldId::{SystemPct, UsagePct, UserPct};
+        match field_id {
+            UsagePct | UserPct | SystemPct => Some(CPU_HIGHLIGHT.clone()),
+            _ => None,
+        }
+    }
+}
+
 impl HasViewStyle for model::SystemModel {
     fn get_view_style(field_id: &Self::FieldId) -> Option<ViewStyle> {
         use model::SystemModelFieldId::Mem;

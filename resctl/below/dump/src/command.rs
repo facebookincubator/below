@@ -15,7 +15,7 @@
 use crate::{CommonField, DumpField};
 use model::{
     CgroupModelFieldId, FieldId, NetworkModelFieldId, SingleDiskModelFieldId,
-    SingleNetModelFieldId, SystemModelFieldId,
+    SingleNetModelFieldId, SingleProcessModelFieldId, SystemModelFieldId,
 };
 
 use anyhow::{bail, Error, Result};
@@ -359,39 +359,119 @@ $ below dump disk -b "08:30:00" -e "08:30:30" -s read_bytes_per_sec --rsort --to
     )
 });
 
-make_option! (ProcField {
-    "timestamp": Timestamp,
-    "datetime": Datetime,
-    "io": Io,
-    "mem": Mem,
-    "cpu": Cpu,
-    "pid": Pid,
-    "ppid": Ppid,
-    "comm": Comm,
-    "state": State,
-    "uptime": Uptime,
-    "cgroup": Cgroup,
-    "cpu_user": CpuUserPct,
-    "cpu_sys": CpuSysPct,
-    "cpu_threads": CpuNumThreads,
-    "cpu_total": CpuTotalPct,
-    "mem_rss": MemRssBytes,
-    "mem_minorfaults": MemMinor,
-    "mem_majorfaults": MemMajor,
-    "mem_vm_size": VmSize,
-    "mem_lock": Lock,
-    "mem_pin": Pin,
-    "mem_anon": Anon,
-    "mem_file": File,
-    "mem_shmem": Shmem,
-    "mem_pte": Pte,
-    "mem_swap": Swap,
-    "mem_huge_tlb": HugeTLB,
-    "io_read": IoRead,
-    "io_write": IoWrite,
-    "io_total": IoTotal,
-    "cmdline": Cmdline,
-    "exe": ExePath,
+/// Represents the four sub-model of ProcessModel.
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    below_derive::EnumFromStr,
+    below_derive::EnumToString
+)]
+pub enum ProcessAggField {
+    Cpu,
+    Mem,
+    Io,
+}
+
+impl AggField<SingleProcessModelFieldId> for ProcessAggField {
+    fn expand(&self, detail: bool) -> Vec<SingleProcessModelFieldId> {
+        use model::ProcessCpuModelFieldId as Cpu;
+        use model::ProcessIoModelFieldId as Io;
+        use model::ProcessMemoryModelFieldId as Mem;
+        use model::SingleProcessModelFieldId as FieldId;
+
+        if detail {
+            match self {
+                Self::Cpu => Cpu::unit_variant_iter().map(FieldId::Cpu).collect(),
+                Self::Mem => Mem::unit_variant_iter().map(FieldId::Mem).collect(),
+                Self::Io => Io::unit_variant_iter().map(FieldId::Io).collect(),
+            }
+        } else {
+            // Default fields for each group
+            match self {
+                Self::Cpu => vec![FieldId::Cpu(Cpu::UsagePct)],
+                Self::Mem => vec![FieldId::Mem(Mem::RssBytes)],
+                Self::Io => vec![FieldId::Io(Io::RbytesPerSec), FieldId::Io(Io::WbytesPerSec)],
+            }
+        }
+    }
+}
+
+pub type ProcessOptionField = DumpOptionField<SingleProcessModelFieldId, ProcessAggField>;
+
+pub static DEFAULT_PROCESS_FIELDS: &[ProcessOptionField] = &[
+    DumpOptionField::Unit(DumpField::Common(CommonField::Datetime)),
+    DumpOptionField::Unit(DumpField::FieldId(SingleProcessModelFieldId::Pid)),
+    DumpOptionField::Unit(DumpField::FieldId(SingleProcessModelFieldId::Ppid)),
+    DumpOptionField::Unit(DumpField::FieldId(SingleProcessModelFieldId::Comm)),
+    DumpOptionField::Unit(DumpField::FieldId(SingleProcessModelFieldId::State)),
+    DumpOptionField::Agg(ProcessAggField::Cpu),
+    DumpOptionField::Agg(ProcessAggField::Mem),
+    DumpOptionField::Agg(ProcessAggField::Io),
+    DumpOptionField::Unit(DumpField::FieldId(SingleProcessModelFieldId::UptimeSecs)),
+    DumpOptionField::Unit(DumpField::FieldId(SingleProcessModelFieldId::Cgroup)),
+    DumpOptionField::Unit(DumpField::Common(CommonField::Timestamp)),
+    DumpOptionField::Unit(DumpField::FieldId(SingleProcessModelFieldId::Cmdline)),
+    DumpOptionField::Unit(DumpField::FieldId(SingleProcessModelFieldId::ExePath)),
+];
+
+const PROCESS_ABOUT: &str = "Dump process stats";
+
+/// Generated about message for Process dump so supported fields are up-to-date.
+static PROCESS_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+    format!(
+        r#"{about}
+
+********************** Available fields **********************
+
+{common_fields}, {process_fields}
+
+{all_cpu_fields}
+
+{all_memory_fields}
+
+{all_io_fields}
+
+********************** Aggregated fields **********************
+
+* cpu: includes [{agg_cpu_fields}].
+
+* mem: includes [{agg_memory_fields}].
+
+* io: incldues [{agg_io_fields}].
+
+* --detail: includes [<agg_field>.*] for each given aggregated field.
+
+* --default: includes [{default_fields}].
+
+* --everything: includes everything (equivalent to --default --detail).
+
+********************** Example Commands **********************
+
+Simple example:
+
+$ below dump process -b "08:30:00" -e "08:30:30" -f comm cpu io.rwbytes_per_sec -O csv
+
+Output stats for all "below*" matched processes from 08:30:00 to 08:30:30:
+
+$ below dump process -b "08:30:00" -e "08:30:30" -s comm -F below* -O json
+
+Output stats for top 5 CPU intense processes for each time slice from 08:30:00 to 08:30:30:
+
+$ below dump process -b "08:30:00" -e "08:30:30" -s cpu.usage_pct --rsort --top 5
+
+"#,
+        about = PROCESS_ABOUT,
+        common_fields = join(CommonField::unit_variant_iter()),
+        process_fields = join(SingleProcessModelFieldId::unit_variant_iter()),
+        all_cpu_fields = join(ProcessAggField::Cpu.expand(true)),
+        all_memory_fields = join(ProcessAggField::Mem.expand(true)),
+        all_io_fields = join(ProcessAggField::Io.expand(true)),
+        agg_cpu_fields = join(ProcessAggField::Cpu.expand(false)),
+        agg_memory_fields = join(ProcessAggField::Mem.expand(false)),
+        agg_io_fields = join(ProcessAggField::Io.expand(false)),
+        default_fields = join(DEFAULT_PROCESS_FIELDS.to_owned()),
+    )
 });
 
 /// Represents the four sub-model of CgroupModel.
@@ -894,51 +974,16 @@ pub enum DumpCommand {
         #[structopt(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
-    /// Dump process stats
-    ///
-    /// ********************** Available fields **********************
-    ///
-    /// timestamp, datetime, pid, ppid, comm, state, uptime, cgroup, cmdline, exe
-    ///
-    /// cpu_user, cpu_sys, cpu_threads, cpu_total
-    ///
-    /// mem_rss, mem_minorfaults, mem_majorfaults, mem_vm_size, mem_lock, mem_pin, mem_anon
-    /// mem_file, mem_shmem, mem_pte, mem_swap, mem_huge_tlb
-    ///
-    /// io_read, io_write, io_total
-    ///
-    /// ********************** Aggregated fields **********************
-    ///
-    /// * cpu: includes [cpu_total]. Additionally includes [cpu_user, cpu_sys, cpu_threads] if --detail specified
-    ///
-    /// * mem: includes [mem_rss]. Additionally includes [mem_*] if --detail specified
-    ///
-    /// * io: includes [io_read, io_write]. Additionally includes[io_total] -if --detail specified
-    ///
-    /// --default will have all of [pid, comm, cpu, mem, io]. To display everything, use --everything.
-    ///
-    /// ********************** Example Commands **********************
-    ///
-    /// Simple example:
-    ///
-    /// $ below dump process -b "08:30:00" -e "08:30:30" -f comm cpu io_total -O csv
-    ///
-    /// Output stats for all "below*" matched processes from 08:30:00 to 08:30:30:
-    ///
-    /// $ below dump process -b "08:30:00" -e "08:30:30" -s comm -F below* -O json
-    ///
-    /// Output stats for top 5 CPU intense processes for each time slice from 08:30:00 to 08:30:30:
-    ///
-    /// $ below dump process -b "08:30:00" -e "08:30:30" -s cpu_total --rsort --top 5
+    #[structopt(about = PROCESS_ABOUT, long_about = PROCESS_LONG_ABOUT.as_str())]
     Process {
         /// Select which fields to display and in what order.
         #[structopt(short, long)]
-        fields: Option<Vec<ProcField>>,
+        fields: Option<Vec<ProcessOptionField>>,
         #[structopt(flatten)]
         opts: GeneralOpt,
         /// Select field for operation, use with --sort, --rsort, --filter, --top
         #[structopt(long, short)]
-        select: Option<ProcField>,
+        select: Option<SingleProcessModelFieldId>,
         /// Saved pattern in the dumprc file under [process] section.
         #[structopt(long, short, conflicts_with("fields"))]
         pattern: Option<String>,

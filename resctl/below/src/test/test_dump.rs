@@ -13,18 +13,16 @@
 // limitations under the License.
 
 use std::io;
-use std::path::PathBuf;
 
 use serde_json::Value;
 
 use super::*;
-use command::{expand_fields, GeneralOpt, OutputFormat, ProcField};
+use command::{expand_fields, GeneralOpt, OutputFormat};
 use common::util::convert_bytes;
 use dump::*;
-use get::Dget;
 use model::Queriable;
 use print::HasRenderConfigForDump;
-use tmain::{Dump, Dumper};
+use tmain::Dumper;
 
 #[test]
 // Test correctness of system decoration
@@ -232,31 +230,29 @@ impl io::Write for StrIo {
 #[test]
 // Test correctness of process decoration
 // This test will also test JSON correctness.
-fn test_dump_proc_content() {
+fn test_dump_process_content() {
     let mut collector = Collector::new(get_dummy_exit_data());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
-    let time = SystemTime::now();
-    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
 
     let mut opts: GeneralOpt = Default::default();
-    opts.everything = true;
+    let fields = command::expand_fields(command::DEFAULT_PROCESS_FIELDS, true);
     opts.output_format = Some(OutputFormat::Json);
-    let mut proc_handle = process::Process::new(opts, advance, time, None);
-    proc_handle.init(None);
+    let process_dumper = process::Process::new(&opts, None, fields);
 
     // update model again to populate cpu and io data
     let model = collector.update_model(&logger).expect("Fail to get model");
-    let mut proc_content = StrIo::new();
+    let mut process_content = StrIo::new();
     let mut round = 0;
-    proc_handle
-        .iterate_exec(&model, &mut proc_content, &mut round, false)
-        .expect("Fail to get json from iterate_exec");
+    let ctx = CommonFieldContext { timestamp: 0 };
+    process_dumper
+        .dump_model(&ctx, &model, &mut process_content, &mut round, false)
+        .expect("Failed to dump process model");
 
     // verify json correctness
-    assert!(!proc_content.content.is_empty());
+    assert!(!process_content.content.is_empty());
     let jval: Value =
-        serde_json::from_str(&proc_content.content).expect("Fail parse json of process dump");
+        serde_json::from_str(&process_content.content).expect("Fail parse json of process dump");
 
     // verify content correctness, test first 5 should be enough
     let mut count = 5;
@@ -401,46 +397,54 @@ fn test_dump_proc_select() {
     let mut collector = Collector::new(get_dummy_exit_data());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
-    let time = SystemTime::now();
-    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
+    // update model again to populate cpu and io data
+    let model = collector.update_model(&logger).expect("Fail to get model");
 
+    let fields = command::expand_fields(command::DEFAULT_PROCESS_FIELDS, true);
     let mut opts: GeneralOpt = Default::default();
     opts.everything = true;
     opts.output_format = Some(OutputFormat::Json);
-    let mut proc_handle = process::Process::new(opts, advance, time, Some(ProcField::Pid));
-    proc_handle.init(None);
-
-    // update model again to populate cpu and io data
-    let model = collector.update_model(&logger).expect("Fail to get model");
-    proc_handle.get_opts_mut().filter = Some(
+    opts.filter = Some(
         regex::Regex::new(&model.process.processes.iter().last().unwrap().0.to_string())
             .expect("Fail to construct regex"),
     );
-    let mut proc_content = StrIo::new();
+    let process_dumper = process::Process::new(
+        &opts,
+        Some(model::SingleProcessModelFieldId::Pid),
+        fields.clone(),
+    );
+
+    let mut process_content = StrIo::new();
     let mut round = 0;
-    proc_handle
-        .iterate_exec(&model, &mut proc_content, &mut round, false)
-        .expect("Fail to get json from iterate_exec");
+    let ctx = CommonFieldContext { timestamp: 0 };
+    process_dumper
+        .dump_model(&ctx, &model, &mut process_content, &mut round, false)
+        .expect("Failed to dump process model");
 
     // test select filter
     let jval: Value =
-        serde_json::from_str(&proc_content.content).expect("Fail parse json of process dump");
+        serde_json::from_str(&process_content.content).expect("Fail parse json of process dump");
     assert_eq!(jval.as_array().unwrap().len(), 1);
 
     // test select rsort top
-    proc_handle.get_opts_mut().sort = true;
-    proc_handle.get_opts_mut().top = 5;
-    proc_handle.get_opts_mut().filter = None;
+    opts.sort = true;
+    opts.top = 5;
+    opts.filter = None;
+    let process_dumper = process::Process::new(
+        &opts,
+        Some(model::SingleProcessModelFieldId::Pid),
+        fields.clone(),
+    );
 
-    proc_content.content = String::new();
+    process_content.content = String::new();
     round = 0;
-    proc_handle
-        .iterate_exec(&model, &mut proc_content, &mut round, false)
-        .expect("Fail to get json from iterate_exec");
+    process_dumper
+        .dump_model(&ctx, &model, &mut process_content, &mut round, false)
+        .expect("Failed to dump process model");
 
     assert_eq!(round, 5);
     let jval: Value =
-        serde_json::from_str(&proc_content.content).expect("Fail parse json of process dump");
+        serde_json::from_str(&process_content.content).expect("Fail parse json of process dump");
 
     let mut prev_id = 0;
     for item in jval.as_array().unwrap() {
@@ -453,17 +457,19 @@ fn test_dump_proc_select() {
     }
 
     // test select sort top
-    proc_handle.get_opts_mut().sort = false;
-    proc_handle.get_opts_mut().rsort = true;
-    proc_content.content = String::new();
+    opts.sort = false;
+    opts.rsort = true;
+    let process_dumper =
+        process::Process::new(&opts, Some(model::SingleProcessModelFieldId::Pid), fields);
+    process_content.content = String::new();
     round = 0;
-    proc_handle
-        .iterate_exec(&model, &mut proc_content, &mut round, false)
-        .expect("Fail to get json from iterate_exec");
+    process_dumper
+        .dump_model(&ctx, &model, &mut process_content, &mut round, false)
+        .expect("Failed to dump process model");
 
     assert_eq!(round, 5);
     let jval: Value =
-        serde_json::from_str(&proc_content.content).expect("Fail parse json of process dump");
+        serde_json::from_str(&process_content.content).expect("Fail parse json of process dump");
 
     prev_id = 0;
     for item in jval.as_array().unwrap() {
@@ -1208,7 +1214,7 @@ fn test_parse_pattern() {
 demacia = ["datetime", "os_release"]
 
 [process]
-proc = ["datetime", "mem_anon"]
+proc = ["datetime", "mem.anon"]
 "#;
     file.write_all(dumprc_str.as_bytes())
         .expect("Faild to write temp dumprc file during testing ignore");
@@ -1232,10 +1238,21 @@ proc = ["datetime", "mem_anon"]
         ))
     );
 
-    let proc_res =
-        parse_pattern::<ProcField>(path.to_string_lossy().to_string(), "proc".into(), "process")
-            .expect("Failed to parse process pattern");
+    let proc_res = parse_pattern::<command::ProcessOptionField>(
+        path.to_string_lossy().to_string(),
+        "proc".into(),
+        "process",
+    )
+    .expect("Failed to parse process pattern");
 
-    assert_eq!(proc_res[0], ProcField::Datetime);
-    assert_eq!(proc_res[1], ProcField::Anon);
+    assert_eq!(
+        proc_res[0],
+        command::ProcessOptionField::Unit(ProcessField::Common(CommonField::Datetime))
+    );
+    assert_eq!(
+        proc_res[1],
+        command::ProcessOptionField::Unit(ProcessField::FieldId(
+            model::SingleProcessModelFieldId::Mem(model::ProcessMemoryModelFieldId::Anon)
+        ))
+    );
 }

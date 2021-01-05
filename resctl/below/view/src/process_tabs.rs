@@ -13,66 +13,57 @@
 // limitations under the License.
 
 use crate::process_view::ProcessState;
+use crate::render::ViewItem;
 use crate::stats_view::StateCommon;
-use below_derive::BelowDecor;
-use common::util::{convert_bytes, is_cpu_significant};
 use model::SingleProcessModel;
 
 use cursive::utils::markup::StyledString;
 
-// All available sorting tags
-make_sort_order! (ProcessOrders {
-    "pid": Pid,
-    "ppid": Ppid,
-    "comm": Comm,
-    "state": State,
-    "uptime": UptimeSecs,
-    "cgroup": Cgroup,
-    "cpu_user": CpuUser,
-    "cpu_sys": CpuSys,
-    "cpu_num_threads": CpuNumThreads,
-    "cpu_total": CpuTotal,
-    "rss": Rss,
-    "vm_size": VmSize,
-    "lock": Lock,
-    "pin": Pin,
-    "anon": Anon,
-    "file": File,
-    "shmem": Shmem,
-    "pte": Pte,
-    "swap": Swap,
-    "huge_tlb": HugeTLB,
-    "minor_faults": MinorFaults,
-    "major_faults": MajorFaults,
-    "read": Read,
-    "write": Write,
-    "io_total": IoTotal,
-    "cmdline": Cmdline,
-});
+/// Renders corresponding Fields From ProcessModel.
+type ProcessViewItem = ViewItem<model::SingleProcessModelFieldId>;
 
-impl Default for ProcessOrders {
-    fn default() -> Self {
-        ProcessOrders::Keep
-    }
+/// A collection of ProcessViewItem.
+#[derive(Clone)]
+pub struct ProcessTab {
+    pub view_items: Vec<ProcessViewItem>,
 }
 
 // Defines how to iterate through the process stats and generate get_rows for ViewBridge
-pub trait ProcessTab {
-    fn get_title_vec(&self, model: &SingleProcessModel) -> Vec<String>;
+impl ProcessTab {
+    fn new(view_items: Vec<ProcessViewItem>) -> Self {
+        Self { view_items }
+    }
+
     fn get_process_field_line(
         &self,
         model: &SingleProcessModel,
         offset: Option<usize>,
-    ) -> StyledString;
-    fn sort_process(
-        &self,
-        sort_order: ProcessOrders,
-        processes: &mut Vec<&SingleProcessModel>,
-        reverse: bool,
-    );
+    ) -> StyledString {
+        let mut line = StyledString::new();
+        line.append(default_tabs::COMM_VIEW_ITEM.render(model));
+        line.append_plain(" ");
 
-    fn get_rows(
-        &mut self,
+        for item in std::iter::once(&*default_tabs::CGROUP_VIEW_ITEM)
+            .chain(self.view_items.iter())
+            .skip(offset.unwrap_or(0))
+        {
+            line.append(item.render(model));
+            line.append_plain(" ");
+        }
+
+        line
+    }
+
+    pub fn get_title_vec(&self) -> Vec<String> {
+        std::iter::once(&*default_tabs::COMM_VIEW_ITEM)
+            .chain(std::iter::once(&*default_tabs::CGROUP_VIEW_ITEM))
+            .chain(self.view_items.iter())
+            .map(|item| item.config.render_title())
+            .collect()
+    }
+
+    pub fn get_rows(
+        &self,
         state: &ProcessState,
         offset: Option<usize>,
     ) -> Vec<(StyledString, String)> {
@@ -81,7 +72,9 @@ pub trait ProcessTab {
         let mut processes: Vec<&SingleProcessModel> =
             process_model.processes.iter().map(|(_, spm)| spm).collect();
 
-        self.sort_process(state.sort_order, &mut processes, state.reverse);
+        if let Some(sort_order) = state.sort_order.as_ref() {
+            model::sort_queriables(&mut processes, sort_order, state.reverse);
+        }
         processes
             .iter()
             .filter(|spm| {
@@ -111,231 +104,76 @@ pub trait ProcessTab {
     }
 }
 
-macro_rules! impl_process_tab {
-    ($name:ident) => {
-        impl ProcessTab for $name {
-            fn get_title_vec(&self, model: &SingleProcessModel) -> Vec<String> {
-                let mut res: Vec<String> = self
-                    .get_title_pipe(&model)
-                    .trim()
-                    .split("|")
-                    .map(|s| s.to_string())
-                    .collect();
-                res.pop();
-                res
-            }
+pub mod default_tabs {
+    use super::*;
 
-            fn sort_process(
-                &self,
-                sort_order: ProcessOrders,
-                processes: &mut Vec<&SingleProcessModel>,
-                reverse: bool,
-            ) {
-                self.sort(sort_order, processes, reverse)
-            }
-
-            fn get_process_field_line(
-                &self,
-                model: &SingleProcessModel,
-                offset: Option<usize>,
-            ) -> StyledString {
-                match offset {
-                    Some(offset) => {
-                        let mut field_iter = self.get_field_vec(&model).into_iter();
-                        let mut res = StyledString::new();
-                        if let Some(name) = field_iter.next() {
-                            res.append(name);
-                            res.append_plain(" ")
-                        };
-
-                        field_iter.skip(offset).for_each(|item| {
-                            res.append(item);
-                            res.append_plain(" ")
-                        });
-                        res
-                    }
-                    _ => self.get_field_line(&model),
-                }
-            }
-        }
+    use model::ProcessCpuModelFieldId::{NumThreads, SystemPct, UsagePct, UserPct};
+    use model::ProcessIoModelFieldId::{RbytesPerSec, RwbytesPerSec, WbytesPerSec};
+    use model::ProcessMemoryModelFieldId::{
+        Anon, File, HugeTlb, Lock, MajorfaultsPerSec, MinorfaultsPerSec, Pin, Pte, RssBytes, Shmem,
+        Swap, VmSize,
     };
+    use model::SingleProcessModelFieldId::{
+        Cgroup, Cmdline, Comm, Cpu, Io, Mem, Pid, Ppid, State, UptimeSecs,
+    };
+
+    use once_cell::sync::Lazy;
+
+    pub static COMM_VIEW_ITEM: Lazy<ProcessViewItem> = Lazy::new(|| ViewItem::from_default(Comm));
+    pub static CGROUP_VIEW_ITEM: Lazy<ProcessViewItem> =
+        Lazy::new(|| ViewItem::from_default(Cgroup));
+
+    pub static PROCESS_GENERAL_TAB: Lazy<ProcessTab> = Lazy::new(|| {
+        ProcessTab::new(vec![
+            ViewItem::from_default(Pid),
+            ViewItem::from_default(Ppid),
+            ViewItem::from_default(State),
+            ViewItem::from_default(Cpu(UsagePct)),
+            ViewItem::from_default(Cpu(UserPct)),
+            ViewItem::from_default(Cpu(SystemPct)),
+            ViewItem::from_default(Mem(RssBytes)),
+            ViewItem::from_default(Mem(MinorfaultsPerSec)),
+            ViewItem::from_default(Mem(MajorfaultsPerSec)),
+            ViewItem::from_default(Io(RbytesPerSec)),
+            ViewItem::from_default(Io(WbytesPerSec)),
+            ViewItem::from_default(UptimeSecs),
+            ViewItem::from_default(Cpu(NumThreads)),
+            ViewItem::from_default(Io(RwbytesPerSec)),
+            ViewItem::from_default(Cmdline),
+        ])
+    });
+
+    pub static PROCESS_CPU_TAB: Lazy<ProcessTab> = Lazy::new(|| {
+        ProcessTab::new(vec![
+            ViewItem::from_default(Cpu(UserPct)),
+            ViewItem::from_default(Cpu(SystemPct)),
+            ViewItem::from_default(Cpu(NumThreads)),
+            ViewItem::from_default(Cpu(UsagePct)),
+        ])
+    });
+
+    pub static PROCESS_MEM_TAB: Lazy<ProcessTab> = Lazy::new(|| {
+        ProcessTab::new(vec![
+            ViewItem::from_default(Mem(RssBytes)),
+            ViewItem::from_default(Mem(VmSize)),
+            ViewItem::from_default(Mem(Swap)),
+            ViewItem::from_default(Mem(Anon)),
+            ViewItem::from_default(Mem(File)),
+            ViewItem::from_default(Mem(Shmem)),
+            ViewItem::from_default(Mem(Pte)),
+            ViewItem::from_default(Mem(Lock)),
+            ViewItem::from_default(Mem(Pin)),
+            ViewItem::from_default(Mem(HugeTlb)),
+            ViewItem::from_default(Mem(MinorfaultsPerSec)),
+            ViewItem::from_default(Mem(MajorfaultsPerSec)),
+        ])
+    });
+
+    pub static PROCESS_IO_TAB: Lazy<ProcessTab> = Lazy::new(|| {
+        ProcessTab::new(vec![
+            ViewItem::from_default(Io(RbytesPerSec)),
+            ViewItem::from_default(Io(WbytesPerSec)),
+            ViewItem::from_default(Io(RwbytesPerSec)),
+        ])
+    });
 }
-
-#[derive(BelowDecor, Default, Clone)]
-pub struct ProcessGeneral {
-    #[blink("SingleProcessModel$get_comm")]
-    #[bttr(sort_tag = "ProcessOrders::Comm")]
-    pub comm: Option<String>,
-    #[blink("SingleProcessModel$get_cgroup")]
-    #[bttr(sort_tag = "ProcessOrders::Cgroup")]
-    pub cgroup: Option<String>,
-    #[blink("SingleProcessModel$get_pid")]
-    #[bttr(sort_tag = "ProcessOrders::Pid")]
-    pub pid: Option<i32>,
-    #[blink("SingleProcessModel$get_ppid")]
-    #[bttr(sort_tag = "ProcessOrders::Ppid")]
-    pub ppid: Option<i32>,
-    #[blink("SingleProcessModel$get_state")]
-    #[bttr(sort_tag = "ProcessOrders::State")]
-    pub state: Option<procfs::PidState>,
-    #[bttr(
-        title = "CPU",
-        width = 11,
-        precision = 2,
-        unit = "%",
-        sort_tag = "ProcessOrders::CpuTotal",
-        highlight_if = "is_cpu_significant($)"
-    )]
-    #[blink("SingleProcessModel$cpu?.get_user_pct")]
-    #[blink("SingleProcessModel$cpu?.get_system_pct")]
-    pub cpu: Option<f64>,
-    #[blink("SingleProcessModel$cpu?.get_user_pct")]
-    #[bttr(sort_tag = "ProcessOrders::CpuUser")]
-    pub cpu_user_pct: Option<f64>,
-    #[blink("SingleProcessModel$cpu?.get_system_pct")]
-    #[bttr(sort_tag = "ProcessOrders::CpuSys")]
-    pub cpu_system_pct: Option<f64>,
-    #[blink("SingleProcessModel$mem?.get_rss_bytes")]
-    #[bttr(sort_tag = "ProcessOrders::Rss")]
-    pub mem_rss_bytes: Option<u64>,
-    #[blink("SingleProcessModel$mem?.get_minorfaults_per_sec")]
-    #[bttr(sort_tag = "ProcessOrders::MinorFaults")]
-    pub mem_minorfaults_per_sec: Option<f64>,
-    #[blink("SingleProcessModel$mem?.get_majorfaults_per_sec")]
-    #[bttr(sort_tag = "ProcessOrders::MajorFaults")]
-    pub mem_majorfaults_per_sec: Option<f64>,
-    #[blink("SingleProcessModel$io?.get_rbytes_per_sec")]
-    #[bttr(sort_tag = "ProcessOrders::Read")]
-    pub io_rbytes_per_sec: Option<f64>,
-    #[blink("SingleProcessModel$io?.get_wbytes_per_sec")]
-    #[bttr(sort_tag = "ProcessOrders::Write")]
-    pub io_wbytes_per_sec: Option<f64>,
-    #[blink("SingleProcessModel$get_uptime_secs")]
-    #[bttr(sort_tag = "ProcessOrders::UptimeSecs")]
-    pub uptime_secs: Option<u64>,
-    #[blink("SingleProcessModel$cpu?.get_num_threads")]
-    #[bttr(sort_tag = "ProcessOrders::CpuNumThreads")]
-    pub cpu_num_threads: Option<u64>,
-    #[bttr(
-        title = "RW Total",
-        width = 10,
-        sort_tag = "ProcessOrders::IoTotal",
-        decorator = "convert_bytes($ as f64)",
-        unit = "/s"
-    )]
-    #[blink("SingleProcessModel$io?.get_rbytes_per_sec")]
-    #[blink("SingleProcessModel$io?.get_wbytes_per_sec")]
-    pub disk: Option<f64>,
-    #[blink("SingleProcessModel$get_cmdline")]
-    #[bttr(sort_tag = "ProcessOrders::Cmdline")]
-    pub cmdline: Option<String>,
-}
-
-impl_process_tab!(ProcessGeneral);
-
-#[derive(BelowDecor, Default, Clone)]
-pub struct ProcessCPU {
-    #[blink("SingleProcessModel$get_comm")]
-    #[bttr(sort_tag = "ProcessOrders::Comm")]
-    pub comm: Option<String>,
-    #[blink("SingleProcessModel$get_cgroup")]
-    #[bttr(sort_tag = "ProcessOrders::Cgroup")]
-    pub cgroup: Option<String>,
-    #[bttr(sort_tag = "ProcessOrders::CpuUser")]
-    #[blink("SingleProcessModel$cpu?.get_user_pct")]
-    pub cpu_user: Option<f64>,
-    #[bttr(sort_tag = "ProcessOrders::CpuSys")]
-    #[blink("SingleProcessModel$cpu?.get_system_pct")]
-    pub cpu_sys: Option<f64>,
-    #[bttr(sort_tag = "ProcessOrders::CpuNumThreads")]
-    #[blink("SingleProcessModel$cpu?.get_num_threads")]
-    pub cpu_num_threads: Option<u64>,
-    #[bttr(
-        title = "CPU",
-        width = 11,
-        precision = 2,
-        unit = "%",
-        sort_tag = "ProcessOrders::CpuTotal"
-    )]
-    #[blink("SingleProcessModel$cpu?.get_user_pct")]
-    #[blink("SingleProcessModel$cpu?.get_system_pct")]
-    pub cpu_total: Option<f64>,
-}
-
-impl_process_tab!(ProcessCPU);
-
-#[derive(BelowDecor, Default, Clone)]
-pub struct ProcessMem {
-    #[blink("SingleProcessModel$get_comm")]
-    #[bttr(sort_tag = "ProcessOrders::Comm")]
-    pub comm: Option<String>,
-    #[blink("SingleProcessModel$get_cgroup")]
-    #[bttr(sort_tag = "ProcessOrders::Cgroup")]
-    pub cgroup: Option<String>,
-    #[bttr(sort_tag = "ProcessOrders::Rss")]
-    #[blink("SingleProcessModel$mem?.get_rss_bytes")]
-    pub mem_rss: Option<u64>,
-    #[bttr(sort_tag = "ProcessOrders::VmSize")]
-    #[blink("SingleProcessModel$mem?.get_vm_size")]
-    pub vm_size: Option<u64>,
-    #[bttr(sort_tag = "ProcessOrders::Swap")]
-    #[blink("SingleProcessModel$mem?.get_swap")]
-    pub swap: Option<u64>,
-    #[bttr(sort_tag = "ProcessOrders::Anon")]
-    #[blink("SingleProcessModel$mem?.get_anon")]
-    pub anon: Option<u64>,
-    #[bttr(sort_tag = "ProcessOrders::File")]
-    #[blink("SingleProcessModel$mem?.get_file")]
-    pub file: Option<u64>,
-    #[bttr(sort_tag = "ProcessOrders::Shmem")]
-    #[blink("SingleProcessModel$mem?.get_shmem")]
-    pub shmem: Option<u64>,
-    #[bttr(sort_tag = "ProcessOrders::Pte")]
-    #[blink("SingleProcessModel$mem?.get_pte")]
-    pub pte: Option<u64>,
-    #[bttr(sort_tag = "ProcessOrders::Lock")]
-    #[blink("SingleProcessModel$mem?.get_lock")]
-    pub lock: Option<u64>,
-    #[bttr(sort_tag = "ProcessOrders::Pin")]
-    #[blink("SingleProcessModel$mem?.get_pin")]
-    pub pin: Option<u64>,
-    #[bttr(sort_tag = "ProcessOrders::HugeTLB")]
-    #[blink("SingleProcessModel$mem?.get_huge_tlb")]
-    pub huge_tlb: Option<u64>,
-    #[bttr(sort_tag = "ProcessOrders::MinorFaults")]
-    #[blink("SingleProcessModel$mem?.get_minorfaults_per_sec")]
-    pub mem_minorfaults: Option<f64>,
-    #[bttr(sort_tag = "ProcessOrders::MajorFaults")]
-    #[blink("SingleProcessModel$mem?.get_majorfaults_per_sec")]
-    pub mem_majorfaults: Option<f64>,
-}
-
-impl_process_tab!(ProcessMem);
-
-#[derive(BelowDecor, Default, Clone)]
-pub struct ProcessIO {
-    #[blink("SingleProcessModel$get_comm")]
-    #[bttr(sort_tag = "ProcessOrders::Comm")]
-    pub comm: Option<String>,
-    #[blink("SingleProcessModel$get_cgroup")]
-    #[bttr(sort_tag = "ProcessOrders::Cgroup")]
-    pub cgroup: Option<String>,
-    #[bttr(sort_tag = "ProcessOrders::Read")]
-    #[blink("SingleProcessModel$io?.get_rbytes_per_sec")]
-    pub io_read: Option<f64>,
-    #[bttr(sort_tag = "ProcessOrders::Write")]
-    #[blink("SingleProcessModel$io?.get_wbytes_per_sec")]
-    pub io_write: Option<f64>,
-    #[bttr(
-        title = "RW Total",
-        decorator = "convert_bytes($ as f64)",
-        width = 11,
-        sort_tag = "ProcessOrders::IoTotal",
-        unit = "/s"
-    )]
-    #[blink("SingleProcessModel$io?.get_rbytes_per_sec")]
-    #[blink("SingleProcessModel$io?.get_wbytes_per_sec")]
-    pub io_total: Option<f64>,
-}
-
-impl_process_tab!(ProcessIO);

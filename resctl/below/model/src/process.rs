@@ -37,7 +37,7 @@ impl ProcessModel {
     }
 }
 
-#[derive(BelowDecor, Default)]
+#[derive(BelowDecor, Default, below_derive::Queriable)]
 pub struct SingleProcessModel {
     #[bttr(title = "Pid", width = 11)]
     pub pid: Option<i32>,
@@ -55,8 +55,11 @@ pub struct SingleProcessModel {
         decorator = "fold_string(&$, 50, 1, |c: char| c == '/')"
     )]
     pub cgroup: Option<String>,
+    #[queriable(subquery)]
     pub io: Option<ProcessIoModel>,
+    #[queriable(subquery)]
     pub mem: Option<ProcessMemoryModel>,
+    #[queriable(subquery)]
     pub cpu: Option<ProcessCpuModel>,
     #[bttr(title = "Cmdline", width = 50)]
     pub cmdline: Option<String>,
@@ -89,7 +92,7 @@ impl SingleProcessModel {
     }
 }
 
-#[derive(Clone, BelowDecor, Default)]
+#[derive(Clone, BelowDecor, Default, below_derive::Queriable)]
 pub struct ProcessIoModel {
     #[bttr(
         title = "Reads",
@@ -105,19 +108,27 @@ pub struct ProcessIoModel {
         unit = "/s"
     )]
     pub wbytes_per_sec: Option<f64>,
+    pub rwbytes_per_sec: Option<f64>,
 }
 
 impl ProcessIoModel {
     fn new(begin: &procfs::PidIo, end: &procfs::PidIo, delta: Duration) -> ProcessIoModel {
+        let rbytes_per_sec = count_per_sec!(begin.rbytes, end.rbytes, delta);
+        let wbytes_per_sec = count_per_sec!(begin.wbytes, end.wbytes, delta);
+        let rwbytes_per_sec = Some(
+            rbytes_per_sec.clone().unwrap_or_default() + wbytes_per_sec.clone().unwrap_or_default(),
+        );
         ProcessIoModel {
-            rbytes_per_sec: count_per_sec!(begin.rbytes, end.rbytes, delta),
-            wbytes_per_sec: count_per_sec!(begin.wbytes, end.wbytes, delta),
+            rbytes_per_sec,
+            wbytes_per_sec,
+            rwbytes_per_sec,
         }
     }
 }
 
-#[derive(Clone, BelowDecor, Default)]
+#[derive(Clone, BelowDecor, Default, below_derive::Queriable)]
 pub struct ProcessCpuModel {
+    pub usage_pct: Option<f64>,
     #[bttr(
         title = "CPU User",
         width = 11,
@@ -140,15 +151,19 @@ pub struct ProcessCpuModel {
 
 impl ProcessCpuModel {
     fn new(begin: &procfs::PidStat, end: &procfs::PidStat, delta: Duration) -> ProcessCpuModel {
+        let user_pct = usec_pct!(begin.user_usecs, end.user_usecs, delta);
+        let system_pct = usec_pct!(begin.system_usecs, end.system_usecs, delta);
+        let usage_pct = collector::opt_add(user_pct.clone(), system_pct.clone());
         ProcessCpuModel {
-            user_pct: usec_pct!(begin.user_usecs, end.user_usecs, delta),
-            system_pct: usec_pct!(begin.system_usecs, end.system_usecs, delta),
+            usage_pct,
+            user_pct,
+            system_pct,
             num_threads: end.num_threads.map(|t| t as u64),
         }
     }
 }
 
-#[derive(Clone, BelowDecor, Default)]
+#[derive(Clone, BelowDecor, Default, below_derive::Queriable)]
 pub struct ProcessMemoryModel {
     #[bttr(title = "Minflt", width = 11, precision = 2, unit = "/s")]
     pub minorfaults_per_sec: Option<f64>,

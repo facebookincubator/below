@@ -30,25 +30,6 @@ use crate::controllers::Controllers;
 use crate::tab_view::TabView;
 use common::logutil::{get_last_log_to_display, CPMsgRecord};
 
-macro_rules! make_sort_order {
-    ($name:ident {$($str_field:tt: $enum_field:ident,)*}) => {
-        #[derive(Copy, Clone, PartialEq)]
-        pub enum $name {
-            Keep,
-            $($enum_field,)*
-        }
-
-        impl From<&str> for $name {
-            fn from(order_str: &str) -> Self {
-                match order_str.to_lowercase().as_str() {
-                    $($str_field => $name::$enum_field,)*
-                    _ => $name::Keep
-                }
-            }
-        }
-    }
-}
-
 /// A trait that defines common state data querying or event handling.
 ///
 /// This trait must be implemented by all view state. It will help to expose

@@ -21,10 +21,14 @@ use cursive::view::Identifiable;
 use cursive::views::{NamedView, SelectView, ViewRef};
 use cursive::Cursive;
 
-use model::{ProcessModel, SingleProcessModel};
+use model::{
+    ProcessCpuModelFieldId, ProcessIoModelFieldId, ProcessMemoryModelFieldId, ProcessModel,
+    SingleProcessModelFieldId,
+};
 
 use crate::process_tabs::{
-    ProcessCPU, ProcessGeneral, ProcessIO, ProcessMem, ProcessOrders, ProcessTab,
+    default_tabs::{PROCESS_CPU_TAB, PROCESS_GENERAL_TAB, PROCESS_IO_TAB, PROCESS_MEM_TAB},
+    ProcessTab,
 };
 use crate::stats_view::{StateCommon, StatsView, ViewBridge};
 use crate::ViewState;
@@ -38,45 +42,55 @@ pub struct ProcessState {
     // For zoomed view, we should save current filter to here and reset the
     // filter when go back to cgroup or process view.
     pub filter_cache_for_zoom: Option<String>,
-    pub sort_order: ProcessOrders,
-    pub sort_tags: HashMap<String, Vec<ProcessOrders>>,
+    pub sort_order: Option<SingleProcessModelFieldId>,
+    pub sort_tags: HashMap<String, &'static ProcessTab>,
     pub reverse: bool,
     pub model: Rc<RefCell<ProcessModel>>,
 }
 
 impl StateCommon for ProcessState {
     type ModelType = ProcessModel;
-    type TagType = ProcessOrders;
+    type TagType = SingleProcessModelFieldId;
     fn get_filter(&mut self) -> &mut Option<String> {
         &mut self.filter
     }
 
     fn set_sort_tag(&mut self, sort_order: Self::TagType, reverse: &mut bool) -> bool {
-        if self.sort_order == sort_order && sort_order != ProcessOrders::Keep {
+        let sort_order = Some(sort_order);
+        if self.sort_order == sort_order {
             *reverse = !*reverse;
         } else {
             *reverse = true;
             self.sort_order = sort_order;
         }
         self.reverse = *reverse;
-        self.sort_order != ProcessOrders::Keep
+        true
     }
 
     fn set_sort_tag_from_tab_idx(&mut self, tab: &str, idx: usize, reverse: &mut bool) -> bool {
-        let sort_order = self
-            .sort_tags
-            .get(tab)
-            .unwrap_or_else(|| panic!("Fail to find tab: {}", tab))
-            .get(idx)
-            .expect("Out of title scope")
-            .clone();
+        let sort_order = match idx {
+            0 => Self::TagType::Comm,
+            1 => Self::TagType::Cgroup,
+            _ => self
+                .sort_tags
+                .get(tab)
+                .unwrap_or_else(|| panic!("Fail to find tab: {}", tab))
+                .view_items
+                .get(idx - 2)
+                .expect("Out of title scope")
+                .field_id
+                .to_owned(),
+        };
 
         self.set_sort_tag(sort_order, reverse)
     }
 
     fn set_sort_string(&mut self, selection: &str, reverse: &mut bool) -> bool {
-        let sort_order: ProcessOrders = selection.into();
-        self.set_sort_tag(sort_order, reverse)
+        use std::str::FromStr;
+        match Self::TagType::from_str(selection) {
+            Ok(field_id) => self.set_sort_tag(field_id, reverse),
+            Err(_) => false,
+        }
     }
 
     fn get_model(&self) -> Ref<Self::ModelType> {
@@ -89,15 +103,15 @@ impl StateCommon for ProcessState {
 
     fn new(model: Rc<RefCell<Self::ModelType>>) -> Self {
         let mut sort_tags = HashMap::new();
-        sort_tags.insert("General".into(), ProcessGeneral::get_sort_tag_vec());
-        sort_tags.insert("CPU".into(), ProcessCPU::get_sort_tag_vec());
-        sort_tags.insert("Mem".into(), ProcessMem::get_sort_tag_vec());
-        sort_tags.insert("I/O".into(), ProcessIO::get_sort_tag_vec());
+        sort_tags.insert("General".into(), &*PROCESS_GENERAL_TAB);
+        sort_tags.insert("CPU".into(), &*PROCESS_CPU_TAB);
+        sort_tags.insert("Mem".into(), &*PROCESS_MEM_TAB);
+        sort_tags.insert("I/O".into(), &*PROCESS_IO_TAB);
         Self {
             cgroup_filter: None,
             filter: None,
             filter_cache_for_zoom: None,
-            sort_order: ProcessOrders::Keep,
+            sort_order: None,
             sort_tags,
             reverse: false,
             model,
@@ -106,8 +120,8 @@ impl StateCommon for ProcessState {
 }
 
 impl ProcessState {
-    fn set_sort_order(&mut self, tag: ProcessOrders) {
-        self.sort_order = tag;
+    fn set_sort_order(&mut self, tag: SingleProcessModelFieldId) {
+        self.sort_order = Some(tag);
     }
 
     fn set_reverse(&mut self, reverse: bool) {
@@ -127,11 +141,8 @@ impl ProcessState {
     }
 }
 
-pub enum ProcessView {
-    General(ProcessGeneral),
-    Cpu(ProcessCPU),
-    Mem(ProcessMem),
-    Io(ProcessIO),
+pub struct ProcessView {
+    tab: &'static ProcessTab,
 }
 
 impl ProcessView {
@@ -154,10 +165,30 @@ impl ProcessView {
 
         let tabs = vec!["General".into(), "CPU".into(), "Mem".into(), "I/O".into()];
         let mut tabs_map: HashMap<String, ProcessView> = HashMap::new();
-        tabs_map.insert("General".into(), ProcessView::General(Default::default()));
-        tabs_map.insert("CPU".into(), ProcessView::Cpu(Default::default()));
-        tabs_map.insert("Mem".into(), ProcessView::Mem(Default::default()));
-        tabs_map.insert("I/O".into(), ProcessView::Io(Default::default()));
+        tabs_map.insert(
+            "General".into(),
+            Self {
+                tab: &*PROCESS_GENERAL_TAB,
+            },
+        );
+        tabs_map.insert(
+            "CPU".into(),
+            Self {
+                tab: &*PROCESS_CPU_TAB,
+            },
+        );
+        tabs_map.insert(
+            "Mem".into(),
+            Self {
+                tab: &*PROCESS_MEM_TAB,
+            },
+        );
+        tabs_map.insert(
+            "I/O".into(),
+            Self {
+                tab: &*PROCESS_IO_TAB,
+            },
+        );
         let user_data = c
             .user_data::<ViewState>()
             .expect("No data stored in Cursive Object!");
@@ -173,7 +204,9 @@ impl ProcessView {
         .feed_data(c)
         .on_event('P', |c| {
             let mut view = Self::get_process_view(c);
-            view.state.borrow_mut().set_sort_order(ProcessOrders::Pid);
+            view.state
+                .borrow_mut()
+                .set_sort_order(SingleProcessModelFieldId::Pid);
             view.state.borrow_mut().set_reverse(false);
             view.refresh(c)
         })
@@ -181,19 +214,27 @@ impl ProcessView {
             let mut view = Self::get_process_view(c);
             view.state
                 .borrow_mut()
-                .set_sort_order(ProcessOrders::CpuTotal);
+                .set_sort_order(SingleProcessModelFieldId::Cpu(
+                    ProcessCpuModelFieldId::UsagePct,
+                ));
             view.state.borrow_mut().set_reverse(true);
             view.refresh(c)
         })
         .on_event('N', |c| {
             let mut view = Self::get_process_view(c);
-            view.state.borrow_mut().set_sort_order(ProcessOrders::Comm);
+            view.state
+                .borrow_mut()
+                .set_sort_order(SingleProcessModelFieldId::Comm);
             view.state.borrow_mut().set_reverse(false);
             view.refresh(c)
         })
         .on_event('M', |c| {
             let mut view = Self::get_process_view(c);
-            view.state.borrow_mut().set_sort_order(ProcessOrders::Rss);
+            view.state
+                .borrow_mut()
+                .set_sort_order(SingleProcessModelFieldId::Mem(
+                    ProcessMemoryModelFieldId::RssBytes,
+                ));
             view.state.borrow_mut().set_reverse(true);
             view.refresh(c)
         })
@@ -201,7 +242,9 @@ impl ProcessView {
             let mut view = Self::get_process_view(c);
             view.state
                 .borrow_mut()
-                .set_sort_order(ProcessOrders::IoTotal);
+                .set_sort_order(SingleProcessModelFieldId::Io(
+                    ProcessIoModelFieldId::RwbytesPerSec,
+                ));
             view.state.borrow_mut().set_reverse(true);
             view.refresh(c)
         })
@@ -236,15 +279,6 @@ impl ProcessView {
             _ => {}
         }
     }
-
-    fn get_inner(&self) -> Box<dyn ProcessTab> {
-        match self {
-            Self::General(inner) => Box::new(inner.clone()),
-            Self::Cpu(inner) => Box::new(inner.clone()),
-            Self::Mem(inner) => Box::new(inner.clone()),
-            Self::Io(inner) => Box::new(inner.clone()),
-        }
-    }
 }
 
 impl ViewBridge for ProcessView {
@@ -253,8 +287,7 @@ impl ViewBridge for ProcessView {
         "process_view"
     }
     fn get_title_vec(&self) -> Vec<String> {
-        let model: SingleProcessModel = Default::default();
-        self.get_inner().get_title_vec(&model)
+        self.tab.get_title_vec()
     }
 
     fn get_rows(
@@ -262,6 +295,6 @@ impl ViewBridge for ProcessView {
         state: &Self::StateType,
         offset: Option<usize>,
     ) -> Vec<(StyledString, String)> {
-        self.get_inner().get_rows(state, offset)
+        self.tab.get_rows(state, offset)
     }
 }

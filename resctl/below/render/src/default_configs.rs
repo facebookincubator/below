@@ -315,6 +315,68 @@ impl HasRenderConfig for model::SingleNetModel {
     }
 }
 
+impl HasRenderConfig for model::SingleProcessModel {
+    fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
+        use model::SingleProcessModelFieldId::*;
+        match field_id {
+            Pid => rc!(title("Pid")),
+            Ppid => rc!(title("Ppid")),
+            Comm => rc!(title("Comm"), width(30)),
+            State => rc!(title("State")),
+            UptimeSecs => rc!(title("Uptime(sec)")),
+            Cgroup => rc!(title("Cgroup"), width(50), fold(FoldOption::Name),),
+            Io(field_id) => model::ProcessIoModel::get_render_config(field_id),
+            Mem(field_id) => model::ProcessMemoryModel::get_render_config(field_id),
+            Cpu(field_id) => model::ProcessCpuModel::get_render_config(field_id),
+            Cmdline => rc!(title("Cmdline"), width(50)),
+            ExePath => rc!(title("Exe Path")),
+        }
+    }
+}
+
+impl HasRenderConfig for model::ProcessIoModel {
+    fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
+        use model::ProcessIoModelFieldId::*;
+        match field_id {
+            RbytesPerSec => rc!(title("Reads"), suffix("/s"), format(ReadableSize)),
+            WbytesPerSec => rc!(title("Writes"), suffix("/s"), format(ReadableSize)),
+            RwbytesPerSec => rc!(title("RW Total"), suffix("/s"), format(ReadableSize)),
+        }
+    }
+}
+
+impl HasRenderConfig for model::ProcessMemoryModel {
+    fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
+        use model::ProcessMemoryModelFieldId::*;
+        match field_id {
+            MinorfaultsPerSec => rc!(title("Minflt"), format(Precision(2)), suffix("/s")),
+            MajorfaultsPerSec => rc!(title("Majflt"), format(Precision(2)), suffix("/s")),
+            RssBytes => rc!(title("RSS"), format(ReadableSize)),
+            VmSize => rc!(title("VM Size"), format(ReadableSize)),
+            Lock => rc!(title("Lock"), format(ReadableSize)),
+            Pin => rc!(title("Pin"), format(ReadableSize)),
+            Anon => rc!(title("Anon"), format(ReadableSize)),
+            File => rc!(title("File"), format(ReadableSize)),
+            Shmem => rc!(title("Shmem"), format(ReadableSize)),
+            Pte => rc!(title("PTE"), format(ReadableSize)),
+            Swap => rc!(title("Swap"), format(ReadableSize)),
+            HugeTlb => rc!(title("Huge TLB"), format(ReadableSize)),
+        }
+    }
+}
+
+impl HasRenderConfig for model::ProcessCpuModel {
+    fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
+        use model::ProcessCpuModelFieldId::*;
+        match field_id {
+            UsagePct => rc!(title("CPU"), format(Precision(2)), suffix("%")),
+            UserPct => rc!(title("CPU User"), format(Precision(2)), suffix("%")),
+            SystemPct => rc!(title("CPU System"), format(Precision(2)), suffix("%")),
+            NumThreads => rc!(title("Threads")),
+        }
+    }
+}
+
 impl HasRenderConfig for model::SystemModel {
     fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
         use model::SystemModelFieldId::*;

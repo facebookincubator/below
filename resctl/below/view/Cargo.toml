@@ -7,10 +7,8 @@ license = "Apache-2.0"
 include = ["src/**/*.rs"]
 
 [dependencies]
-below_derive = { path = "../below_derive" }
 common = { path = "../common" }
 model = { path = "../model" }
-procfs = { path = "../../common/procfs" }
 render = { path = "../render" }
 store = { path = "../store" }
 anyhow = "1.0"
