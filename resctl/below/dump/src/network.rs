@@ -82,28 +82,28 @@ pub struct NetworkData {
         tag = "NetworkField::InMcast",
         class = "NetworkField::Ip"
     )]
-    #[blink("NetworkModel$ip_ext.get_in_mcast_pkts_per_sec")]
+    #[blink("NetworkModel$ip.get_in_mcast_pkts_per_sec")]
     pub in_mcast_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "IpOutMcastPkts/s",
         tag = "NetworkField::OutMcast",
         class = "NetworkField::Ip"
     )]
-    #[blink("NetworkModel$ip_ext.get_out_mcast_pkts_per_sec")]
+    #[blink("NetworkModel$ip.get_out_mcast_pkts_per_sec")]
     pub out_mcast_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "IpInBcastPkts/s",
         tag = "NetworkField::InBcast",
         class = "NetworkField::Ip"
     )]
-    #[blink("NetworkModel$ip_ext.get_in_bcast_pkts_per_sec")]
+    #[blink("NetworkModel$ip.get_in_bcast_pkts_per_sec")]
     pub in_bcast_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "IpOutBcastPkts/s",
         tag = "NetworkField::OutBcast",
         class = "NetworkField::Ip"
     )]
-    #[blink("NetworkModel$ip_ext.get_out_bcast_pkts_per_sec")]
+    #[blink("NetworkModel$ip.get_out_bcast_pkts_per_sec")]
     pub out_bcast_pkts_per_sec: Option<u64>,
     #[bttr(
         title = "Ip6InPkts/s",

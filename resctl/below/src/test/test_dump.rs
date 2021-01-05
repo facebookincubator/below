@@ -984,19 +984,19 @@ fn test_dump_network_content() {
         );
         assert_eq!(
             value["IpInMcastPkts/s"].as_str().unwrap(),
-            nm.ip_ext.get_in_mcast_pkts_per_sec_str()
+            nm.ip.get_in_mcast_pkts_per_sec_str()
         );
         assert_eq!(
             value["IpOutMcastPkts/s"].as_str().unwrap(),
-            nm.ip_ext.get_out_mcast_pkts_per_sec_str()
+            nm.ip.get_out_mcast_pkts_per_sec_str()
         );
         assert_eq!(
             value["IpInBcastPkts/s"].as_str().unwrap(),
-            nm.ip_ext.get_in_bcast_pkts_per_sec_str()
+            nm.ip.get_in_bcast_pkts_per_sec_str()
         );
         assert_eq!(
             value["IpOutBcastPkts/s"].as_str().unwrap(),
-            nm.ip_ext.get_out_bcast_pkts_per_sec_str()
+            nm.ip.get_out_bcast_pkts_per_sec_str()
         );
         //ip6
         assert_eq!(

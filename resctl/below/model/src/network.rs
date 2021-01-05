@@ -19,7 +19,6 @@ pub struct NetworkModel {
     pub interfaces: BTreeMap<String, SingleNetModel>,
     pub tcp: TcpModel,
     pub ip: IpModel,
-    pub ip_ext: IpExtModel,
     pub ip6: Ip6Model,
     pub icmp: IcmpModel,
     pub icmp6: Icmp6Model,
@@ -57,8 +56,6 @@ impl NetworkModel {
             ip: IpModel::new(
                 sample.ip.as_ref().unwrap_or(&Default::default()),
                 last.and_then(|(n, d)| n.ip.as_ref().map(|n| (n, d))),
-            ),
-            ip_ext: IpExtModel::new(
                 sample.ip_ext.as_ref().unwrap_or(&Default::default()),
                 last.and_then(|(n, d)| n.ip_ext.as_ref().map(|n| (n, d))),
             ),
@@ -153,25 +150,7 @@ pub struct IpModel {
     pub out_discards_pkts_per_sec: Option<u64>,
     #[bttr(title = "OutNoRoutesPkts/s", unit = " pkts", width = 20)]
     pub out_no_routes_pkts_per_sec: Option<u64>,
-}
-
-impl IpModel {
-    pub fn new(sample: &procfs::IpStat, last: Option<(&procfs::IpStat, Duration)>) -> IpModel {
-        IpModel {
-            forwarding_pkts_per_sec: get_option_rate!(forwarding, sample, last),
-            in_receives_pkts_per_sec: get_option_rate!(in_receives, sample, last),
-            forw_datagrams_per_sec: get_option_rate!(forw_datagrams, sample, last),
-            in_discards_pkts_per_sec: get_option_rate!(in_discards, sample, last),
-            in_delivers_pkts_per_sec: get_option_rate!(in_delivers, sample, last),
-            out_requests_per_sec: get_option_rate!(out_requests, sample, last),
-            out_discards_pkts_per_sec: get_option_rate!(out_discards, sample, last),
-            out_no_routes_pkts_per_sec: get_option_rate!(out_no_routes, sample, last),
-        }
-    }
-}
-
-#[derive(BelowDecor, Default)]
-pub struct IpExtModel {
+    // IpExt stats below
     #[bttr(title = "InMcastPkts/s", unit = " pkts", width = 20)]
     pub in_mcast_pkts_per_sec: Option<u64>,
     #[bttr(title = "OutMcastPkts/s", unit = " pkts", width = 20)]
@@ -196,23 +175,34 @@ pub struct IpExtModel {
     pub in_no_ect_pkts_per_sec: Option<u64>,
 }
 
-impl IpExtModel {
+impl IpModel {
     pub fn new(
-        sample: &procfs::IpExtStat,
-        last: Option<(&procfs::IpExtStat, Duration)>,
-    ) -> IpExtModel {
-        IpExtModel {
-            in_mcast_pkts_per_sec: get_option_rate!(in_mcast_pkts, sample, last),
-            out_mcast_pkts_per_sec: get_option_rate!(out_mcast_pkts, sample, last),
-            in_bcast_pkts_per_sec: get_option_rate!(in_bcast_pkts, sample, last),
-            out_bcast_pkts_per_sec: get_option_rate!(out_bcast_pkts, sample, last),
-            in_octets_per_sec: get_option_rate!(in_octets, sample, last),
-            out_octets_per_sec: get_option_rate!(out_octets, sample, last),
-            in_mcast_octets_per_sec: get_option_rate!(in_mcast_octets, sample, last),
-            out_mcast_octets_per_sec: get_option_rate!(out_mcast_octets, sample, last),
-            in_bcast_octets_per_sec: get_option_rate!(in_bcast_octets, sample, last),
-            out_bcast_octets_per_sec: get_option_rate!(out_bcast_octets, sample, last),
-            in_no_ect_pkts_per_sec: get_option_rate!(in_no_ect_pkts, sample, last),
+        sample: &procfs::IpStat,
+        last: Option<(&procfs::IpStat, Duration)>,
+        sample_ext: &procfs::IpExtStat,
+        last_ext: Option<(&procfs::IpExtStat, Duration)>,
+    ) -> IpModel {
+        IpModel {
+            forwarding_pkts_per_sec: get_option_rate!(forwarding, sample, last),
+            in_receives_pkts_per_sec: get_option_rate!(in_receives, sample, last),
+            forw_datagrams_per_sec: get_option_rate!(forw_datagrams, sample, last),
+            in_discards_pkts_per_sec: get_option_rate!(in_discards, sample, last),
+            in_delivers_pkts_per_sec: get_option_rate!(in_delivers, sample, last),
+            out_requests_per_sec: get_option_rate!(out_requests, sample, last),
+            out_discards_pkts_per_sec: get_option_rate!(out_discards, sample, last),
+            out_no_routes_pkts_per_sec: get_option_rate!(out_no_routes, sample, last),
+            // IpExt
+            in_mcast_pkts_per_sec: get_option_rate!(in_mcast_pkts, sample_ext, last_ext),
+            out_mcast_pkts_per_sec: get_option_rate!(out_mcast_pkts, sample_ext, last_ext),
+            in_bcast_pkts_per_sec: get_option_rate!(in_bcast_pkts, sample_ext, last_ext),
+            out_bcast_pkts_per_sec: get_option_rate!(out_bcast_pkts, sample_ext, last_ext),
+            in_octets_per_sec: get_option_rate!(in_octets, sample_ext, last_ext),
+            out_octets_per_sec: get_option_rate!(out_octets, sample_ext, last_ext),
+            in_mcast_octets_per_sec: get_option_rate!(in_mcast_octets, sample_ext, last_ext),
+            out_mcast_octets_per_sec: get_option_rate!(out_mcast_octets, sample_ext, last_ext),
+            in_bcast_octets_per_sec: get_option_rate!(in_bcast_octets, sample_ext, last_ext),
+            out_bcast_octets_per_sec: get_option_rate!(out_bcast_octets, sample_ext, last_ext),
+            in_no_ect_pkts_per_sec: get_option_rate!(in_no_ect_pkts, sample_ext, last_ext),
         }
     }
 }
