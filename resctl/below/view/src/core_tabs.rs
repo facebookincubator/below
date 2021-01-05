@@ -48,10 +48,7 @@ impl CoreTab for CoreCpu {
         let model = state.get_model();
 
         let mut res: Vec<(StyledString, String)> = model
-            .cpu
             .cpus
-            .as_ref()
-            .unwrap_or(&vec![])
             .iter()
             .filter(|scm| {
                 if let Some(f) = &state.filter {
@@ -63,17 +60,7 @@ impl CoreTab for CoreCpu {
             .map(|scm| (scm.get_field_line(), "".into()))
             .collect();
 
-        res.push((
-            model
-                .cpu
-                .total_cpu
-                .as_ref()
-                .unwrap_or(&SingleCpuModel {
-                    ..Default::default()
-                })
-                .get_field_line(),
-            "".into(),
-        ));
+        res.push((model.total_cpu.get_field_line(), "".into()));
 
         res
     }

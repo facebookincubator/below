@@ -248,11 +248,7 @@ fn calculate_cpu_usage() {
         &sample,
         Some((&last_sample, Duration::from_secs(5))),
     );
-    let total_cpu = model
-        .system
-        .cpu
-        .total_cpu
-        .expect("Fail to calculate total CPU");
+    let total_cpu = model.system.total_cpu;
     assert_eq!(total_cpu.usage_pct, Some(40.0));
     assert_eq!(total_cpu.user_pct, Some(10.0));
     assert_eq!(total_cpu.system_pct, Some(30.0));

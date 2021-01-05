@@ -32,84 +32,84 @@ pub struct SystemData {
     #[blink("SystemModel$")]
     pub os_release: Option<String>,
     #[bttr(tag = "SysField::TotalInterruptCt", class = "SysField::Stat")]
-    #[blink("SystemModel$cpu.get_total_interrupt_ct")]
+    #[blink("SystemModel$stat.get_total_interrupt_ct")]
     pub total_interrupt_ct: Option<i64>,
     #[bttr(tag = "SysField::ContextSwitches", class = "SysField::Stat")]
-    #[blink("SystemModel$cpu.get_context_switches")]
+    #[blink("SystemModel$stat.get_context_switches")]
     pub context_switches: Option<i64>,
     #[bttr(tag = "SysField::BootTimeEpochSecs", class = "SysField::Stat")]
-    #[blink("SystemModel$cpu.get_boot_time_epoch_secs")]
+    #[blink("SystemModel$stat.get_boot_time_epoch_secs")]
     pub boot_time_epoch_secs: Option<i64>,
     #[bttr(tag = "SysField::TotalProcs", class = "SysField::Stat")]
-    #[blink("SystemModel$cpu.get_total_processes")]
+    #[blink("SystemModel$stat.get_total_processes")]
     pub total_processes: Option<i64>,
     #[bttr(tag = "SysField::RunningProcs", class = "SysField::Stat")]
-    #[blink("SystemModel$cpu.get_running_processes")]
+    #[blink("SystemModel$stat.get_running_processes")]
     pub running_processes: Option<i32>,
     #[bttr(tag = "SysField::BlockedProcs", class = "SysField::Stat")]
-    #[blink("SystemModel$cpu.get_blocked_processes")]
+    #[blink("SystemModel$stat.get_blocked_processes")]
     pub blocked_processes: Option<i32>,
     // Cpu
     #[bttr(tag = "SysField::CpuUsagePct", class = "SysField::Cpu")]
-    #[blink("SystemModel$cpu.total_cpu?.get_usage_pct")]
+    #[blink("SystemModel$total_cpu.get_usage_pct")]
     pub usage_pct: Option<f64>,
     #[bttr(tag = "SysField::CpuUserPct", class = "SysField::Cpu")]
-    #[blink("SystemModel$cpu.total_cpu?.get_user_pct")]
+    #[blink("SystemModel$total_cpu.get_user_pct")]
     pub user_pct: Option<f64>,
     #[bttr(
         tag = "SysField::CpuIdlePct",
         class = "SysField::Cpu",
         class_detail = true
     )]
-    #[blink("SystemModel$cpu.total_cpu?.get_idle_pct")]
+    #[blink("SystemModel$total_cpu.get_idle_pct")]
     pub idle_pct: Option<f64>,
     #[bttr(tag = "SysField::CpuSystemPct", class = "SysField::Cpu")]
-    #[blink("SystemModel$cpu.total_cpu?.get_system_pct")]
+    #[blink("SystemModel$total_cpu.get_system_pct")]
     pub system_pct: Option<f64>,
     #[bttr(
         tag = "SysField::CpuNicePct",
         class = "SysField::Cpu",
         class_detail = true
     )]
-    #[blink("SystemModel$cpu.total_cpu?.get_nice_pct")]
+    #[blink("SystemModel$total_cpu.get_nice_pct")]
     pub nice_pct: Option<f64>,
     #[bttr(
         tag = "SysField::CpuIowaitPct",
         class = "SysField::Cpu",
         class_detail = true
     )]
-    #[blink("SystemModel$cpu.total_cpu?.get_iowait_pct")]
+    #[blink("SystemModel$total_cpu.get_iowait_pct")]
     pub iowait_pct: Option<f64>,
     #[bttr(tag = "SysField::CpuIrq", class = "SysField::Cpu", class_detail = true)]
-    #[blink("SystemModel$cpu.total_cpu?.get_irq_pct")]
+    #[blink("SystemModel$total_cpu.get_irq_pct")]
     pub irq_pct: Option<f64>,
     #[bttr(
         tag = "SysField::CpuSoftIrq",
         class = "SysField::Cpu",
         class_detail = true
     )]
-    #[blink("SystemModel$cpu.total_cpu?.get_softirq_pct")]
+    #[blink("SystemModel$total_cpu.get_softirq_pct")]
     pub softirq_pct: Option<f64>,
     #[bttr(
         tag = "SysField::CpuStolen",
         class = "SysField::Cpu",
         class_detail = true
     )]
-    #[blink("SystemModel$cpu.total_cpu?.get_stolen_pct")]
+    #[blink("SystemModel$total_cpu.get_stolen_pct")]
     pub stolen_pct: Option<f64>,
     #[bttr(
         tag = "SysField::CpuGuest",
         class = "SysField::Cpu",
         class_detail = true
     )]
-    #[blink("SystemModel$cpu.total_cpu?.get_guest_pct")]
+    #[blink("SystemModel$total_cpu.get_guest_pct")]
     pub guest_pct: Option<f64>,
     #[bttr(
         tag = "SysField::CpuGuestNice",
         class = "SysField::Cpu",
         class_detail = true
     )]
-    #[blink("SystemModel$cpu.total_cpu?.get_guest_nice_pct")]
+    #[blink("SystemModel$total_cpu.get_guest_nice_pct")]
     pub guest_nice_pct: Option<f64>,
     // Mem stats
     #[bttr(tag = "SysField::MemTotal", class = "SysField::Mem")]

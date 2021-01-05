@@ -20,7 +20,7 @@ use cursive::Cursive;
 
 use crate::ViewState;
 use common::util::convert_bytes;
-use model::{CpuModel, MemoryModel, NetworkModel, SingleDiskModel, VmModel};
+use model::{MemoryModel, NetworkModel, SingleCpuModel, SingleDiskModel, VmModel};
 
 use below_derive::BelowDecor;
 
@@ -60,10 +60,10 @@ struct SysCpu {
         title_width = 9,
         precision = 2
     )]
-    #[blink("CpuModel$total_cpu?.get_usage_pct")]
+    #[blink("SingleCpuModel$get_usage_pct")]
     pub usage_pct: Option<f64>,
     #[bttr(title = "User", unit = "%", width = 10, title_width = 9, precision = 2)]
-    #[blink("CpuModel$total_cpu?.get_user_pct")]
+    #[blink("SingleCpuModel$get_user_pct")]
     pub user_pct: Option<f64>,
     #[bttr(
         title = "System",
@@ -72,11 +72,11 @@ struct SysCpu {
         title_width = 9,
         precision = 2
     )]
-    #[blink("CpuModel$total_cpu?.get_system_pct")]
+    #[blink("SingleCpuModel$get_system_pct")]
     pub sys_pct: Option<f64>,
 }
 
-gen_row_impl!(SysCpu, CpuModel, "CPU");
+gen_row_impl!(SysCpu, SingleCpuModel, "CPU");
 
 #[derive(BelowDecor, Default)]
 struct SysMem {
@@ -205,7 +205,7 @@ fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
 
     let system_model = view_state.system.borrow();
     let network_model = view_state.network.borrow();
-    let cpu_row = SysCpu::get_row(&system_model.cpu);
+    let cpu_row = SysCpu::get_row(&system_model.total_cpu);
     let mem_row = SysMem::get_row(&system_model.mem);
     let vm_row = SysVM::get_row(&system_model.vm);
     let io_row = SysIo::get_row(&system_model.disks);

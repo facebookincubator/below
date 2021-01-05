@@ -24,7 +24,9 @@ pub struct SystemModel {
     pub kernel_version: Option<String>,
     #[bttr(title = "OS Release", width = 50)]
     pub os_release: Option<String>,
-    pub cpu: CpuModel,
+    pub stat: ProcStatModel,
+    pub total_cpu: SingleCpuModel,
+    pub cpus: Vec<SingleCpuModel>,
     pub mem: MemoryModel,
     pub vm: VmModel,
     pub disks: BTreeMap<String, SingleDiskModel>,
@@ -32,10 +34,25 @@ pub struct SystemModel {
 
 impl SystemModel {
     pub fn new(sample: &SystemSample, last: Option<(&SystemSample, Duration)>) -> SystemModel {
-        let cpu = last
-            .map(|(last, _)| CpuModel::new(&last.stat, &sample.stat))
-            .unwrap_or_default();
-
+        let stat = ProcStatModel::new(&sample.stat);
+        let total_cpu = match (
+            last.and_then(|(last, _)| last.stat.total_cpu.as_ref()),
+            sample.stat.total_cpu.as_ref(),
+        ) {
+            (Some(prev), Some(curr)) => SingleCpuModel::new(-1, &prev, &curr),
+            _ => Default::default(),
+        };
+        let cpus = match (
+            last.and_then(|(last, _)| last.stat.cpus.as_ref()),
+            sample.stat.cpus.as_ref(),
+        ) {
+            (Some(prev), Some(curr)) => std::iter::successors(Some(0), |idx| Some(idx + 1))
+                .zip(prev.iter().zip(curr.iter()))
+                .map(|(idx, (prev, curr))| SingleCpuModel::new(idx, prev, curr))
+                .collect(),
+            (_, Some(curr)) => curr.iter().map(|_| Default::default()).collect(),
+            _ => Default::default(),
+        };
         let mem = Some(MemoryModel::new(&sample.meminfo)).unwrap_or_default();
         let vm = last
             .map(|(last, duration)| VmModel::new(&last.vmstat, &sample.vmstat, duration))
@@ -64,7 +81,9 @@ impl SystemModel {
             hostname: sample.hostname.clone(),
             kernel_version: sample.kernel_version.clone(),
             os_release: sample.os_release.clone(),
-            cpu,
+            stat,
+            total_cpu,
+            cpus,
             mem,
             vm,
             disks,
@@ -73,9 +92,7 @@ impl SystemModel {
 }
 
 #[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
-pub struct CpuModel {
-    pub total_cpu: Option<SingleCpuModel>,
-    pub cpus: Option<Vec<SingleCpuModel>>,
+pub struct ProcStatModel {
     #[bttr(title = "Total Interrupts", width = 20)]
     pub total_interrupt_ct: Option<i64>,
     #[bttr(title = "Context Switches", width = 20)]
@@ -90,36 +107,15 @@ pub struct CpuModel {
     pub blocked_processes: Option<i32>,
 }
 
-impl CpuModel {
-    pub fn new(begin: &procfs::Stat, end: &procfs::Stat) -> CpuModel {
-        CpuModel {
-            total_cpu: match (&begin.total_cpu, &end.total_cpu) {
-                (Some(prev), Some(curr)) => Some(SingleCpuModel::new(-1, &prev, &curr)),
-                _ => None,
-            },
-            cpus: match (&begin.cpus, &end.cpus) {
-                (Some(prev), Some(curr)) => {
-                    let mut idx: i32 = 0;
-                    Some(
-                        prev.iter()
-                            .zip(curr.iter())
-                            .map(|(prev, curr)| {
-                                let res = SingleCpuModel::new(idx, prev, curr);
-                                idx += 1;
-                                res
-                            })
-                            .collect(),
-                    )
-                }
-                (_, Some(curr)) => Some(curr.iter().map(|_| Default::default()).collect()),
-                _ => None,
-            },
-            total_interrupt_ct: end.total_interrupt_count,
-            context_switches: end.context_switches,
-            boot_time_epoch_secs: end.boot_time_epoch_secs,
-            total_processes: end.total_processes,
-            running_processes: end.running_processes,
-            blocked_processes: end.blocked_processes,
+impl ProcStatModel {
+    pub fn new(stat: &procfs::Stat) -> Self {
+        ProcStatModel {
+            total_interrupt_ct: stat.total_interrupt_count,
+            context_switches: stat.context_switches,
+            boot_time_epoch_secs: stat.boot_time_epoch_secs,
+            total_processes: stat.total_processes,
+            running_processes: stat.running_processes,
+            blocked_processes: stat.blocked_processes,
         }
     }
 }

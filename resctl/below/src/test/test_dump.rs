@@ -199,12 +199,7 @@ fn test_dump_sys_content() {
     let model = collector.update_model(&logger).expect("Fail to get model");
     let jval = sys_handle.do_print_json(&model.system);
 
-    let cpu = model
-        .system
-        .cpu
-        .total_cpu
-        .as_ref()
-        .expect("Fail to get cpu from model.sys");
+    let cpu = model.system.total_cpu;
     assert_eq!(jval["Usage"].as_str().unwrap(), cpu.get_usage_pct_str());
     assert_eq!(jval["User"].as_str().unwrap(), cpu.get_user_pct_str());
     assert_eq!(jval["Idle"].as_str().unwrap(), cpu.get_idle_pct_str());
