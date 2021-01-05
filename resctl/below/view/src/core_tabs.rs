@@ -13,41 +13,43 @@
 // limitations under the License.
 
 use crate::core_view::CoreState;
+use crate::render::ViewItem;
 use crate::stats_view::StateCommon;
-use model::system::{SingleCpuModel, SingleDiskModel, SystemModel};
+use base_render::{get_fixed_width, render_config as rc};
+use common::util::get_prefix;
+use model::system::{
+    MemoryModelFieldId, SingleCpuModelFieldId, SingleDiskModelFieldId, VmModelFieldId,
+};
 
 use cursive::utils::markup::StyledString;
 
+const FIELD_NAME_WIDTH: usize = 20;
+const FIELD_WIDTH: usize = 20;
+
 pub trait CoreTab {
-    fn get_title_vec(&self, _: &SystemModel) -> Vec<String> {
-        vec![format!("{:<20.20}", "Field"), format!("{:<20.20}", "Value")]
+    fn get_title_vec(&self) -> Vec<String> {
+        vec![
+            get_fixed_width("Field", FIELD_NAME_WIDTH),
+            get_fixed_width("Value", FIELD_WIDTH),
+        ]
     }
 
-    fn get_rows(&mut self, state: &CoreState) -> Vec<(StyledString, String)>;
+    fn get_rows(&self, state: &CoreState) -> Vec<(StyledString, String)>;
 }
 
 #[derive(Default, Clone)]
 pub struct CoreCpu;
 
 impl CoreTab for CoreCpu {
-    fn get_title_vec(&self, _: &SystemModel) -> Vec<String> {
-        let scm = SingleCpuModel {
-            ..Default::default()
-        };
-        let mut res: Vec<String> = scm
-            .get_title_pipe()
-            .trim()
-            .split('|')
-            .map(|s| s.to_string())
-            .collect();
-        res.pop();
-        res
+    fn get_title_vec(&self) -> Vec<String> {
+        SingleCpuModelFieldId::unit_variant_iter()
+            .map(|field_id| ViewItem::from_default(field_id).config.render_title())
+            .collect()
     }
 
-    fn get_rows(&mut self, state: &CoreState) -> Vec<(StyledString, String)> {
+    fn get_rows(&self, state: &CoreState) -> Vec<(StyledString, String)> {
         let model = state.get_model();
-
-        let mut res: Vec<(StyledString, String)> = model
+        model
             .cpus
             .iter()
             .filter(|scm| {
@@ -57,12 +59,28 @@ impl CoreTab for CoreCpu {
                     true
                 }
             })
-            .map(|scm| (scm.get_field_line(), "".into()))
-            .collect();
-
-        res.push((model.total_cpu.get_field_line(), "".into()));
-
-        res
+            .chain(std::iter::once(&model.total_cpu))
+            .map(|scm| {
+                (
+                    SingleCpuModelFieldId::unit_variant_iter().fold(
+                        StyledString::new(),
+                        |mut line, field_id| {
+                            let view_item = ViewItem::from_default(field_id.clone());
+                            let rendered =
+                                if field_id == SingleCpuModelFieldId::Idx && scm.idx == -1 {
+                                    view_item.config.render(Some("total".to_owned().into()))
+                                } else {
+                                    view_item.render(scm)
+                                };
+                            line.append(rendered);
+                            line.append_plain(" ");
+                            line
+                        },
+                    ),
+                    "".to_owned(),
+                )
+            })
+            .collect()
     }
 }
 
@@ -70,13 +88,18 @@ impl CoreTab for CoreCpu {
 pub struct CoreMem;
 
 impl CoreTab for CoreMem {
-    fn get_rows(&mut self, state: &CoreState) -> Vec<(StyledString, String)> {
+    fn get_rows(&self, state: &CoreState) -> Vec<(StyledString, String)> {
         let model = state.get_model();
 
-        model
-            .mem
-            .get_interleave_line(" ")
-            .iter()
+        MemoryModelFieldId::unit_variant_iter()
+            .map(|field_id| {
+                let mut line = StyledString::new();
+                let item = ViewItem::from_default(field_id).update(rc!(width(FIELD_NAME_WIDTH)));
+                line.append_plain(item.config.render_title());
+                line.append_plain(" ");
+                line.append(item.update(rc!(width(FIELD_WIDTH))).render(&model.mem));
+                line
+            })
             .filter(|s| {
                 if let Some(f) = &state.filter {
                     s.source().contains(f)
@@ -93,13 +116,18 @@ impl CoreTab for CoreMem {
 pub struct CoreVm;
 
 impl CoreTab for CoreVm {
-    fn get_rows(&mut self, state: &CoreState) -> Vec<(StyledString, String)> {
+    fn get_rows(&self, state: &CoreState) -> Vec<(StyledString, String)> {
         let model = state.get_model();
 
-        model
-            .vm
-            .get_interleave_line(" ")
-            .iter()
+        VmModelFieldId::unit_variant_iter()
+            .map(|field_id| {
+                let mut line = StyledString::new();
+                let item = ViewItem::from_default(field_id).update(rc!(width(FIELD_NAME_WIDTH)));
+                line.append_plain(item.config.render_title());
+                line.append_plain(" ");
+                line.append(item.update(rc!(width(FIELD_WIDTH))).render(&model.vm));
+                line
+            })
             .filter(|s| {
                 if let Some(f) = &state.filter {
                     s.source().contains(f)
@@ -116,40 +144,50 @@ impl CoreTab for CoreVm {
 pub struct CoreDisk;
 
 impl CoreTab for CoreDisk {
-    fn get_title_vec(&self, _: &SystemModel) -> Vec<String> {
-        let sdm = SingleDiskModel {
-            ..Default::default()
-        };
-        let mut res: Vec<String> = sdm
-            .get_title_pipe()
-            .trim()
-            .split('|')
-            .map(|s| s.to_string())
-            .collect();
-        res.pop();
-        res
+    fn get_title_vec(&self) -> Vec<String> {
+        SingleDiskModelFieldId::unit_variant_iter()
+            .map(|field_id| ViewItem::from_default(field_id).config.render_title())
+            .collect()
     }
 
-    fn get_rows(&mut self, state: &CoreState) -> Vec<(StyledString, String)> {
+    fn get_rows(&self, state: &CoreState) -> Vec<(StyledString, String)> {
         state
-            .get_model_mut()
+            .get_model()
             .disks
-            .iter_mut()
-            .map(|(dn, sdm)| {
+            .iter()
+            .filter_map(|(dn, sdm)| {
                 // We use the partition parent id to check if it exists in collapsed_disk set.
                 let idx_major = format!("{}.0", sdm.major.unwrap_or(0));
                 let idx = format!("{}.{}", sdm.major.unwrap_or(0), sdm.minor.unwrap_or(0));
-                sdm.collapse = state.collapsed_disk.contains(&idx_major) && sdm.minor != Some(0);
-                (dn, sdm, idx)
-            })
-            .filter(|(dn, sdm, _idx)| {
-                if let Some(f) = &state.filter {
-                    dn.starts_with(f)
+                let collapse = state.collapsed_disk.contains(&idx_major) && sdm.minor != Some(0);
+                if state
+                    .filter
+                    .as_ref()
+                    .map_or(!collapse, |f| dn.starts_with(f))
+                {
+                    Some((
+                        SingleDiskModelFieldId::unit_variant_iter().fold(
+                            StyledString::new(),
+                            |mut line, field_id| {
+                                let view_item = ViewItem::from_default(field_id.clone());
+                                let rendered = if field_id == SingleDiskModelFieldId::Name {
+                                    view_item
+                                        .update(rc!(indented_prefix(get_prefix(collapse))))
+                                        .render_indented(sdm)
+                                } else {
+                                    view_item.render(sdm)
+                                };
+                                line.append(rendered);
+                                line.append_plain(" ");
+                                line
+                            },
+                        ),
+                        idx,
+                    ))
                 } else {
-                    !sdm.collapse
+                    None
                 }
             })
-            .map(|(_, sdm, idx)| (sdm.get_field_line(), idx))
             .collect()
     }
 }

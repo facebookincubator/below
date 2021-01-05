@@ -13,7 +13,10 @@
 // limitations under the License.
 
 use crate::{CommonField, DumpField};
-use model::{CgroupModelFieldId, FieldId, NetworkModelFieldId, SingleNetModelFieldId};
+use model::{
+    CgroupModelFieldId, FieldId, NetworkModelFieldId, SingleDiskModelFieldId,
+    SingleNetModelFieldId, SystemModelFieldId,
+};
 
 use anyhow::{bail, Error, Result};
 use once_cell::sync::Lazy;
@@ -31,7 +34,7 @@ pub trait AggField<F: FieldId> {
 /// Generic representation of fields accepted by different dump subcommands.
 /// Each DumpOptionField is either an aggregation of multiple FieldIds, or a
 /// "unit" field which could be either a CommonField or a FieldId.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum DumpOptionField<F: FieldId, A: AggField<F>> {
     Unit(DumpField<F>),
     Agg(A),
@@ -127,108 +130,233 @@ macro_rules! make_option {
     }
 }
 
-make_option! (SysField {
-    "timestamp": Timestamp,
-    "datetime": Datetime,
-    "stat": Stat,
-    "cpu": Cpu,
-    "mem": Mem,
-    "vm": Vm,
-    "hostname": Hostname,
-    "kernel_version": KernelVersion,
-    "os_release": OSRelease,
-    "total_interrupt_ct": TotalInterruptCt,
-    "context_switches": ContextSwitches,
-    "boot_time_epoch_secs": BootTimeEpochSecs,
-    "total_procs": TotalProcs,
-    "running_procs": RunningProcs,
-    "blocked_procs": BlockedProcs,
-    "cpu_usage": CpuUsagePct,
-    "cpu_user": CpuUserPct,
-    "cpu_idle": CpuIdlePct,
-    "cpu_system": CpuSystemPct,
-    "cpu_nice": CpuNicePct,
-    "cpu_iowait": CpuIowaitPct,
-    "cpu_irq": CpuIrq,
-    "cpu_softirq": CpuSoftIrq,
-    "cpu_stolen": CpuStolen,
-    "cpu_guest": CpuGuest,
-    "cpu_guest_nice": CpuGuestNice,
-    "mem_total": MemTotal,
-    "mem_free": MemFree,
-    "mem_available": MemAvailable,
-    "mem_buffers": MemBuffers,
-    "mem_cached": MemCached,
-    "mem_swap_cached": MemSwapCached,
-    "mem_active": MemActive,
-    "mem_inactive": MemInactive,
-    "mem_anon": MemAnon,
-    "mem_file": MemFile,
-    "mem_unevictable": MemUnevictable,
-    "mem_mlocked": MemMlocked,
-    "mem_swap_total": MemSwapTotal,
-    "mem_swap_free": MemSwapFree,
-    "mem_dirty": MemDirty,
-    "mem_writeback": MemWriteback,
-    "mem_anon_pages": MemAnonPages,
-    "mem_mapped": MemMapped,
-    "mem_shmem": MemShmem,
-    "mem_kreclaimable": MemKreclaimable,
-    "mem_slab": MemSlab,
-    "mem_slab_reclaimable": MemSlabReclaimable,
-    "mem_slab_unreclaimable": MemSlabUnreclaimable,
-    "mem_kernel_stack": MemKernelStack,
-    "mem_page_tables": MemPageTables,
-    "mem_anon_huge_pages": MemAnonHugePages,
-    "mem_shmem_huge_pages": MemShmemHugePages,
-    "mem_file_huge_pages": MemFileHugePages,
-    "mem_total_huge_pages": MemTotalHugePages,
-    "mem_free_huge_pages": MemFreeHugePages,
-    "mem_huge_page_size": MemHugePageSize,
-    "mem_cma_total": MemCmaTotal,
-    "mem_cma_free": MemCmaFree,
-    "mem_vmalloc_total": MemVmallocTotal,
-    "mem_vmalloc_used": MemVmallocUsed,
-    "mem_vmalloc_chunk": MemVmallocChunk,
-    "mem_direct_map_4k": MemDirectMap4k,
-    "mem_direct_map_2m": MemDirectMap2m,
-    "mem_direct_map_1g": MemDirectMap1g,
-    "vm_pgpgin": VmPgpgin,
-    "vm_pgpgout": VmPgpgout,
-    "vm_pswpin": VmPswpin,
-    "vm_pswpout": VmPswpout,
-    "vm_psteal_kswapd": VmPstealKswapd,
-    "vm_psteal_direct": VmPstealDirect,
-    "vm_pscan_kswapd": VmPscanKswapd,
-    "vm_pscan_direct": VmPscanDirect,
-    "vm_oom_kill": VmOomKill,
+/// Represents the four sub-model of SystemModel.
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    below_derive::EnumFromStr,
+    below_derive::EnumToString
+)]
+pub enum SystemAggField {
+    Cpu,
+    Mem,
+    Vm,
+    Stat,
+}
+
+impl AggField<SystemModelFieldId> for SystemAggField {
+    fn expand(&self, detail: bool) -> Vec<SystemModelFieldId> {
+        use model::MemoryModelFieldId as Mem;
+        use model::ProcStatModelFieldId as Stat;
+        use model::SingleCpuModelFieldId as Cpu;
+        use model::SystemModelFieldId as FieldId;
+        use model::VmModelFieldId as Vm;
+
+        if detail {
+            match self {
+                Self::Cpu => Cpu::unit_variant_iter()
+                    // The Idx field is always -1 (we aggregate all CPUs)
+                    .filter(|v| v != &Cpu::Idx)
+                    .map(FieldId::Cpu)
+                    .collect(),
+                Self::Mem => Mem::unit_variant_iter().map(FieldId::Mem).collect(),
+                Self::Vm => Vm::unit_variant_iter().map(FieldId::Vm).collect(),
+                Self::Stat => Stat::unit_variant_iter().map(FieldId::Stat).collect(),
+            }
+        } else {
+            // Default fields for each group
+            match self {
+                Self::Cpu => vec![Cpu::UsagePct, Cpu::UserPct, Cpu::SystemPct]
+                    .into_iter()
+                    .map(FieldId::Cpu)
+                    .collect(),
+                Self::Mem => vec![Mem::Total, Mem::Free]
+                    .into_iter()
+                    .map(FieldId::Mem)
+                    .collect(),
+                Self::Vm => Vm::unit_variant_iter().map(FieldId::Vm).collect(),
+                Self::Stat => Stat::unit_variant_iter().map(FieldId::Stat).collect(),
+            }
+        }
+    }
+}
+
+pub type SystemOptionField = DumpOptionField<SystemModelFieldId, SystemAggField>;
+
+pub static DEFAULT_SYSTEM_FIELDS: &[SystemOptionField] = &[
+    DumpOptionField::Unit(DumpField::FieldId(SystemModelFieldId::Hostname)),
+    DumpOptionField::Unit(DumpField::Common(CommonField::Datetime)),
+    DumpOptionField::Agg(SystemAggField::Cpu),
+    DumpOptionField::Agg(SystemAggField::Mem),
+    DumpOptionField::Agg(SystemAggField::Vm),
+    DumpOptionField::Unit(DumpField::FieldId(SystemModelFieldId::KernelVersion)),
+    DumpOptionField::Unit(DumpField::FieldId(SystemModelFieldId::OsRelease)),
+    DumpOptionField::Agg(SystemAggField::Stat),
+    DumpOptionField::Unit(DumpField::Common(CommonField::Timestamp)),
+];
+
+const SYSTEM_ABOUT: &str = "Dump system stats";
+
+/// Generated about message for System dump so supported fields are up-to-date.
+static SYSTEM_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+    format!(
+        r#"{about}
+
+********************** Available fields **********************
+
+{common_fields}, {system_fields}
+
+{all_cpu_fields}
+
+{all_memory_fields}
+
+{all_vm_fields}
+
+{all_stat_fields}
+
+********************** Aggregated fields **********************
+
+* cpu: includes [{agg_cpu_fields}].
+
+* mem: includes [{agg_memory_fields}].
+
+* vm: incldues [{agg_vm_fields}].
+
+* stat: includes [{agg_stat_fields}].
+
+* --detail: includes [<agg_field>.*] for each given aggregated field.
+
+* --default: includes [{default_fields}].
+
+* --everything: includes everything (equivalent to --default --detail).
+
+********************** Example Commands **********************
+
+$ below dump system -b "08:30:00" -e "08:30:30" -f datetime vm hostname -O csv
+
+"#,
+        about = SYSTEM_ABOUT,
+        common_fields = join(CommonField::unit_variant_iter()),
+        system_fields = join(SystemModelFieldId::unit_variant_iter()),
+        all_cpu_fields = join(SystemAggField::Cpu.expand(true)),
+        all_memory_fields = join(SystemAggField::Mem.expand(true)),
+        all_vm_fields = join(SystemAggField::Vm.expand(true)),
+        all_stat_fields = join(SystemAggField::Stat.expand(true)),
+        agg_cpu_fields = join(SystemAggField::Cpu.expand(false)),
+        agg_memory_fields = join(SystemAggField::Mem.expand(false)),
+        agg_vm_fields = join(SystemAggField::Vm.expand(false)),
+        agg_stat_fields = join(SystemAggField::Stat.expand(false)),
+        default_fields = join(DEFAULT_SYSTEM_FIELDS.to_owned()),
+    )
 });
 
-make_option! (DiskField {
-    "timestamp": Timestamp,
-    "datetime": Datetime,
-    "read": Read,
-    "write": Write,
-    "discard": Discard,
-    "name": Name,
-    "total": TotalBytes,
-    "read_bytes": ReadBytes,
-    "write_bytes": WriteBytes,
-    "discard_bytes": DiscardBytes,
-    "read_completed": ReadComplated,
-    "read_merged": ReadMerged,
-    "read_sectors": ReadSectors,
-    "time_spend_read": TimeSpendRead,
-    "write_completed": WriteCompleted,
-    "write_merged": WriteMerged,
-    "write_sectors": WriteSectors,
-    "time_spend_write": TimeSpendWrite,
-    "discard_completed": DiscardCompleted,
-    "discard_merged": DiscardMerged,
-    "discard_sectors": DiscardSectors,
-    "time_spend_discard": TimeSpendDiscard,
-    "major": Major,
-    "minor": Minor,
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    below_derive::EnumFromStr,
+    below_derive::EnumToString
+)]
+pub enum DiskAggField {
+    Read,
+    Write,
+    Discard,
+}
+
+impl AggField<SingleDiskModelFieldId> for DiskAggField {
+    fn expand(&self, _detail: bool) -> Vec<SingleDiskModelFieldId> {
+        use model::SingleDiskModelFieldId::*;
+
+        match self {
+            Self::Read => vec![
+                ReadBytesPerSec,
+                ReadCompleted,
+                ReadMerged,
+                ReadSectors,
+                TimeSpendReadMs,
+            ],
+            Self::Write => vec![
+                WriteBytesPerSec,
+                WriteCompleted,
+                WriteMerged,
+                WriteSectors,
+                TimeSpendWriteMs,
+            ],
+            Self::Discard => vec![
+                DiscardBytesPerSec,
+                DiscardCompleted,
+                DiscardMerged,
+                DiscardSectors,
+                TimeSpendDiscardMs,
+            ],
+        }
+    }
+}
+
+pub type DiskOptionField = DumpOptionField<SingleDiskModelFieldId, DiskAggField>;
+
+pub static DEFAULT_DISK_FIELDS: &[DiskOptionField] = &[
+    DumpOptionField::Unit(DumpField::Common(CommonField::Datetime)),
+    DumpOptionField::Unit(DumpField::FieldId(SingleDiskModelFieldId::Name)),
+    DumpOptionField::Unit(DumpField::FieldId(
+        SingleDiskModelFieldId::DiskTotalBytesPerSec,
+    )),
+    DumpOptionField::Unit(DumpField::FieldId(SingleDiskModelFieldId::Major)),
+    DumpOptionField::Unit(DumpField::FieldId(SingleDiskModelFieldId::Minor)),
+    DumpOptionField::Agg(DiskAggField::Read),
+    DumpOptionField::Agg(DiskAggField::Write),
+    DumpOptionField::Agg(DiskAggField::Discard),
+    DumpOptionField::Unit(DumpField::Common(CommonField::Timestamp)),
+];
+
+const DISK_ABOUT: &str = "Dump disk stats";
+
+/// Generated about message for System dump so supported fields are up-to-date.
+static DISK_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+    format!(
+        r#"{about}
+
+********************** Available fields **********************
+
+{common_fields}, and expanded fields below.
+
+********************** Aggregated fields **********************
+
+* read: includes [{agg_read_fields}].
+
+* write: includes [{agg_write_fields}].
+
+* discard: incldues [{agg_discard_fields}].
+
+* --detail: no effect.
+
+* --default: includes [{default_fields}].
+
+* --everything: includes everything (equivalent to --default --detail).
+
+********************** Example Commands **********************
+
+Simple example:
+
+$ below dump disk -b "08:30:00" -e "08:30:30" -f read write discard -O csv
+
+Output stats for all "nvme0*" matched disk from 08:30:00 to 08:30:30:
+
+$ below dump disk -b "08:30:00" -e "08:30:30" -s name -F nvme0* -O json
+
+Output stats for top 5 read partitions for each time slice from 08:30:00 to 08:30:30:
+
+$ below dump disk -b "08:30:00" -e "08:30:30" -s read_bytes_per_sec --rsort --top 5
+
+"#,
+        about = DISK_ABOUT,
+        common_fields = join(CommonField::unit_variant_iter()),
+        agg_read_fields = join(DiskAggField::Read.expand(false)),
+        agg_write_fields = join(DiskAggField::Write.expand(false)),
+        agg_discard_fields = join(DiskAggField::Discard.expand(false)),
+        default_fields = join(DEFAULT_DISK_FIELDS.to_owned()),
+    )
 });
 
 make_option! (ProcField {
@@ -267,7 +395,13 @@ make_option! (ProcField {
 });
 
 /// Represents the four sub-model of CgroupModel.
-#[derive(Clone, Debug, below_derive::EnumFromStr, below_derive::EnumToString)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    below_derive::EnumFromStr,
+    below_derive::EnumToString
+)]
 pub enum CgroupAggField {
     Cpu,
     Mem,
@@ -735,95 +869,27 @@ pub struct GeneralOpt {
 
 #[derive(Debug, StructOpt, Clone)]
 pub enum DumpCommand {
-    /// Dump system stats
-    ///
-    /// ********************** Available fields **********************
-    ///
-    /// timestamp, datetime, hostname, total_interrupt_ct, context_switches, boot_time_epoch_secs,
-    /// total_procs, running_procs, blocked_procs, kernel_version, os_release
-    ///
-    /// cpu_usage, cpu_user, cpu_idle, cpu_system, cpu_nice, cpu_iowait, cpu_irq, cpu_softirq, cpu_stolen,
-    /// cpu_guest, cpu_guest_nice
-    ///
-    /// mem_total, mem_free, mem_available, mem_buffers, mem_cached, mem_swap_cached, mem_anon, mem_file,
-    /// mem_active, mem_inactive, mem_unevictable, mem_mlocked, mem_swap_total, mem_swap_free, mem_dirty, mem_writeback,
-    /// mem_anon_pages, mem_mapped, mem_shmem, mem_kreclaimable, mem_slab, mem_slab_reclaimable, mem_slab_unreclaimable,
-    /// mem_kernel_stack, mem_page_tables, mem_anon_huge_pages, mem_shmem_huge_pages, mem_file_huge_pages,
-    /// mem_total_huge_pages, mem_free_huge_pages, mem_huge_page_size, mem_cma_total, mem_cma_free, mem_vmalloc_total,
-    /// mem_vmalloc_used, mem_vmalloc_chunk, mem_direct_map_4k, mem_direct_map_2m, mem_direct_map_1g
-    ///
-    /// vm_pgpgin, vm_pgpgout, vm_pswpin, vm_pswpout, vm_psteal_kswapd, vm_psteal_direct, vm_pscan_kswapd, vm_pscan_direct,
-    /// vm_oom_kill
-    ///
-    /// ********************** Aggregated fields **********************
-    ///
-    /// * cpu: includes [cpu_usage, cpu_user, cpu_system]. Additionally includes [cpu_*] if --detail is specified.
-    ///
-    /// * mem: includes [mem_total, mem_free]. Additionally includes [mem_*] if --detail is specified.
-    ///
-    /// * vm: includes [vm_*].
-    ///
-    /// --default will have all of [hostname, cpu, mem, vm]. To display everything, use --everything.
-    ///
-    /// ********************** Example Commands **********************
-    ///
-    /// $ below dump system -b "08:30:00" -e "08:30:30" -f datetime io hostname -O csv
-    ///
-    /// $ below dump system -b "08:30:00" -e "08:30:30" -f datetime -O csv -f hostname -f vm
+    #[structopt(about = SYSTEM_ABOUT, long_about = SYSTEM_LONG_ABOUT.as_str())]
     System {
         /// Select which fields to display and in what order.
         #[structopt(short, long)]
-        fields: Option<Vec<SysField>>,
+        fields: Option<Vec<SystemOptionField>>,
         #[structopt(flatten)]
         opts: GeneralOpt,
         /// Saved pattern in the dumprc file under [system] section.
         #[structopt(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
-    /// Dump disk stats
-    ///
-    /// ********************** Available fields **********************
-    ///
-    /// timestamp, datetime, name, total, major, minor
-    ///
-    /// read_bytes, read_completed, read_merged, read_sectors, time_spend_read
-    ///
-    /// write_bytes, write_completed, write_merged, write_sectors, time_spend_write
-    ///
-    /// discard_bytes, discard_completed, discard_merged, discard_sectors, time_spend_discard
-    ///
-    /// ********************** Aggregated fields **********************
-    ///
-    /// * read: includes [read*]
-    ///
-    /// * write: includes [write*]
-    ///
-    /// * discard: includes [discard*]
-    ///
-    /// --default will have all of [name, total, major, minor, read, write, discard]. To display everything, use --everything.
-    ///
-    /// ********************** Example Commands **********************
-    ///
-    /// Simple example:
-    ///
-    /// $ below dump disk -b "08:30:00" -e "08:30:30" -f read write discard -O csv
-    ///
-    /// Output stats for all "nvme0*" matched disk from 08:30:00 to 08:30:30:
-    ///
-    /// $ below dump process -b "08:30:00" -e "08:30:30" -s read -F nvme0* -O json
-    ///
-    /// Output stats for top 5 read partitions for each time slice from 08:30:00 to 08:30:30:
-    ///
-    /// $ below dump process -b "08:30:00" -e "08:30:30" -s read_bytes --rsort --top 5
+    #[structopt(about = DISK_ABOUT, long_about = DISK_LONG_ABOUT.as_str())]
     Disk {
         /// Select which fields to display and in what order.
         #[structopt(short, long)]
-        fields: Option<Vec<DiskField>>,
+        fields: Option<Vec<DiskOptionField>>,
         #[structopt(flatten)]
         opts: GeneralOpt,
         /// Select field for operation, use with --sort, --rsort, --filter, --top
         #[structopt(long, short)]
-        select: Option<DiskField>,
+        select: Option<SingleDiskModelFieldId>,
         /// Saved pattern in the dumprc file under [disk] section.
         #[structopt(long, short, conflicts_with("fields"))]
         pattern: Option<String>,

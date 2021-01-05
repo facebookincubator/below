@@ -16,7 +16,7 @@ use super::*;
 
 use cursive::theme::BaseColor;
 
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
+#[derive(Clone, Debug, Default, PartialEq, BelowDecor, below_derive::Queriable)]
 pub struct SystemModel {
     #[bttr(title = "Hostname", width = 20)]
     pub hostname: String,
@@ -24,11 +24,18 @@ pub struct SystemModel {
     pub kernel_version: Option<String>,
     #[bttr(title = "OS Release", width = 50)]
     pub os_release: Option<String>,
+    #[queriable(subquery)]
     pub stat: ProcStatModel,
+    #[queriable(subquery)]
+    #[queriable(preferred_name = cpu)]
     pub total_cpu: SingleCpuModel,
+    #[queriable(ignore)]
     pub cpus: Vec<SingleCpuModel>,
+    #[queriable(subquery)]
     pub mem: MemoryModel,
+    #[queriable(subquery)]
     pub vm: VmModel,
+    #[queriable(ignore)]
     pub disks: BTreeMap<String, SingleDiskModel>,
 }
 
@@ -91,7 +98,7 @@ impl SystemModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
+#[derive(Clone, Debug, Default, PartialEq, BelowDecor, below_derive::Queriable)]
 pub struct ProcStatModel {
     #[bttr(title = "Total Interrupts", width = 20)]
     pub total_interrupt_ct: Option<i64>,
@@ -120,7 +127,7 @@ impl ProcStatModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
+#[derive(Clone, Debug, Default, PartialEq, BelowDecor, below_derive::Queriable)]
 pub struct SingleCpuModel {
     #[bttr(
         title = "CPU",
@@ -219,7 +226,7 @@ impl SingleCpuModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
+#[derive(Clone, Debug, Default, PartialEq, BelowDecor, below_derive::Queriable)]
 pub struct MemoryModel {
     #[bttr(title = "Total", decorator = "convert_bytes($ as f64)", width = 20)]
     pub total: Option<u64>,
@@ -438,7 +445,7 @@ impl MemoryModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
+#[derive(Clone, Debug, Default, PartialEq, BelowDecor, below_derive::Queriable)]
 pub struct VmModel {
     #[bttr(
         title = "Page In",
@@ -496,7 +503,7 @@ impl VmModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
+#[derive(Clone, Debug, Default, PartialEq, BelowDecor, below_derive::Queriable)]
 pub struct SingleDiskModel {
     #[bttr(
         title = "Name",
@@ -566,8 +573,16 @@ pub struct SingleDiskModel {
     pub major: Option<u64>,
     #[bttr(title = "Minor", width = 7, cmp = true)]
     pub minor: Option<u64>,
+    #[queriable(ignore)]
     pub collapse: bool,
+    #[queriable(ignore)]
     pub depth: usize,
+}
+
+impl Recursive for SingleDiskModel {
+    fn get_depth(&self) -> usize {
+        if self.minor == Some(0) { 0 } else { 1 }
+    }
 }
 
 impl SingleDiskModel {

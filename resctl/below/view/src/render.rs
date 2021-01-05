@@ -22,10 +22,13 @@ use cursive::utils::markup::StyledString;
 pub enum ViewStyle {
     /// Highlight the Field if its value is above some threshold.
     HighlightAbove(Field),
+    /// Highlight the Field if its value is below some threshold.
+    HighlightBelow(Field),
 }
 
 pub const PRESSURE_HIGHLIGHT: ViewStyle = ViewStyle::HighlightAbove(Field::F64(40.0));
 pub const CPU_HIGHLIGHT: ViewStyle = ViewStyle::HighlightAbove(Field::F64(100.0));
+pub const MEM_HIGHLIGHT: ViewStyle = ViewStyle::HighlightBelow(Field::U64(2 << 20));
 
 #[derive(Clone, Default)]
 pub struct ViewConfig {
@@ -49,6 +52,16 @@ impl ViewConfig {
             Some(view_style) => match view_style {
                 ViewStyle::HighlightAbove(threshold) => {
                     if field.as_ref().map_or(false, |field| field > threshold) {
+                        StyledString::styled(
+                            rendered,
+                            cursive::theme::Color::Light(cursive::theme::BaseColor::Red),
+                        )
+                    } else {
+                        StyledString::plain(rendered)
+                    }
+                }
+                ViewStyle::HighlightBelow(threshold) => {
+                    if field.as_ref().map_or(false, |field| field < threshold) {
                         StyledString::styled(
                             rendered,
                             cursive::theme::Color::Light(cursive::theme::BaseColor::Red),

@@ -135,8 +135,7 @@ impl ViewBridge for CoreView {
         "core_view"
     }
     fn get_title_vec(&self) -> Vec<String> {
-        let model: SystemModel = Default::default();
-        self.get_inner().get_title_vec(&model)
+        self.get_inner().get_title_vec()
     }
 
     fn get_rows(

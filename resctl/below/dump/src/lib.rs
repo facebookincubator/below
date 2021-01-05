@@ -50,7 +50,7 @@ pub mod tmain;
 pub mod transport;
 
 pub use command::DumpCommand;
-use command::{expand_fields, DiskField, GeneralOpt, OutputFormat, ProcField, SysField};
+use command::{expand_fields, GeneralOpt, OutputFormat, ProcField};
 use fill::Dfill;
 use get::Dget;
 use print::{Dprint, HasRenderConfigForDump};
@@ -63,6 +63,7 @@ const BELOW_DUMP_RC: &str = "/.config/below/dumprc";
 #[derive(
     Clone,
     Debug,
+    PartialEq,
     below_derive::EnumIter,
     below_derive::EnumFromStr,
     below_derive::EnumToString
@@ -90,13 +91,15 @@ impl CommonField {
 /// Generic field for dumping different types of models. It's either a
 /// CommonField or a FieldId that extracts a Field from a given model. It
 /// represents a unified interface for dumpable items.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum DumpField<F: FieldId> {
     Common(CommonField),
     FieldId(F),
 }
 
 pub type CgroupField = DumpField<model::CgroupModelFieldId>;
+pub type SystemField = DumpField<model::SystemModelFieldId>;
+pub type DiskField = DumpField<model::SingleDiskModelFieldId>;
 pub type NetworkField = DumpField<model::NetworkModelFieldId>;
 pub type IfaceField = DumpField<model::SingleNetModelFieldId>;
 // Essentially the same as NetworkField
@@ -221,13 +224,33 @@ pub fn run(
             pattern,
         } => {
             let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
-            let mut sys = system::System::new(opts, advance, time_end, None);
-            if let Some(pattern_key) = pattern {
-                sys.init(parse_pattern(filename, pattern_key, "system"));
+            let default = opts.everything || opts.default;
+            let detail = opts.everything || opts.detail;
+            let fields = if let Some(pattern_key) = pattern {
+                parse_pattern(filename, pattern_key, "system")
             } else {
-                sys.init(fields);
-            }
-            sys.exec()
+                fields
+            };
+            let fields = expand_fields(
+                match fields.as_ref() {
+                    Some(fields) if !default => fields,
+                    _ => command::DEFAULT_SYSTEM_FIELDS,
+                },
+                detail,
+            );
+            let system = system::System::new(&opts, fields);
+            let mut output: Box<dyn Write> = match opts.output.as_ref() {
+                Some(file_path) => Box::new(File::create(file_path)?),
+                None => Box::new(io::stdout()),
+            };
+            dump_timeseries(
+                advance,
+                time_end,
+                &system,
+                output.as_mut(),
+                opts.output_format,
+                opts.br,
+            )
         }
         DumpCommand::Disk {
             fields,
@@ -236,13 +259,33 @@ pub fn run(
             pattern,
         } => {
             let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
-            let mut disk = disk::Disk::new(opts, advance, time_end, select);
-            if let Some(pattern_key) = pattern {
-                disk.init(parse_pattern(filename, pattern_key, "disk"));
+            let default = opts.everything || opts.default;
+            let detail = opts.everything || opts.detail;
+            let fields = if let Some(pattern_key) = pattern {
+                parse_pattern(filename, pattern_key, "disk")
             } else {
-                disk.init(fields);
-            }
-            disk.exec()
+                fields
+            };
+            let fields = expand_fields(
+                match fields.as_ref() {
+                    Some(fields) if !default => fields,
+                    _ => command::DEFAULT_DISK_FIELDS,
+                },
+                detail,
+            );
+            let disk = disk::Disk::new(&opts, select, fields);
+            let mut output: Box<dyn Write> = match opts.output.as_ref() {
+                Some(file_path) => Box::new(File::create(file_path)?),
+                None => Box::new(io::stdout()),
+            };
+            dump_timeseries(
+                advance,
+                time_end,
+                &disk,
+                output.as_mut(),
+                opts.output_format,
+                opts.br,
+            )
         }
         DumpCommand::Process {
             fields,

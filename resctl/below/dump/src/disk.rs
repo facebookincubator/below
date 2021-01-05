@@ -14,197 +14,116 @@
 
 use super::*;
 
-use model::SingleDiskModel;
+use model::SingleDiskModelFieldId;
 
-use below_derive::BelowDecor;
-
-#[derive(BelowDecor, Default)]
-pub struct DiskData {
-    #[bttr(dfill_struct = "Disk")]
-    #[bttr(tag = "DiskField::Name")]
-    #[blink("SingleDiskModel$get_name")]
-    pub name: Option<String>,
-    #[bttr(tag = "DiskField::TotalBytes")]
-    #[blink("SingleDiskModel$get_disk_total_bytes_per_sec")]
-    pub disk_total_bytes_per_sec: Option<f64>,
-    #[bttr(tag = "DiskField::ReadBytes", class = "DiskField::Read")]
-    #[blink("SingleDiskModel$get_read_bytes_per_sec")]
-    pub read_bytes_per_sec: Option<f64>,
-    #[bttr(tag = "DiskField::WriteBytes", class = "DiskField::Write")]
-    #[blink("SingleDiskModel$get_write_bytes_per_sec")]
-    pub write_bytes_per_sec: Option<f64>,
-    #[bttr(tag = "DiskField::DiscardBytes", class = "DiskField::Discard")]
-    #[blink("SingleDiskModel$get_discard_bytes_per_sec")]
-    pub discard_bytes_per_sec: Option<f64>,
-    #[bttr(tag = "DiskField::ReadComplated", class = "DiskField::Read")]
-    #[blink("SingleDiskModel$get_read_completed")]
-    pub read_completed: Option<u64>,
-    #[bttr(tag = "DiskField::ReadMerged", class = "DiskField::Read")]
-    #[blink("SingleDiskModel$get_read_merged")]
-    pub read_merged: Option<u64>,
-    #[bttr(tag = "DiskField::ReadSectors", class = "DiskField::Read")]
-    #[blink("SingleDiskModel$get_read_sectors")]
-    pub read_sectors: Option<u64>,
-    #[bttr(tag = "DiskField::TimeSpendRead", class = "DiskField::Read")]
-    #[blink("SingleDiskModel$get_time_spend_read_ms")]
-    pub time_spend_read_ms: Option<u64>,
-    #[bttr(tag = "DiskField::WriteCompleted", class = "DiskField::Write")]
-    #[blink("SingleDiskModel$get_write_completed")]
-    pub write_completed: Option<u64>,
-    #[bttr(tag = "DiskField::WriteMerged", class = "DiskField::Write")]
-    #[blink("SingleDiskModel$get_write_merged")]
-    pub write_merged: Option<u64>,
-    #[bttr(tag = "DiskField::WriteSectors", class = "DiskField::Write")]
-    #[blink("SingleDiskModel$get_write_sectors")]
-    pub write_sectors: Option<u64>,
-    #[bttr(tag = "DiskField::TimeSpendWrite", class = "DiskField::Write")]
-    #[blink("SingleDiskModel$get_time_spend_write_ms")]
-    pub time_spend_write_ms: Option<u64>,
-    #[bttr(tag = "DiskField::DiscardCompleted", class = "DiskField::Discard")]
-    #[blink("SingleDiskModel$get_discard_completed")]
-    pub discard_completed: Option<u64>,
-    #[bttr(tag = "DiskField::DiscardMerged", class = "DiskField::Discard")]
-    #[blink("SingleDiskModel$get_discard_merged")]
-    pub discard_merged: Option<u64>,
-    #[bttr(tag = "DiskField::DiscardSectors", class = "DiskField::Discard")]
-    #[blink("SingleDiskModel$get_discard_sectors")]
-    pub discard_sectors: Option<u64>,
-    #[bttr(tag = "DiskField::TimeSpendDiscard", class = "DiskField::Discard")]
-    #[blink("SingleDiskModel$get_time_spend_discard_ms")]
-    pub time_spend_discard_ms: Option<u64>,
-    #[bttr(tag = "DiskField::Major")]
-    #[blink("SingleDiskModel$get_major")]
-    pub major: Option<u64>,
-    #[bttr(tag = "DiskField::Minor")]
-    #[blink("SingleDiskModel$get_minor")]
-    pub minor: Option<u64>,
-    #[bttr(
-        title = "Datetime",
-        width = 19,
-        decorator = "translate_datetime(&$)",
-        tag = "DiskField::Datetime"
-    )]
-    datetime: i64,
-    #[bttr(title = "Timestamp", width = 10, tag = "DiskField::Timestamp")]
-    timestamp: i64,
-}
-
-type TitleFtype = Box<dyn Fn(&DiskData, &SingleDiskModel) -> String>;
-type FieldFtype = Box<dyn Fn(&DiskData, &SingleDiskModel) -> String>;
+impl HasRenderConfigForDump for model::SingleDiskModel {}
 
 pub struct Disk {
-    data: DiskData,
     opts: GeneralOpt,
-    advance: Advance,
-    time_end: SystemTime,
-    select: Option<DiskField>,
-    pub title_fns: Vec<TitleFtype>,
-    pub field_fns: Vec<FieldFtype>,
+    select: Option<SingleDiskModelFieldId>,
+    fields: Vec<DiskField>,
 }
 
-impl DumpType for Disk {
-    type Model = SingleDiskModel;
-    type FieldsType = DiskField;
-    type DataType = DiskData;
-}
-
-make_dget!(
-    Disk,
-    DiskField::Datetime,
-    DiskField::Name,
-    DiskField::TotalBytes,
-    DiskField::Major,
-    DiskField::Minor,
-    DiskField::Read,
-    DiskField::Write,
-    DiskField::Discard,
-    DiskField::Timestamp,
-);
-
-impl Dprint for Disk {}
-
-impl Dump for Disk {
-    fn new(
-        opts: GeneralOpt,
-        advance: Advance,
-        time_end: SystemTime,
-        select: Option<DiskField>,
+impl Disk {
+    pub fn new(
+        opts: &GeneralOpt,
+        select: Option<SingleDiskModelFieldId>,
+        fields: Vec<DiskField>,
     ) -> Self {
         Self {
-            data: Default::default(),
-            opts,
-            advance,
-            time_end,
+            opts: opts.to_owned(),
             select,
-            title_fns: vec![],
-            field_fns: vec![],
+            fields,
         }
     }
+}
 
-    fn advance_timestamp(&mut self, model: &model::Model) -> Result<()> {
-        self.data.timestamp = match model.timestamp.duration_since(SystemTime::UNIX_EPOCH) {
-            Ok(t) => t.as_secs() as i64,
-            Err(e) => bail!("Fail to convert system time: {}", e),
-        };
-        self.data.datetime = self.data.timestamp;
-
-        Ok(())
-    }
-
-    fn iterate_exec<T: Write>(
+impl Dumper for Disk {
+    fn dump_model(
         &self,
+        ctx: &CommonFieldContext,
         model: &model::Model,
-        output: &mut T,
+        output: &mut dyn Write,
         round: &mut usize,
         comma_flag: bool,
     ) -> Result<IterExecResult> {
-        let mut disks: Vec<&SingleDiskModel> = model
+        let mut disks: Vec<_> = model
             .system
             .disks
             .iter()
-            .filter_map(|(_, sdm)| match (self.select, self.opts.filter.as_ref()) {
-                (Some(tag), Some(re)) => {
-                    if self.filter_by(sdm, &tag, &re) {
-                        Some(sdm)
-                    } else {
+            .filter_map(
+                |(_, model)| match (self.select.as_ref(), self.opts.filter.as_ref()) {
+                    (Some(field_id), Some(filter))
+                        if !filter.is_match(
+                            &model
+                                .query(&field_id)
+                                .map_or("?".to_owned(), |v| v.to_string()),
+                        ) =>
+                    {
                         None
                     }
-                }
-                _ => Some(sdm),
-            })
+                    _ => Some(model),
+                },
+            )
             .collect();
 
-        if let Some(tag) = self.select {
+        if let Some(field_id) = &self.select {
             if self.opts.sort {
-                Self::sort_by(&mut disks, &tag, false);
+                model::sort_queriables(&mut disks, &field_id, false);
             }
 
             if self.opts.rsort {
-                Self::sort_by(&mut disks, &tag, true);
+                model::sort_queriables(&mut disks, &field_id, true);
             }
 
             if (self.opts.sort || self.opts.rsort) && self.opts.top != 0 {
                 disks.truncate(self.opts.top as usize);
             }
         }
-        let json = self.get_opts().output_format == Some(OutputFormat::Json);
+        let json = self.opts.output_format == Some(OutputFormat::Json);
         let mut json_output = json!([]);
 
         disks
-            .iter()
-            .map(|sdm| {
-                let ret = match self.opts.output_format {
-                    Some(OutputFormat::Raw) | None => self.do_print_raw(&sdm, output, *round),
-                    Some(OutputFormat::Csv) => self.do_print_csv(&sdm, output, *round),
-                    Some(OutputFormat::KeyVal) => self.do_print_kv(&sdm, output),
+            .into_iter()
+            .map(|model| {
+                match self.opts.output_format {
+                    Some(OutputFormat::Raw) | None => write!(
+                        output,
+                        "{}",
+                        print::dump_raw_indented(
+                            &self.fields,
+                            ctx,
+                            model,
+                            *round,
+                            self.opts.repeat_title,
+                            self.opts.disable_title,
+                            self.opts.raw
+                        )
+                    )?,
+                    Some(OutputFormat::Csv) => write!(
+                        output,
+                        "{}",
+                        print::dump_csv(
+                            &self.fields,
+                            ctx,
+                            model,
+                            *round,
+                            self.opts.disable_title,
+                            self.opts.raw
+                        )
+                    )?,
+                    Some(OutputFormat::KeyVal) => write!(
+                        output,
+                        "{}",
+                        print::dump_kv(&self.fields, ctx, model, self.opts.raw)
+                    )?,
                     Some(OutputFormat::Json) => {
-                        let par = self.do_print_json(&sdm);
+                        let par = print::dump_json(&self.fields, ctx, model, self.opts.raw);
                         json_output.as_array_mut().unwrap().push(par);
-                        Ok(())
                     }
-                };
+                }
                 *round += 1;
-                ret
+                Ok(())
             })
             .collect::<Result<Vec<_>>>()?;
 

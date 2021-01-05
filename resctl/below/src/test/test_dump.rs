@@ -18,167 +18,13 @@ use std::path::PathBuf;
 use serde_json::Value;
 
 use super::*;
-use command::{expand_fields, GeneralOpt, OutputFormat, ProcField, SysField};
+use command::{expand_fields, GeneralOpt, OutputFormat, ProcField};
 use common::util::convert_bytes;
 use dump::*;
 use get::Dget;
 use model::Queriable;
-use print::{Dprint, HasRenderConfigForDump};
+use print::HasRenderConfigForDump;
 use tmain::{Dump, Dumper};
-
-#[test]
-fn test_tmain_init() {
-    let mut opts: GeneralOpt = Default::default();
-    let time = SystemTime::now();
-    let logger = get_logger();
-    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
-    let mut collector = Collector::new(get_dummy_exit_data());
-    let model = collector.update_model(&logger).expect("Fail to get model");
-
-    // Since we are using the same function for field and title generation,
-    // testing title should be enough if we don't care about the content.
-    // case1: pick field and verify order
-    opts.output_format = Some(OutputFormat::Csv);
-    let mut sys_handle = system::System::new(opts, advance, time, None);
-    let fields = Some(vec![SysField::Timestamp, SysField::Datetime]);
-    sys_handle.init(fields.clone());
-    assert_eq!(sys_handle.title_fns.len(), 2);
-    assert_eq!(sys_handle.field_fns.len(), 2);
-    let mut title_iter = sys_handle.title_fns.iter();
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Timestamp"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Datetime"
-    );
-
-    // case2: when default is set
-    sys_handle.title_fns.clear();
-    sys_handle.field_fns.clear();
-    sys_handle.get_opts_mut().default = true;
-    sys_handle.init(fields.clone());
-    assert_eq!(sys_handle.title_fns.len(), 25);
-    assert_eq!(sys_handle.field_fns.len(), 25);
-    let mut title_iter = sys_handle.title_fns.iter();
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Hostname"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Datetime"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Usage"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "User"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "System"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Total"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Free"
-    );
-
-    // case3: when everything is set
-    sys_handle.title_fns.clear();
-    sys_handle.field_fns.clear();
-    sys_handle.get_opts_mut().default = true;
-    sys_handle.get_opts_mut().everything = true;
-    sys_handle.init(fields);
-    assert!(sys_handle.get_opts().default);
-    assert!(sys_handle.get_opts().detail);
-    assert_eq!(sys_handle.title_fns.len(), 70);
-    assert_eq!(sys_handle.field_fns.len(), 70);
-    let mut title_iter = sys_handle.title_fns.iter();
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Hostname"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Datetime"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Usage"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "User"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "System"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Idle"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Nice"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "IOWait"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Irq"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "SoftIrq"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Stolen"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Guest"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Guest Nice"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Total"
-    );
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Free"
-    );
-
-    // case4: test json dedup
-    sys_handle.title_fns.clear();
-    sys_handle.field_fns.clear();
-    sys_handle.get_opts_mut().default = false;
-    sys_handle.get_opts_mut().everything = false;
-    sys_handle.get_opts_mut().output_format = Some(OutputFormat::Json);
-    let fields = Some(vec![SysField::Timestamp, SysField::Timestamp]);
-    sys_handle.init(fields);
-    assert_eq!(sys_handle.title_fns.len(), 1);
-    assert_eq!(sys_handle.field_fns.len(), 1);
-    let mut title_iter = sys_handle.title_fns.iter();
-    assert_eq!(
-        title_iter.next().unwrap()(sys_handle.get_data(), &model.system),
-        "Timestamp"
-    );
-}
 
 #[test]
 // Test correctness of system decoration
@@ -186,18 +32,22 @@ fn test_dump_sys_content() {
     let mut collector = Collector::new(get_dummy_exit_data());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
-    let time = SystemTime::now();
-    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
 
     let mut opts: GeneralOpt = Default::default();
-    opts.everything = true;
+    let fields = command::expand_fields(command::DEFAULT_SYSTEM_FIELDS, true);
     opts.output_format = Some(OutputFormat::Json);
-    let mut sys_handle = system::System::new(opts, advance, time, None);
-    sys_handle.init(None);
+    let system_dumper = system::System::new(&opts, fields);
 
     // update model again to populate cpu and io data
     let model = collector.update_model(&logger).expect("Fail to get model");
-    let jval = sys_handle.do_print_json(&model.system);
+    let mut system_content = StrIo::new();
+    let mut round = 0;
+    let ctx = CommonFieldContext { timestamp: 0 };
+    system_dumper
+        .dump_model(&ctx, &model, &mut system_content, &mut round, false)
+        .expect("Failed to dump cgroup model");
+    let jval: Value =
+        serde_json::from_str(&system_content.content).expect("Fail parse json of system dump");
 
     let cpu = model.system.total_cpu;
     assert_eq!(jval["Usage"].as_str().unwrap(), cpu.get_usage_pct_str());
@@ -1237,22 +1087,20 @@ fn test_dump_disk_content() {
     let mut collector = Collector::new(get_dummy_exit_data());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
-    let time = SystemTime::now();
-    let advance = Advance::new(logger.clone(), PathBuf::new(), time);
 
     let mut opts: GeneralOpt = Default::default();
-    opts.everything = true;
+    let fields = command::expand_fields(command::DEFAULT_DISK_FIELDS, true);
     opts.output_format = Some(OutputFormat::Json);
-    let mut disk_handle = disk::Disk::new(opts, advance, time, None);
-    disk_handle.init(None);
+    let disk_dumper = disk::Disk::new(&opts, None, fields);
 
-    // update model again to populate cpu and io data
+    // update model again to populate disk data
     let model = collector.update_model(&logger).expect("Fail to get model");
     let mut disk_content = StrIo::new();
     let mut round = 0;
-    disk_handle
-        .iterate_exec(&model, &mut disk_content, &mut round, false)
-        .expect("Fail to get json from iterate_exec");
+    let ctx = CommonFieldContext { timestamp: 0 };
+    disk_dumper
+        .dump_model(&ctx, &model, &mut disk_content, &mut round, false)
+        .expect("Failed to dump cgroup model");
 
     // verify json correctness
     assert!(!disk_content.content.is_empty());
@@ -1366,15 +1214,23 @@ proc = ["datetime", "mem_anon"]
         .expect("Faild to write temp dumprc file during testing ignore");
     file.flush().expect("Failed to flush during testing ignore");
 
-    let sys_res = parse_pattern::<SysField>(
+    let sys_res = parse_pattern::<command::SystemOptionField>(
         path.to_string_lossy().to_string(),
         "demacia".into(),
         "system",
     )
     .expect("Failed to parse system pattern");
 
-    assert_eq!(sys_res[0], SysField::Datetime);
-    assert_eq!(sys_res[1], SysField::OSRelease);
+    assert_eq!(
+        sys_res[0],
+        command::SystemOptionField::Unit(SystemField::Common(CommonField::Datetime))
+    );
+    assert_eq!(
+        sys_res[1],
+        command::SystemOptionField::Unit(SystemField::FieldId(
+            model::SystemModelFieldId::OsRelease
+        ))
+    );
 
     let proc_res =
         parse_pattern::<ProcField>(path.to_string_lossy().to_string(), "proc".into(), "process")

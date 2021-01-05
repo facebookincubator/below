@@ -25,6 +25,9 @@ pub enum RenderFormat {
     /// Only works on numeric Fields. Format as human-readable size with
     /// suffixes (KB, MB, GB etc).
     ReadableSize,
+    /// Only works on numeric Fields. Format number of 4K pages as
+    /// human-readable size with suffixes (KB, MB, GB etc).
+    PageReadableSize,
     /// Only works on int Fields. Same as ReadableSize except when Field is -1,
     /// in which case "max" is returned.
     MaxOrReadableSize,
@@ -97,7 +100,7 @@ impl RenderConfig {
         self
     }
 
-    fn get_title(&self) -> &str {
+    pub fn get_title(&self) -> &str {
         self.title.unwrap_or("unknown")
     }
 
@@ -123,6 +126,7 @@ impl RenderConfig {
             Some(format) => match format {
                 Precision(precision) => format!("{:.precision$}", field, precision = precision),
                 ReadableSize => convert_bytes(f64::from(field)),
+                PageReadableSize => convert_bytes(4096.0 * f64::from(field)),
                 MaxOrReadableSize => {
                     let field = i64::from(field);
                     if field == -1 {

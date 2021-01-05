@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::render::{HasViewStyle, ViewStyle, CPU_HIGHLIGHT, PRESSURE_HIGHLIGHT};
+use crate::render::{HasViewStyle, ViewStyle, CPU_HIGHLIGHT, MEM_HIGHLIGHT, PRESSURE_HIGHLIGHT};
 
 impl HasViewStyle for model::CgroupModel {
     fn get_view_style(field_id: &Self::FieldId) -> Option<ViewStyle> {
@@ -42,3 +42,29 @@ impl HasViewStyle for model::CgroupPressureModel {
 }
 
 impl HasViewStyle for model::SingleNetModel {}
+
+impl HasViewStyle for model::SystemModel {
+    fn get_view_style(field_id: &Self::FieldId) -> Option<ViewStyle> {
+        use model::SystemModelFieldId::Mem;
+        match field_id {
+            Mem(field_id) => model::MemoryModel::get_view_style(field_id),
+            _ => None,
+        }
+    }
+}
+
+impl HasViewStyle for model::MemoryModel {
+    fn get_view_style(field_id: &Self::FieldId) -> Option<ViewStyle> {
+        use model::MemoryModelFieldId::Free;
+        match field_id {
+            Free => Some(MEM_HIGHLIGHT.clone()),
+            _ => None,
+        }
+    }
+}
+
+impl HasViewStyle for model::SingleCpuModel {}
+
+impl HasViewStyle for model::VmModel {}
+
+impl HasViewStyle for model::SingleDiskModel {}

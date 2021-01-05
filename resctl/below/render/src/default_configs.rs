@@ -16,7 +16,7 @@ use super::*;
 
 use crate::render_config as rc;
 
-use RenderFormat::{MaxOrReadableSize, Precision, ReadableSize};
+use RenderFormat::{MaxOrReadableSize, PageReadableSize, Precision, ReadableSize};
 
 impl HasRenderConfig for model::CgroupModel {
     fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
@@ -129,6 +129,7 @@ impl HasRenderConfig for model::CgroupPressureModel {
         }
     }
 }
+
 impl HasRenderConfig for model::NetworkModel {
     fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
         use model::NetworkModelFieldId::*;
@@ -310,6 +311,146 @@ impl HasRenderConfig for model::SingleNetModel {
             TxHeartbeatErrors => rc!(title("TX Heartbeat Errors")),
             TxPackets => rc!(title("TX Packets")),
             TxWindowErrors => rc!(title("TX Window Errors")),
+        }
+    }
+}
+
+impl HasRenderConfig for model::SystemModel {
+    fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
+        use model::SystemModelFieldId::*;
+        match field_id {
+            Hostname => rc!(title("Hostname"), width(20)),
+            KernelVersion => rc!(title("Kernel Version"), width(50)),
+            OsRelease => rc!(title("OS Release"), width(50)),
+            Stat(field_id) => model::ProcStatModel::get_render_config(field_id),
+            Cpu(field_id) => model::SingleCpuModel::get_render_config(field_id),
+            Mem(field_id) => model::MemoryModel::get_render_config(field_id),
+            Vm(field_id) => model::VmModel::get_render_config(field_id),
+        }
+    }
+}
+
+impl HasRenderConfig for model::ProcStatModel {
+    fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
+        use model::ProcStatModelFieldId::*;
+        match field_id {
+            TotalInterruptCt => rc!(title("Total Interrupts")),
+            ContextSwitches => rc!(title("Context Switches")),
+            BootTimeEpochSecs => rc!(title("Boot Time Epoch")),
+            TotalProcesses => rc!(title("Total Procs")),
+            RunningProcesses => rc!(title("Running Procs")),
+            BlockedProcesses => rc!(title("Blocked Procs")),
+        }
+    }
+}
+
+impl HasRenderConfig for model::SingleCpuModel {
+    fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
+        use model::SingleCpuModelFieldId::*;
+        match field_id {
+            Idx => rc!(title("CPU")),
+            UsagePct => rc!(title("Usage"), suffix("%"), format(Precision(2))),
+            UserPct => rc!(title("User"), suffix("%"), format(Precision(2))),
+            IdlePct => rc!(title("Idle"), suffix("%"), format(Precision(2))),
+            SystemPct => rc!(title("System"), suffix("%"), format(Precision(2))),
+            NicePct => rc!(title("Nice"), suffix("%"), format(Precision(2))),
+            IowaitPct => rc!(title("IOWait"), suffix("%"), format(Precision(2))),
+            IrqPct => rc!(title("Irq"), suffix("%"), format(Precision(2))),
+            SoftirqPct => rc!(title("SoftIrq"), suffix("%"), format(Precision(2))),
+            StolenPct => rc!(title("Stolen"), suffix("%"), format(Precision(2))),
+            GuestPct => rc!(title("Guest"), suffix("%"), format(Precision(2))),
+            GuestNicePct => rc!(title("Guest Nice"), suffix("%"), format(Precision(2))),
+        }
+    }
+}
+
+impl HasRenderConfig for model::MemoryModel {
+    fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
+        use model::MemoryModelFieldId::*;
+        match field_id {
+            Total => rc!(title("Total"), format(ReadableSize)),
+            Free => rc!(title("Free"), format(ReadableSize)),
+            Available => rc!(title("Available"), format(ReadableSize)),
+            Buffers => rc!(title("Buffers"), format(ReadableSize)),
+            Cached => rc!(title("Cached"), format(ReadableSize)),
+            SwapCached => rc!(title("Swap Cached"), format(ReadableSize)),
+            Active => rc!(title("Active"), format(ReadableSize)),
+            Inactive => rc!(title("Inactive"), format(ReadableSize)),
+            Anon => rc!(title("Anon"), format(ReadableSize)),
+            File => rc!(title("File"), format(ReadableSize)),
+            Unevictable => rc!(title("Unevictable"), format(ReadableSize)),
+            Mlocked => rc!(title("Mlocked"), format(ReadableSize)),
+            SwapTotal => rc!(title("Swap Total"), format(ReadableSize)),
+            SwapFree => rc!(title("Swap Free"), format(ReadableSize)),
+            Dirty => rc!(title("Dirty"), format(ReadableSize)),
+            Writeback => rc!(title("Writeback"), format(ReadableSize)),
+            AnonPages => rc!(title("Anon Pages"), format(ReadableSize)),
+            Mapped => rc!(title("Mapped"), format(ReadableSize)),
+            Shmem => rc!(title("Shmem"), format(ReadableSize)),
+            Kreclaimable => rc!(title("Kreclaimable"), format(ReadableSize)),
+            Slab => rc!(title("Slab"), format(ReadableSize)),
+            SlabReclaimable => rc!(title("Slab Reclaimable"), format(ReadableSize)),
+            SlabUnreclaimable => rc!(title("Slab Unreclaimable"), format(ReadableSize)),
+            KernelStack => rc!(title("Kernel Stack"), format(ReadableSize)),
+            PageTables => rc!(title("Page Tables"), format(ReadableSize)),
+            AnonHugePagesBytes => rc!(title("Anon Huge Pages"), format(ReadableSize)),
+            ShmemHugePagesBytes => rc!(title("Shmem Huge Pages"), format(ReadableSize)),
+            FileHugePagesBytes => rc!(title("File Huge Pages"), format(ReadableSize)),
+            TotalHugePagesBytes => rc!(title("Total Huge Pages"), format(ReadableSize)),
+            FreeHugePagesBytes => rc!(title("Free Huge Pages"), format(ReadableSize)),
+            HugePageSize => rc!(title("Huge Page Size"), format(ReadableSize)),
+            CmaTotal => rc!(title("Cma Total"), format(ReadableSize)),
+            CmaFree => rc!(title("Cma Free"), format(ReadableSize)),
+            VmallocTotal => rc!(title("Vmalloc Total"), format(ReadableSize)),
+            VmallocUsed => rc!(title("Vmalloc Used"), format(ReadableSize)),
+            VmallocChunk => rc!(title("Vmalloc Chunk"), format(ReadableSize)),
+            DirectMap4k => rc!(title("Direct Map 4K"), format(ReadableSize)),
+            DirectMap2m => rc!(title("Direct Map 2M"), format(ReadableSize)),
+            DirectMap1g => rc!(title("Direct Map 1G"), format(ReadableSize)),
+        }
+    }
+}
+
+impl HasRenderConfig for model::VmModel {
+    fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
+        use model::VmModelFieldId::*;
+        match field_id {
+            PgpginPerSec => rc!(title("Page In"), format(PageReadableSize), suffix("/s")),
+            PgpgoutPerSec => rc!(title("Page Out"), format(PageReadableSize), suffix("/s")),
+            PswpinPerSec => rc!(title("Swap In"), format(PageReadableSize), suffix("/s")),
+            PswpoutPerSec => rc!(title("Swap Out"), format(PageReadableSize), suffix("/s")),
+            PgstealKswapd => rc!(title("Pgsteal Kswapd"), suffix(" pages/s")),
+            PgstealDirect => rc!(title("Pgsteal Direct"), suffix(" pages/s")),
+            PgscanKswapd => rc!(title("Pgscan Kswapd"), suffix(" pages/s")),
+            PgscanDirect => rc!(title("Pgscan Direct"), suffix(" pages/s")),
+            OomKill => rc!(title("OOM Kills")),
+        }
+    }
+}
+
+impl HasRenderConfig for model::SingleDiskModel {
+    fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
+        use model::SingleDiskModelFieldId::*;
+        match field_id {
+            Name => rc!(title("Name"), width(15)),
+            ReadBytesPerSec => rc!(title("Read"), format(ReadableSize), suffix("/s")),
+            WriteBytesPerSec => rc!(title("Write"), format(ReadableSize), suffix("/s")),
+            DiscardBytesPerSec => rc!(title("Discard"), format(ReadableSize), suffix("/s")),
+            DiskTotalBytesPerSec => rc!(title("Disk"), format(ReadableSize), suffix("/s")),
+            ReadCompleted => rc!(title("Read Completed")),
+            ReadMerged => rc!(title("Read Merged")),
+            ReadSectors => rc!(title("Read Sectors")),
+            TimeSpendReadMs => rc!(title("Time Spend Read"), suffix(" ms")),
+            WriteCompleted => rc!(title("Write Completed")),
+            WriteMerged => rc!(title("Write Merged")),
+            WriteSectors => rc!(title("Write Sectors")),
+            TimeSpendWriteMs => rc!(title("Time Spend Write"), suffix(" ms")),
+            DiscardCompleted => rc!(title("Discard Completed")),
+            DiscardMerged => rc!(title("Discard Merged")),
+            DiscardSectors => rc!(title("Discard Sectors")),
+            TimeSpendDiscardMs => rc!(title("Time Spend Discard"), suffix(" ms")),
+            Major => rc!(title("Major"), width(7)),
+            Minor => rc!(title("Minor"), width(7)),
         }
     }
 }
