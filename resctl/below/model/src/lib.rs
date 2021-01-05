@@ -18,7 +18,6 @@ use std::time::{Duration, Instant, SystemTime};
 
 use anyhow::{anyhow, bail, Context, Result};
 use cursive::utils::markup::StyledString;
-use strum_macros::{EnumIter, EnumString};
 
 use below_derive::BelowDecor;
 use below_thrift::types::{CgroupSample, Sample, SystemSample};
@@ -106,6 +105,12 @@ impl From<f64> for Field {
 impl From<String> for Field {
     fn from(v: String) -> Self {
         Field::Str(v)
+    }
+}
+
+impl<T: Into<Field> + Clone> From<&T> for Field {
+    fn from(v: &T) -> Self {
+        v.clone().into()
     }
 }
 

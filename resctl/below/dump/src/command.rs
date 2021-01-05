@@ -21,8 +21,6 @@ use regex::Regex;
 use std::str::FromStr;
 use std::string::ToString;
 use structopt::StructOpt;
-use strum::IntoEnumIterator;
-use strum_macros::EnumString;
 
 /// Field that represents a group of related FieldIds of a Queriable.
 /// Shorthand for specifying fields to dump.
@@ -269,8 +267,7 @@ make_option! (ProcField {
 });
 
 /// Represents the four sub-model of CgroupModel.
-#[derive(Clone, Debug, EnumString, strum_macros::ToString)]
-#[strum(serialize_all = "snake_case")]
+#[derive(Clone, Debug, below_derive::EnumFromStr, below_derive::EnumToString)]
 pub enum CgroupAggField {
     Cpu,
     Mem,
@@ -288,10 +285,12 @@ impl AggField<CgroupModelFieldId> for CgroupAggField {
 
         if detail {
             match self {
-                Self::Cpu => Cpu::iter().map(FieldId::Cpu).collect(),
-                Self::Mem => Mem::iter().map(FieldId::Mem).collect(),
-                Self::Io => Io::iter().map(FieldId::Io).collect(),
-                Self::Pressure => Pressure::iter().map(FieldId::Pressure).collect(),
+                Self::Cpu => Cpu::unit_variant_iter().map(FieldId::Cpu).collect(),
+                Self::Mem => Mem::unit_variant_iter().map(FieldId::Mem).collect(),
+                Self::Io => Io::unit_variant_iter().map(FieldId::Io).collect(),
+                Self::Pressure => Pressure::unit_variant_iter()
+                    .map(FieldId::Pressure)
+                    .collect(),
             }
         } else {
             // Default fields for each group
@@ -375,8 +374,8 @@ $ below dump cgroup -b "08:30:00" -e "08:30:30" -s cpu.usage_pct --rsort --top 5
 
 "#,
         about = CGROUP_ABOUT,
-        common_fields = join(CommonField::iter()),
-        cgroup_fields = join(CgroupModelFieldId::iter()),
+        common_fields = join(CommonField::unit_variant_iter()),
+        cgroup_fields = join(CgroupModelFieldId::unit_variant_iter()),
         all_cpu_fields = join(CgroupAggField::Cpu.expand(true)),
         all_memory_fields = join(CgroupAggField::Mem.expand(true)),
         all_io_fields = join(CgroupAggField::Io.expand(true)),

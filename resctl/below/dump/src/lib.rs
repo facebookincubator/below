@@ -24,7 +24,6 @@ use anyhow::{anyhow, bail, Result};
 use cursive::utils::markup::StyledString;
 use regex::Regex;
 use serde_json::{json, Value};
-use strum_macros::{EnumIter, EnumString};
 use toml::value::Value as TValue;
 
 use common::dateutil;
@@ -64,8 +63,13 @@ const BELOW_DUMP_RC: &str = "/.config/below/dumprc";
 
 /// Fields available to all commands. Each enum represents some semantics and
 /// knows how to extract relevant data from a CommonFieldContext.
-#[derive(Clone, Debug, EnumIter, EnumString, strum_macros::ToString)]
-#[strum(serialize_all = "snake_case")]
+#[derive(
+    Clone,
+    Debug,
+    below_derive::EnumIter,
+    below_derive::EnumFromStr,
+    below_derive::EnumToString
+)]
 pub enum CommonField {
     Timestamp,
     Datetime,

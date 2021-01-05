@@ -14,20 +14,31 @@
 
 use super::*;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, below_derive::Queriable)]
 pub struct CgroupModel {
     pub name: String,
     pub full_path: String,
     pub inode_number: Option<u64>,
+    #[queriable(ignore)]
     pub depth: u32,
+    #[queriable(subquery)]
     pub cpu: Option<CgroupCpuModel>,
+    #[queriable(subquery)]
+    #[queriable(preferred_name = mem)]
     pub memory: Option<CgroupMemoryModel>,
+    #[queriable(ignore)]
     pub io: Option<BTreeMap<String, CgroupIoModel>>,
+    #[queriable(subquery)]
+    #[queriable(preferred_name = io)]
     pub io_total: Option<CgroupIoModel>,
+    #[queriable(subquery)]
     pub pressure: Option<CgroupPressureModel>,
+    #[queriable(ignore)]
     pub children: BTreeSet<CgroupModel>,
+    #[queriable(ignore)]
     pub count: u32,
     // Indicate if such cgroup is created
+    #[queriable(ignore)]
     pub recreate_flag: bool,
 }
 
@@ -159,90 +170,13 @@ impl CgroupModel {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, EnumIter)]
-pub enum CgroupModelFieldId {
-    Name,
-    FullPath,
-    InodeNumber,
-    // Disable for strum so we can iterate the above fields only. The aggregate
-    // fields below do not have default so we don't iterate over them.
-    #[strum(disabled)]
-    Cpu(CgroupCpuModelFieldId),
-    #[strum(disabled)]
-    Mem(CgroupMemoryModelFieldId),
-    #[strum(disabled)]
-    Io(CgroupIoModelFieldId),
-    #[strum(disabled)]
-    Pressure(CgroupPressureModelFieldId),
-}
-
-impl FieldId for CgroupModelFieldId {
-    type Queriable = CgroupModel;
-}
-
-impl std::str::FromStr for CgroupModelFieldId {
-    type Err = ::strum::ParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use CgroupModelFieldId::*;
-        if let Some(s) = s.strip_prefix("cpu.") {
-            CgroupCpuModelFieldId::from_str(s).map(Cpu)
-        } else if let Some(s) = s.strip_prefix("mem.") {
-            CgroupMemoryModelFieldId::from_str(s).map(Mem)
-        } else if let Some(s) = s.strip_prefix("io.") {
-            CgroupIoModelFieldId::from_str(s).map(Io)
-        } else if let Some(s) = s.strip_prefix("pressure.") {
-            CgroupPressureModelFieldId::from_str(s).map(Pressure)
-        } else {
-            match s {
-                "name" => Ok(Name),
-                "full_path" => Ok(FullPath),
-                "inode_number" => Ok(InodeNumber),
-                _ => Err(Self::Err::VariantNotFound),
-            }
-        }
-    }
-}
-
-impl std::string::ToString for CgroupModelFieldId {
-    fn to_string(&self) -> String {
-        use CgroupModelFieldId::*;
-        match self {
-            Name => "name".to_owned(),
-            FullPath => "full_path".to_owned(),
-            InodeNumber => "inode_number".to_owned(),
-            Cpu(field_id) => format!("cpu.{}", field_id.to_string()),
-            Mem(field_id) => format!("mem.{}", field_id.to_string()),
-            Io(field_id) => format!("io.{}", field_id.to_string()),
-            Pressure(field_id) => format!("pressure.{}", field_id.to_string()),
-        }
-    }
-}
-
-impl Queriable for CgroupModel {
-    type FieldId = CgroupModelFieldId;
-
-    fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
-        use CgroupModelFieldId::*;
-        match field_id {
-            Name => Some(Field::Str(self.name.clone())),
-            FullPath => Some(Field::Str(self.full_path.clone())),
-            InodeNumber => self.inode_number.map(Field::from),
-            Cpu(field_id) => self.cpu.as_ref().and_then(|m| m.query(field_id)),
-            Mem(field_id) => self.memory.as_ref().and_then(|m| m.query(field_id)),
-            Io(field_id) => self.io_total.as_ref().and_then(|m| m.query(field_id)),
-            Pressure(field_id) => self.pressure.as_ref().and_then(|m| m.query(field_id)),
-        }
-    }
-}
-
 impl Recursive for CgroupModel {
     fn get_depth(&self) -> usize {
         self.depth as usize
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
 pub struct CgroupCpuModel {
     pub usage_pct: Option<f64>,
     pub user_pct: Option<f64>,
@@ -269,38 +203,7 @@ impl CgroupCpuModel {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, EnumString, EnumIter, strum_macros::ToString)]
-#[strum(serialize_all = "snake_case")]
-pub enum CgroupCpuModelFieldId {
-    UsagePct,
-    UserPct,
-    SystemPct,
-    NrPeriodsPerSec,
-    NrThrottledPerSec,
-    ThrottledPct,
-}
-
-impl FieldId for CgroupCpuModelFieldId {
-    type Queriable = CgroupCpuModel;
-}
-
-impl Queriable for CgroupCpuModel {
-    type FieldId = CgroupCpuModelFieldId;
-
-    fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
-        use CgroupCpuModelFieldId::*;
-        match field_id {
-            UsagePct => self.usage_pct.map(Field::from),
-            UserPct => self.user_pct.map(Field::from),
-            SystemPct => self.system_pct.map(Field::from),
-            NrPeriodsPerSec => self.nr_periods_per_sec.map(Field::from),
-            NrThrottledPerSec => self.nr_throttled_per_sec.map(Field::from),
-            ThrottledPct => self.throttled_pct.map(Field::from),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
 pub struct CgroupIoModel {
     pub rbytes_per_sec: Option<f64>,
     pub wbytes_per_sec: Option<f64>,
@@ -358,40 +261,7 @@ impl std::ops::Add<&CgroupIoModel> for CgroupIoModel {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, EnumString, EnumIter, strum_macros::ToString)]
-#[strum(serialize_all = "snake_case")]
-pub enum CgroupIoModelFieldId {
-    RbytesPerSec,
-    WbytesPerSec,
-    RiosPerSec,
-    WiosPerSec,
-    DbytesPerSec,
-    DiosPerSec,
-    RwbytesPerSec,
-}
-
-impl FieldId for CgroupIoModelFieldId {
-    type Queriable = CgroupIoModel;
-}
-
-impl Queriable for CgroupIoModel {
-    type FieldId = CgroupIoModelFieldId;
-
-    fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
-        use CgroupIoModelFieldId::*;
-        match field_id {
-            RbytesPerSec => self.rbytes_per_sec.map(Field::from),
-            WbytesPerSec => self.wbytes_per_sec.map(Field::from),
-            RiosPerSec => self.rios_per_sec.map(Field::from),
-            WiosPerSec => self.wios_per_sec.map(Field::from),
-            DbytesPerSec => self.dbytes_per_sec.map(Field::from),
-            DiosPerSec => self.dios_per_sec.map(Field::from),
-            RwbytesPerSec => self.rwbytes_per_sec.map(Field::from),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
 pub struct CgroupMemoryModel {
     pub total: Option<u64>,
     pub swap: Option<u64>,
@@ -577,104 +447,7 @@ impl CgroupMemoryModel {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, EnumString, EnumIter, strum_macros::ToString)]
-#[strum(serialize_all = "snake_case")]
-pub enum CgroupMemoryModelFieldId {
-    Total,
-    Swap,
-    Anon,
-    File,
-    KernelStack,
-    Slab,
-    Sock,
-    Shmem,
-    FileMapped,
-    FileDirty,
-    FileWriteback,
-    AnonThp,
-    InactiveAnon,
-    ActiveAnon,
-    InactiveFile,
-    ActiveFile,
-    Unevictable,
-    SlabReclaimable,
-    SlabUnreclaimable,
-    Pgfault,
-    Pgmajfault,
-    WorkingsetRefault,
-    WorkingsetActivate,
-    WorkingsetNodereclaim,
-    Pgrefill,
-    Pgscan,
-    Pgsteal,
-    Pgactivate,
-    Pgdeactivate,
-    Pglazyfree,
-    Pglazyfreed,
-    ThpFaultAlloc,
-    ThpCollapseAlloc,
-    MemoryHigh,
-    EventsLow,
-    EventsHigh,
-    EventsMax,
-    EventsOom,
-    EventsOomKill,
-}
-
-impl FieldId for CgroupMemoryModelFieldId {
-    type Queriable = CgroupMemoryModel;
-}
-
-impl Queriable for CgroupMemoryModel {
-    type FieldId = CgroupMemoryModelFieldId;
-
-    fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
-        use CgroupMemoryModelFieldId::*;
-        match field_id {
-            Total => self.total.map(Field::from),
-            Swap => self.swap.map(Field::from),
-            Anon => self.anon.map(Field::from),
-            File => self.file.map(Field::from),
-            KernelStack => self.kernel_stack.map(Field::from),
-            Slab => self.slab.map(Field::from),
-            Sock => self.sock.map(Field::from),
-            Shmem => self.shmem.map(Field::from),
-            FileMapped => self.file_mapped.map(Field::from),
-            FileDirty => self.file_dirty.map(Field::from),
-            FileWriteback => self.file_writeback.map(Field::from),
-            AnonThp => self.anon_thp.map(Field::from),
-            InactiveAnon => self.inactive_anon.map(Field::from),
-            ActiveAnon => self.active_anon.map(Field::from),
-            InactiveFile => self.inactive_file.map(Field::from),
-            ActiveFile => self.active_file.map(Field::from),
-            Unevictable => self.unevictable.map(Field::from),
-            SlabReclaimable => self.slab_reclaimable.map(Field::from),
-            SlabUnreclaimable => self.slab_unreclaimable.map(Field::from),
-            Pgfault => self.pgfault.map(Field::from),
-            Pgmajfault => self.pgmajfault.map(Field::from),
-            WorkingsetRefault => self.workingset_refault.map(Field::from),
-            WorkingsetActivate => self.workingset_activate.map(Field::from),
-            WorkingsetNodereclaim => self.workingset_nodereclaim.map(Field::from),
-            Pgrefill => self.pgrefill.map(Field::from),
-            Pgscan => self.pgscan.map(Field::from),
-            Pgsteal => self.pgsteal.map(Field::from),
-            Pgactivate => self.pgactivate.map(Field::from),
-            Pgdeactivate => self.pgdeactivate.map(Field::from),
-            Pglazyfree => self.pglazyfree.map(Field::from),
-            Pglazyfreed => self.pglazyfreed.map(Field::from),
-            ThpFaultAlloc => self.thp_fault_alloc.map(Field::from),
-            ThpCollapseAlloc => self.thp_collapse_alloc.map(Field::from),
-            MemoryHigh => self.memory_high.map(Field::from),
-            EventsLow => self.events_low.map(Field::from),
-            EventsHigh => self.events_high.map(Field::from),
-            EventsMax => self.events_max.map(Field::from),
-            EventsOom => self.events_oom.map(Field::from),
-            EventsOomKill => self.events_oom_kill.map(Field::from),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
 pub struct CgroupPressureModel {
     pub cpu_some_pct: Option<f64>,
     pub io_some_pct: Option<f64>,
@@ -694,35 +467,6 @@ impl CgroupPressureModel {
             io_full_pct: pressure.io.full.avg10,
             memory_some_pct: pressure.memory.some.avg10,
             memory_full_pct: pressure.memory.full.avg10,
-        }
-    }
-}
-
-#[derive(PartialEq, Debug, Clone, EnumString, EnumIter, strum_macros::ToString)]
-#[strum(serialize_all = "snake_case")]
-pub enum CgroupPressureModelFieldId {
-    CpuSomePct,
-    IoSomePct,
-    IoFullPct,
-    MemorySomePct,
-    MemoryFullPct,
-}
-
-impl FieldId for CgroupPressureModelFieldId {
-    type Queriable = CgroupPressureModel;
-}
-
-impl Queriable for CgroupPressureModel {
-    type FieldId = CgroupPressureModelFieldId;
-
-    fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
-        use CgroupPressureModelFieldId::*;
-        match field_id {
-            CpuSomePct => self.cpu_some_pct.map(Field::from),
-            IoSomePct => self.io_some_pct.map(Field::from),
-            IoFullPct => self.io_full_pct.map(Field::from),
-            MemorySomePct => self.memory_some_pct.map(Field::from),
-            MemoryFullPct => self.memory_full_pct.map(Field::from),
         }
     }
 }

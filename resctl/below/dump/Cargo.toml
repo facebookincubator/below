@@ -20,6 +20,4 @@ regex = "1.4.2"
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 structopt = "0.3.7"
-strum = "0.19"
-strum_macros = "0.19"
 toml = "=0.5.7"
