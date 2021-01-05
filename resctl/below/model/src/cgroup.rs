@@ -14,13 +14,10 @@
 
 use super::*;
 
-#[derive(Clone, Debug, Default, BelowDecor)]
+#[derive(Clone, Debug, Default)]
 pub struct CgroupModel {
-    #[bttr(title = "Name", width = 50)]
     pub name: String,
-    #[bttr(title = "Full Path", width = 50)]
     pub full_path: String,
-    #[bttr(title = "Inode Num")]
     pub inode_number: Option<u64>,
     pub depth: u32,
     pub cpu: Option<CgroupCpuModel>,
@@ -245,37 +242,13 @@ impl Recursive for CgroupModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct CgroupCpuModel {
-    #[bttr(
-        title = "CPU Usage",
-        width = 15,
-        unit = "%",
-        precision = 2,
-        highlight_if = "is_cpu_significant($)"
-    )]
     pub usage_pct: Option<f64>,
-    #[bttr(
-        title = "CPU User",
-        width = 15,
-        unit = "%",
-        precision = 2,
-        highlight_if = "is_cpu_significant($)"
-    )]
     pub user_pct: Option<f64>,
-    #[bttr(
-        title = "CPU Sys",
-        width = 15,
-        unit = "%",
-        precision = 2,
-        highlight_if = "is_cpu_significant($)"
-    )]
     pub system_pct: Option<f64>,
-    #[bttr(title = "Nr Period", width = 15, unit = "/s", precision = 2)]
     pub nr_periods_per_sec: Option<f64>,
-    #[bttr(title = "Nr Throttle", width = 15, unit = "/s", precision = 2)]
     pub nr_throttled_per_sec: Option<f64>,
-    #[bttr(title = "Throttle", width = 15, unit = "%", precision = 2)]
     pub throttled_pct: Option<f64>,
 }
 
@@ -327,34 +300,13 @@ impl Queriable for CgroupCpuModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct CgroupIoModel {
-    #[bttr(
-        title = "Reads",
-        width = 11,
-        unit = "/s",
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub rbytes_per_sec: Option<f64>,
-    #[bttr(
-        title = "Writes",
-        width = 11,
-        unit = "/s",
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub wbytes_per_sec: Option<f64>,
-    #[bttr(title = "Read IOPS", width = 11, precision = 1)]
     pub rios_per_sec: Option<f64>,
-    #[bttr(title = "Write IOPS", width = 11, precision = 1)]
     pub wios_per_sec: Option<f64>,
-    #[bttr(
-        title = "Discards",
-        width = 9,
-        unit = "/s",
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub dbytes_per_sec: Option<f64>,
-    #[bttr(title = "Discard IOPS", width = 13, precision = 1)]
     pub dios_per_sec: Option<f64>,
     pub rwbytes_per_sec: Option<f64>,
 }
@@ -439,133 +391,46 @@ impl Queriable for CgroupIoModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct CgroupMemoryModel {
-    #[bttr(title = "Memory", width = 11, decorator = "convert_bytes($ as f64)")]
     pub total: Option<u64>,
-    #[bttr(
-        title = "Memory Swap",
-        width = 13,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub swap: Option<u64>,
-    #[bttr(title = "Anon", width = 11, decorator = "convert_bytes($ as f64)")]
     pub anon: Option<u64>,
-    #[bttr(title = "File", width = 11, decorator = "convert_bytes($ as f64)")]
     pub file: Option<u64>,
-    #[bttr(
-        title = "Kernel Stack",
-        width = 14,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub kernel_stack: Option<u64>,
-    #[bttr(title = "Slab", width = 11, decorator = "convert_bytes($ as f64)")]
     pub slab: Option<u64>,
-    #[bttr(title = "Sock", width = 11, decorator = "convert_bytes($ as f64)")]
     pub sock: Option<u64>,
-    #[bttr(title = "Shmem", width = 11, decorator = "convert_bytes($ as f64)")]
     pub shmem: Option<u64>,
-    #[bttr(
-        title = "File Mapped",
-        width = 13,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub file_mapped: Option<u64>,
-    #[bttr(
-        title = "File Dirty",
-        width = 13,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub file_dirty: Option<u64>,
-    #[bttr(title = "File WB", width = 11, decorator = "convert_bytes($ as f64)")]
     pub file_writeback: Option<u64>,
-    #[bttr(title = "Anon THP", width = 11, decorator = "convert_bytes($ as f64)")]
     pub anon_thp: Option<u64>,
-    #[bttr(
-        title = "Inactive Anon",
-        width = 15,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub inactive_anon: Option<u64>,
-    #[bttr(
-        title = "Active Anon",
-        width = 13,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub active_anon: Option<u64>,
-    #[bttr(
-        title = "Inactive File",
-        width = 15,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub inactive_file: Option<u64>,
-    #[bttr(
-        title = "Active File",
-        width = 13,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub active_file: Option<u64>,
-    #[bttr(
-        title = "Unevictable",
-        width = 13,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub unevictable: Option<u64>,
-    #[bttr(
-        title = "Slab Reclaimable",
-        width = 18,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub slab_reclaimable: Option<u64>,
-    #[bttr(
-        title = "Slab Unreclaimable",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub slab_unreclaimable: Option<u64>,
-    #[bttr(title = "Pgfault/s", width = 11)]
     pub pgfault: Option<u64>,
-    #[bttr(title = "Pgmajfault/s", width = 15)]
     pub pgmajfault: Option<u64>,
-    #[bttr(title = "Workingset Refault/s", width = 23)]
     pub workingset_refault: Option<u64>,
-    #[bttr(title = "Workingset Activate/s", width = 25)]
     pub workingset_activate: Option<u64>,
-    #[bttr(title = "Workingset Nodereclaim/s", width = 25)]
     pub workingset_nodereclaim: Option<u64>,
-    #[bttr(title = "Pgrefill/s", width = 11)]
     pub pgrefill: Option<u64>,
-    #[bttr(title = "Pgscan/s", width = 11)]
     pub pgscan: Option<u64>,
-    #[bttr(title = "Pgsteal/s", width = 13)]
     pub pgsteal: Option<u64>,
-    #[bttr(title = "Pgactivate/s", width = 15)]
     pub pgactivate: Option<u64>,
-    #[bttr(title = "Pgdeactivate/s", width = 17)]
     pub pgdeactivate: Option<u64>,
-    #[bttr(title = "Pglazyfree/s", width = 15)]
     pub pglazyfree: Option<u64>,
-    #[bttr(title = "Pglazyfreed/s", width = 18)]
     pub pglazyfreed: Option<u64>,
-    #[bttr(title = "THP Fault Alloc/s", width = 18)]
     pub thp_fault_alloc: Option<u64>,
-    #[bttr(title = "THP Collapse Alloc/s", width = 18)]
     pub thp_collapse_alloc: Option<u64>,
-    #[bttr(
-        title = "Memory.High",
-        width = 18,
-        decorator = "if $ == -1 { \"max\".to_string() } else { convert_bytes($ as f64) }"
-    )]
     pub memory_high: Option<i64>,
-    #[bttr(title = "Events Low", width = 11)]
     pub events_low: Option<u64>,
-    #[bttr(title = "Events High", width = 12)]
     pub events_high: Option<u64>,
-    #[bttr(title = "Events Max", width = 11)]
     pub events_max: Option<u64>,
-    #[bttr(title = "Events OOM", width = 11)]
     pub events_oom: Option<u64>,
-    #[bttr(title = "Events Kill", width = 12)]
     pub events_oom_kill: Option<u64>,
 }
 
@@ -809,55 +674,12 @@ impl Queriable for CgroupMemoryModel {
     }
 }
 
-fn is_pressure_significant(p: f64) -> Option<cursive::theme::BaseColor> {
-    if p > 40.0 {
-        Some(cursive::theme::BaseColor::Red)
-    } else {
-        None
-    }
-}
-
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct CgroupPressureModel {
-    #[bttr(
-        title = "CPU Pressure",
-        width = 15,
-        unit = "%",
-        precision = 2,
-        highlight_if = "is_pressure_significant($)"
-    )]
     pub cpu_some_pct: Option<f64>,
-    #[bttr(
-        title = "I/O Some Pressure",
-        width = 18,
-        unit = "%",
-        precision = 2,
-        highlight_if = "is_pressure_significant($)"
-    )]
     pub io_some_pct: Option<f64>,
-    #[bttr(
-        title = "I/O Pressure",
-        width = 15,
-        unit = "%",
-        precision = 2,
-        highlight_if = "is_pressure_significant($)"
-    )]
     pub io_full_pct: Option<f64>,
-    #[bttr(
-        title = "Mem Some Pressure",
-        width = 20,
-        unit = "%",
-        precision = 2,
-        highlight_if = "is_pressure_significant($)"
-    )]
     pub memory_some_pct: Option<f64>,
-    #[bttr(
-        title = "Mem Pressure",
-        width = 15,
-        unit = "%",
-        precision = 2,
-        highlight_if = "is_pressure_significant($)"
-    )]
     pub memory_full_pct: Option<f64>,
 }
 
