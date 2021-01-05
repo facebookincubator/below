@@ -37,23 +37,13 @@ impl ProcessModel {
     }
 }
 
-#[derive(BelowDecor, Default, below_derive::Queriable)]
+#[derive(Default, below_derive::Queriable)]
 pub struct SingleProcessModel {
-    #[bttr(title = "Pid", width = 11)]
     pub pid: Option<i32>,
-    #[bttr(title = "Ppid", width = 11)]
     pub ppid: Option<i32>,
-    #[bttr(title = "Comm", width = 30)]
     pub comm: Option<String>,
-    #[bttr(title = "State", width = 11)]
     pub state: Option<procfs::PidState>,
-    #[bttr(title = "Uptime(sec)", width = 11)]
     pub uptime_secs: Option<u64>,
-    #[bttr(
-        title = "Cgroup",
-        width = 50,
-        decorator = "fold_string(&$, 50, 1, |c: char| c == '/')"
-    )]
     pub cgroup: Option<String>,
     #[queriable(subquery)]
     pub io: Option<ProcessIoModel>,
@@ -61,9 +51,7 @@ pub struct SingleProcessModel {
     pub mem: Option<ProcessMemoryModel>,
     #[queriable(subquery)]
     pub cpu: Option<ProcessCpuModel>,
-    #[bttr(title = "Cmdline", width = 50)]
     pub cmdline: Option<String>,
-    #[bttr(title = "Exe Path")]
     pub exe_path: Option<String>,
 }
 
@@ -92,21 +80,9 @@ impl SingleProcessModel {
     }
 }
 
-#[derive(Clone, BelowDecor, Default, below_derive::Queriable)]
+#[derive(Clone, Default, below_derive::Queriable)]
 pub struct ProcessIoModel {
-    #[bttr(
-        title = "Reads",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        unit = "/s"
-    )]
     pub rbytes_per_sec: Option<f64>,
-    #[bttr(
-        title = "Writes",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        unit = "/s"
-    )]
     pub wbytes_per_sec: Option<f64>,
     pub rwbytes_per_sec: Option<f64>,
 }
@@ -126,26 +102,11 @@ impl ProcessIoModel {
     }
 }
 
-#[derive(Clone, BelowDecor, Default, below_derive::Queriable)]
+#[derive(Clone, Default, below_derive::Queriable)]
 pub struct ProcessCpuModel {
     pub usage_pct: Option<f64>,
-    #[bttr(
-        title = "CPU User",
-        width = 11,
-        precision = 2,
-        unit = "%",
-        highlight_if = "is_cpu_significant($)"
-    )]
     pub user_pct: Option<f64>,
-    #[bttr(
-        title = "CPU Sys",
-        width = 11,
-        precision = 2,
-        unit = "%",
-        highlight_if = "is_cpu_significant($)"
-    )]
     pub system_pct: Option<f64>,
-    #[bttr(title = "Threads", width = 11)]
     pub num_threads: Option<u64>,
 }
 
@@ -163,36 +124,19 @@ impl ProcessCpuModel {
     }
 }
 
-#[derive(Clone, BelowDecor, Default, below_derive::Queriable)]
+#[derive(Clone, Default, below_derive::Queriable)]
 pub struct ProcessMemoryModel {
-    #[bttr(title = "Minflt", width = 11, precision = 2, unit = "/s")]
     pub minorfaults_per_sec: Option<f64>,
-    #[bttr(title = "Majflt", width = 11, precision = 2, unit = "/s")]
     pub majorfaults_per_sec: Option<f64>,
-    #[bttr(
-        title = "RSS",
-        width = 11,
-        decorator = "convert_bytes($ as f64)",
-        cmp = true
-    )]
     pub rss_bytes: Option<u64>,
-    #[bttr(title = "VM Size", width = 11, decorator = "convert_bytes($ as f64)")]
     pub vm_size: Option<u64>,
-    #[bttr(title = "Lock", width = 11, decorator = "convert_bytes($ as f64)")]
     pub lock: Option<u64>,
-    #[bttr(title = "Pin", width = 11, decorator = "convert_bytes($ as f64)")]
     pub pin: Option<u64>,
-    #[bttr(title = "Anon", width = 11, decorator = "convert_bytes($ as f64)")]
     pub anon: Option<u64>,
-    #[bttr(title = "File", width = 11, decorator = "convert_bytes($ as f64)")]
     pub file: Option<u64>,
-    #[bttr(title = "Shmem", width = 11, decorator = "convert_bytes($ as f64)")]
     pub shmem: Option<u64>,
-    #[bttr(title = "PTE", width = 11, decorator = "convert_bytes($ as f64)")]
     pub pte: Option<u64>,
-    #[bttr(title = "Swap", width = 11, decorator = "convert_bytes($ as f64)")]
     pub swap: Option<u64>,
-    #[bttr(title = "Huge TLB", width = 11, decorator = "convert_bytes($ as f64)")]
     pub huge_tlb: Option<u64>,
 }
 

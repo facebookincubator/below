@@ -12,16 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashSet;
 use std::fs::File;
-use std::hash::Hash;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, Result};
-use regex::Regex;
 use serde_json::{json, Value};
 use toml::value::Value as TValue;
 
@@ -35,11 +32,9 @@ use store::advance::Advance;
 use store::Direction;
 
 #[macro_use]
-pub mod get;
 pub mod cgroup;
 pub mod command;
 pub mod disk;
-mod fill;
 pub mod iface;
 pub mod network;
 pub mod print;
@@ -50,9 +45,7 @@ pub mod transport;
 
 pub use command::DumpCommand;
 use command::{expand_fields, GeneralOpt, OutputFormat};
-use fill::Dfill;
-use get::Dget;
-use print::{Dprint, HasRenderConfigForDump};
+use print::HasRenderConfigForDump;
 use tmain::{dump_timeseries, Dumper, IterExecResult};
 
 const BELOW_DUMP_RC: &str = "/.config/below/dumprc";
@@ -104,20 +97,6 @@ pub type NetworkField = DumpField<model::NetworkModelFieldId>;
 pub type IfaceField = DumpField<model::SingleNetModelFieldId>;
 // Essentially the same as NetworkField
 pub type TransportField = DumpField<model::NetworkModelFieldId>;
-
-// The DumpType trait is the key of how we make our dump generic.
-// Basically, the DumpType trait will be required by all dump related
-// traits to provide a guideline on what's the concrete type looks like.
-// For how traits work altogether, please take a look at tmain.rs.
-// # Types:
-// Model ==> The real model typle, like CgroupModel or SingleProcessModel.
-// FieldsType ==> The enum tag type we defined in command.rs, like Sys.
-// DataType ==> Our struct that implement the BelowDecor per dump module.
-pub trait DumpType {
-    type Model: Default;
-    type FieldsType: Eq + Hash;
-    type DataType;
-}
 
 fn get_advance(
     logger: slog::Logger,

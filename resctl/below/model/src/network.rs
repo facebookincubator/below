@@ -91,31 +91,19 @@ impl NetworkModel {
     }
 }
 
-#[derive(BelowDecor, Default, below_derive::Queriable)]
+#[derive(Default, below_derive::Queriable)]
 pub struct TcpModel {
-    #[bttr(title = "ActiveOpens/s", width = 20)]
     pub active_opens_per_sec: Option<u64>,
-    #[bttr(title = "PassiveOpens/s", width = 20)]
     pub passive_opens_per_sec: Option<u64>,
-    #[bttr(title = "AttemptFails/s", width = 20)]
     pub attempt_fails_per_sec: Option<u64>,
-    #[bttr(title = "EstabResets/s", width = 20)]
     pub estab_resets_per_sec: Option<u64>,
-    #[bttr(title = "CurEstabConn", width = 20)]
     pub curr_estab_conn: Option<u64>,
-    #[bttr(title = "InSegs/s", unit = " segs", width = 20)]
     pub in_segs_per_sec: Option<u64>,
-    #[bttr(title = "OutSegs/s", unit = " segs", width = 20)]
     pub out_segs_per_sec: Option<u64>,
-    #[bttr(title = "RetransSegs/s", unit = " segs", width = 20)]
     pub retrans_segs_per_sec: Option<u64>,
-    #[bttr(title = "RetransSegs", unit = " segs", width = 20)]
     pub retrans_segs: Option<u64>,
-    #[bttr(title = "InErrors", width = 20)]
     pub in_errs: Option<u64>,
-    #[bttr(title = "OutRsts/s", width = 20)]
     pub out_rsts_per_sec: Option<u64>,
-    #[bttr(title = "InCsumErrors", width = 20)]
     pub in_csum_errors: Option<u64>,
     // Collected TcpExt stats, but not going to display. If we got feedback that user do need
     // those stats, we can add those here.
@@ -140,46 +128,27 @@ impl TcpModel {
     }
 }
 
-#[derive(BelowDecor, Default, below_derive::Queriable)]
+#[derive(Default, below_derive::Queriable)]
 pub struct IpModel {
-    #[bttr(title = "ForwPkts/s", unit = " pkts", width = 20)]
     pub forwarding_pkts_per_sec: Option<u64>,
-    #[bttr(title = "InPkts/s", unit = " pkts", width = 20)]
     pub in_receives_pkts_per_sec: Option<u64>,
-    #[bttr(title = "ForwDatagrams/s", width = 20)]
     pub forw_datagrams_per_sec: Option<u64>,
-    #[bttr(title = "InDiscardPkts/s", unit = " pkts", width = 20)]
     pub in_discards_pkts_per_sec: Option<u64>,
-    #[bttr(title = "InDeliversPkts/s", unit = " pkts", width = 20)]
     pub in_delivers_pkts_per_sec: Option<u64>,
-    #[bttr(title = "OutReqs/s", unit = " reqs", width = 20)]
     pub out_requests_per_sec: Option<u64>,
-    #[bttr(title = "OutDiscardPkts/s", unit = " pkts", width = 20)]
     pub out_discards_pkts_per_sec: Option<u64>,
-    #[bttr(title = "OutNoRoutesPkts/s", unit = " pkts", width = 20)]
     pub out_no_routes_pkts_per_sec: Option<u64>,
     // IpExt stats below
-    #[bttr(title = "InMcastPkts/s", unit = " pkts", width = 20)]
     pub in_mcast_pkts_per_sec: Option<u64>,
-    #[bttr(title = "OutMcastPkts/s", unit = " pkts", width = 20)]
     pub out_mcast_pkts_per_sec: Option<u64>,
-    #[bttr(title = "InBcastPkts/s", unit = " pkts", width = 20)]
     pub in_bcast_pkts_per_sec: Option<u64>,
-    #[bttr(title = "OutBcastPkts/s", unit = " pkts", width = 20)]
     pub out_bcast_pkts_per_sec: Option<u64>,
-    #[bttr(title = "InOctets/s", unit = " octets", width = 20)]
     pub in_octets_per_sec: Option<u64>,
-    #[bttr(title = "OutOctets/s", unit = " octets", width = 20)]
     pub out_octets_per_sec: Option<u64>,
-    #[bttr(title = "InMcastOctets/s", unit = " octets", width = 20)]
     pub in_mcast_octets_per_sec: Option<u64>,
-    #[bttr(title = "OutMcastOctets/s", unit = " octets", width = 20)]
     pub out_mcast_octets_per_sec: Option<u64>,
-    #[bttr(title = "InBcastOctets/s", unit = " octets", width = 20)]
     pub in_bcast_octets_per_sec: Option<u64>,
-    #[bttr(title = "OutBcastOctets/s", unit = " octets", width = 20)]
     pub out_bcast_octets_per_sec: Option<u64>,
-    #[bttr(title = "InNoEctPkts/s", unit = " pkts", width = 20)]
     pub in_no_ect_pkts_per_sec: Option<u64>,
 }
 
@@ -215,41 +184,24 @@ impl IpModel {
     }
 }
 
-#[derive(BelowDecor, Default, below_derive::Queriable)]
+#[derive(Default, below_derive::Queriable)]
 pub struct Ip6Model {
-    #[bttr(title = "InPkts/s", unit = " pkts", width = 20)]
     pub in_receives_pkts_per_sec: Option<u64>,
-    #[bttr(title = "InHdrErrs", width = 20)]
     pub in_hdr_errors: Option<u64>,
-    #[bttr(title = "InNoRoutesPkts/s", unit = " pkts", width = 20)]
     pub in_no_routes_pkts_per_sec: Option<u64>,
-    #[bttr(title = "InAddrErrs", width = 20)]
     pub in_addr_errors: Option<u64>,
-    #[bttr(title = "InDiscardsPkts/s", unit = " pkts", width = 20)]
     pub in_discards_pkts_per_sec: Option<u64>,
-    #[bttr(title = "InDeliversPkts/s", unit = " pkts", width = 20)]
     pub in_delivers_pkts_per_sec: Option<u64>,
-    #[bttr(title = "ForwDatagrams/s", width = 20)]
     pub out_forw_datagrams_per_sec: Option<u64>,
-    #[bttr(title = "OutReqs/s", unit = " reqs", width = 20)]
     pub out_requests_per_sec: Option<u64>,
-    #[bttr(title = "OutNoRoutesPkts/s", unit = " pkts", width = 20)]
     pub out_no_routes_pkts_per_sec: Option<u64>,
-    #[bttr(title = "InMcastPkts/s", unit = " pkts", width = 20)]
     pub in_mcast_pkts_per_sec: Option<u64>,
-    #[bttr(title = "OutMcastPkts/s", unit = " pkts", width = 20)]
     pub out_mcast_pkts_per_sec: Option<u64>,
-    #[bttr(title = "InOctets/s", unit = " octets", width = 20)]
     pub in_octets_per_sec: Option<u64>,
-    #[bttr(title = "OutOctets/s", unit = " octets", width = 20)]
     pub out_octets_per_sec: Option<u64>,
-    #[bttr(title = "InMcastOctets/s", unit = " octets", width = 20)]
     pub in_mcast_octets_per_sec: Option<u64>,
-    #[bttr(title = "OutMcastOctets/s", unit = " octets", width = 20)]
     pub out_mcast_octets_per_sec: Option<u64>,
-    #[bttr(title = "InBcastOctets/s", unit = " octets", width = 20)]
     pub in_bcast_octets_per_sec: Option<u64>,
-    #[bttr(title = "OutBcastOctets/s", unit = " octets", width = 20)]
     pub out_bcast_octets_per_sec: Option<u64>,
 }
 
@@ -277,19 +229,13 @@ impl Ip6Model {
     }
 }
 
-#[derive(BelowDecor, Default, below_derive::Queriable)]
+#[derive(Default, below_derive::Queriable)]
 pub struct IcmpModel {
-    #[bttr(title = "InMsg/s", unit = " msgs", width = 20)]
     pub in_msgs_per_sec: Option<u64>,
-    #[bttr(title = "InErrs", width = 20)]
     pub in_errors: Option<u64>,
-    #[bttr(title = "InDestUnreachs", width = 20)]
     pub in_dest_unreachs: Option<u64>,
-    #[bttr(title = "OutMsg/s", unit = " msgs", width = 20)]
     pub out_msgs_per_sec: Option<u64>,
-    #[bttr(title = "OutErrs", width = 20)]
     pub out_errors: Option<u64>,
-    #[bttr(title = "OutDestUnreachs", width = 20)]
     pub out_dest_unreachs: Option<u64>,
 }
 
@@ -309,19 +255,13 @@ impl IcmpModel {
     }
 }
 
-#[derive(BelowDecor, Default, below_derive::Queriable)]
+#[derive(Default, below_derive::Queriable)]
 pub struct Icmp6Model {
-    #[bttr(title = "InMsg/s", unit = " msgs", width = 20)]
     pub in_msgs_per_sec: Option<u64>,
-    #[bttr(title = "InErrs", width = 20)]
     pub in_errors: Option<u64>,
-    #[bttr(title = "InDestUnreachs", width = 20)]
     pub in_dest_unreachs: Option<u64>,
-    #[bttr(title = "OutMsg/s", unit = " msgs", width = 20)]
     pub out_msgs_per_sec: Option<u64>,
-    #[bttr(title = "OutErrs", width = 20)]
     pub out_errors: Option<u64>,
-    #[bttr(title = "OutDestUnreachs", width = 20)]
     pub out_dest_unreachs: Option<u64>,
 }
 
@@ -341,21 +281,14 @@ impl Icmp6Model {
     }
 }
 
-#[derive(BelowDecor, Default, below_derive::Queriable)]
+#[derive(Default, below_derive::Queriable)]
 pub struct UdpModel {
-    #[bttr(title = "InPkts/s", unit = " pkts", width = 20)]
     pub in_datagrams_pkts_per_sec: Option<u64>,
-    #[bttr(title = "NoPorts", width = 20)]
     pub no_ports: Option<u64>,
-    #[bttr(title = "InErrs", width = 20)]
     pub in_errors: Option<u64>,
-    #[bttr(title = "OutPkts/s", unit = " pkts", width = 20)]
     pub out_datagrams_pkts_per_sec: Option<u64>,
-    #[bttr(title = "RcvbufErrs", width = 20)]
     pub rcvbuf_errors: Option<u64>,
-    #[bttr(title = "SndBufErrs", width = 20)]
     pub sndbuf_errors: Option<u64>,
-    #[bttr(title = "IgnoredMulti", width = 20)]
     pub ignored_multi: Option<u64>,
 }
 
@@ -373,23 +306,15 @@ impl UdpModel {
     }
 }
 
-#[derive(BelowDecor, Default, below_derive::Queriable)]
+#[derive(Default, below_derive::Queriable)]
 pub struct Udp6Model {
-    #[bttr(title = "InPkts/s", unit = " pkts", width = 20)]
     pub in_datagrams_pkts_per_sec: Option<u64>,
-    #[bttr(title = "NoPorts", width = 20)]
     pub no_ports: Option<u64>,
-    #[bttr(title = "InErrs", width = 20)]
     pub in_errors: Option<u64>,
-    #[bttr(title = "OutPkts/s", unit = " pkts", width = 20)]
     pub out_datagrams_pkts_per_sec: Option<u64>,
-    #[bttr(title = "RcvbufErrs", width = 20)]
     pub rcvbuf_errors: Option<u64>,
-    #[bttr(title = "SndBufErrs", width = 20)]
     pub sndbuf_errors: Option<u64>,
-    #[bttr(title = "InCsumErrs", width = 20)]
     pub in_csum_errors: Option<u64>,
-    #[bttr(title = "IgnoredMulti", width = 20)]
     pub ignored_multi: Option<u64>,
 }
 
@@ -411,67 +336,37 @@ impl Udp6Model {
     }
 }
 
-#[derive(BelowDecor, Default, below_derive::Queriable)]
+#[derive(Default, below_derive::Queriable)]
 pub struct SingleNetModel {
-    #[bttr(title = "Interface", width = 20)]
     pub interface: String,
-    #[bttr(title = "RX Bytes/s", width = 20, decorator = "convert_bytes($)")]
     pub rx_bytes_per_sec: Option<f64>,
-    #[bttr(title = "TX Bytes/s", width = 20, decorator = "convert_bytes($)")]
     pub tx_bytes_per_sec: Option<f64>,
-    #[bttr(title = "I/O Bytes/s", width = 20, decorator = "convert_bytes($)")]
     pub throughput_per_sec: Option<f64>,
-    #[bttr(title = "RX Pkts/s", width = 20)]
     pub rx_packets_per_sec: Option<u64>,
-    #[bttr(title = "TX Pkts/s", width = 20)]
     pub tx_packets_per_sec: Option<u64>,
-    #[bttr(title = "Collision", width = 20)]
     pub collisions: Option<u64>,
-    #[bttr(title = "Multicast", width = 20)]
     pub multicast: Option<u64>,
-    #[bttr(title = "RX Bytes", width = 20)]
     pub rx_bytes: Option<u64>,
-    #[bttr(title = "RX Compressed", width = 20)]
     pub rx_compressed: Option<u64>,
-    #[bttr(title = "RX CRC Errors", width = 20)]
     pub rx_crc_errors: Option<u64>,
-    #[bttr(title = "RX Dropped", width = 20)]
     pub rx_dropped: Option<u64>,
-    #[bttr(title = "RX Errors", width = 20)]
     pub rx_errors: Option<u64>,
-    #[bttr(title = "RX Fifo Errors", width = 20)]
     pub rx_fifo_errors: Option<u64>,
-    #[bttr(title = "RX Frame Errors", width = 20)]
     pub rx_frame_errors: Option<u64>,
-    #[bttr(title = "RX Length Errors", width = 20)]
     pub rx_length_errors: Option<u64>,
-    #[bttr(title = "RX Missed Errors", width = 20)]
     pub rx_missed_errors: Option<u64>,
-    #[bttr(title = "RX Nohandler", width = 20)]
     pub rx_nohandler: Option<u64>,
-    #[bttr(title = "RX Over Errors", width = 20)]
     pub rx_over_errors: Option<u64>,
-    #[bttr(title = "TX Packets", width = 20)]
     pub rx_packets: Option<u64>,
-    #[bttr(title = "TX Aborted Errors", width = 20)]
     pub tx_aborted_errors: Option<u64>,
-    #[bttr(title = "TX Bytes", width = 20)]
     pub tx_bytes: Option<u64>,
-    #[bttr(title = "TX Carrier Errors", width = 20)]
     pub tx_carrier_errors: Option<u64>,
-    #[bttr(title = "TX Compressed", width = 20)]
     pub tx_compressed: Option<u64>,
-    #[bttr(title = "TX Dropped", width = 20)]
     pub tx_dropped: Option<u64>,
-    #[bttr(title = "TX Errors", width = 20)]
     pub tx_errors: Option<u64>,
-    #[bttr(title = "TX Fifo Errors", width = 20)]
     pub tx_fifo_errors: Option<u64>,
-    #[bttr(title = "TX Heartbeat Errors", width = 20)]
     pub tx_heartbeat_errors: Option<u64>,
-    #[bttr(title = "TX Packets", width = 20)]
     pub tx_packets: Option<u64>,
-    #[bttr(title = "TX Window Errors", width = 20)]
     pub tx_window_errors: Option<u64>,
 }
 

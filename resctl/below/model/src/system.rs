@@ -14,15 +14,10 @@
 
 use super::*;
 
-use cursive::theme::BaseColor;
-
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor, below_derive::Queriable)]
+#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
 pub struct SystemModel {
-    #[bttr(title = "Hostname", width = 20)]
     pub hostname: String,
-    #[bttr(title = "Kernel Version", width = 50)]
     pub kernel_version: Option<String>,
-    #[bttr(title = "OS Release", width = 50)]
     pub os_release: Option<String>,
     #[queriable(subquery)]
     pub stat: ProcStatModel,
@@ -98,19 +93,13 @@ impl SystemModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor, below_derive::Queriable)]
+#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
 pub struct ProcStatModel {
-    #[bttr(title = "Total Interrupts", width = 20)]
     pub total_interrupt_ct: Option<i64>,
-    #[bttr(title = "Context Switches", width = 20)]
     pub context_switches: Option<i64>,
-    #[bttr(title = "Boot Time Epoch", width = 20)]
     pub boot_time_epoch_secs: Option<i64>,
-    #[bttr(title = "Total Procs", width = 20)]
     pub total_processes: Option<i64>,
-    #[bttr(title = "Running Procs", width = 20)]
     pub running_processes: Option<i32>,
-    #[bttr(title = "Blocked Procs", width = 20)]
     pub blocked_processes: Option<i32>,
 }
 
@@ -127,35 +116,19 @@ impl ProcStatModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor, below_derive::Queriable)]
+#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
 pub struct SingleCpuModel {
-    #[bttr(
-        title = "CPU",
-        width = 10,
-        decorator = "if self.idx == -1 { \"total\".into() } else { self.idx.to_string() }"
-    )]
     pub idx: i32,
-    #[bttr(title = "Usage", unit = "%", width = 10, precision = 2)]
     pub usage_pct: Option<f64>,
-    #[bttr(title = "User", unit = "%", width = 10, precision = 2)]
     pub user_pct: Option<f64>,
-    #[bttr(title = "Idle", unit = "%", width = 10, precision = 2)]
-    pub idle_pct: Option<f64>,
-    #[bttr(title = "System", unit = "%", width = 10, precision = 2)]
     pub system_pct: Option<f64>,
-    #[bttr(title = "Nice", unit = "%", width = 10, precision = 2)]
+    pub idle_pct: Option<f64>,
     pub nice_pct: Option<f64>,
-    #[bttr(title = "IOWait", unit = "%", width = 10, precision = 2)]
     pub iowait_pct: Option<f64>,
-    #[bttr(title = "Irq", unit = "%", width = 10, precision = 2)]
     pub irq_pct: Option<f64>,
-    #[bttr(title = "SoftIrq", unit = "%", width = 10, precision = 2)]
     pub softirq_pct: Option<f64>,
-    #[bttr(title = "Stolen", unit = "%", width = 10, precision = 2)]
     pub stolen_pct: Option<f64>,
-    #[bttr(title = "Guest", unit = "%", width = 10, precision = 2)]
     pub guest_pct: Option<f64>,
-    #[bttr(title = "Guest Nice", unit = "%", width = 10, precision = 2)]
     pub guest_nice_pct: Option<f64>,
 }
 
@@ -226,174 +199,46 @@ impl SingleCpuModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor, below_derive::Queriable)]
+#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
 pub struct MemoryModel {
-    #[bttr(title = "Total", decorator = "convert_bytes($ as f64)", width = 20)]
     pub total: Option<u64>,
-    #[bttr(
-        title = "Free",
-        decorator = "convert_bytes($ as f64)",
-        width = 20,
-        highlight_if = "if $ < (2 << 20) {Some(BaseColor::Red)} else {None}"
-    )]
     pub free: Option<u64>,
-    #[bttr(title = "Available", width = 20, decorator = "convert_bytes($ as f64)")]
     pub available: Option<u64>,
-    #[bttr(title = "Buffers", width = 20, decorator = "convert_bytes($ as f64)")]
     pub buffers: Option<u64>,
-    #[bttr(title = "Cached", width = 20, decorator = "convert_bytes($ as f64)")]
     pub cached: Option<u64>,
-    #[bttr(
-        title = "Swap Cached",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub swap_cached: Option<u64>,
-    #[bttr(title = "Active", width = 20, decorator = "convert_bytes($ as f64)")]
     pub active: Option<u64>,
-    #[bttr(title = "Inactive", width = 20, decorator = "convert_bytes($ as f64)")]
     pub inactive: Option<u64>,
-    #[bttr(title = "Anon", width = 20, decorator = "convert_bytes($ as f64)")]
     pub anon: Option<u64>,
-    #[bttr(title = "File", width = 20, decorator = "convert_bytes($ as f64)")]
     pub file: Option<u64>,
-    #[bttr(
-        title = "Unevictable",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub unevictable: Option<u64>,
-    #[bttr(title = "Mlocked", width = 20, decorator = "convert_bytes($ as f64)")]
     pub mlocked: Option<u64>,
-    #[bttr(
-        title = "Swap Total",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub swap_total: Option<u64>,
-    #[bttr(title = "Swap Free", width = 20, decorator = "convert_bytes($ as f64)")]
     pub swap_free: Option<u64>,
-    #[bttr(title = "Dirty", width = 20, decorator = "convert_bytes($ as f64)")]
     pub dirty: Option<u64>,
-    #[bttr(title = "Writeback", width = 20, decorator = "convert_bytes($ as f64)")]
     pub writeback: Option<u64>,
-    #[bttr(
-        title = "Anon Pages",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub anon_pages: Option<u64>,
-    #[bttr(title = "Mapped", width = 20, decorator = "convert_bytes($ as f64)")]
     pub mapped: Option<u64>,
-    #[bttr(title = "Shmem", width = 20, decorator = "convert_bytes($ as f64)")]
     pub shmem: Option<u64>,
-    #[bttr(
-        title = "Kreclaimable",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub kreclaimable: Option<u64>,
-    #[bttr(title = "Slab", width = 20, decorator = "convert_bytes($ as f64)")]
     pub slab: Option<u64>,
-    #[bttr(
-        title = "Slab Reclaimable",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub slab_reclaimable: Option<u64>,
-    #[bttr(
-        title = "Slab Unreclaimable",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub slab_unreclaimable: Option<u64>,
-    #[bttr(
-        title = "Kernel Stack",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub kernel_stack: Option<u64>,
-    #[bttr(
-        title = "Page Tables",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub page_tables: Option<u64>,
-    #[bttr(
-        title = "Anon Huge Pages",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub anon_huge_pages_bytes: Option<u64>,
-    #[bttr(
-        title = "Shmem Huge Pages",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub shmem_huge_pages_bytes: Option<u64>,
-    #[bttr(
-        title = "File Huge Pages",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub file_huge_pages_bytes: Option<u64>,
-    #[bttr(
-        title = "Total Huge Pages",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub total_huge_pages_bytes: Option<u64>,
-    #[bttr(
-        title = "Free Huge Pages",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub free_huge_pages_bytes: Option<u64>,
-    #[bttr(
-        title = "Huge Page Size",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub huge_page_size: Option<u64>,
-    #[bttr(title = "Cma Total", width = 20, decorator = "convert_bytes($ as f64)")]
     pub cma_total: Option<u64>,
-    #[bttr(title = "Cma Free", width = 20, decorator = "convert_bytes($ as f64)")]
     pub cma_free: Option<u64>,
-    #[bttr(
-        title = "Vmalloc Total",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub vmalloc_total: Option<u64>,
-    #[bttr(
-        title = "Vmalloc Used",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub vmalloc_used: Option<u64>,
-    #[bttr(
-        title = "Vmalloc Chunk",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub vmalloc_chunk: Option<u64>,
-    #[bttr(
-        title = "Direct Map 4K",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub direct_map_4k: Option<u64>,
-    #[bttr(
-        title = "Direct Map 2M",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub direct_map_2m: Option<u64>,
-    #[bttr(
-        title = "Direct Map 1G",
-        width = 20,
-        decorator = "convert_bytes($ as f64)"
-    )]
     pub direct_map_1g: Option<u64>,
 }
 
@@ -445,45 +290,16 @@ impl MemoryModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor, below_derive::Queriable)]
+#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
 pub struct VmModel {
-    #[bttr(
-        title = "Page In",
-        width = 20,
-        decorator = "convert_bytes(4096.0 * $)",
-        unit = "/s"
-    )]
     pub pgpgin_per_sec: Option<f64>,
-    #[bttr(
-        title = "Page Out",
-        width = 20,
-        decorator = "convert_bytes(4096.0 * $)",
-        unit = "/s"
-    )]
     pub pgpgout_per_sec: Option<f64>,
-    #[bttr(
-        title = "Swap In",
-        width = 20,
-        decorator = "convert_bytes(4096.0 * $)",
-        unit = "/s"
-    )]
     pub pswpin_per_sec: Option<f64>,
-    #[bttr(
-        title = "Swap Out",
-        width = 20,
-        decorator = "convert_bytes(4096.0 * $)",
-        unit = "/s"
-    )]
     pub pswpout_per_sec: Option<f64>,
-    #[bttr(title = "Pgsteal Kswapd", width = 20, unit = " pages/s")]
     pub pgsteal_kswapd: Option<u64>,
-    #[bttr(title = "Pgsteal Direct", width = 20, unit = " pages/s")]
     pub pgsteal_direct: Option<u64>,
-    #[bttr(title = "Pgscan Kswapd", width = 20, unit = " pages/s")]
     pub pgscan_kswapd: Option<u64>,
-    #[bttr(title = "Pgscan Direct", width = 20, unit = " pages/s")]
     pub pgscan_direct: Option<u64>,
-    #[bttr(title = "OOM Kills", width = 20)]
     pub oom_kill: Option<u64>,
 }
 
@@ -503,80 +319,27 @@ impl VmModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, BelowDecor, below_derive::Queriable)]
+#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
 pub struct SingleDiskModel {
-    #[bttr(
-        title = "Name",
-        width = 15,
-        depth = "self.depth * 3",
-        prefix = "get_prefix(self.collapse)",
-        cmp = true
-    )]
     pub name: Option<String>,
-    #[bttr(
-        title = "Read",
-        width = 10,
-        decorator = "convert_bytes($ as f64)",
-        unit = "/s",
-        cmp = true
-    )]
     pub read_bytes_per_sec: Option<f64>,
-    #[bttr(
-        title = "Write",
-        width = 10,
-        decorator = "convert_bytes($ as f64)",
-        cmp = true,
-        unit = "/s"
-    )]
     pub write_bytes_per_sec: Option<f64>,
-    #[bttr(
-        title = "Discard",
-        width = 10,
-        decorator = "convert_bytes($ as f64)",
-        cmp = true,
-        unit = "/s"
-    )]
     pub discard_bytes_per_sec: Option<f64>,
-    #[bttr(
-        title = "Disk",
-        width = 10,
-        decorator = "convert_bytes($ as f64)",
-        cmp = true,
-        unit = "/s"
-    )]
     pub disk_total_bytes_per_sec: Option<f64>,
-    #[bttr(title = "Read Completed", width = 15, cmp = true)]
     pub read_completed: Option<u64>,
-    #[bttr(title = "Read Merged", width = 15, cmp = true)]
     pub read_merged: Option<u64>,
-    #[bttr(title = "Read Sectors", width = 15, cmp = true)]
     pub read_sectors: Option<u64>,
-    #[bttr(title = "Time Spend Read", width = 15, unit = " ms", cmp = true)]
     pub time_spend_read_ms: Option<u64>,
-    #[bttr(title = "Write Completed", width = 15, cmp = true)]
     pub write_completed: Option<u64>,
-    #[bttr(title = "Write Merged", width = 15, cmp = true)]
     pub write_merged: Option<u64>,
-    #[bttr(title = "Write Sectors", width = 15, cmp = true)]
     pub write_sectors: Option<u64>,
-    #[bttr(title = "Time Spend Write", width = 15, unit = " ms", cmp = true)]
     pub time_spend_write_ms: Option<u64>,
-    #[bttr(title = "Discard Completed", width = 15, cmp = true)]
     pub discard_completed: Option<u64>,
-    #[bttr(title = "Discard Merged", width = 15, cmp = true)]
     pub discard_merged: Option<u64>,
-    #[bttr(title = "Discard Sectors", width = 15, cmp = true)]
     pub discard_sectors: Option<u64>,
-    #[bttr(title = "Time Spend Discard", width = 15, unit = " ms", cmp = true)]
     pub time_spend_discard_ms: Option<u64>,
-    #[bttr(title = "Major", width = 7, cmp = true)]
     pub major: Option<u64>,
-    #[bttr(title = "Minor", width = 7, cmp = true)]
     pub minor: Option<u64>,
-    #[queriable(ignore)]
-    pub collapse: bool,
-    #[queriable(ignore)]
-    pub depth: usize,
 }
 
 impl Recursive for SingleDiskModel {
@@ -620,8 +383,6 @@ impl SingleDiskModel {
             time_spend_discard_ms: end.time_spend_discard_ms.map(|v| v as u64),
             major: end.major.map(|v| v as u64),
             minor: end.minor.map(|v| v as u64),
-            collapse: false,
-            depth: if end.minor == Some(0) { 0 } else { 1 },
         }
     }
 }

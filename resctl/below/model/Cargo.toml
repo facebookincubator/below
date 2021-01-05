@@ -10,10 +10,8 @@ include = ["src/**/*.rs"]
 below-thrift = { path = "../if" }
 below_derive = { path = "../below_derive" }
 cgroupfs = { path = "../../common/cgroupfs" }
-common = { path = "../common" }
 procfs = { path = "../../common/procfs" }
 anyhow = "1.0"
-cursive = { version = "0.15.0", default-features = false, features = ["crossterm", "termion"] }
 hostname = "0.3"
 os_info = "=2.0.1"
 regex = "1.4.2"

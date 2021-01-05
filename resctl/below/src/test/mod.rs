@@ -13,33 +13,25 @@
 // limitations under the License.
 
 use std::collections::BTreeMap;
-use std::io;
 use std::io::prelude::*;
-use std::sync::mpsc::{channel, Sender};
+use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use cursive::theme::{BaseColor, Color};
-use cursive::utils::markup::StyledString;
-use once_cell::sync::Lazy;
-use slog::{self, error, o, Drain};
+use slog::{self, Drain};
 use tempdir::TempDir;
 
 use crate::below_config::BelowConfig;
-use crate::logutil;
 use crate::model::{collect_sample, CgroupModel, CgroupPressureModel, Collector, Model};
 use crate::store;
 use crate::Advance;
 
-use below_derive::BelowDecor;
 use below_thrift::types::Sample;
 use below_thrift::DataFrame;
 
 mod fake_view;
 mod test_config;
 mod test_controllers;
-mod test_decorators;
 mod test_dump;
 mod test_general;
 
