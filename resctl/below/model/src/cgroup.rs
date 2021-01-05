@@ -335,17 +335,22 @@ pub struct CgroupIoModel {
     pub dbytes_per_sec: Option<f64>,
     #[bttr(title = "Discard IOPS", width = 13, precision = 1)]
     pub dios_per_sec: Option<f64>,
+    pub rwbytes_per_sec: Option<f64>,
 }
 
 impl CgroupIoModel {
     pub fn new(begin: &cgroupfs::IoStat, end: &cgroupfs::IoStat, delta: Duration) -> CgroupIoModel {
+        let rbytes_per_sec = count_per_sec!(begin.rbytes, end.rbytes, delta);
+        let wbytes_per_sec = count_per_sec!(begin.wbytes, end.wbytes, delta);
+        let rwbytes_per_sec = opt_add(rbytes_per_sec.clone(), wbytes_per_sec.clone());
         CgroupIoModel {
-            rbytes_per_sec: count_per_sec!(begin.rbytes, end.rbytes, delta),
-            wbytes_per_sec: count_per_sec!(begin.wbytes, end.wbytes, delta),
+            rbytes_per_sec,
+            wbytes_per_sec,
             rios_per_sec: count_per_sec!(begin.rios, end.rios, delta),
             wios_per_sec: count_per_sec!(begin.wios, end.wios, delta),
             dbytes_per_sec: count_per_sec!(begin.dbytes, end.dbytes, delta),
             dios_per_sec: count_per_sec!(begin.dios, end.dios, delta),
+            rwbytes_per_sec,
         }
     }
 
@@ -359,6 +364,7 @@ impl CgroupIoModel {
             wios_per_sec: Some(0.0),
             dbytes_per_sec: Some(0.0),
             dios_per_sec: Some(0.0),
+            rwbytes_per_sec: Some(0.0),
         }
     }
 }
@@ -374,6 +380,7 @@ impl std::ops::Add<&CgroupIoModel> for CgroupIoModel {
             wios_per_sec: opt_add(self.wios_per_sec, other.wios_per_sec),
             dbytes_per_sec: opt_add(self.dbytes_per_sec, other.dbytes_per_sec),
             dios_per_sec: opt_add(self.dios_per_sec, other.dios_per_sec),
+            rwbytes_per_sec: opt_add(self.rwbytes_per_sec, other.rwbytes_per_sec),
         }
     }
 }
@@ -387,6 +394,7 @@ pub enum CgroupIoModelFieldId {
     WiosPerSec,
     DbytesPerSec,
     DiosPerSec,
+    RwbytesPerSec,
 }
 
 impl FieldId for CgroupIoModelFieldId {
@@ -405,6 +413,7 @@ impl Queriable for CgroupIoModel {
             WiosPerSec => self.wios_per_sec.map(Field::from),
             DbytesPerSec => self.dbytes_per_sec.map(Field::from),
             DiosPerSec => self.dios_per_sec.map(Field::from),
+            RwbytesPerSec => self.rwbytes_per_sec.map(Field::from),
         }
     }
 }
