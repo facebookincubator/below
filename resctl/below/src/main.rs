@@ -229,42 +229,31 @@ fn start_exitstat(
     logger: slog::Logger,
     debug: bool,
 ) -> (Arc<Mutex<procfs::PidMap>>, Option<Receiver<Error>>) {
-    // TODO(T78976996) remove the fbcode_gate once we can exit stats is
-    // enabled for opensource
-    if cfg!(fbcode_build) {
-        let mut exit_driver = bpf::exitstat::ExitstatDriver::new(logger, debug);
-        let exit_buffer = exit_driver.get_buffer();
-        let (bpf_err_send, bpf_err_recv) = channel();
-        thread::spawn(move || {
-            match exit_driver.drive() {
-                Ok(_) => {}
-                Err(e) => bpf_err_send.send(e).unwrap(),
-            };
-        });
+    let mut exit_driver = bpf::exitstat::ExitstatDriver::new(logger, debug);
+    let exit_buffer = exit_driver.get_buffer();
+    let (bpf_err_send, bpf_err_recv) = channel();
+    thread::spawn(move || {
+        match exit_driver.drive() {
+            Ok(_) => {}
+            Err(e) => bpf_err_send.send(e).unwrap(),
+        };
+    });
 
-        (exit_buffer, Some(bpf_err_recv))
-    } else {
-        (Arc::new(Mutex::new(procfs::PidMap::new())), None)
-    }
+    (exit_buffer, Some(bpf_err_recv))
 }
 
 /// Returns true if other end disconnected, false otherwise
 fn check_for_exitstat_errors(logger: &slog::Logger, receiver: &Receiver<Error>) -> bool {
-    // TODO(T78976996) remove the fbcode_gate once we can exit stats is
-    // enabled for opensource
-    // This code path will unlikely to execute for non fbcode_build
-    if cfg!(fbcode_build) {
-        // Print an error but don't exit on bpf issues. Do this b/c we can't always
-        // be sure what kind of kernel we're running on and if it's new enough.
-        match receiver.try_recv() {
-            Ok(e) => error!(logger, "{}", e),
-            Err(TryRecvError::Empty) => {}
-            Err(TryRecvError::Disconnected) => {
-                warn!(logger, "bpf error channel disconnected");
-                return true;
-            }
-        };
-    }
+    // Print an error but don't exit on bpf issues. Do this b/c we can't always
+    // be sure what kind of kernel we're running on and if it's new enough.
+    match receiver.try_recv() {
+        Ok(e) => error!(logger, "{}", e),
+        Err(TryRecvError::Empty) => {}
+        Err(TryRecvError::Disconnected) => {
+            warn!(logger, "bpf error channel disconnected");
+            return true;
+        }
+    };
 
     false
 }
