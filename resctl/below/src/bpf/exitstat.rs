@@ -2,13 +2,14 @@ use core::time::Duration;
 use std::ffi::CStr;
 use std::sync::{Arc, Mutex};
 
-use anyhow::{anyhow, bail, Result};
-use libbpf_rs::{ObjectBuilder, PerfBufferBuilder};
+use anyhow::{bail, Result};
+use libbpf_rs::PerfBufferBuilder;
 use once_cell::sync::Lazy;
 use plain::Plain;
 use slog::warn;
 
-static BPF_OBJECT_FILE: &'static str = "/usr/facebook/below/bpf/exitstat.bpf.o";
+use exitstat::ExitstatSkelBuilder;
+
 static PAGE_SIZE: Lazy<i64> = Lazy::new(|| page_size());
 
 #[repr(C)]
@@ -131,29 +132,18 @@ impl ExitstatDriver {
 
     /// Loops forever unless an error is hit
     pub fn drive(&mut self) -> Result<()> {
-        // Load object file
-        let mut obj_builder = ObjectBuilder::default();
-        if self.debug {
-            obj_builder.debug(self.debug);
-        }
-        let mut obj = obj_builder.open_file(BPF_OBJECT_FILE)?.load()?;
-
-        // Attach prog
-        let _link = obj
-            .prog("tracepoint__sched__sched_process_exit")?
-            .ok_or_else(|| anyhow!("prog not found in object file"))?
-            .attach()?;
+        let mut skel_builder = ExitstatSkelBuilder::default();
+        skel_builder.obj_builder.debug(self.debug);
+        let mut skel = skel_builder.open()?.load()?;
+        skel.attach()?;
 
         // Set up perf ring buffer
-        let events = obj
-            .map("events")?
-            .ok_or_else(|| anyhow!("map not found in object file"))?;
         let buffer = self.get_buffer();
         let logger_clone = self.logger.clone();
-        let perf_builder = PerfBufferBuilder::new(events)
+        let perf = PerfBufferBuilder::new(skel.maps().events())
             .sample_cb(move |_, data: &[u8]| Self::handle_event(&buffer, data))
-            .lost_cb(move |cpu, count| Self::handle_lost_events(&logger_clone, cpu, count));
-        let perf = perf_builder.build()?;
+            .lost_cb(move |cpu, count| Self::handle_lost_events(&logger_clone, cpu, count))
+            .build()?;
 
         // Poll events
         loop {
