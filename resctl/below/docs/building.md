@@ -6,6 +6,7 @@
 
 # Dependencies
 
+* libbpf-dev (for headers)
 * libz (dynamically linked)
 * libelf (dynamically linked)
 * libncursesw (dynamically linked)
@@ -28,10 +29,22 @@ or make sure `thrift1` is accessible by adding `$HOME/.thrift/fbthrift/bin` to
 
 # Building
 
+Below's UI is quite laggy in debug builds. We recommend always building in
+release mode.
+
 ```
-[resctl]$ cargo build --release
+[resctl]$ cargo install libbpf-cargo
+[resctl]$ cargo libbpf make -- --release
 [resctl]$ cargo test
 ```
 
-Below's UI is quite laggy in debug builds. We recommend always building in
-release mode.
+`cargo libbpf make` is a convenience wrapper for the BPF components. Alternatively,
+you could do:
+
+```
+[resctl]$ cargo install libbpf-cargo
+[resctl]$ cargo libbpf build
+[resctl]$ cargo libbpf gen
+[resctl]$ cargo build --release
+[resctl]$ cargo test
+```
