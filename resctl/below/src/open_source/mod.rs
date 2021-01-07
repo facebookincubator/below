@@ -15,3 +15,7 @@
 pub mod init;
 pub mod logging;
 pub mod statistics;
+#[path = "../bpf/mod.rs"]
+mod bpf;
+
+pub use bpf::ExitstatSkelBuilder;
