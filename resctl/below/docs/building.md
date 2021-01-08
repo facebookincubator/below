@@ -29,6 +29,9 @@ or make sure `thrift1` is accessible by adding `$HOME/.thrift/fbthrift/bin` to
 # Building
 
 ```
-[resctl]$ cargo build
+[resctl]$ cargo build --release
 [resctl]$ cargo test
 ```
+
+Below's UI is quite laggy in debug builds. We recommend always building in
+release mode.
