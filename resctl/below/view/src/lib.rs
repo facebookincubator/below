@@ -175,6 +175,10 @@ fn refresh(c: &mut Cursive) {
 
 pub struct ViewState {
     pub time_elapsed: Duration,
+    /// Keep track of the lowest seen `time_elapsed` so that view can highlight abnormal
+    /// elapsed times. Below will never go faster than the requested interval rate but
+    /// can certainly go higher (b/c of a loaded system or other delays).
+    pub lowest_time_elapsed: Duration,
     pub timestamp: SystemTime,
     pub system: Rc<RefCell<SystemModel>>,
     pub cgroup: Rc<RefCell<CgroupModel>>,
@@ -189,6 +193,9 @@ pub struct ViewState {
 impl ViewState {
     pub fn update(&mut self, model: Model) {
         self.time_elapsed = model.time_elapsed;
+        if model.time_elapsed.as_secs() != 0 && model.time_elapsed < self.lowest_time_elapsed {
+            self.lowest_time_elapsed = model.time_elapsed;
+        }
         self.timestamp = model.timestamp;
         self.system.replace(model.system);
         self.cgroup.replace(model.cgroup);
@@ -199,6 +206,7 @@ impl ViewState {
     pub fn new_with_advance(main_view_state: MainViewState, model: Model, mode: ViewMode) -> Self {
         Self {
             time_elapsed: model.time_elapsed,
+            lowest_time_elapsed: model.time_elapsed,
             timestamp: model.timestamp,
             system: Rc::new(RefCell::new(model.system)),
             cgroup: Rc::new(RefCell::new(model.cgroup)),
