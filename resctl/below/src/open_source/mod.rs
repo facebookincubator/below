@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#[path = "../bpf/mod.rs"]
+mod bpf;
 pub mod init;
 pub mod logging;
 pub mod statistics;
+
+pub use bpf::ExitstatSkelBuilder;

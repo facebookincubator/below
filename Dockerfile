@@ -1,11 +1,15 @@
-FROM ubuntu:latest AS build
+FROM ubuntu:groovy AS build
+
+ARG RUN_TESTS
 
 RUN apt-get update
 RUN apt-get install -y \
   build-essential \
   ca-certificates \
+  clang \
   curl \
   git \
+  libbpf-dev \
   libelf-dev \
   libncursesw5-dev \
   libssl-dev \
@@ -29,15 +33,28 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /rustup.sh
 RUN chmod +x /rustup.sh
 RUN bash /rustup.sh -y --default-toolchain nightly
 
+# Install libbpf-rs tooling
+RUN /root/.cargo/bin/cargo install libbpf-cargo
+
 # Build below
 WORKDIR resctl
-RUN /root/.cargo/bin/cargo build --release --package below
+RUN /root/.cargo/bin/cargo libbpf make -- --release --package resctl_below
+
+# Run tests if requested
+RUN if [[ -n "$RUN_TESTS" ]]; then     \
+    /root/.cargo/bin/cargo test --     \
+    --skip test_dump                   \
+    --skip advance_forward_and_reverse \
+    --skip disable_disk_stat           \
+    stdout                             \
+    --skip disable_io_stat;            \
+  fi
 
 # Now create stage 2 image. We drop all the build dependencies and only install
 # runtime dependencies. This will create a smaller image suitable for
 # distribution.
 
-FROM ubuntu:latest
+FROM ubuntu:groovy
 
 # Default locale is "POSIX" which doesn't seem to play well with UTF-8. Cursive
 # uses UTF-8 to draw lines so we need to set this locale otherwise our lines

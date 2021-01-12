@@ -8,7 +8,7 @@ use once_cell::sync::Lazy;
 use plain::Plain;
 use slog::warn;
 
-use exitstat::ExitstatSkelBuilder;
+use crate::ExitstatSkelBuilder;
 
 static PAGE_SIZE: Lazy<i64> = Lazy::new(|| page_size());
 

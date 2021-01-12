@@ -35,7 +35,7 @@ use slog::{self, debug, error, warn};
 use structopt::StructOpt;
 
 mod below_config;
-mod bpf;
+mod exitstat;
 #[cfg(test)]
 mod test;
 
@@ -229,7 +229,7 @@ fn start_exitstat(
     logger: slog::Logger,
     debug: bool,
 ) -> (Arc<Mutex<procfs::PidMap>>, Option<Receiver<Error>>) {
-    let mut exit_driver = bpf::exitstat::ExitstatDriver::new(logger, debug);
+    let mut exit_driver = exitstat::ExitstatDriver::new(logger, debug);
     let exit_buffer = exit_driver.get_buffer();
     let (bpf_err_send, bpf_err_recv) = channel();
     thread::spawn(move || {

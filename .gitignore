@@ -1,1 +1,3 @@
 /target
+*.skel.rs
+**/src/bpf/mod.rs
