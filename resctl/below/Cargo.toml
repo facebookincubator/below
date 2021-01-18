@@ -35,7 +35,7 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 slog-async = "2.3"
 slog-term = "2.4.2"
 structopt = "0.3.21"
-tokio = { version = "=0.2.13", features = ["full"] }
+tokio = { version = "=0.2.13", features = ["full", "test-util"] }
 toml = "=0.5.7"
 walkdir = "2.2.9"
 
