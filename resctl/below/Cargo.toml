@@ -2,11 +2,8 @@
 name = "resctl_below"
 edition = "2018"
 version = "0.1.0"
-authors = ['Facebook', 'Daniel Xu <dlxu@fb.com>']
+authors = ['Facebook']
 license = "Apache-2.0"
-description = "An interactive tool to view and record historical system data"
-homepage = "https://github.com/facebookincubator/resctl"
-repository = "https://github.com/facebookincubator/resctl"
 include = ["src/**/*.rs"]
 
 [[bin]]
