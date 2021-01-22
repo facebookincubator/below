@@ -1,5 +1,5 @@
 [package]
-name = "render"
+name = "below-render"
 edition = "2018"
 version = "0.1.0"
 authors = ['Facebook', 'Daniel Xu <dlxu@fb.com>']
@@ -10,5 +10,5 @@ repository = "https://github.com/facebookincubator/resctl"
 include = ["src/**/*.rs"]
 
 [dependencies]
-common = { path = "../common" }
-model = { path = "../model" }
+common = { package = "below-common", path = "../common" }
+model = { package = "below-model", path = "../model" }

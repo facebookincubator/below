@@ -1,5 +1,5 @@
 [package]
-name = "dump"
+name = "below-dump"
 edition = "2018"
 version = "0.1.0"
 authors = ['Facebook', 'Daniel Xu <dlxu@fb.com>']
@@ -10,11 +10,11 @@ repository = "https://github.com/facebookincubator/resctl"
 include = ["src/**/*.rs"]
 
 [dependencies]
+common = { package = "below-common", path = "../common" }
+model = { package = "below-model", path = "../model" }
+render = { package = "below-render", path = "../render" }
+store = { package = "below-store", path = "../store" }
 below_derive = { path = "../below_derive" }
-common = { path = "../common" }
-model = { path = "../model" }
-render = { path = "../render" }
-store = { path = "../store" }
 anyhow = "1.0"
 once_cell = "1.4"
 regex = "1.4.2"
