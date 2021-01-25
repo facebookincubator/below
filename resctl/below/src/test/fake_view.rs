@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use cursive::views::ViewRef;
-use cursive::Cursive;
+use cursive::CursiveRunnable;
 
 use super::*;
 use view::{
@@ -25,7 +25,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 pub struct FakeView {
-    pub inner: Cursive,
+    pub inner: CursiveRunnable,
 }
 
 // TODO Add view and controller related tests (T76419919)
@@ -37,7 +37,7 @@ impl FakeView {
         let mut collector = Collector::new(get_dummy_exit_data());
         let model = collector.update_model(&logger).expect("Fail to get model");
 
-        let mut inner = Cursive::dummy();
+        let mut inner = CursiveRunnable::dummy();
         inner.set_user_data(ViewState::new_with_advance(
             MainViewState::Cgroup,
             model,

@@ -61,6 +61,7 @@ use cursive::theme::{BaseColor, Color, PaletteColor};
 use cursive::view::Identifiable;
 use cursive::views::{LinearLayout, OnEventView, Panel, ResizedView, StackView};
 use cursive::Cursive;
+use cursive::CursiveRunnable;
 use toml::value::Value;
 
 use common::open_source_shim;
@@ -91,7 +92,7 @@ mod tab_view;
 const BELOW_CMD_RC: &str = "/.config/below/cmdrc";
 
 pub struct View {
-    inner: Cursive,
+    inner: CursiveRunnable,
 }
 
 macro_rules! advance {
@@ -237,11 +238,12 @@ impl ViewState {
 
 impl View {
     pub fn new_with_advance(model: model::Model, mode: ViewMode) -> View {
-        let mut inner = cursive::Cursive::new(|| {
-            let termion_backend = cursive::backends::crossterm::Backend::init().unwrap();
-            Box::new(cursive_buffered_backend::BufferedBackend::new(
-                termion_backend,
-            ))
+        let mut inner = cursive::CursiveRunnable::new(|| {
+            cursive::backends::crossterm::Backend::init().map(|termion_backend| {
+                Box::new(cursive_buffered_backend::BufferedBackend::new(
+                    termion_backend,
+                )) as Box<(dyn cursive::backend::Backend)>
+            })
         });
         inner.set_user_data(ViewState::new_with_advance(
             MainViewState::Cgroup,
