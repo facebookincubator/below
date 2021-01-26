@@ -1,5 +1,5 @@
 [package]
-name = "model"
+name = "below-model"
 edition = "2018"
 version = "0.1.0"
 authors = ['Facebook', 'Daniel Xu <dlxu@fb.com>']
@@ -13,7 +13,7 @@ include = ["src/**/*.rs"]
 below-thrift = { path = "../if" }
 below_derive = { path = "../below_derive" }
 cgroupfs = { path = "../../common/cgroupfs" }
-procfs = { path = "../../common/procfs" }
+procfs = { package = "fb_procfs", path = "../../common/procfs" }
 anyhow = "1.0"
 hostname = "0.3"
 os_info = "=2.0.1"

@@ -1,5 +1,5 @@
 [package]
-name = "procfs"
+name = "fb_procfs"
 edition = "2018"
 version = "0.1.0"
 authors = ['Facebook', 'Daniel Xu <dlxu@fb.com>']

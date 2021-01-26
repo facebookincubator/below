@@ -15,14 +15,14 @@ name = "below"
 path = "src/main.rs"
 
 [dependencies]
+common = { package = "below-common", path = "common" }
+dump = { package = "below-dump", path = "dump" }
+model = { package = "below-model", path = "model" }
+store = { package = "below-store", path = "store" }
 below-thrift = { path = "if" }
+view = { package = "below-view", path = "view" }
 cgroupfs = { path = "../common/cgroupfs" }
-common = { path = "common" }
-dump = { path = "dump" }
-model = { path = "model" }
-procfs = { path = "../common/procfs" }
-store = { path = "store" }
-view = { path = "view" }
+procfs = { package = "fb_procfs", path = "../common/procfs" }
 slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"

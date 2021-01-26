@@ -1,5 +1,5 @@
 [package]
-name = "store"
+name = "below-store"
 edition = "2018"
 version = "0.1.0"
 authors = ['Facebook', 'Daniel Xu <dlxu@fb.com>']
@@ -10,9 +10,9 @@ repository = "https://github.com/facebookincubator/resctl"
 include = ["src/**/*.rs"]
 
 [dependencies]
+common = { package = "below-common", path = "../common" }
+model = { package = "below-model", path = "../model" }
 below-thrift = { path = "../if" }
-common = { path = "../common" }
-model = { path = "../model" }
 fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
