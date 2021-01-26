@@ -2,8 +2,10 @@
 name = "procfs-thrift"
 edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ['Facebook', 'Daniel Xu <dlxu@fb.com>']
 license = "Apache-2.0"
+homepage = "https://github.com/facebookincubator/resctl"
+repository = "https://github.com/facebookincubator/resctl"
 include = ["thrift_lib.rs"]
 build = "thrift_build.rs"
 

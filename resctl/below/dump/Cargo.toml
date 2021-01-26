@@ -2,8 +2,11 @@
 name = "dump"
 edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ['Facebook', 'Daniel Xu <dlxu@fb.com>']
 license = "Apache-2.0"
+description = "Dump crate for below"
+homepage = "https://github.com/facebookincubator/resctl"
+repository = "https://github.com/facebookincubator/resctl"
 include = ["src/**/*.rs"]
 
 [dependencies]
