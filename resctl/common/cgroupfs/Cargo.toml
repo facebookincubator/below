@@ -11,7 +11,7 @@ readme = "README"
 include = ["src/lib.rs"]
 
 [dependencies]
-cgroupfs-thrift = { path = "if" }
+cgroupfs-thrift = { path = "if", version = "0.1.0" }
 nix = "0.19"
 openat = "0.1.18"
 thiserror = "1.0"

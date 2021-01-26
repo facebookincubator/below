@@ -15,16 +15,16 @@ name = "below"
 path = "src/main.rs"
 
 [dependencies]
-common = { package = "below-common", path = "common" }
-dump = { package = "below-dump", path = "dump" }
-model = { package = "below-model", path = "model" }
-store = { package = "below-store", path = "store" }
-below-thrift = { path = "if" }
-view = { package = "below-view", path = "view" }
-cgroupfs = { path = "../common/cgroupfs" }
-procfs = { package = "fb_procfs", path = "../common/procfs" }
-slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+common = { package = "below-common", path = "common", version = "0.1.0" }
+dump = { package = "below-dump", path = "dump", version = "0.1.0" }
+model = { package = "below-model", path = "model", version = "0.1.0" }
+store = { package = "below-store", path = "store", version = "0.1.0" }
+below-thrift = { path = "if", version = "0.1.0" }
+view = { package = "below-view", path = "view", version = "0.1.0" }
+cgroupfs = { path = "../common/cgroupfs", version = "0.1.0" }
+procfs = { package = "fb_procfs", path = "../common/procfs", version = "0.1.0" }
+slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 cursive = { version = "0.16.0", default-features = false, features = ["crossterm", "termion"] }

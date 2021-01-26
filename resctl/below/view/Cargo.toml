@@ -10,10 +10,10 @@ repository = "https://github.com/facebookincubator/resctl"
 include = ["src/**/*.rs"]
 
 [dependencies]
-common = { package = "below-common", path = "../common" }
-model = { package = "below-model", path = "../model" }
-render = { package = "below-render", path = "../render" }
-store = { package = "below-store", path = "../store" }
+common = { package = "below-common", path = "../common", version = "0.1.0" }
+model = { package = "below-model", path = "../model", version = "0.1.0" }
+render = { package = "below-render", path = "../render", version = "0.1.0" }
+store = { package = "below-store", path = "../store", version = "0.1.0" }
 anyhow = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 cursive = { version = "0.16.0", default-features = false, features = ["crossterm", "termion"] }

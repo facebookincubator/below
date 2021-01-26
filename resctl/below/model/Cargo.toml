@@ -10,10 +10,10 @@ repository = "https://github.com/facebookincubator/resctl"
 include = ["src/**/*.rs"]
 
 [dependencies]
-below-thrift = { path = "../if" }
-below_derive = { path = "../below_derive" }
-cgroupfs = { path = "../../common/cgroupfs" }
-procfs = { package = "fb_procfs", path = "../../common/procfs" }
+below-thrift = { path = "../if", version = "0.1.0" }
+below_derive = { path = "../below_derive", version = "0.1.0" }
+cgroupfs = { path = "../../common/cgroupfs", version = "0.1.0" }
+procfs = { package = "fb_procfs", path = "../../common/procfs", version = "0.1.0" }
 anyhow = "1.0"
 hostname = "0.3"
 os_info = "=2.0.1"
