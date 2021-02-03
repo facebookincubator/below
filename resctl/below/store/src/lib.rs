@@ -646,6 +646,7 @@ fn calculate_shard(timestamp: SystemTime) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use paste::paste;
     use slog::Drain;
     use std::time::Duration;
     use tempdir::TempDir;
@@ -668,18 +669,34 @@ mod tests {
         };
     }
 
-    #[test]
-    fn create_writer() {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
-        StoreWriter::new(&dir, false).expect("Failed to create store");
+    macro_rules! store_test {
+        ($name:ident, $func:ident) => {
+            #[test]
+            fn $name() {
+                $func(false);
+            }
+
+            paste! {
+                #[test]
+                fn [<$name _compressed>]() {
+                    $func(true);
+                }
+            }
+        };
     }
 
-    #[test]
-    fn simple_put_read() {
+    store_test!(create_writer, _create_writer);
+    fn _create_writer(compress: bool) {
+        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        StoreWriter::new(&dir, compress).expect("Failed to create store");
+    }
+
+    store_test!(simple_put_read, _simple_put_read);
+    fn _simple_put_read(compress: bool) {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = SystemTime::now();
         {
-            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, compress).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -693,12 +710,15 @@ mod tests {
         assert_eq!(frame.1.sample.cgroup.memory_current, Some(333));
     }
 
-    #[test]
-    fn read_past_the_end_returns_none() {
+    store_test!(
+        read_past_the_end_returns_none,
+        _read_past_the_end_returns_none
+    );
+    fn _read_past_the_end_returns_none(compress: bool) {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = SystemTime::now();
         {
-            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, compress).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -715,12 +735,12 @@ mod tests {
         assert_eq!(frame_opt, None);
     }
 
-    #[test]
-    fn read_iterates_appropriately() {
+    store_test!(read_iterates_appropriately, _read_iterates_appropriately);
+    fn _read_iterates_appropriately(compress: bool) {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = SystemTime::now();
         {
-            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, compress).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -744,12 +764,15 @@ mod tests {
         assert_eq!(frame.1.sample.cgroup.memory_current, Some(666));
     }
 
-    #[test]
-    fn put_and_read_work_across_shards() {
+    store_test!(
+        put_and_read_work_across_shards,
+        _put_and_read_work_across_shards
+    );
+    fn _put_and_read_work_across_shards(compress: bool) {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = SystemTime::now();
         {
-            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, compress).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -773,12 +796,12 @@ mod tests {
         assert_eq!(frame.1.sample.cgroup.memory_current, Some(666));
     }
 
-    #[test]
-    fn read_reverse() {
+    store_test!(read_reverse, _read_reverse);
+    fn _read_reverse(compress: bool) {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = SystemTime::now();
         {
-            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, compress).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -792,12 +815,12 @@ mod tests {
         assert_eq!(frame.1.sample.cgroup.memory_current, Some(333));
     }
 
-    #[test]
-    fn read_reverse_across_shards() {
+    store_test!(read_reverse_across_shards, _read_reverse_across_shards);
+    fn _read_reverse_across_shards(compress: bool) {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = SystemTime::now();
         {
-            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, compress).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -821,12 +844,12 @@ mod tests {
         assert_eq!(frame.1.sample.cgroup.memory_current, Some(333));
     }
 
-    #[test]
-    fn discard() {
+    store_test!(discard, _discard);
+    fn _discard(compress: bool) {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
         {
-            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, compress).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -859,8 +882,8 @@ mod tests {
         assert_eq!(frame.1.sample.cgroup.memory_current, Some(777));
     }
 
-    #[test]
-    fn flock_protects() {
+    store_test!(flock_protects, _flock_protects);
+    fn _flock_protects(compress: bool) {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = SystemTime::now();
         let shard = calculate_shard(ts);
@@ -877,22 +900,25 @@ mod tests {
         )
         .expect("Failed to acquire flock on index file");
 
-        StoreWriter::new(&dir, false).expect_err("Did not conflict on index lock");
+        StoreWriter::new(&dir, compress).expect_err("Did not conflict on index lock");
     }
 
-    #[test]
-    fn writing_to_already_written_index_works() {
+    store_test!(
+        writing_to_already_written_index_works,
+        _writing_to_already_written_index_works
+    );
+    fn _writing_to_already_written_index_works(compress: bool) {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
         {
-            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, compress).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
             writer.put(ts, &frame).expect("Failed to store data");
         }
         {
-            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, compress).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(666);
             writer
@@ -918,12 +944,15 @@ mod tests {
         assert_eq!(frame.1.sample.cgroup.memory_current, Some(666));
     }
 
-    #[test]
-    fn read_skips_over_corrupt_index_entry() {
+    store_test!(
+        read_skips_over_corrupt_index_entry,
+        _read_skips_over_corrupt_index_entry
+    );
+    fn _read_skips_over_corrupt_index_entry(compress: bool) {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
         {
-            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, compress).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -944,7 +973,7 @@ mod tests {
                 .expect("Failed to append to index");
         }
         {
-            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, compress).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(666);
             writer
@@ -964,14 +993,14 @@ mod tests {
         assert_eq!(frame.1.sample.cgroup.memory_current, Some(666));
     }
 
-    #[test]
-    fn writer_creates_directory() {
+    store_test!(writer_creates_directory, _writer_creates_directory);
+    fn _writer_creates_directory(compress: bool) {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let mut subdir = dir.path().to_path_buf();
         subdir.push("foo");
         let ts = SystemTime::now();
         {
-            let mut writer = StoreWriter::new(&subdir, false).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&subdir, compress).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
