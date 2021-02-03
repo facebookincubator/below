@@ -98,6 +98,11 @@ enum Command {
         /// Flag to disable bpftrace exitstats
         #[structopt(long)]
         disable_exitstats: bool,
+        /// Enable data file compression
+        ///
+        /// You can expect up to ~4.5x smaller data files
+        #[structopt(long)]
+        compress: bool,
     },
     /// Replay historical data (interactive)
     Replay {
@@ -370,6 +375,7 @@ fn real_main(init: init::InitToken) {
             ref skew_detection_threshold_ms,
             ref disable_disk_stat,
             ref disable_exitstats,
+            ref compress,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
             run(
@@ -390,6 +396,7 @@ fn real_main(init: init::InitToken) {
                         debug,
                         *disable_disk_stat,
                         *disable_exitstats,
+                        *compress,
                     )
                 },
             )
@@ -523,6 +530,7 @@ fn record(
     debug: bool,
     disable_disk_stat: bool,
     disable_exitstats: bool,
+    compress: bool,
 ) -> Result<()> {
     debug!(logger, "Starting up!");
 
@@ -530,7 +538,7 @@ fn record(
         bump_memlock_rlimit()?;
     }
 
-    let mut store = store::StoreWriter::new(&below_config.store_dir, false)?;
+    let mut store = store::StoreWriter::new(&below_config.store_dir, compress)?;
     let mut stats = statistics::Statistics::new();
 
     let (exit_buffer, bpf_errs) = if disable_exitstats {
