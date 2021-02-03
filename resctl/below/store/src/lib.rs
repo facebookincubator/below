@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::convert::TryInto;
 use std::fs::{self, File, OpenOptions};
 use std::io::{ErrorKind, Write};
 use std::os::unix::io::AsRawFd;
@@ -19,8 +20,10 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use anyhow::{Context, Result};
+use bitflags::bitflags;
 use fbthrift::compact_protocol;
 use slog::warn;
+use static_assertions::const_assert;
 
 use below_thrift::DataFrame;
 use common::util::get_unix_timestamp;
@@ -65,6 +68,12 @@ use crate::open_source::*;
 
 const SHARD_TIME: u64 = 24 * 60 * 60;
 
+bitflags! {
+    struct IndexEntryFlags: u32 {
+        const COMPRESSED = 0x1;
+    }
+}
+
 #[repr(C)]
 struct IndexEntry {
     /// Timestamp of the data entry
@@ -72,7 +81,9 @@ struct IndexEntry {
     /// Offset into the data file that this entry exists at
     offset: u64,
     /// Length of the data entry
-    len: u64,
+    len: u32,
+    /// Flags for this data entry
+    flags: IndexEntryFlags,
     /// crc32 of the data entry
     data_crc: u32,
     /// crc32 of this entry (e.g. crc32 of all the above members)
@@ -80,6 +91,7 @@ struct IndexEntry {
 }
 
 const INDEX_ENTRY_SIZE: usize = std::mem::size_of::<IndexEntry>();
+const_assert!(INDEX_ENTRY_SIZE == 32);
 
 /// The StoreWriter struct maintains state to put more data in the
 /// store. It keeps track of the index and data file it's currently
@@ -244,7 +256,11 @@ impl StoreWriter {
         let mut index_entry = IndexEntry {
             timestamp: get_unix_timestamp(timestamp),
             offset,
-            len: serialized.len() as u64,
+            flags: IndexEntryFlags::empty(),
+            len: serialized
+                .len()
+                .try_into()
+                .with_context(|| format!("Serialized len={} overflows u32", serialized.len()))?,
             data_crc,
             index_crc: 0,
         };
@@ -476,9 +492,10 @@ pub fn read_next_sample<P: AsRef<Path>>(
                 continue;
             }
 
-            let data_slice = match data_mmap
-                .get(index_entry.offset as usize..(index_entry.offset + index_entry.len) as usize)
-            {
+            let data_slice = match data_mmap.get(
+                index_entry.offset as usize
+                    ..(index_entry.offset + (index_entry.len as u64)) as usize,
+            ) {
                 Some(data_slice) => data_slice,
                 // Hit EOF on data file, go to next index
                 None => break,
