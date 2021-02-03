@@ -24,6 +24,7 @@ use bitflags::bitflags;
 use fbthrift::compact_protocol;
 use slog::warn;
 use static_assertions::const_assert;
+use zstd::stream::decode_all;
 
 use below_thrift::DataFrame;
 use common::util::get_unix_timestamp;
@@ -109,6 +110,8 @@ pub struct StoreWriter {
     data_len: u64,
     /// Active shard
     shard: u64,
+    /// Individually compress data frames
+    compress: bool,
 }
 
 // Given path to the store dir, get a Vec<String> of the index file
@@ -135,18 +138,53 @@ macro_rules! get_index_entries {
     }};
 }
 
+enum SerializedFrame<'a> {
+    Bytes(bytes::Bytes),
+    Copy(Vec<u8>),
+    Slice(&'a [u8]),
+}
+
+impl<'a> SerializedFrame<'a> {
+    fn data(&self) -> &[u8] {
+        match self {
+            SerializedFrame::Bytes(b) => &b,
+            SerializedFrame::Copy(v) => &v,
+            SerializedFrame::Slice(s) => s,
+        }
+    }
+}
+
+fn serialize_frame(data: &DataFrame, compress: bool) -> Result<SerializedFrame> {
+    let serialized = compact_protocol::serialize(data);
+    if compress {
+        Ok(SerializedFrame::Copy(zstd::block::compress(
+            &serialized,
+            0,
+        )?))
+    } else {
+        Ok(SerializedFrame::Bytes(serialized))
+    }
+}
+
 impl StoreWriter {
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
-        Self::new_with_timestamp(path, SystemTime::now())
+    /// Create a new `StoreWriter` that writes data to `path` directory.
+    ///
+    /// If `compress` is set, dataframes are zstd compressed
+    pub fn new<P: AsRef<Path>>(path: P, compress: bool) -> Result<Self> {
+        Self::new_with_timestamp(path, SystemTime::now(), compress)
     }
 
-    pub fn new_with_timestamp<P: AsRef<Path>>(path: P, timestamp: SystemTime) -> Result<Self> {
+    pub fn new_with_timestamp<P: AsRef<Path>>(
+        path: P,
+        timestamp: SystemTime,
+        compress: bool,
+    ) -> Result<Self> {
         let shard = calculate_shard(timestamp);
 
-        Self::new_with_shard(path, shard)
+        Self::new_with_shard(path, shard, compress)
     }
 
-    fn new_with_shard<P: AsRef<Path>>(path: P, shard: u64) -> Result<Self> {
+    fn new_with_shard<P: AsRef<Path>>(path: P, shard: u64, compress: bool) -> Result<Self> {
         if !path.as_ref().is_dir() {
             std::fs::create_dir(&path).with_context(|| {
                 format!("Failed to create store path: {}", path.as_ref().display())
@@ -230,6 +268,7 @@ impl StoreWriter {
             data,
             data_len,
             shard,
+            compress,
         })
     }
 
@@ -239,28 +278,32 @@ impl StoreWriter {
         let shard = calculate_shard(timestamp);
         if shard != self.shard {
             // We just recreate the StoreWriter since this is a new shard
-            *self = Self::new_with_shard(self.dir.as_path(), shard)?;
+            *self = Self::new_with_shard(self.dir.as_path(), shard, self.compress)?;
         }
 
         // It doesn't really matter which order we write the data in,
         // most filesystems do not provide ordering guarantees for
         // appends to different files anyways. We just need to handle
         // various failure cases on the read side.
-        let serialized = compact_protocol::serialize(data);
+        let serialized =
+            serialize_frame(data, self.compress).context("Failed to serialize data frame")?;
         let offset = self.data_len;
         self.data
-            .write_all(&serialized)
+            .write_all(serialized.data())
             .context("Failed to write entry to data file")?;
-        self.data_len += serialized.len() as u64;
-        let data_crc = serialized.as_ref().crc32();
+        self.data_len += serialized.data().len() as u64;
+        let data_crc = serialized.data().crc32();
         let mut index_entry = IndexEntry {
             timestamp: get_unix_timestamp(timestamp),
             offset,
-            flags: IndexEntryFlags::empty(),
-            len: serialized
-                .len()
-                .try_into()
-                .with_context(|| format!("Serialized len={} overflows u32", serialized.len()))?,
+            flags: if self.compress {
+                IndexEntryFlags::COMPRESSED
+            } else {
+                IndexEntryFlags::empty()
+            },
+            len: serialized.data().len().try_into().with_context(|| {
+                format!("Serialized len={} overflows u32", serialized.data().len())
+            })?,
             data_crc,
             index_crc: 0,
         };
@@ -511,8 +554,19 @@ pub fn read_next_sample<P: AsRef<Path>>(
                 continue;
             }
 
+            let data_decompressed = if index_entry.flags.contains(IndexEntryFlags::COMPRESSED) {
+                SerializedFrame::Copy(
+                    decode_all(data_slice).context("Failed to decompress data frame")?,
+                )
+            } else {
+                SerializedFrame::Slice(data_slice)
+            };
+
             let ts = std::time::UNIX_EPOCH + std::time::Duration::from_secs(index_entry.timestamp);
-            return Some(compact_protocol::deserialize(data_slice).map(|df| (ts, df))).transpose();
+            return Some(
+                compact_protocol::deserialize(data_decompressed.data()).map(|df| (ts, df)),
+            )
+            .transpose();
         }
     }
     Ok(None)
@@ -617,7 +671,7 @@ mod tests {
     #[test]
     fn create_writer() {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
-        StoreWriter::new(&dir).expect("Failed to create store");
+        StoreWriter::new(&dir, false).expect("Failed to create store");
     }
 
     #[test]
@@ -625,7 +679,7 @@ mod tests {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = SystemTime::now();
         {
-            let mut writer = StoreWriter::new(&dir).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -644,7 +698,7 @@ mod tests {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = SystemTime::now();
         {
-            let mut writer = StoreWriter::new(&dir).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -666,7 +720,7 @@ mod tests {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = SystemTime::now();
         {
-            let mut writer = StoreWriter::new(&dir).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -695,7 +749,7 @@ mod tests {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = SystemTime::now();
         {
-            let mut writer = StoreWriter::new(&dir).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -724,7 +778,7 @@ mod tests {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = SystemTime::now();
         {
-            let mut writer = StoreWriter::new(&dir).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -743,7 +797,7 @@ mod tests {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = SystemTime::now();
         {
-            let mut writer = StoreWriter::new(&dir).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -772,7 +826,7 @@ mod tests {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
         {
-            let mut writer = StoreWriter::new(&dir).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -823,7 +877,7 @@ mod tests {
         )
         .expect("Failed to acquire flock on index file");
 
-        StoreWriter::new(&dir).expect_err("Did not conflict on index lock");
+        StoreWriter::new(&dir, false).expect_err("Did not conflict on index lock");
     }
 
     #[test]
@@ -831,14 +885,14 @@ mod tests {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
         {
-            let mut writer = StoreWriter::new(&dir).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
             writer.put(ts, &frame).expect("Failed to store data");
         }
         {
-            let mut writer = StoreWriter::new(&dir).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(666);
             writer
@@ -869,7 +923,7 @@ mod tests {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
         {
-            let mut writer = StoreWriter::new(&dir).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
@@ -890,7 +944,7 @@ mod tests {
                 .expect("Failed to append to index");
         }
         {
-            let mut writer = StoreWriter::new(&dir).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&dir, false).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(666);
             writer
@@ -917,7 +971,7 @@ mod tests {
         subdir.push("foo");
         let ts = SystemTime::now();
         {
-            let mut writer = StoreWriter::new(&subdir).expect("Failed to create store");
+            let mut writer = StoreWriter::new(&subdir, false).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 

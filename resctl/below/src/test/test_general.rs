@@ -18,7 +18,7 @@ use common::util::fold_string;
 #[test]
 fn record_replay_integration() {
     let dir = TempDir::new("below_record_replay_test").expect("tempdir failed");
-    let mut store = store::StoreWriter::new(&dir).expect("Failed to create store");
+    let mut store = store::StoreWriter::new(&dir, false).expect("Failed to create store");
 
     // Collect a sample
     let logger = get_logger();
@@ -106,7 +106,7 @@ fn record_replay_integration() {
 #[test]
 fn advance_forward_and_reverse() {
     let dir = TempDir::new("below_record_replay_test").expect("tempdir failed");
-    let mut store = store::StoreWriter::new(&dir).expect("Failed to create store");
+    let mut store = store::StoreWriter::new(&dir, false).expect("Failed to create store");
 
     // Collect and store the same sample 3 times
     let timestamp = 554433;

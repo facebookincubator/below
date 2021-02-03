@@ -530,7 +530,7 @@ fn record(
         bump_memlock_rlimit()?;
     }
 
-    let mut store = store::StoreWriter::new(&below_config.store_dir)?;
+    let mut store = store::StoreWriter::new(&below_config.store_dir, false)?;
     let mut stats = statistics::Statistics::new();
 
     let (exit_buffer, bpf_errs) = if disable_exitstats {
