@@ -41,6 +41,7 @@ slog-term = "2.4.2"
 structopt = "0.3.21"
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
 toml = "=0.5.7"
+users = "0.9"
 walkdir = "2.2.9"
 
 [dev-dependencies]

@@ -33,6 +33,7 @@ use cursive::Cursive;
 use regex::Regex;
 use slog::{self, debug, error, warn};
 use structopt::StructOpt;
+use users::{get_current_uid, get_user_by_uid};
 
 mod below_config;
 mod exitstat;
@@ -276,7 +277,9 @@ where
 {
     let (err_sender, err_receiver) = channel();
     let mut log_dir = below_config.log_dir.clone();
-    log_dir.push("error.log");
+    let user = get_user_by_uid(get_current_uid()).expect("Failed to get current user for logging");
+
+    log_dir.push(format!("error_{}.log", user.name().to_string_lossy()));
 
     if let Err(e) = create_log_dir(&below_config.log_dir) {
         eprintln!("{}", e);
