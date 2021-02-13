@@ -8,7 +8,6 @@ description = "A crate for reading cgroupv2 data"
 homepage = "https://github.com/facebookincubator/resctl"
 repository = "https://github.com/facebookincubator/resctl"
 readme = "README"
-include = ["src/lib.rs"]
 
 [dependencies]
 cgroupfs-thrift = { path = "if", version = "0.1.0" }

@@ -8,7 +8,6 @@ description = "A crate for reading procfs"
 homepage = "https://github.com/facebookincubator/resctl"
 repository = "https://github.com/facebookincubator/resctl"
 readme = "README"
-include = ["src/lib.rs"]
 
 [dependencies]
 procfs-thrift = { path = "if", version = "0.1.0" }

@@ -7,7 +7,6 @@ license = "Apache-2.0"
 description = "Store crate for below"
 homepage = "https://github.com/facebookincubator/resctl"
 repository = "https://github.com/facebookincubator/resctl"
-include = ["src/**/*.rs"]
 
 [dependencies]
 common = { package = "below-common", path = "../common", version = "0.1.0" }

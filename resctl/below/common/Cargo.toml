@@ -7,7 +7,6 @@ license = "Apache-2.0"
 description = "Common below code"
 homepage = "https://github.com/facebookincubator/resctl"
 repository = "https://github.com/facebookincubator/resctl"
-include = ["src/**/*.rs"]
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }

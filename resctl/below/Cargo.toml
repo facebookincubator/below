@@ -8,7 +8,6 @@ description = "An interactive tool to view and record historical system data"
 homepage = "https://github.com/facebookincubator/resctl"
 repository = "https://github.com/facebookincubator/resctl"
 readme = "../../README.md"
-include = ["src/**/*.rs"]
 
 [[bin]]
 name = "below"
