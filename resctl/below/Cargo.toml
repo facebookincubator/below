@@ -28,7 +28,7 @@ anyhow = "1.0"
 async-trait = "0.1.29"
 cursive = { version = "0.16.0", default-features = false, features = ["crossterm", "termion"] }
 libbpf-rs = "0.6.1"
-libc = "0.2"
+libc = "0.2.86"
 once_cell = "1.4"
 plain = "0.2"
 regex = "1.4.2"
