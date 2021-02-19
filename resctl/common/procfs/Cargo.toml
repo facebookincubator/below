@@ -1,19 +1,19 @@
 [package]
 name = "fb_procfs"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook', 'Daniel Xu <dlxu@fb.com>']
-license = "Apache-2.0"
+authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
+edition = "2018"
 description = "A crate for reading procfs"
+readme = "README"
 homepage = "https://github.com/facebookincubator/resctl"
 repository = "https://github.com/facebookincubator/resctl"
-readme = "README"
+license = "Apache-2.0"
 
 [dependencies]
-procfs-thrift = { path = "if", version = "0.1.0" }
 lazy_static = "1.0"
 libc = "0.2.86"
 openat = "0.1.18"
+procfs_thrift = { path = "if", version = "0.1.0" }
 thiserror = "1.0"
 threadpool = "1.8.1"
 

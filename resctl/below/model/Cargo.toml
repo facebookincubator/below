@@ -1,20 +1,20 @@
 [package]
 name = "below-model"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook', 'Daniel Xu <dlxu@fb.com>']
-license = "Apache-2.0"
+authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
+edition = "2018"
 description = "Model crate for below"
 homepage = "https://github.com/facebookincubator/resctl"
 repository = "https://github.com/facebookincubator/resctl"
+license = "Apache-2.0"
 
 [dependencies]
-below-thrift = { path = "../if", version = "0.1.0" }
-below_derive = { path = "../below_derive", version = "0.1.0" }
-cgroupfs = { path = "../../common/cgroupfs", version = "0.1.0" }
-procfs = { package = "fb_procfs", path = "../../common/procfs", version = "0.1.0" }
 anyhow = "1.0"
+below_derive = { path = "../below_derive", version = "0.1.0" }
+below_thrift = { path = "../if", version = "0.1.0" }
+cgroupfs = { path = "../../common/cgroupfs", version = "0.1.0" }
 hostname = "0.3"
 os_info = "=2.0.1"
+procfs = { package = "fb_procfs", path = "../../common/procfs", version = "0.1.0" }
 regex = "1.4.2"
 slog = { version = "2.5", features = ["max_level_debug"] }

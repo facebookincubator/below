@@ -1,46 +1,46 @@
 [package]
 name = "resctl_below"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook', 'Daniel Xu <dlxu@fb.com>']
-license = "Apache-2.0"
+authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
+edition = "2018"
 description = "An interactive tool to view and record historical system data"
+readme = "../../README.md"
 homepage = "https://github.com/facebookincubator/resctl"
 repository = "https://github.com/facebookincubator/resctl"
-readme = "../../README.md"
+license = "Apache-2.0"
 
 [[bin]]
 name = "below"
 path = "src/main.rs"
 
 [dependencies]
-common = { package = "below-common", path = "common", version = "0.1.0" }
-dump = { package = "below-dump", path = "dump", version = "0.1.0" }
-model = { package = "below-model", path = "model", version = "0.1.0" }
-store = { package = "below-store", path = "store", version = "0.1.0" }
-below-thrift = { path = "if", version = "0.1.0" }
-view = { package = "below-view", path = "view", version = "0.1.0" }
-cgroupfs = { path = "../common/cgroupfs", version = "0.1.0" }
-procfs = { package = "fb_procfs", path = "../common/procfs", version = "0.1.0" }
-slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
-cursive = { version = "0.16.0", default-features = false, features = ["crossterm", "termion"] }
+below_thrift = { path = "if", version = "0.1.0" }
+cgroupfs = { path = "../common/cgroupfs", version = "0.1.0" }
+common = { package = "below-common", path = "common", version = "0.1.0" }
+cursive = { version = "0.16.0", features = ["crossterm", "termion"], default-features = false }
+dump = { package = "below-dump", path = "dump", version = "0.1.0" }
 libbpf-rs = "0.6.1"
 libc = "0.2.86"
+model = { package = "below-model", path = "model", version = "0.1.0" }
 once_cell = "1.4"
 plain = "0.2"
+procfs = { package = "fb_procfs", path = "../common/procfs", version = "0.1.0" }
 regex = "1.4.2"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 slog-async = "2.3"
 slog-term = "2.4.2"
+slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+store = { package = "below-store", path = "store", version = "0.1.0" }
 structopt = "0.3.21"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 toml = "=0.5.7"
 users = "0.9"
+view = { package = "below-view", path = "view", version = "0.1.0" }
 walkdir = "2.2.9"
 
 [dev-dependencies]

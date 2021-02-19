@@ -1,16 +1,16 @@
 [package]
 name = "cgroupfs"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook', 'Daniel Xu <dlxu@fb.com>']
-license = "Apache-2.0"
+authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
+edition = "2018"
 description = "A crate for reading cgroupv2 data"
+readme = "README"
 homepage = "https://github.com/facebookincubator/resctl"
 repository = "https://github.com/facebookincubator/resctl"
-readme = "README"
+license = "Apache-2.0"
 
 [dependencies]
-cgroupfs-thrift = { path = "if", version = "0.1.0" }
+cgroupfs_thrift = { path = "if", version = "0.1.0" }
 nix = "0.19"
 openat = "0.1.18"
 thiserror = "1.0"
