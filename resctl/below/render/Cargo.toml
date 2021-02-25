@@ -9,5 +9,5 @@ repository = "https://github.com/facebookincubator/resctl"
 license = "Apache-2.0"
 
 [dependencies]
-common = { package = "below-common", path = "../common", version = "0.1.0" }
-model = { package = "below-model", path = "../model", version = "0.1.0" }
+common = { package = "below-common", version = "0.1.0", path = "../common" }
+model = { package = "below-model", version = "0.1.0", path = "../model" }

@@ -10,11 +10,11 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "1.0"
-below_derive = { path = "../below_derive", version = "0.1.0" }
-below_thrift = { path = "../if", version = "0.1.0" }
-cgroupfs = { path = "../../common/cgroupfs", version = "0.1.0" }
+below_derive = { version = "0.1.0", path = "../below_derive" }
+below_thrift = { version = "0.1.0", path = "../if" }
+cgroupfs = { version = "0.1.0", path = "../../common/cgroupfs" }
 hostname = "0.3"
 os_info = "=2.0.1"
-procfs = { package = "fb_procfs", path = "../../common/procfs", version = "0.1.0" }
+procfs = { package = "fb_procfs", version = "0.1.0", path = "../../common/procfs" }
 regex = "1.4.2"
 slog = { version = "2.5", features = ["max_level_debug"] }
