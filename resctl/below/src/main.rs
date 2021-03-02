@@ -500,7 +500,7 @@ fn real_main(init: init::InitToken) {
                 below_config,
                 Service::Off,
                 RedirectLogOnFail::Off,
-                |_below_config, logger, _errs| dump::run(logger, store_dir, host, port, cmd),
+                |_below_config, logger, errs| dump::run(logger, errs, store_dir, host, port, cmd),
             )
         }
     };

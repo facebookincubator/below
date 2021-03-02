@@ -16,9 +16,10 @@ use std::fs::File;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::mpsc::Receiver;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Error, Result};
 use serde_json::{json, Value};
 use toml::value::Value as TValue;
 
@@ -185,6 +186,7 @@ pub fn parse_pattern<T: FromStr>(
 
 pub fn run(
     logger: slog::Logger,
+    errs: Receiver<Error>,
     dir: PathBuf,
     host: Option<String>,
     port: Option<u16>,
@@ -229,6 +231,7 @@ pub fn run(
                 output.as_mut(),
                 opts.output_format,
                 opts.br,
+                errs,
             )
         }
         DumpCommand::Disk {
@@ -264,6 +267,7 @@ pub fn run(
                 output.as_mut(),
                 opts.output_format,
                 opts.br,
+                errs,
             )
         }
         DumpCommand::Process {
@@ -299,6 +303,7 @@ pub fn run(
                 output.as_mut(),
                 opts.output_format,
                 opts.br,
+                errs,
             )
         }
         DumpCommand::Cgroup {
@@ -334,6 +339,7 @@ pub fn run(
                 output.as_mut(),
                 opts.output_format,
                 opts.br,
+                errs,
             )
         }
         DumpCommand::Iface {
@@ -369,6 +375,7 @@ pub fn run(
                 output.as_mut(),
                 opts.output_format,
                 opts.br,
+                errs,
             )
         }
         DumpCommand::Network {
@@ -403,6 +410,7 @@ pub fn run(
                 output.as_mut(),
                 opts.output_format,
                 opts.br,
+                errs,
             )
         }
         DumpCommand::Transport {
@@ -437,6 +445,7 @@ pub fn run(
                 output.as_mut(),
                 opts.output_format,
                 opts.br,
+                errs,
             )
         }
     }

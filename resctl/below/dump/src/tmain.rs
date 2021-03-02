@@ -46,6 +46,7 @@ pub fn dump_timeseries(
     output: &mut dyn Write,
     output_format: Option<OutputFormat>,
     br: Option<String>,
+    errs: Receiver<Error>,
 ) -> Result<()> {
     let mut model = match advance.advance(Direction::Forward) {
         Some(m) => m,
@@ -62,6 +63,10 @@ pub fn dump_timeseries(
     }
 
     loop {
+        // Received external error, e.g. stop signal
+        if let Ok(e) = errs.try_recv() {
+            bail!(e);
+        }
         let ctx = CommonFieldContext {
             timestamp: model
                 .timestamp
