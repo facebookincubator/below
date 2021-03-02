@@ -1,5 +1,5 @@
 [package]
-name = "resctl_below"
+name = "below"
 version = "0.1.0"
 authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
 edition = "2018"
@@ -8,10 +8,6 @@ readme = "../../README.md"
 homepage = "https://github.com/facebookincubator/resctl"
 repository = "https://github.com/facebookincubator/resctl"
 license = "Apache-2.0"
-
-[[bin]]
-name = "below"
-path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0"
