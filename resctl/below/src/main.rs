@@ -31,6 +31,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use anyhow::{anyhow, bail, Context, Error, Result};
 use cursive::Cursive;
 use regex::Regex;
+use signal_hook::iterator::Signals;
 use slog::{self, debug, error, warn};
 use structopt::StructOpt;
 use users::{get_current_uid, get_user_by_uid};
@@ -264,6 +265,22 @@ fn check_for_exitstat_errors(logger: &slog::Logger, receiver: &Receiver<Error>) 
     false
 }
 
+/// Special Error that indicates the program should stop now. It represents an
+/// actual signal, e.g. SIGINT, SIGTERM, that is handled by below and thus below
+/// can shutdown gracefully.
+#[derive(Clone, Debug)]
+struct StopSignal {
+    signal: i32,
+}
+
+impl std::error::Error for StopSignal {}
+
+impl std::fmt::Display for StopSignal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Stopped by signal: {}", self.signal)
+    }
+}
+
 fn run<F>(
     init: init::InitToken,
     debug: bool,
@@ -288,6 +305,30 @@ where
 
     let logger = logging::setup(init, log_dir, debug, redirect);
     setup_log_on_panic(logger.clone());
+
+    match Signals::new(&[signal_hook::SIGINT, signal_hook::SIGTERM]) {
+        Ok(signals) => {
+            let logger = logger.clone();
+            let err_sender = err_sender.clone();
+            thread::spawn(move || {
+                let mut term_now = false;
+                for signal in signals.forever() {
+                    if term_now {
+                        error!(logger, "Below didn't stop in time. Terminate now!");
+                        std::process::exit(1);
+                    }
+                    term_now = true;
+                    error!(logger, "Stop signal received: {}, exiting.", signal);
+                    err_sender.send(anyhow!(StopSignal { signal })).unwrap();
+                }
+            });
+        }
+        Err(e) => {
+            error!(logger, "{}", e);
+            return 1;
+        }
+    }
+
     #[cfg(fbcode_build)]
     facebook::init(
         init,
@@ -300,6 +341,10 @@ where
 
     match res {
         Ok(_) => 0,
+        Err(e) if e.is::<StopSignal>() => {
+            error!(logger, "{}", e);
+            0
+        }
         Err(e) => {
             if logutil::get_current_log_target() == logutil::TargetLog::File {
                 logutil::set_current_log_target(logutil::TargetLog::All);
