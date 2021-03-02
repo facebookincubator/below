@@ -23,7 +23,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::exit;
 use std::rc::Rc;
-use std::sync::mpsc::{channel, Receiver, TryRecvError};
+use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, TryRecvError};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -403,9 +403,10 @@ fn real_main(init: init::InitToken) {
                 below_config,
                 Service::Off,
                 RedirectLogOnFail::On,
-                |below_config, logger, _errs| {
+                |below_config, logger, errs| {
                     live(
                         logger,
+                        errs,
                         Duration::from_secs(*interval_s as u64),
                         debug,
                         below_config,
@@ -465,8 +466,8 @@ fn real_main(init: init::InitToken) {
                 below_config,
                 Service::Off,
                 RedirectLogOnFail::Off,
-                |below_config, logger, _errs| {
-                    replay(logger, time, below_config, host, port, days_adjuster)
+                |below_config, logger, errs| {
+                    replay(logger, errs, time, below_config, host, port, days_adjuster)
                 },
             )
         }
@@ -508,6 +509,7 @@ fn real_main(init: init::InitToken) {
 
 fn replay(
     logger: slog::Logger,
+    errs: Receiver<Error>,
     time: String,
     below_config: BelowConfig,
     host: Option<String>,
@@ -564,6 +566,21 @@ fn replay(
         }
     };
     logutil::set_current_log_target(logutil::TargetLog::File);
+
+    let sink = view.cb_sink().clone();
+    thread::spawn(move || {
+        match errs.recv() {
+            Ok(e) => {
+                error!(logger, "{}", e);
+            }
+            Err(_) => {
+                error!(logger, "error channel disconnected");
+            }
+        };
+        sink.send(Box::new(|c| c.quit()))
+            .expect("Failed to stop view");
+    });
+
     view.run()
 }
 
@@ -684,6 +701,7 @@ fn record(
 
 fn live_local(
     logger: slog::Logger,
+    errs: Receiver<Error>,
     interval: Duration,
     debug: bool,
     below_config: BelowConfig,
@@ -727,7 +745,23 @@ fn live_local(
                 );
             }
 
-            thread::sleep(interval);
+            // Rely on timeout to guarantee interval between samples
+            match errs.recv_timeout(interval) {
+                Ok(e) => {
+                    error!(logger, "{}", e);
+                    sink.send(Box::new(|c| c.quit()))
+                        .expect("Failed to stop view");
+                    return;
+                }
+                Err(RecvTimeoutError::Disconnected) => {
+                    error!(logger, "error channel disconnected");
+                    sink.send(Box::new(|c| c.quit()))
+                        .expect("Failed to stop view");
+                    return;
+                }
+                Err(RecvTimeoutError::Timeout) => {}
+            };
+
             let res = collector.update_model(&logger);
             match res {
                 Ok(model) => {
@@ -756,6 +790,7 @@ fn live_local(
 
 fn live_remote(
     logger: slog::Logger,
+    errs: Receiver<Error>,
     interval: Duration,
     host: String,
     port: Option<u16>,
@@ -778,7 +813,23 @@ fn live_remote(
 
     thread::spawn(move || {
         loop {
-            thread::sleep(interval);
+            // Rely on timeout to guarantee interval between samples
+            match errs.recv_timeout(interval) {
+                Ok(e) => {
+                    error!(logger, "{}", e);
+                    sink.send(Box::new(|c| c.quit()))
+                        .expect("Failed to stop view");
+                    return;
+                }
+                Err(RecvTimeoutError::Disconnected) => {
+                    error!(logger, "error channel disconnected");
+                    sink.send(Box::new(|c| c.quit()))
+                        .expect("Failed to stop view");
+                    return;
+                }
+                Err(RecvTimeoutError::Timeout) => {}
+            };
+
             let data_plane = Box::new(move |s: &mut Cursive| {
                 let view_state = s.user_data::<ViewState>().expect("user data not set");
 
@@ -801,6 +852,7 @@ fn live_remote(
 
 fn live(
     logger: slog::Logger,
+    errs: Receiver<Error>,
     interval: Duration,
     debug: bool,
     below_config: BelowConfig,
@@ -808,9 +860,9 @@ fn live(
     port: Option<u16>,
 ) -> Result<()> {
     if let Some(host) = host {
-        live_remote(logger, interval, host, port)
+        live_remote(logger, errs, interval, host, port)
     } else {
-        live_local(logger, interval, debug, below_config)
+        live_local(logger, errs, interval, debug, below_config)
     }
 }
 
