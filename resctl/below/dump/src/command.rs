@@ -221,7 +221,7 @@ static SYSTEM_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 * mem: includes [{agg_memory_fields}].
 
-* vm: incldues [{agg_vm_fields}].
+* vm: includes [{agg_vm_fields}].
 
 * stat: includes [{agg_stat_fields}].
 
@@ -327,7 +327,7 @@ static DISK_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 * write: includes [{agg_write_fields}].
 
-* discard: incldues [{agg_discard_fields}].
+* discard: includes [{agg_discard_fields}].
 
 * --detail: no effect.
 
@@ -438,7 +438,7 @@ static PROCESS_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 * mem: includes [{agg_memory_fields}].
 
-* io: incldues [{agg_io_fields}].
+* io: includes [{agg_io_fields}].
 
 * --detail: includes [<agg_field>.*] for each given aggregated field.
 
@@ -560,7 +560,7 @@ static CGROUP_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 * mem: includes [{agg_memory_fields}].
 
-* io: incldues [{agg_io_fields}].
+* io: includes [{agg_io_fields}].
 
 * pressure: includes [{agg_pressure_fields}].
 
@@ -687,7 +687,7 @@ static IFACE_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 * rx: includes [{agg_rx_fields}].
 
-* tx: incldues [{agg_tx_fields}].
+* tx: includes [{agg_tx_fields}].
 
 * --detail: no effect.
 
@@ -779,9 +779,9 @@ static NETWORK_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 * ip6: includes [{agg_ip6_fields}].
 
-* icmp: incldues [{agg_icmp_fields}].
+* icmp: includes [{agg_icmp_fields}].
 
-* icmp6: incldues [{agg_icmp6_fields}].
+* icmp6: includes [{agg_icmp6_fields}].
 
 * --detail: no effect.
 
@@ -864,7 +864,7 @@ static TRANSPORT_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 * udp: includes [{agg_udp_fields}].
 
-* udp6: incldues [{agg_udp6_fields}].
+* udp6: includes [{agg_udp6_fields}].
 
 * --detail: no effect.
 
