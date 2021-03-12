@@ -59,9 +59,11 @@ fn record_replay_integration() {
     let timestamp = 554433;
     let unix_ts = UNIX_EPOCH + Duration::from_secs(timestamp);
     let df = DataFrame { sample };
-    store.put(unix_ts, &df).expect("failed to store sample");
     store
-        .put(unix_ts + Duration::from_secs(1), &df)
+        .put(unix_ts, &df, logger.clone())
+        .expect("failed to store sample");
+    store
+        .put(unix_ts + Duration::from_secs(1), &df, logger.clone())
         .expect("Failed to store second sample");
 
     // Restore the first sample
@@ -119,7 +121,7 @@ fn advance_forward_and_reverse() {
             sample: sample.clone(),
         };
         store
-            .put(unix_ts + Duration::from_secs(i), &df)
+            .put(unix_ts + Duration::from_secs(i), &df, logger.clone())
             .expect("failed to store sample");
     }
 

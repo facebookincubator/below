@@ -668,7 +668,11 @@ fn record(
 
         match collected_sample {
             Ok(s) => {
-                if let Err(e) = store.put(post_collect_sys_time, &DataFrame { sample: s }) {
+                if let Err(e) = store.put(
+                    post_collect_sys_time,
+                    &DataFrame { sample: s },
+                    logger.clone(),
+                ) {
                     error!(logger, "{}", e);
                 }
             }

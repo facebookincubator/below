@@ -274,7 +274,12 @@ impl StoreWriter {
 
     /// Store data with corresponding timestamp. Errors may be
     /// returned if file operations fail.
-    pub fn put(&mut self, timestamp: SystemTime, data: &DataFrame) -> Result<()> {
+    pub fn put(
+        &mut self,
+        timestamp: SystemTime,
+        data: &DataFrame,
+        logger: slog::Logger,
+    ) -> Result<()> {
         let shard = calculate_shard(timestamp);
         if shard != self.shard {
             // We just recreate the StoreWriter since this is a new shard
@@ -287,6 +292,27 @@ impl StoreWriter {
         // various failure cases on the read side.
         let serialized =
             serialize_frame(data, self.compress).context("Failed to serialize data frame")?;
+        // Appends to data file are large and cannot be atomic. We may have
+        // partial writes that increases the file size without updating the
+        // stored state. Thus always read actual data file length.
+        let data_len = self
+            .data
+            .metadata()
+            .with_context(|| {
+                format!(
+                    "Failed to get metadata of data file: data_{:011}",
+                    self.shard
+                )
+            })?
+            .len();
+        // Warn potential data file corruption
+        if self.data_len != data_len {
+            warn!(
+                logger,
+                "Data length mismatch: {} (expect {})", data_len, self.data_len
+            );
+            self.data_len = data_len;
+        }
         let offset = self.data_len;
         self.data
             .write_all(serialized.data())
@@ -700,7 +726,9 @@ mod tests {
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
-            writer.put(ts, &frame).expect("Failed to store data");
+            writer
+                .put(ts, &frame, get_logger())
+                .expect("Failed to store data");
         }
 
         let frame = read_next_sample(&dir, ts, Direction::Forward, get_logger())
@@ -708,6 +736,56 @@ mod tests {
             .expect("Did not find stored sample");
         assert_ts!(frame.0, ts);
         assert_eq!(frame.1.sample.cgroup.memory_current, Some(333));
+    }
+
+    store_test!(put_read_corrupt_data, _put_read_corrupt_data);
+    fn _put_read_corrupt_data(compress: bool) {
+        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let ts = SystemTime::now();
+        let ts_next = ts + Duration::from_secs(1);
+        {
+            let mut writer = StoreWriter::new(&dir, compress).expect("Failed to create store");
+            let mut frame = DataFrame::default();
+            frame.sample.cgroup.memory_current = Some(333);
+
+            writer
+                .put(ts, &frame, get_logger())
+                .expect("Failed to store data");
+
+            // Inject an extra byte to corrupt data file
+            for entry in fs::read_dir(&dir).expect("Failed to read dir") {
+                let entry = entry.expect("Failed to list entry");
+                if let Some(name) = entry.path().file_name() {
+                    if name.to_string_lossy().starts_with("data_") {
+                        OpenOptions::new()
+                            .append(true)
+                            .open(entry.path())
+                            .expect("Failed to open data file")
+                            .write_all(&[0])
+                            .expect("Failed to write to data file");
+                    }
+                }
+            }
+
+            frame.sample.cgroup.memory_current = Some(222);
+
+            // Write a second sample after the faulty byte
+            writer
+                .put(ts_next, &frame, get_logger())
+                .expect("Failed to store data");
+        }
+
+        let frame = read_next_sample(&dir, ts, Direction::Forward, get_logger())
+            .expect("Failed to read sample")
+            .expect("Did not find stored sample");
+        assert_ts!(frame.0, ts);
+        assert_eq!(frame.1.sample.cgroup.memory_current, Some(333));
+
+        let frame = read_next_sample(&dir, ts_next, Direction::Forward, get_logger())
+            .expect("Failed to read sample")
+            .expect("Did not find stored sample");
+        assert_ts!(frame.0, ts_next);
+        assert_eq!(frame.1.sample.cgroup.memory_current, Some(222));
     }
 
     store_test!(
@@ -722,7 +800,9 @@ mod tests {
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
-            writer.put(ts, &frame).expect("Failed to store data");
+            writer
+                .put(ts, &frame, get_logger())
+                .expect("Failed to store data");
         }
 
         let frame_opt = read_next_sample(
@@ -744,11 +824,13 @@ mod tests {
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
-            writer.put(ts, &frame).expect("Failed to store data");
+            writer
+                .put(ts, &frame, get_logger())
+                .expect("Failed to store data");
 
             frame.sample.cgroup.memory_current = Some(666);
             writer
-                .put(ts + Duration::from_secs(5), &frame)
+                .put(ts + Duration::from_secs(5), &frame, get_logger())
                 .expect("Failed to store data");
         }
 
@@ -776,11 +858,13 @@ mod tests {
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
-            writer.put(ts, &frame).expect("Failed to store data");
+            writer
+                .put(ts, &frame, get_logger())
+                .expect("Failed to store data");
 
             frame.sample.cgroup.memory_current = Some(666);
             writer
-                .put(ts + Duration::from_secs(SHARD_TIME), &frame)
+                .put(ts + Duration::from_secs(SHARD_TIME), &frame, get_logger())
                 .expect("Failed to store data");
         }
 
@@ -805,7 +889,9 @@ mod tests {
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
-            writer.put(ts, &frame).expect("Failed to store data");
+            writer
+                .put(ts, &frame, get_logger())
+                .expect("Failed to store data");
         }
 
         let frame = read_next_sample(&dir, ts, Direction::Reverse, get_logger())
@@ -824,11 +910,13 @@ mod tests {
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
-            writer.put(ts, &frame).expect("Failed to store data");
+            writer
+                .put(ts, &frame, get_logger())
+                .expect("Failed to store data");
 
             frame.sample.cgroup.memory_current = Some(666);
             writer
-                .put(ts + Duration::from_secs(SHARD_TIME), &frame)
+                .put(ts + Duration::from_secs(SHARD_TIME), &frame, get_logger())
                 .expect("Failed to store data");
         }
 
@@ -853,21 +941,27 @@ mod tests {
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
-            writer.put(ts, &frame).expect("Failed to store data");
+            writer
+                .put(ts, &frame, get_logger())
+                .expect("Failed to store data");
 
             frame.sample.cgroup.memory_current = Some(666);
             writer
-                .put(ts + Duration::from_secs(1), &frame)
+                .put(ts + Duration::from_secs(1), &frame, get_logger())
                 .expect("Failed to store data");
 
             frame.sample.cgroup.memory_current = Some(777);
             writer
-                .put(ts + Duration::from_secs(SHARD_TIME), &frame)
+                .put(ts + Duration::from_secs(SHARD_TIME), &frame, get_logger())
                 .expect("Failed to store data");
 
             frame.sample.cgroup.memory_current = Some(888);
             writer
-                .put(ts + Duration::from_secs(SHARD_TIME + 1), &frame)
+                .put(
+                    ts + Duration::from_secs(SHARD_TIME + 1),
+                    &frame,
+                    get_logger(),
+                )
                 .expect("Failed to store data");
 
             writer
@@ -915,14 +1009,16 @@ mod tests {
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
-            writer.put(ts, &frame).expect("Failed to store data");
+            writer
+                .put(ts, &frame, get_logger())
+                .expect("Failed to store data");
         }
         {
             let mut writer = StoreWriter::new(&dir, compress).expect("Failed to create store");
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(666);
             writer
-                .put(ts + Duration::from_secs(5), &frame)
+                .put(ts + Duration::from_secs(5), &frame, get_logger())
                 .expect("Failed to store data");
         }
 
@@ -956,7 +1052,9 @@ mod tests {
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
-            writer.put(ts, &frame).expect("Failed to store data");
+            writer
+                .put(ts, &frame, get_logger())
+                .expect("Failed to store data");
         }
         // Append garbage to the index entry
         {
@@ -977,7 +1075,7 @@ mod tests {
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(666);
             writer
-                .put(ts + Duration::from_secs(5), &frame)
+                .put(ts + Duration::from_secs(5), &frame, get_logger())
                 .expect("Failed to store data");
         }
 
@@ -1004,7 +1102,9 @@ mod tests {
             let mut frame = DataFrame::default();
             frame.sample.cgroup.memory_current = Some(333);
 
-            writer.put(ts, &frame).expect("Failed to store data");
+            writer
+                .put(ts, &frame, get_logger())
+                .expect("Failed to store data");
         }
 
         let frame = read_next_sample(&subdir, ts, Direction::Forward, get_logger())
