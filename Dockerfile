@@ -38,7 +38,7 @@ RUN /root/.cargo/bin/cargo install libbpf-cargo
 
 # Build below
 WORKDIR resctl
-RUN /root/.cargo/bin/cargo libbpf make -- --release --package resctl_below
+RUN /root/.cargo/bin/cargo libbpf make -- --release --package below
 
 # Run tests if requested
 RUN if [[ -n "$RUN_TESTS" ]]; then     \
