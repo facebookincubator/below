@@ -72,7 +72,7 @@ fn test_config_load_success() {
 
     let below_config = match BelowConfig::load(&path) {
         Ok(b) => b,
-        Err(e) => panic!("{}", e),
+        Err(e) => panic!("{:#}", e),
     };
     assert_eq!(below_config.log_dir.to_string_lossy(), "/var/log/below");
     assert_eq!(below_config.store_dir.to_string_lossy(), "/var/log/below");
@@ -129,7 +129,7 @@ fn test_config_partial_load() {
 
     let below_config = match BelowConfig::load(&path) {
         Ok(b) => b,
-        Err(e) => panic!("{}", e),
+        Err(e) => panic!("{:#}", e),
     };
     assert_eq!(below_config.log_dir.to_string_lossy(), "my magic string");
     assert_eq!(

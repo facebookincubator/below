@@ -80,7 +80,7 @@ impl Advance {
             }
             Ok(None) => {}
             Err(e) => {
-                error!(self.logger, "{}", e.context("Failed to load from store"));
+                error!(self.logger, "{:#}", e.context("Failed to load from store"));
             }
         }
     }
@@ -191,7 +191,7 @@ impl Advance {
 
     pub fn advance(&mut self, direction: crate::Direction) -> Option<model::Model> {
         if let Err(e) = self.handle_direction_switch(direction) {
-            error!(self.logger, "Failed to switch iterator direction: {}", e);
+            error!(self.logger, "Failed to switch iterator direction: {:#}", e);
             return None;
         }
 
@@ -249,7 +249,7 @@ impl Advance {
             }
             Ok(None) => None,
             Err(e) => {
-                error!(self.logger, "{}", e.context("Failed to load from store"));
+                error!(self.logger, "{:#}", e.context("Failed to load from store"));
                 None
             }
         }

@@ -2,7 +2,7 @@ use core::time::Duration;
 use std::ffi::CStr;
 use std::sync::{Arc, Mutex};
 
-use anyhow::{bail, Result};
+use anyhow::{Context, Result};
 use libbpf_rs::PerfBufferBuilder;
 use once_cell::sync::Lazy;
 use plain::Plain;
@@ -147,13 +147,8 @@ impl ExitstatDriver {
 
         // Poll events
         loop {
-            let ret = perf.poll(Duration::from_millis(100));
-            match ret {
-                Ok(()) => {}
-                Err(e) => {
-                    bail!("Error polling perf buffer: {}", e);
-                }
-            };
+            perf.poll(Duration::from_millis(100))
+                .context("Error polling perf buffer")?;
         }
     }
 }

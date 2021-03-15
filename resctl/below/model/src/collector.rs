@@ -74,10 +74,9 @@ pub fn get_hostname() -> Result<String> {
 
 #[cfg(fbcode_build)]
 pub fn get_os_release() -> Result<String> {
-    match std::fs::read_to_string("/etc/centos-release") {
-        Ok(o) => Ok(o.trim_matches('\n').trim().into()),
-        Err(e) => bail!("Fail to get centos release: {}", e),
-    }
+    std::fs::read_to_string("/etc/centos-release")
+        .context("Fail to get centos release")
+        .map(|o| o.trim_matches('\n').trim().into())
 }
 
 #[cfg(not(fbcode_build))]
@@ -152,7 +151,7 @@ pub fn collect_sample(
         netstats: match procfs::NetReader::new().and_then(|v| v.read_netstat()) {
             Ok(ns) => ns,
             Err(e) => {
-                error!(logger, "{}", e);
+                error!(logger, "{:#}", e);
                 Default::default()
             }
         },
@@ -164,14 +163,14 @@ pub fn collect_sample(
             kernel_version: match reader.read_kernel_version() {
                 Ok(k) => Some(k),
                 Err(e) => {
-                    error!(logger, "{}", e);
+                    error!(logger, "{:#}", e);
                     None
                 }
             },
             os_release: match get_os_release() {
                 Ok(o) => Some(o),
                 Err(e) => {
-                    error!(logger, "{}", e);
+                    error!(logger, "{:#}", e);
                     None
                 }
             },
@@ -187,7 +186,7 @@ pub fn collect_sample(
                     })
                     .collect(),
                 (false, Err(e)) => {
-                    error!(logger, "{}", e);
+                    error!(logger, "{:#}", e);
                     Default::default()
                 }
                 (true, _) => Default::default(),
@@ -295,7 +294,7 @@ fn collect_cgroup_sample(
         inode_number: match reader.read_inode_number() {
             Ok(st_ino) => Some(st_ino as i64),
             Err(e) => {
-                error!(logger, "Fail to collect inode number: {}", e);
+                error!(logger, "Fail to collect inode number: {:#}", e);
                 None
             }
         },

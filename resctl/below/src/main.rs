@@ -254,7 +254,7 @@ fn check_for_exitstat_errors(logger: &slog::Logger, receiver: &Receiver<Error>) 
     // Print an error but don't exit on bpf issues. Do this b/c we can't always
     // be sure what kind of kernel we're running on and if it's new enough.
     match receiver.try_recv() {
-        Ok(e) => error!(logger, "{}", e),
+        Ok(e) => error!(logger, "{:#}", e),
         Err(TryRecvError::Empty) => {}
         Err(TryRecvError::Disconnected) => {
             warn!(logger, "bpf error channel disconnected");
@@ -299,7 +299,7 @@ where
     log_dir.push(format!("error_{}.log", user.name().to_string_lossy()));
 
     if let Err(e) = create_log_dir(&below_config.log_dir) {
-        eprintln!("{}", e);
+        eprintln!("{:#}", e);
         return 1;
     }
 
@@ -324,7 +324,7 @@ where
             });
         }
         Err(e) => {
-            error!(logger, "{}", e);
+            error!(logger, "{:#}", e);
             return 1;
         }
     }
@@ -342,7 +342,7 @@ where
     match res {
         Ok(_) => 0,
         Err(e) if e.is::<StopSignal>() => {
-            error!(logger, "{}", e);
+            error!(logger, "{:#}", e);
             0
         }
         Err(e) => {
@@ -351,8 +351,9 @@ where
             }
             error!(
                 logger,
-                "\n----------------- Detected unclean exit -------------------\n\
-                Error Message: {}\n\
+                "\n\
+                ----------------- Detected unclean exit ---------------------\n\
+                Error Message: {:#}\n\
                 -------------------------------------------------------------",
                 e
             );
@@ -378,7 +379,7 @@ fn real_main(init: init::InitToken) {
     let below_config = match BelowConfig::load(&opts.config) {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("{}", e);
+            eprintln!("{:#}", e);
             exit(1);
         }
     };
@@ -571,7 +572,7 @@ fn replay(
     thread::spawn(move || {
         match errs.recv() {
             Ok(e) => {
-                error!(logger, "{}", e);
+                error!(logger, "{:#}", e);
             }
             Err(_) => {
                 error!(logger, "error channel disconnected");
@@ -673,18 +674,18 @@ fn record(
                     &DataFrame { sample: s },
                     logger.clone(),
                 ) {
-                    error!(logger, "{}", e);
+                    error!(logger, "{:#}", e);
                 }
             }
             Err(e) => {
                 // Handle cgroupfs errors
                 match e.downcast_ref::<cgroupfs::Error>() {
                     // Unrecoverable error -- below only supports cgroup2
-                    Some(e @ cgroupfs::Error::NotCgroup2(_)) => bail!("{}", e),
+                    Some(cgroupfs::Error::NotCgroup2(_)) => bail!(e),
                     _ => {}
                 };
 
-                error!(logger, "{}", e);
+                error!(logger, "{:#}", e);
             }
         };
 
@@ -752,7 +753,7 @@ fn live_local(
             // Rely on timeout to guarantee interval between samples
             match errs.recv_timeout(interval) {
                 Ok(e) => {
-                    error!(logger, "{}", e);
+                    error!(logger, "{:#}", e);
                     sink.send(Box::new(|c| c.quit()))
                         .expect("Failed to stop view");
                     return;
@@ -783,7 +784,7 @@ fn live_local(
                     }
                 }
                 Err(e) => {
-                    error!(logger, "{}", e);
+                    error!(logger, "{:#}", e);
                 }
             }
         }
@@ -820,7 +821,7 @@ fn live_remote(
             // Rely on timeout to guarantee interval between samples
             match errs.recv_timeout(interval) {
                 Ok(e) => {
-                    error!(logger, "{}", e);
+                    error!(logger, "{:#}", e);
                     sink.send(Box::new(|c| c.quit()))
                         .expect("Failed to stop view");
                     return;

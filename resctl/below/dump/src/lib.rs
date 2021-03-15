@@ -157,9 +157,9 @@ pub fn parse_pattern<T: FromStr>(
                 .as_table()
                 .expect("Failed to parse dumprc: File may be empty.")
                 .to_owned(),
-            Err(e) => panic!("Failed to parse dumprc file: {}", e),
+            Err(e) => panic!("Failed to parse dumprc file: {:#}", e),
         },
-        Err(e) => panic!("Failed to read dumprc file: {}", e),
+        Err(e) => panic!("Failed to read dumprc file: {:#}", e),
     };
 
     Some(
