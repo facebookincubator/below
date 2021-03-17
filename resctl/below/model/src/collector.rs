@@ -79,6 +79,7 @@ pub fn get_os_release() -> Result<String> {
         .map(|o| o.trim_matches('\n').trim().into())
 }
 
+use os_info as _; // So RUSTFIXDEPS doesn't complain.
 #[cfg(not(fbcode_build))]
 pub fn get_os_release() -> Result<String> {
     let info = os_info::get();
