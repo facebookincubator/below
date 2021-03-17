@@ -67,6 +67,8 @@ struct Opt {
 
 #[derive(Debug, StructOpt)]
 enum Command {
+    #[structopt(flatten)]
+    Base(commands::Command),
     /// Display live system data (interactive) (default)
     Live {
         #[structopt(short, long, default_value = "5")]
@@ -281,7 +283,7 @@ impl std::fmt::Display for StopSignal {
     }
 }
 
-fn run<F>(
+pub fn run<F>(
     init: init::InitToken,
     debug: bool,
     below_config: BelowConfig,
@@ -290,7 +292,7 @@ fn run<F>(
     command: F,
 ) -> i32
 where
-    F: FnOnce(BelowConfig, slog::Logger, Receiver<Error>) -> Result<()>,
+    F: FnOnce(init::InitToken, BelowConfig, slog::Logger, Receiver<Error>) -> Result<()>,
 {
     let (err_sender, err_receiver) = channel();
     let mut log_dir = below_config.log_dir.clone();
@@ -337,7 +339,7 @@ where
         below_config.store_dir.clone(),
         err_sender,
     );
-    let res = command(below_config, logger.clone(), err_receiver);
+    let res = command(init, below_config, logger.clone(), err_receiver);
 
     match res {
         Ok(_) => 0,
@@ -391,6 +393,7 @@ fn real_main(init: init::InitToken) {
         port: None,
     });
     let rc = match cmd {
+        Command::Base(command) => commands::run_command(init, debug, below_config, command),
         Command::Live {
             ref interval_s,
             ref host,
@@ -404,7 +407,7 @@ fn real_main(init: init::InitToken) {
                 below_config,
                 Service::Off,
                 RedirectLogOnFail::On,
-                |below_config, logger, errs| {
+                |_, below_config, logger, errs| {
                     live(
                         logger,
                         errs,
@@ -434,7 +437,7 @@ fn real_main(init: init::InitToken) {
                 below_config,
                 Service::On(*port),
                 RedirectLogOnFail::Off,
-                |below_config, logger, errs| {
+                |_, below_config, logger, errs| {
                     record(
                         logger,
                         errs,
@@ -467,7 +470,7 @@ fn real_main(init: init::InitToken) {
                 below_config,
                 Service::Off,
                 RedirectLogOnFail::Off,
-                |below_config, logger, errs| {
+                |_, below_config, logger, errs| {
                     replay(logger, errs, time, below_config, host, port, days_adjuster)
                 },
             )
@@ -482,7 +485,7 @@ fn real_main(init: init::InitToken) {
                     below_config,
                     Service::Off,
                     RedirectLogOnFail::Off,
-                    |below_config, logger, _errs| dump_store(logger, time, below_config, json),
+                    |_, below_config, logger, _errs| dump_store(logger, time, below_config, json),
                 )
             }
         },
@@ -501,7 +504,9 @@ fn real_main(init: init::InitToken) {
                 below_config,
                 Service::Off,
                 RedirectLogOnFail::Off,
-                |_below_config, logger, errs| dump::run(logger, errs, store_dir, host, port, cmd),
+                |_, _below_config, logger, errs| {
+                    dump::run(logger, errs, store_dir, host, port, cmd)
+                },
             )
         }
     };
