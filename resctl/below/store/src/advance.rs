@@ -112,25 +112,22 @@ impl Advance {
     }
 
     pub fn jump_sample_forward(&mut self, duration: humantime::Duration) -> Option<model::Model> {
-        self.last_sample_time += duration.into();
-        match self.advance(Direction::Forward) {
-            Some(model) => return Some(model),
-            None => {}
-        }
+        // Find the first sample after the desired timestamp
+        // This is useful since we need to fill the "last_sample"
+        self.last_sample_time += Duration::from_secs(duration.as_secs() + 1);
+        self.advance(Direction::Forward);
 
-        // If sample is not available, get the latest sample
-        self.last_sample_time = SystemTime::now();
+        // Move one sample back
         self.advance(Direction::Reverse)
     }
 
     pub fn jump_sample_backward(&mut self, duration: humantime::Duration) -> Option<model::Model> {
-        self.last_sample_time -= duration.into();
-        match self.advance(Direction::Reverse) {
-            Some(model) => return Some(model),
-            None => {}
-        }
+        // Find the first sample before the desired timestamp
+        //this is useful since we need to fill the "last_sample"
+        self.last_sample_time -= Duration::from_secs(duration.as_secs() + 1);
+        self.advance(Direction::Reverse);
 
-        // If sample is not available, get the earlist sample
+        // Move one sample forward
         self.advance(Direction::Forward)
     }
 
