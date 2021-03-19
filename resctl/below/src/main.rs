@@ -554,7 +554,21 @@ fn replay(
     // Fill the last_sample for forward iteration. If no previous sample exists,
     // this should have no effect.
     advance.initialize();
-    let mut view = match advance.advance(store::Direction::Forward) {
+
+    let model = match advance.advance(store::Direction::Forward) {
+        m @ Some(_) => m,
+        None => {
+            warn!(
+                logger,
+                #"V",
+                "Requested timestamp is in future. Displaying latest sample.",
+            );
+
+            advance.get_latest_sample()
+        }
+    };
+
+    let mut view = match model {
         Some(model) => view::View::new_with_advance(
             model,
             view::ViewMode::Replay(Rc::new(RefCell::new(advance))),
