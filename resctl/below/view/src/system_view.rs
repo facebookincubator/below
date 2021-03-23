@@ -65,7 +65,12 @@ mod render_impl {
 
     const ROW_NAME_WIDTH: usize = 15;
     const ROW_FIELD_NAME_WIDTH: usize = 9;
-    const ROW_FIELD_WIDTH: usize = 17;
+    const ROW_FIELD_WIDTH: usize = 21;
+    /// ROW_FIELD_WIDTH_HALVED * 2 + 1 == ROW_NAME_WIDTH, the +1 is for the '|'
+    ///
+    /// Need 10 chars for each field b/c each value has up to 4 significant digits
+    /// with a dot, a space, 4 chars for units
+    const ROW_FIELD_WIDTH_HALVED: usize = 10;
 
     pub fn render_row<T: Queriable>(
         name: &'static str,
@@ -82,17 +87,22 @@ mod render_impl {
         row
     }
 
-    pub fn render_models_row<'a, T: 'a + Queriable>(
+    pub fn render_read_write_models_row<'a, T: 'a + Queriable>(
         name: &'static str,
         models: impl Iterator<Item = (&'a String, &'a T)>,
-        item: ViewItem<T::FieldId>,
+        read_item: ViewItem<T::FieldId>,
+        write_item: ViewItem<T::FieldId>,
     ) -> StyledString {
-        let item = item.update(rc!(width(ROW_FIELD_WIDTH)));
+        let read_item = read_item.update(rc!(width(ROW_FIELD_WIDTH_HALVED)));
+        let write_item = write_item.update(rc!(width(ROW_FIELD_WIDTH_HALVED)));
+
         let mut row = StyledString::new();
         row.append(base_render::get_fixed_width(name, ROW_NAME_WIDTH));
         for (name, model) in models {
             row.append(base_render::get_fixed_width(name, ROW_FIELD_NAME_WIDTH));
-            row.append(item.render(model));
+            row.append(read_item.render(model));
+            row.append_plain("|");
+            row.append(write_item.render(model));
         }
         row
     }
@@ -110,20 +120,24 @@ mod render_impl {
     }
 
     pub fn render_io_row(disks: &BTreeMap<String, SingleDiskModel>) -> StyledString {
-        use model::SingleDiskModelFieldId::DiskTotalBytesPerSec;
-        render_models_row(
-            "I/O",
+        use model::SingleDiskModelFieldId::ReadBytesPerSec;
+        use model::SingleDiskModelFieldId::WriteBytesPerSec;
+        render_read_write_models_row(
+            "I/O   (Rd|Wr)", // Line up () with Iface's below
             disks.iter().filter(|(_, sdm)| sdm.minor == Some(0)),
-            ViewItem::from_default(DiskTotalBytesPerSec),
+            ViewItem::from_default(ReadBytesPerSec),
+            ViewItem::from_default(WriteBytesPerSec),
         )
     }
 
     pub fn render_iface_row(ifaces: &BTreeMap<String, SingleNetModel>) -> StyledString {
-        use model::SingleNetModelFieldId::ThroughputPerSec;
-        render_models_row(
-            "Iface",
+        use model::SingleNetModelFieldId::RxBytesPerSec;
+        use model::SingleNetModelFieldId::TxBytesPerSec;
+        render_read_write_models_row(
+            "Iface (Rx|Tx)",
             ifaces.iter(),
-            ViewItem::from_default(ThroughputPerSec),
+            ViewItem::from_default(RxBytesPerSec),
+            ViewItem::from_default(TxBytesPerSec),
         )
     }
 }

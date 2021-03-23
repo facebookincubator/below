@@ -105,9 +105,9 @@ impl RenderConfig {
     }
 
     /// Value for fixed-width rendering, with default as title width + 2 and
-    /// minimum width 11.
+    /// minimum width 10.
     fn get_width(&self) -> usize {
-        const MIN_WIDTH: usize = 11;
+        const MIN_WIDTH: usize = 10;
         std::cmp::max(MIN_WIDTH, self.width.unwrap_or(self.get_title().len() + 2))
     }
 
