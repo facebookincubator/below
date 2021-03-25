@@ -12,11 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[path = "../bpf/mod.rs"]
-mod bpf;
-pub mod commands;
-pub mod init;
-pub mod logging;
-pub mod statistics;
+use structopt::StructOpt;
 
-pub use bpf::ExitstatSkelBuilder;
+/// This is a shim so we can add FB-internal commands without affecting the
+/// open source build
+#[derive(Debug, StructOpt)]
+pub enum Command {}
+
+pub fn run_command(
+    _init: crate::init::InitToken,
+    _debug: bool,
+    _below_config: crate::BelowConfig,
+    _cmd: &Command,
+) -> i32 {
+    0
+}
