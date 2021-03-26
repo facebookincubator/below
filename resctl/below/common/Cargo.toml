@@ -9,6 +9,7 @@ repository = "https://github.com/facebookincubator/resctl"
 license = "Apache-2.0"
 
 [dependencies]
+anyhow = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 cursive = { version = "0.16.0", features = ["crossterm", "termion"], default-features = false }
 humantime = "1.3"

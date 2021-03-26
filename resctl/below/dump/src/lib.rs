@@ -17,13 +17,13 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::mpsc::Receiver;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::SystemTime;
 
-use anyhow::{anyhow, bail, Error, Result};
+use anyhow::{bail, Error, Result};
 use serde_json::{json, Value};
 use toml::value::Value as TValue;
 
-use common::dateutil;
+use common::cliutil;
 use common::util::translate_datetime;
 use model::{Field, FieldId, Queriable};
 #[macro_use]
@@ -106,32 +106,11 @@ fn get_advance(
     port: Option<u16>,
     opts: &command::GeneralOpt,
 ) -> Result<(SystemTime, Advance)> {
-    let mut time_begin = UNIX_EPOCH
-        + Duration::from_secs(
-            dateutil::HgTime::parse(&opts.begin)
-                .ok_or_else(|| anyhow!("Unrecognized begin format"))?
-                .unixtime,
-        );
-
-    let mut time_end = if opts.end.is_none() {
-        SystemTime::now()
-    } else {
-        UNIX_EPOCH
-            + Duration::from_secs(
-                dateutil::HgTime::parse(opts.end.as_ref().unwrap())
-                    .ok_or_else(|| anyhow!("Unrecognized end format"))?
-                    .unixtime,
-            )
-    };
-
-    if let Some(days) = opts.yesterdays.as_ref() {
-        if days.is_empty() || days.find(|c: char| c != 'y').is_some() {
-            bail!("Unrecognized days adjuster format: {}", days);
-        }
-        let time_to_deduct = Duration::from_secs(days.chars().count() as u64 * 86400);
-        time_begin -= time_to_deduct;
-        time_end -= time_to_deduct;
-    }
+    let (time_begin, time_end) = cliutil::system_time_range_from_date_and_adjuster(
+        opts.begin.as_str(),
+        opts.end.as_deref(),
+        opts.yesterdays.as_deref(),
+    )?;
 
     let mut advance = if let Some(host) = host {
         Advance::new_with_remote(logger, host, port, time_begin)?

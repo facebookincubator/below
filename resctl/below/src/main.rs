@@ -26,7 +26,7 @@ use std::rc::Rc;
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, TryRecvError};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime};
 
 use anyhow::{anyhow, bail, Context, Error, Result};
 use cursive::Cursive;
@@ -45,7 +45,7 @@ mod test;
 
 use below_config::BelowConfig;
 use below_thrift::DataFrame;
-use common::{dateutil, logutil, open_source_shim};
+use common::{cliutil, logutil, open_source_shim};
 use dump::DumpCommand;
 use model;
 use store;
@@ -524,31 +524,8 @@ fn replay(
     port: Option<u16>,
     days_adjuster: Option<String>,
 ) -> Result<()> {
-    let mut timestamp = UNIX_EPOCH
-        + Duration::from_secs(
-            dateutil::HgTime::parse(&time)
-                .ok_or_else(|| {
-                    anyhow!(
-                        "Unrecognized timestamp format\n\
-                    Input: {}.\n\
-                    Examples:\n\t\
-                    Keywords: now, today, yesterday\n\t\
-                    Relative: \"{{humantime}} ago\", e.g. 2 days 3 hr 15m 10sec ago\n\t\
-                    Relative short: Mixed {{time_digit}}{{time_unit_char}}. E.g. 10m, 3d2H, 5h30s, 10m5h\n\t\
-                    Absolute: \"Jan 01 23:59\", \"01/01/1970 11:59PM\", \"1970-01-01 23:59:59\"\n\t\
-                    Unix Epoch: 1589808367",
-                        &time
-                    )
-                })?
-                .unixtime,
-        );
-
-    if let Some(days) = days_adjuster {
-        if days.is_empty() || days.find(|c: char| c != 'y').is_some() {
-            bail!("Unrecognized days adjuster format: {}", days);
-        }
-        timestamp -= Duration::from_secs(days.chars().count() as u64 * 86400);
-    }
+    let timestamp =
+        cliutil::system_time_from_date_and_adjuster(time.as_str(), days_adjuster.as_deref())?;
 
     let mut advance = if let Some(host) = host {
         Advance::new_with_remote(logger.clone(), host, port, timestamp)?
@@ -898,12 +875,7 @@ fn dump_store(
     below_config: BelowConfig,
     json: bool,
 ) -> Result<()> {
-    let timestamp = UNIX_EPOCH
-        + Duration::from_secs(
-            dateutil::HgTime::parse(&time)
-                .ok_or(anyhow!("Unrecognized timestamp format"))?
-                .unixtime,
-        );
+    let timestamp = cliutil::system_time_from_date(time.as_str())?;
 
     let (ts, df) = match store::read_next_sample(
         &below_config.store_dir,
