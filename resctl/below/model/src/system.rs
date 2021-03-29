@@ -14,7 +14,15 @@
 
 use super::*;
 
-#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
 pub struct SystemModel {
     pub hostname: String,
     pub kernel_version: Option<String>,
@@ -93,7 +101,15 @@ impl SystemModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
 pub struct ProcStatModel {
     pub total_interrupt_ct: Option<i64>,
     pub context_switches: Option<i64>,
@@ -116,7 +132,15 @@ impl ProcStatModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
 pub struct SingleCpuModel {
     pub idx: i32,
     pub usage_pct: Option<f64>,
@@ -199,7 +223,15 @@ impl SingleCpuModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
 pub struct MemoryModel {
     pub total: Option<u64>,
     pub free: Option<u64>,
@@ -290,7 +322,15 @@ impl MemoryModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
 pub struct VmModel {
     pub pgpgin_per_sec: Option<f64>,
     pub pgpgout_per_sec: Option<f64>,
@@ -319,7 +359,15 @@ impl VmModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
 pub struct SingleDiskModel {
     pub name: Option<String>,
     pub read_bytes_per_sec: Option<f64>,

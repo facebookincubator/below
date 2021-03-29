@@ -14,7 +14,7 @@
 
 use super::*;
 
-#[derive(Clone, Debug, Default, below_derive::Queriable)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, below_derive::Queriable)]
 pub struct CgroupModel {
     pub name: String,
     pub full_path: String,
@@ -176,7 +176,15 @@ impl Recursive for CgroupModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
 pub struct CgroupCpuModel {
     pub usage_pct: Option<f64>,
     pub user_pct: Option<f64>,
@@ -203,7 +211,15 @@ impl CgroupCpuModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
 pub struct CgroupIoModel {
     pub rbytes_per_sec: Option<f64>,
     pub wbytes_per_sec: Option<f64>,
@@ -261,7 +277,15 @@ impl std::ops::Add<&CgroupIoModel> for CgroupIoModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
 pub struct CgroupMemoryModel {
     pub total: Option<u64>,
     pub swap: Option<u64>,
@@ -447,7 +471,15 @@ impl CgroupMemoryModel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, below_derive::Queriable)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
 pub struct CgroupPressureModel {
     pub cpu_some_pct: Option<f64>,
     pub io_some_pct: Option<f64>,

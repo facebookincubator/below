@@ -17,6 +17,7 @@ use std::fmt;
 use std::time::{Duration, Instant, SystemTime};
 
 use anyhow::{anyhow, Context, Result};
+use serde::{Deserialize, Serialize};
 
 use below_thrift::types::{CgroupSample, Sample, SystemSample};
 
@@ -25,6 +26,7 @@ pub mod collector;
 pub mod cgroup;
 pub mod network;
 pub mod process;
+mod sample_model;
 pub mod system;
 
 pub use cgroup::*;
@@ -203,6 +205,7 @@ pub trait Recursive {
     fn get_depth(&self) -> usize;
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Model {
     pub time_elapsed: Duration,
     pub timestamp: SystemTime,
@@ -232,5 +235,21 @@ impl Model {
             process: ProcessModel::new(&sample.processes, last.map(|(s, d)| (&s.processes, d))),
             network: NetworkModel::new(&sample.netstats, last.map(|(s, d)| (&s.netstats, d))),
         }
+    }
+}
+
+/// Get a sample `Model`. There are no guarantees internal consistency of the
+/// model, neither are values in the model supposed to be realistic.
+pub fn get_sample_model() -> Model {
+    serde_json::from_str(sample_model::SAMPLE_MODEL_JSON).unwrap()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deserialize_sample_model_json() {
+        get_sample_model();
     }
 }

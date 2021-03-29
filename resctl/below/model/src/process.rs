@@ -14,7 +14,7 @@
 
 use super::*;
 
-#[derive(Default)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct ProcessModel {
     pub processes: BTreeMap<i32, SingleProcessModel>,
 }
@@ -37,7 +37,7 @@ impl ProcessModel {
     }
 }
 
-#[derive(Default, below_derive::Queriable)]
+#[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
 pub struct SingleProcessModel {
     pub pid: Option<i32>,
     pub ppid: Option<i32>,
@@ -80,7 +80,7 @@ impl SingleProcessModel {
     }
 }
 
-#[derive(Clone, Default, below_derive::Queriable)]
+#[derive(Clone, Default, Serialize, Deserialize, below_derive::Queriable)]
 pub struct ProcessIoModel {
     pub rbytes_per_sec: Option<f64>,
     pub wbytes_per_sec: Option<f64>,
@@ -102,7 +102,7 @@ impl ProcessIoModel {
     }
 }
 
-#[derive(Clone, Default, below_derive::Queriable)]
+#[derive(Clone, Default, Serialize, Deserialize, below_derive::Queriable)]
 pub struct ProcessCpuModel {
     pub usage_pct: Option<f64>,
     pub user_pct: Option<f64>,
@@ -124,7 +124,7 @@ impl ProcessCpuModel {
     }
 }
 
-#[derive(Clone, Default, below_derive::Queriable)]
+#[derive(Clone, Default, Serialize, Deserialize, below_derive::Queriable)]
 pub struct ProcessMemoryModel {
     pub minorfaults_per_sec: Option<f64>,
     pub majorfaults_per_sec: Option<f64>,
