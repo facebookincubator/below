@@ -12,11 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::io::prelude::*;
+
 use cursive::event::{Event, Key};
 use toml::Value;
 
 use super::fake_view::FakeView;
+use super::TempDir;
 use view::controllers::*;
+use view::{View, ViewState};
 
 #[test]
 fn test_event_controller_override() {
@@ -270,5 +274,57 @@ fn test_event_to_str() {
     assert_eq!(
         event_to_string(&Event::CtrlAlt(Key::Enter)),
         "<Ctrl><Alt><Enter>"
+    );
+}
+
+#[test]
+fn test_belowrc_to_event() {
+    // Creating self cleaning test belowrc file
+    let tempdir = TempDir::new("below_cmd_test").expect("Failed to create temp dir");
+    let path = tempdir.path().join("belowrc");
+
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(&path)
+        .expect("Fail to open belowrc in tempdir");
+    let belowrc_str = r#"
+[cmd]
+next_tab = 'b'
+cgroup = 'k'
+prev_tab = 'c'
+next_col = 'd'
+"#;
+    file.write_all(belowrc_str.as_bytes())
+        .expect("Faild to write temp belowrc file during testing ignore");
+    file.flush().expect("Failed to flush during testing ignore");
+
+    //
+    let mut fake_view = FakeView::new();
+    View::generate_event_controller_map(&mut fake_view.inner, path.to_string_lossy().to_string());
+
+    let event_controllers = fake_view
+        .inner
+        .user_data::<ViewState>()
+        .expect("No data stored in Cursive object!")
+        .event_controllers
+        .borrow();
+    assert_eq!(
+        event_controllers.get(&Event::Char('b')),
+        Some(&Controllers::NextTab)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('c')),
+        Some(&Controllers::PrevTab)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('d')),
+        Some(&Controllers::NextCol)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('k')),
+        Some(&Controllers::Cgroup)
     );
 }

@@ -68,6 +68,7 @@ use cursive::{
 use toml::value::Value;
 
 use common::open_source_shim;
+use common::util::{get_belowrc_cmd_section_key, get_belowrc_filename};
 use model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
 use store::advance::Advance;
 #[macro_use]
@@ -267,16 +268,44 @@ impl View {
     // event_controller_map during ViewState construction since it
     // depends on CommandPalette to construct for raising errors
     pub fn generate_event_controller_map(c: &mut Cursive, filename: String) {
-        // Verify cmdrc file format
+        // Verify belowrc file format
         let cmdrc_opt = match std::fs::read_to_string(filename) {
-            Ok(cmdrc_str) => match cmdrc_str.parse::<Value>() {
-                Ok(cmdrc) => Some(cmdrc),
+            Ok(belowrc_str) => match belowrc_str.parse::<Value>() {
+                Ok(belowrc) => {
+                    if let Some(cmdrc) = belowrc.get(get_belowrc_cmd_section_key()) {
+                        Some(cmdrc.to_owned())
+                    } else {
+                        None
+                    }
+                }
                 Err(e) => {
-                    view_warn!(c, "Failed to parse cmdrc: {}", e);
+                    view_warn!(c, "Failed to parse belowrc: {}", e);
                     None
                 }
             },
-            _ => None,
+            // Backward compatibility code.
+            // TODO(boyuni) Remove this section of code at May 1st.
+            _ => match std::fs::read_to_string(format!(
+                "{}{}",
+                std::env::var("HOME").expect("Fail to obtain HOME env var"),
+                BELOW_CMD_RC
+            )) {
+                Ok(cmdrc_str) => match cmdrc_str.parse::<Value>() {
+                    Ok(cmdrc) => {
+                        view_warn!(
+                            c,
+                            "cmdrc file has been deprecated and the relative support \
+                            will be removed on 05/01/2021. Please use belowrc instead."
+                        );
+                        Some(cmdrc)
+                    }
+                    Err(e) => {
+                        view_warn!(c, "Failed to parse cmdrc: {}", e);
+                        None
+                    }
+                },
+                _ => None,
+            },
         };
 
         let event_controller_map = controllers::make_event_controller_map(c, &cmdrc_opt);
@@ -345,14 +374,7 @@ impl View {
             .expect("Could not set focus at initialization!");
 
         // Raise warning message if failed to map the customzied command.
-        Self::generate_event_controller_map(
-            &mut self.inner,
-            format!(
-                "{}{}",
-                std::env::var("HOME").unwrap_or_else(|_| "".into()),
-                BELOW_CMD_RC
-            ),
-        );
+        Self::generate_event_controller_map(&mut self.inner, get_belowrc_filename());
         self.inner.run();
 
         Ok(())
