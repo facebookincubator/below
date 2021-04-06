@@ -16,6 +16,8 @@
 use chrono::prelude::*;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+const BELOW_RC: &str = "/.config/below/belowrc";
+
 /// Convert `timestamp` from `SystemTime` to seconds since epoch
 pub fn get_unix_timestamp(timestamp: SystemTime) -> u64 {
     timestamp
@@ -101,4 +103,28 @@ pub fn is_cpu_significant(v: f64) -> Option<cursive::theme::BaseColor> {
     } else {
         None
     }
+}
+
+/// Get the belowrc filename.
+pub fn get_belowrc_filename() -> String {
+    format!(
+        "{}{}",
+        std::env::var("HOME").expect("Fail to obtain HOME env var"),
+        BELOW_RC
+    )
+}
+
+/// The dump section key for belowrc
+pub fn get_belowrc_dump_section_key() -> &'static str {
+    "dump"
+}
+
+/// The cmd section key for belowrc
+pub fn get_belowrc_cmd_section_key() -> &'static str {
+    "cmd"
+}
+
+/// The view section key for belowrc
+pub fn get_belowrc_view_section_key() -> &'static str {
+    "view"
 }

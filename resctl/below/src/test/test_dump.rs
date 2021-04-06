@@ -905,7 +905,7 @@ fn test_dump_disk_titles() {
 #[test]
 fn test_parse_pattern() {
     let tempdir = TempDir::new("below_dump_pattern").expect("Failed to create temp dir");
-    let path = tempdir.path().join("dumprc");
+    let path = tempdir.path().join("belowrc");
 
     let mut file = std::fs::OpenOptions::new()
         .read(true)
@@ -913,16 +913,16 @@ fn test_parse_pattern() {
         .truncate(true)
         .create(true)
         .open(&path)
-        .expect("Fail to open dumprc in tempdir");
-    let dumprc_str = r#"
-[system]
+        .expect("Fail to open belowrc in tempdir");
+    let belowrc_str = r#"
+[dump.system]
 demacia = ["datetime", "os_release"]
 
-[process]
+[dump.process]
 proc = ["datetime", "mem.anon"]
 "#;
-    file.write_all(dumprc_str.as_bytes())
-        .expect("Faild to write temp dumprc file during testing ignore");
+    file.write_all(belowrc_str.as_bytes())
+        .expect("Faild to write temp belowrc file during testing ignore");
     file.flush().expect("Failed to flush during testing ignore");
 
     let sys_res = parse_pattern::<command::SystemOptionField>(

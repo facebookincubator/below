@@ -24,7 +24,7 @@ use serde_json::{json, Value};
 use toml::value::Value as TValue;
 
 use common::cliutil;
-use common::util::translate_datetime;
+use common::util::{get_belowrc_dump_section_key, get_belowrc_filename, translate_datetime};
 use model::{Field, FieldId, Queriable};
 #[macro_use]
 extern crate render;
@@ -123,28 +123,59 @@ fn get_advance(
     Ok((time_end, advance))
 }
 
-/// Try to read $HOME/.config/below/dumprc file and generate a list of keys which will
+/// Try to read $HOME/.config/below/belowrc file and generate a list of keys which will
 /// be used as fields. Any errors happen in this function will directly trigger a panic.
 pub fn parse_pattern<T: FromStr>(
     filename: String,
     pattern_key: String,
     section_key: &str,
 ) -> Option<Vec<T>> {
-    let dumprc_map = match std::fs::read_to_string(filename) {
-        Ok(dumprc_str) => match dumprc_str.parse::<TValue>() {
-            Ok(dumprc) => dumprc
-                .as_table()
-                .expect("Failed to parse dumprc: File may be empty.")
+    let dump_map = match std::fs::read_to_string(filename) {
+        Ok(belowrc_str) => match belowrc_str.parse::<TValue>() {
+            Ok(belowrc_val) => belowrc_val
+                .get(get_belowrc_dump_section_key())
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Failed to get section key: [{}.{}]",
+                        get_belowrc_dump_section_key(),
+                        section_key
+                    )
+                })
                 .to_owned(),
-            Err(e) => panic!("Failed to parse dumprc file: {:#}", e),
+            Err(e) => panic!("Failed to parse belowrc file: {:#}", e),
         },
-        Err(e) => panic!("Failed to read dumprc file: {:#}", e),
+        Err(e) => {
+            // Backward compatibility code.
+            // TODO(boyuni) Remove this section of code at May 1st.
+            if let Ok(dumprc_str) = std::fs::read_to_string(format!(
+                "{}{}",
+                std::env::var("HOME").expect("Fail to obtain HOME env var"),
+                BELOW_DUMP_RC
+            )) {
+                eprintln!(
+                    "[WARNING] dumprc file has been deprecated and the relative support \
+                    will be removed on 05/01/2021. Please use belowrc instead."
+                );
+                match dumprc_str.parse::<TValue>() {
+                    Ok(dumprc_val) => dumprc_val,
+                    Err(e) => panic!("Failed to parse dumprc file: {:#}", e),
+                }
+            } else {
+                panic!("Failed to parse belowrc or dumprc file: {:#}", e)
+            }
+        }
     };
 
     Some(
-        dumprc_map
+        dump_map
             .get(section_key)
-            .unwrap_or_else(|| panic!("Failed to get section key: [{}]", section_key))
+            .unwrap_or_else(|| {
+                panic!(
+                    "Failed to get section key: [{}.{}]",
+                    get_belowrc_dump_section_key(),
+                    section_key
+                )
+            })
             .get(&pattern_key)
             .unwrap_or_else(|| panic!("Failed to get pattern key: {}", pattern_key))
             .as_array()
@@ -171,11 +202,7 @@ pub fn run(
     port: Option<u16>,
     cmd: DumpCommand,
 ) -> Result<()> {
-    let filename = format!(
-        "{}{}",
-        std::env::var("HOME").expect("Fail to obtain HOME env var"),
-        BELOW_DUMP_RC
-    );
+    let filename = get_belowrc_filename();
 
     match cmd {
         DumpCommand::System {
