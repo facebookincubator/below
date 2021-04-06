@@ -53,19 +53,6 @@ $ below dump process -b "10:00" -e "10:10" -O json -s cpu_total --rsort
 $ below dump process -b "10:00" -e "10:10" -O json -s cpu_total --rsort --top 5
 ```
 
-## Use `dumprc` file for saving customized dump pattern
+## Use `belowrc` file for saving customized dump pattern
 
-`below` will use $HOME/.config/below/dumprc toml file for customized dump pattern. Here's an example dumprc file:
-
-```toml
-[system]
-my_pattern1 = ["datetime", "os_release"]
-```
-
-The following two commands are equivalent:
-
-```bash
-$ below dump system -b "10:00" -e "10:10" -f datetime os_release
-
-$ below dump system -b "10:00" -e "10:10" -p my_pattern1
-```
+See `belowrc.md`.

@@ -67,8 +67,11 @@ use cursive::{
 };
 use toml::value::Value;
 
+use common::logutil::get_last_log_to_display;
 use common::open_source_shim;
-use common::util::{get_belowrc_cmd_section_key, get_belowrc_filename};
+use common::util::{
+    get_belowrc_cmd_section_key, get_belowrc_filename, get_belowrc_view_section_key,
+};
 use model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
 use store::advance::Advance;
 #[macro_use]
@@ -141,10 +144,11 @@ macro_rules! view_warn {
 
 // controllers depends on Advance
 pub mod controllers;
+pub mod viewrc;
 // Jump popup depends on view_warn
 mod jump_popup;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum MainViewState {
     Cgroup,
     Process,
@@ -341,11 +345,15 @@ impl View {
             refresh(c);
         });
 
+        // Used to handle warning assignment to the correct view
+        let init_warnings = get_last_log_to_display();
+
         let status_bar = status_bar::new(&mut self.inner);
         let system_view = system_view::new(&mut self.inner);
         let cgroup_view = cgroup_view::CgroupView::new(&mut self.inner);
         let process_view = process_view::ProcessView::new(&mut self.inner);
         let core_view = core_view::CoreView::new(&mut self.inner);
+
         self.inner
             .add_fullscreen_layer(ResizedView::with_full_screen(
                 LinearLayout::vertical()
@@ -375,6 +383,11 @@ impl View {
 
         // Raise warning message if failed to map the customzied command.
         Self::generate_event_controller_map(&mut self.inner, get_belowrc_filename());
+        viewrc::ViewRc::process(&mut self.inner);
+        if let Some(msg) = init_warnings {
+            let c = &mut self.inner;
+            view_warn!(c, "{}", msg);
+        }
         self.inner.run();
 
         Ok(())

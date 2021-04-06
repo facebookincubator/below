@@ -20,40 +20,7 @@ shows the current supported commands with 5 columns:
 * Description: man for the command.
 
 ## Customize hot key
-By default most commands will have a hot key associated with it. A user can setup their own hot key map in file `$HOME/.config/below/cmdrc`. The map should be in form of `COMMAND = HOTKEY`. Here's an example of a working `cmdrc` config:
-```
-next_tab = 'b'
-prev_tab = 'ctrl-c'
-next_col = 'ctrlshift-tab'
-```
-Here's a list of supported hot keys:
-```
-{char}
-ctrl-{char}
-alt-{char}
-ctrl-{KEY}
-alt-{KEY}
-shift-{KEY}
-altshift-{KEY}
-ctrlshift-{KEY}
-ctrlalt-{KEY}
-
-// KEY can be one of the followings
-tab
-enter
-backspace
-left
-right
-up
-down
-ins
-del
-home
-end
-page_up
-page_down
-esc
-```
+See `belowrc.md`.
 
 ## Supported sort arguments
 ### Cgroup
