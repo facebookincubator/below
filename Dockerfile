@@ -31,7 +31,7 @@ ENV THRIFT /fbthrift/fbthrift/bin/thrift1
 # Install nightly rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /rustup.sh
 RUN chmod +x /rustup.sh
-RUN bash /rustup.sh -y --default-toolchain nightly
+RUN bash /rustup.sh -y
 
 # Install libbpf-rs tooling
 RUN /root/.cargo/bin/cargo install libbpf-cargo

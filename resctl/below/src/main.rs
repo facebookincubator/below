@@ -11,12 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-#![feature(backtrace)]
-#![feature(never_type)]
+#![cfg_attr(feature = "enable_backtrace", feature(backtrace))]
 #![recursion_limit = "256"]
 
-use std::backtrace::Backtrace;
 use std::cell::RefCell;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
@@ -901,9 +898,19 @@ fn dump_store(
     Ok(())
 }
 
+#[cfg(feature = "enable_backtrace")]
+pub fn get_backtrace() -> impl std::fmt::Display {
+    std::backtrace::Backtrace::force_capture()
+}
+
+#[cfg(not(feature = "enable_backtrace"))]
+pub fn get_backtrace() -> impl std::fmt::Display {
+    "Backtrace is not available."
+}
+
 fn setup_log_on_panic(logger: slog::Logger) {
     std::panic::set_hook(Box::new(move |info| {
-        let backtrace = Backtrace::force_capture();
+        let backtrace = get_backtrace();
 
         let msg = match info.payload().downcast_ref::<&'static str>() {
             Some(s) => *s,
