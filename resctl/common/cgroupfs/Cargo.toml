@@ -12,7 +12,7 @@ license = "Apache-2.0"
 [dependencies]
 cgroupfs_thrift = { version = "0.1.0", path = "if" }
 nix = "0.19"
-openat = "0.1.18"
+openat = "0.1.20"
 thiserror = "1.0"
 
 [dev-dependencies]

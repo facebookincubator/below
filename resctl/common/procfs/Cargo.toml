@@ -12,7 +12,7 @@ license = "Apache-2.0"
 [dependencies]
 lazy_static = "1.0"
 libc = "0.2.86"
-openat = "0.1.18"
+openat = "0.1.20"
 procfs_thrift = { version = "0.1.0", path = "if" }
 thiserror = "1.0"
 threadpool = "1.8.1"
