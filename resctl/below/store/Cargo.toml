@@ -21,7 +21,7 @@ maplit = "1.0"
 memmap = "0.7"
 model = { package = "below-model", version = "0.1.0", path = "../model" }
 nix = "0.19"
-slog = { version = "2.5", features = ["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 static_assertions = "1.1.0"
 zstd = "=0.7.0+zstd.1.4.9"
 
