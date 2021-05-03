@@ -104,7 +104,7 @@ pub fn new(adv: Rc<RefCell<advance::Advance>>, direction: Direction) -> impl Vie
                     )
                     .child(TextView::new("e.g:"))
                     .child(TextView::new("  Relative Time: 10s or 3h5m or 2d"))
-                    .child(TextView::new("  Absulute time: 10:00am")),
+                    .child(TextView::new("  Absolute time: 10:00am")),
             )
             .dismiss_button("Close"),
     )
