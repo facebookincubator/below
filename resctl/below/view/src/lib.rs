@@ -96,8 +96,6 @@ mod status_bar;
 mod system_view;
 mod tab_view;
 
-const BELOW_CMD_RC: &str = "/.config/below/cmdrc";
-
 pub struct View {
     inner: CursiveRunnable,
 }
@@ -287,29 +285,7 @@ impl View {
                     None
                 }
             },
-            // Backward compatibility code.
-            // TODO(boyuni) Remove this section of code at May 1st.
-            _ => match std::fs::read_to_string(format!(
-                "{}{}",
-                std::env::var("HOME").expect("Fail to obtain HOME env var"),
-                BELOW_CMD_RC
-            )) {
-                Ok(cmdrc_str) => match cmdrc_str.parse::<Value>() {
-                    Ok(cmdrc) => {
-                        view_warn!(
-                            c,
-                            "cmdrc file has been deprecated and the relative support \
-                            will be removed on 05/01/2021. Please use belowrc instead."
-                        );
-                        Some(cmdrc)
-                    }
-                    Err(e) => {
-                        view_warn!(c, "Failed to parse cmdrc: {}", e);
-                        None
-                    }
-                },
-                _ => None,
-            },
+            _ => None,
         };
 
         let event_controller_map = controllers::make_event_controller_map(c, &cmdrc_opt);

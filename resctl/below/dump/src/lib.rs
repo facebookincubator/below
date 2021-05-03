@@ -49,8 +49,6 @@ use command::{expand_fields, GeneralOpt, OutputFormat};
 use print::HasRenderConfigForDump;
 use tmain::{dump_timeseries, Dumper, IterExecResult};
 
-const BELOW_DUMP_RC: &str = "/.config/below/dumprc";
-
 /// Fields available to all commands. Each enum represents some semantics and
 /// knows how to extract relevant data from a CommonFieldContext.
 #[derive(
@@ -144,26 +142,7 @@ pub fn parse_pattern<T: FromStr>(
                 .to_owned(),
             Err(e) => panic!("Failed to parse belowrc file: {:#}", e),
         },
-        Err(e) => {
-            // Backward compatibility code.
-            // TODO(boyuni) Remove this section of code at May 1st.
-            if let Ok(dumprc_str) = std::fs::read_to_string(format!(
-                "{}{}",
-                std::env::var("HOME").expect("Fail to obtain HOME env var"),
-                BELOW_DUMP_RC
-            )) {
-                eprintln!(
-                    "[WARNING] dumprc file has been deprecated and the relative support \
-                    will be removed on 05/01/2021. Please use belowrc instead."
-                );
-                match dumprc_str.parse::<TValue>() {
-                    Ok(dumprc_val) => dumprc_val,
-                    Err(e) => panic!("Failed to parse dumprc file: {:#}", e),
-                }
-            } else {
-                panic!("Failed to parse belowrc or dumprc file: {:#}", e)
-            }
-        }
+        Err(e) => panic!("Failed to parse belowrc file: {:#}", e),
     };
 
     Some(
