@@ -363,6 +363,39 @@ impl<FrameType, ModelType> Advance<FrameType, ModelType> {
 
         model
     }
+
+    /// Syntactic sugar for getting lastest sample
+    pub fn get_latest_sample(&mut self) -> Option<ModelType> {
+        self.jump_sample_to(SystemTime::now())
+    }
+
+    /// Syntactic sugar for jump sample forward
+    pub fn jump_sample_forward(&mut self, duration: humantime::Duration) -> Option<ModelType> {
+        self.jump_sample_to(self.target_timestamp + Duration::from_secs(duration.as_secs()))
+    }
+
+    /// Syntactic sugar for jump sample backward
+    pub fn jump_sample_backward(&mut self, duration: humantime::Duration) -> Option<ModelType> {
+        let gap = Duration::from_secs(duration.as_secs());
+        if util::get_unix_timestamp(self.target_timestamp) < gap.as_secs() {
+            return None;
+        }
+
+        self.jump_sample_to(self.target_timestamp - gap)
+    }
+
+    // Convenience function will be used by dump and scuba dump
+    pub fn get_next_ts(&self) -> SystemTime {
+        // timestamp for initial advance if initialize didn't setup cached_sample
+        if self.cached_sample.is_none() {
+            return self.target_timestamp;
+        }
+
+        match self.current_direction {
+            Direction::Forward => self.target_timestamp + Duration::from_secs(1),
+            Direction::Reverse => self.target_timestamp - Duration::from_secs(1),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -754,5 +787,45 @@ mod tests {
             3,     /*expected_cache*/
             "3_3"  /*new_ts*/
         );
+    }
+
+    #[test]
+    fn advance_test_jump_util() {
+        // Samples: [3, 10, 20, 50]
+        let mut advance = get_advance_with_fake_store(3);
+        advance.initialize();
+
+        assert_eq!(
+            advance
+                .jump_sample_forward(Duration::from_secs(10).into())
+                .expect("Failed to jump sample forward"),
+            "10_20_20_10" /*old_new_ts_dur*/
+        );
+
+        assert_eq!(
+            advance
+                .jump_sample_backward(Duration::from_secs(10).into())
+                .expect("Failed to jump sample backward"),
+            "3_10_10_7" /*old_new_ts_dur*/
+        );
+
+        assert_eq!(
+            advance
+                .get_latest_sample()
+                .expect("Failed to get lastest sample"),
+            "20_50_50_30" /*old_new_ts_dur*/
+        );
+    }
+
+    #[test]
+    fn advance_test_get_next_ts() {
+        // Samples: [3, 10, 20, 50]
+        let mut advance = get_advance_with_fake_store(3);
+        assert_eq!(advance.get_next_ts(), util::get_system_time(3));
+        advance.initialize();
+        assert_eq!(advance.get_next_ts(), util::get_system_time(4));
+        advance.advance(Direction::Forward);
+        advance.advance(Direction::Reverse);
+        assert_eq!(advance.get_next_ts(), util::get_system_time(2));
     }
 }
