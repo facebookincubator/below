@@ -29,7 +29,7 @@ use model::{Field, FieldId, Queriable};
 #[macro_use]
 extern crate render;
 
-use store::advance_new::{new_advance_local, new_advance_remote};
+use store::advance::{new_advance_local, new_advance_remote};
 use store::Advance;
 use store::Direction;
 

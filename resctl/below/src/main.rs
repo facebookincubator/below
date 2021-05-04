@@ -47,7 +47,7 @@ use common::{cliutil, logutil, open_source_shim};
 use dump::DumpCommand;
 use model;
 use store;
-use store::advance_new::{new_advance_local, new_advance_remote};
+use store::advance::{new_advance_local, new_advance_remote};
 use view::ViewState;
 
 open_source_shim!();
@@ -868,7 +868,7 @@ fn dump_store(
         &below_config.store_dir,
         timestamp,
         store::Direction::Forward,
-        logger.clone(),
+        logger,
     ) {
         Ok(Some((ts, df))) => (ts, df),
         Ok(None) => bail!("Data not found for requested timestamp"),

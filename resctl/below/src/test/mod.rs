@@ -23,7 +23,7 @@ use tempdir::TempDir;
 
 use crate::below_config::BelowConfig;
 use crate::model::{collect_sample, CgroupModel, CgroupPressureModel, Collector, Model};
-use crate::store::{self, advance_new::new_advance_local};
+use crate::store::{self, advance::new_advance_local};
 
 use below_thrift::types::Sample;
 use below_thrift::DataFrame;
