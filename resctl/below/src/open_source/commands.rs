@@ -14,8 +14,8 @@
 
 use structopt::StructOpt;
 
-/// This is a shim so we can add FB-internal commands without affecting the
-/// open source build
+// This is a shim so we can add FB-internal commands without affecting the
+// open source build
 #[derive(Debug, StructOpt)]
 pub enum Command {}
 
