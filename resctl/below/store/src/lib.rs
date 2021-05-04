@@ -30,6 +30,7 @@ use below_thrift::DataFrame;
 use common::util::get_unix_timestamp;
 
 pub mod advance;
+pub mod advance_new;
 
 // Shim between facebook types and open source types.
 //
