@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::boxed::Box;
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
@@ -186,6 +187,45 @@ impl Store for RemoteStore {
     }
 }
 
+/// The Advance data structure will be used as an operational
+/// bridge between controller and store.
+pub struct Advance<FrameType, MType> {
+    logger: slog::Logger,
+    store: Box<dyn Store<SampleType = FrameType, ModelType = MType>>,
+    // below needs two adajcent sample to calculate a model. So we will
+    // need to cache one of them while are moving forward or backward
+    // continuously to avoid double query.
+    // * While the current moving direction is forward, we will cache
+    //   the newer_sample.
+    // * Otherwise, we will cache the older_sample.
+    cached_sample: Option<FrameType>,
+    // When we are not moving, target_timestamp means the timestamp of the
+    // cached_sample. When we are about to move, the target_timestamp denotes
+    // the timestamp we want to move.
+    target_timestamp: SystemTime,
+    _current_direction: Direction,
+}
+
+impl<FrameType, ModelType> Advance<FrameType, ModelType> {
+    /// Initialize the current advance module.
+    // Base on the target_timestamp, we will go forward to find the first
+    // available sample. Once we find a sample, we will update the
+    // cached_sample and target_timestamp. This function will throw on
+    // double initialize.
+    pub fn initialize(&mut self) {
+        assert!(self.cached_sample.is_none());
+
+        if let Some((timestamp, sample)) = self.store.extract_sample_and_log(
+            self.target_timestamp,
+            Direction::Forward,
+            &self.logger,
+        ) {
+            self.cached_sample = Some(sample);
+            self.target_timestamp = timestamp;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -270,6 +310,16 @@ mod tests {
                     ))),
                 },
             }
+        }
+    }
+
+    fn get_advance_with_fake_store(timestamp: u64) -> Advance<u64, String> {
+        Advance::<u64, String> {
+            logger: get_logger(),
+            store: Box::new(FakeStore::new()),
+            cached_sample: None,
+            target_timestamp: util::get_system_time(timestamp),
+            _current_direction: Direction::Forward,
         }
     }
 
@@ -397,5 +447,40 @@ mod tests {
         );
 
         check_sample!(60 /*query*/, Direction::Forward);
+    }
+
+    #[test]
+    fn advance_test_initialize() {
+        macro_rules! check_advance {
+            ($init_time:tt, $expected:expr) => {
+                let mut advance = get_advance_with_fake_store($init_time);
+                advance.initialize();
+                assert_eq!(advance.cached_sample, $expected);
+
+                // When we successfully init the cached_sample, the
+                // target_timestamp should be updated accordingly. Otherwise
+                // we should not change the target_timestamp
+                if advance.cached_sample.is_some() {
+                    assert_eq!(
+                        advance.target_timestamp,
+                        util::get_system_time($expected.expect("Didn't init"))
+                    );
+                } else {
+                    assert_eq!(advance.target_timestamp, util::get_system_time($init_time));
+                }
+            };
+        }
+        // Samples: [3, 10, 20, 50]
+        // case 1: timestamp at the sample time
+        check_advance!(10 /*init_time*/, Some(10) /*expected*/);
+
+        // case 2: timstamp between samples
+        check_advance!(4 /*init_time*/, Some(10) /*expected*/);
+
+        // case 3: timestamp earlier than first sample
+        check_advance!(2 /*init_time*/, Some(3) /*expected*/);
+
+        // case 4: timestamp later than last sample
+        check_advance!(60 /*init_time*/, None /*expected*/);
     }
 }
