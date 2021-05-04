@@ -332,6 +332,37 @@ impl<FrameType, ModelType> Advance<FrameType, ModelType> {
             }
         }
     }
+
+
+    /// jump to the sample at timestamp.
+    // We will always use forward jump to make sure we can get two samples before(at)
+    // and after the timestamp. One exception here is the timestamp is in future, so
+    // if we get None, we will try search backward
+    pub fn jump_sample_to(&mut self, timestamp: SystemTime) -> Option<ModelType> {
+        let mut sample_package = self.store.get_adjacent_sample_at_timestamp(
+            timestamp,
+            Direction::Forward,
+            &self.logger,
+        );
+
+        // timestamp is in future, find the latest sample
+        if sample_package.is_none() {
+            sample_package = self.store.get_adjacent_sample_at_timestamp(
+                timestamp,
+                Direction::Reverse,
+                &self.logger,
+            );
+        }
+
+        let sample_package = sample_package?;
+        let model = self.store.to_model(&sample_package);
+        // We will always set direction to Forward after jump to ease of caching
+        self.current_direction = Direction::Forward;
+        self.cached_sample = Some(sample_package.newer_sample);
+        self.target_timestamp = sample_package.timestamp;
+
+        model
+    }
 }
 
 #[cfg(test)]
@@ -673,6 +704,55 @@ mod tests {
             Direction::Reverse,
             3,    /*expected_cache*/
             None  /*old_new_ts_duration*/
+        );
+    }
+
+    #[test]
+    fn advance_test_jump_sample_to() {
+        // Samples: [3, 10, 20, 50]
+        let mut advance = get_advance_with_fake_store(3);
+        advance.initialize();
+
+        macro_rules! check_jump {
+            ($query:tt, $expected_cache:expr, $expected_sample:expr) => {
+                let timestamp = util::get_system_time($query);
+                let res = advance.jump_sample_to(timestamp);
+                assert_eq!(res.expect("Failed to get sample"), $expected_sample);
+                assert_eq!(advance.current_direction, Direction::Forward);
+                assert_eq!(
+                    advance.target_timestamp,
+                    util::get_system_time($expected_cache)
+                );
+                assert_eq!(advance.cached_sample, Some($expected_cache));
+            };
+        }
+
+        // Case 1: Jump to exact timestamp
+        check_jump!(
+            20,            /*query*/
+            20,            /*expected_cache*/
+            "10_20_20_10"  /*old_new_ts_dur*/
+        );
+
+        // Case 2: Jump to between timestamp
+        check_jump!(
+            15,            /*query*/
+            20,            /*expected_cache*/
+            "10_20_20_10"  /*old_new_ts_dur*/
+        );
+
+        // Case 3: Jump to future timestamp
+        check_jump!(
+            60,            /*query*/
+            50,            /*expected_cache*/
+            "20_50_50_30"  /*old_new_ts_dur*/
+        );
+
+        // Case 4: Jump to timestamp that is older than first sample
+        check_jump!(
+            1,     /*query*/
+            3,     /*expected_cache*/
+            "3_3"  /*new_ts*/
         );
     }
 }
