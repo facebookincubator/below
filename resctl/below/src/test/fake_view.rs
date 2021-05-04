@@ -33,7 +33,7 @@ impl FakeView {
     pub fn new() -> Self {
         let time = SystemTime::now();
         let logger = get_logger();
-        let advance = Advance::new(logger.clone(), PathBuf::new(), time);
+        let advance = new_advance_local(logger.clone(), PathBuf::new(), time);
         let mut collector = Collector::new(get_dummy_exit_data());
         let model = collector.update_model(&logger).expect("Fail to get model");
 

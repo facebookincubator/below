@@ -67,11 +67,8 @@ fn record_replay_integration() {
         .expect("Failed to store second sample");
 
     // Restore the first sample
-    let mut advance = Advance::new(get_logger(), dir.as_ref().to_path_buf(), unix_ts);
-    // First sample has incomplete delta data so throw it away
-    advance
-        .advance(store::Direction::Forward)
-        .expect("failed to get advanced data");
+    let mut advance = new_advance_local(get_logger(), dir.as_ref().to_path_buf(), unix_ts);
+    advance.initialize();
     let restored_sample = advance
         .advance(store::Direction::Forward)
         .expect("failed to get advanced data");
@@ -125,10 +122,11 @@ fn advance_forward_and_reverse() {
             .expect("failed to store sample");
     }
 
-    let mut advance = Advance::new(logger, dir.as_ref().to_path_buf(), unix_ts);
+    let mut advance = new_advance_local(logger, dir.as_ref().to_path_buf(), unix_ts);
+    advance.initialize();
 
     // Basic sanity check that backstep then forward step time works
-    for i in 0..3 {
+    for i in 1..3 {
         let sample = advance
             .advance(store::Direction::Forward)
             .expect("failed to get forward data");

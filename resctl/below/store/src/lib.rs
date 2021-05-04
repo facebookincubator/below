@@ -29,8 +29,9 @@ use zstd::stream::decode_all;
 use below_thrift::DataFrame;
 use common::util::get_unix_timestamp;
 
-pub mod advance;
 pub mod advance_new;
+
+pub type Advance = advance_new::Advance<below_thrift::DataFrame, model::Model>;
 
 // Shim between facebook types and open source types.
 //

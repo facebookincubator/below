@@ -398,6 +398,42 @@ impl<FrameType, ModelType> Advance<FrameType, ModelType> {
     }
 }
 
+/// Construct a new Advance object with local store
+pub fn new_advance_local(
+    logger: slog::Logger,
+    store_dir: PathBuf,
+    timestamp: SystemTime,
+) -> Advance<DataFrame, Model> {
+    let store = Box::new(LocalStore { dir: store_dir });
+    Advance {
+        logger,
+        store,
+        cached_sample: None,
+        target_timestamp: timestamp,
+        current_direction: Direction::Forward,
+    }
+}
+
+/// Construct a new Advance object with remote store
+pub fn new_advance_remote(
+    logger: slog::Logger,
+    host: String,
+    port: Option<u16>,
+    timestamp: SystemTime,
+) -> Result<Advance<DataFrame, Model>> {
+    let store = Box::new(RemoteStore {
+        store: crate::remote_store::RemoteStore::new(host, port)?,
+    });
+
+    Ok(Advance {
+        logger,
+        store,
+        cached_sample: None,
+        target_timestamp: timestamp,
+        current_direction: Direction::Forward,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

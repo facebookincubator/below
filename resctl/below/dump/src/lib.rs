@@ -29,7 +29,8 @@ use model::{Field, FieldId, Queriable};
 #[macro_use]
 extern crate render;
 
-use store::advance::Advance;
+use store::advance_new::{new_advance_local, new_advance_remote};
+use store::Advance;
 use store::Direction;
 
 #[macro_use]
@@ -111,9 +112,9 @@ fn get_advance(
     )?;
 
     let mut advance = if let Some(host) = host {
-        Advance::new_with_remote(logger, host, port, time_begin)?
+        new_advance_remote(logger.clone(), host, port, time_begin)?
     } else {
-        Advance::new(logger.clone(), dir, time_begin)
+        new_advance_local(logger.clone(), dir, time_begin)
     };
 
     advance.initialize();

@@ -21,12 +21,12 @@ use cursive::views::{Dialog, EditView, LinearLayout, OnEventView, TextView};
 use cursive::Cursive;
 
 use common::dateutil;
-use store::{advance, Direction};
+use store::{Advance, Direction};
 
 use crate::ViewState;
 
 pub fn advance_helper(
-    adv: &Rc<RefCell<advance::Advance>>,
+    adv: &Rc<RefCell<Advance>>,
     direction: Direction,
     c: &mut Cursive,
     input: &str,
@@ -65,7 +65,7 @@ pub fn advance_helper(
                 // For forward jumping: we will find the next available sample of the input time forward
                 // For backward jumping: we will find the next available sample of the input time backward
                 let timestamp = std::time::UNIX_EPOCH + std::time::Duration::from_secs(pt.unixtime);
-                match adv.borrow_mut().jump_sample_to(timestamp, direction) {
+                match adv.borrow_mut().jump_sample_to(timestamp) {
                     Some(data) => c
                         .user_data::<ViewState>()
                         .expect("No user data set")
@@ -83,7 +83,7 @@ pub fn advance_helper(
     crate::refresh(c);
 }
 
-pub fn new(adv: Rc<RefCell<advance::Advance>>, direction: Direction) -> impl View {
+pub fn new(adv: Rc<RefCell<Advance>>, direction: Direction) -> impl View {
     let title = match direction {
         Direction::Forward => "How far forward should we advance?",
         Direction::Reverse => "How far backward should we advance?",

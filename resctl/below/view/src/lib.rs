@@ -73,7 +73,7 @@ use common::util::{
     get_belowrc_cmd_section_key, get_belowrc_filename, get_belowrc_view_section_key,
 };
 use model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
-use store::advance::Advance;
+use store::Advance;
 #[macro_use]
 extern crate render as base_render;
 

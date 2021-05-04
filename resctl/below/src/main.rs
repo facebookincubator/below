@@ -47,7 +47,7 @@ use common::{cliutil, logutil, open_source_shim};
 use dump::DumpCommand;
 use model;
 use store;
-use store::advance::Advance;
+use store::advance_new::{new_advance_local, new_advance_remote};
 use view::ViewState;
 
 open_source_shim!();
@@ -526,33 +526,17 @@ fn replay(
         cliutil::system_time_from_date_and_adjuster(time.as_str(), days_adjuster.as_deref())?;
 
     let mut advance = if let Some(host) = host {
-        Advance::new_with_remote(logger.clone(), host, port, timestamp)?
+        new_advance_remote(logger.clone(), host, port, timestamp)?
     } else {
-        Advance::new(logger.clone(), below_config.store_dir, timestamp)
+        new_advance_local(logger.clone(), below_config.store_dir, timestamp)
     };
 
     // Fill the last_sample for forward iteration. If no previous sample exists,
     // this should have no effect.
     advance.initialize();
 
-    let model = match advance.advance(store::Direction::Forward) {
-        m @ Some(_) => m,
-        None => {
-            warn!(
-                logger,
-                #"V",
-                "Requested timestamp is in future. Displaying latest sample.",
-            );
-
-            advance.get_latest_sample()
-        }
-    };
-
-    let mut view = match model {
-        Some(model) => view::View::new_with_advance(
-            model,
-            view::ViewMode::Replay(Rc::new(RefCell::new(advance))),
-        ),
+    let model = match advance.jump_sample_to(timestamp) {
+        Some(m) => m,
         None => {
             return Err(anyhow!(
                 "No initial model could be found!\n\
@@ -562,6 +546,11 @@ fn replay(
             ));
         }
     };
+
+    let mut view = view::View::new_with_advance(
+        model,
+        view::ViewMode::Replay(Rc::new(RefCell::new(advance))),
+    );
     logutil::set_current_log_target(logutil::TargetLog::File);
 
     let sink = view.cb_sink().clone();
@@ -726,7 +715,7 @@ fn live_local(
     let mut collector = model::Collector::new(exit_buffer);
     logutil::set_current_log_target(logutil::TargetLog::File);
     // Prepare advance obj for pause mode
-    let mut adv = Advance::new(logger.clone(), below_config.store_dir, SystemTime::now());
+    let mut adv = new_advance_local(logger.clone(), below_config.store_dir, SystemTime::now());
     adv.initialize();
     let mut view = view::View::new_with_advance(
         collector.update_model(&logger)?,
@@ -799,7 +788,7 @@ fn live_remote(
     let timestamp = SystemTime::now()
         .checked_sub(Duration::from_secs(LIVE_REMOTE_MAX_LATENCY_SEC))
         .expect("Fail to construct timestamp with latency allowance in live remote.");
-    let mut advance = Advance::new_with_remote(logger.clone(), host, port, timestamp)?;
+    let mut advance = new_advance_remote(logger.clone(), host, port, timestamp)?;
 
     advance.initialize();
     let mut view = match advance.get_latest_sample() {
