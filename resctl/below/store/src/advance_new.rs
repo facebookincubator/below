@@ -40,6 +40,24 @@ struct SamplePackage<SampleType> {
     duration: Duration,
 }
 
+impl<SampleType> SamplePackage<SampleType> {
+    fn new(
+        older_sample: Option<SampleType>,
+        older_timestamp: SystemTime,
+        newer_sample: SampleType,
+        newer_timestamp: SystemTime,
+    ) -> Self {
+        Self {
+            older_sample,
+            newer_sample,
+            timestamp: newer_timestamp,
+            duration: newer_timestamp
+                .duration_since(older_timestamp)
+                .expect("time went backwards"),
+        }
+    }
+}
+
 impl SamplePackage<DataFrame> {
     pub fn to_model(&self) -> Model {
         // When older_sample is None, we don't provide older_sample to the model
@@ -203,7 +221,7 @@ pub struct Advance<FrameType, MType> {
     // cached_sample. When we are about to move, the target_timestamp denotes
     // the timestamp we want to move.
     target_timestamp: SystemTime,
-    _current_direction: Direction,
+    current_direction: Direction,
 }
 
 impl<FrameType, ModelType> Advance<FrameType, ModelType> {
@@ -222,6 +240,96 @@ impl<FrameType, ModelType> Advance<FrameType, ModelType> {
         ) {
             self.cached_sample = Some(sample);
             self.target_timestamp = timestamp;
+        }
+    }
+
+    /// Generate the next Model base on the moving direction.
+    //
+    // For all of the comment below, we will use the following example samples:
+    // [1, 2, 4, 8, 16, 32, 64]
+    //
+    // Object Saving base on direction:
+    // * tl;dr: We always save the newly generated sample regardless of the direction.
+    //
+    // * Forward: We always save the newer sample and its timestamp.
+    //            While we are displaying {8}, we will also need {4} to generate
+    //            a model. The moving direction is forward, so we will save {8}.
+    //            When next move forward command comes, we will display {16}. So
+    //            that we can use the saved {8} to generate a new model. And the
+    //            {16} will be saved after generate the model.
+    //
+    // * Reverse: We always save the older sample and its timestamp.
+    //            While we are displaying {8}, we will also need {4} to generate
+    //            a model. The moving direction is reverse, so we will save {4}.
+    //            When next move reverse command comes, we will display {4}. In
+    //            that case, we can just query {2} to generate a new model. And
+    //            the {2} will be saved after generate the model.
+    //
+    // Corner cases:
+    // * When direction changes, we will advance two times in the changing direction.
+    //   Let's say the current direction is forward, and we are displaying {8}. So
+    //   the current cached_sample is {8}. We received a command to move reverse.
+    //   So that we are expected to display {4}, which will require sample {2}. When
+    //   the first time we call advance(Reverse), we are still displaying {8}, but
+    //   the cached_sample becomes {4}. We call advance(Reverse) again, we are will
+    //   display {4} and saved {2}, which is what we expected.
+    //
+    // * When reach either end, we don't move forward. Return None in other words,
+    //   and save nothing.
+    //
+    // * When direction change meet reach the end. We don't need any speical handling
+    //   Let's say we are displaying {2} and current direction is forward. We get
+    //   a command to move reverse, so we will call advance(reverse) twice. The
+    //   first time, we are displaying {2} and save {1}. And the second will return
+    //   None. So we changed the direction, but didn't change the display since we
+    //   already reached the end.
+    pub fn advance(&mut self, direction: Direction) -> Option<ModelType> {
+        let target_timestamp = match direction {
+            Direction::Forward => self.target_timestamp + Duration::from_secs(1),
+            Direction::Reverse => self.target_timestamp - Duration::from_secs(1),
+        };
+
+        let (next_timestamp, next_sample) =
+            self.store
+                .extract_sample_and_log(target_timestamp, direction, &self.logger)?;
+
+        // If we detect a direction change, no need to generate a model, we can
+        // just save and move to the next round.
+        if direction != self.current_direction {
+            self.current_direction = direction;
+            self.cached_sample = Some(next_sample);
+            self.target_timestamp = next_timestamp;
+
+            return self.advance(direction);
+        }
+
+        match direction {
+            Direction::Forward => {
+                let sample_package = SamplePackage::<FrameType>::new(
+                    self.cached_sample.take(),
+                    self.target_timestamp,
+                    next_sample,
+                    next_timestamp,
+                );
+                let model = self.store.to_model(&sample_package);
+                self.cached_sample = Some(sample_package.newer_sample);
+                self.target_timestamp = next_timestamp;
+                model
+            }
+            Direction::Reverse => {
+                let sample_package = SamplePackage::<FrameType>::new(
+                    Some(next_sample),
+                    next_timestamp,
+                    self.cached_sample.take().expect(
+                        "No cached sample avaialbe, the Advance module may not be initialized",
+                    ),
+                    self.target_timestamp,
+                );
+                let model = self.store.to_model(&sample_package);
+                self.cached_sample = sample_package.older_sample;
+                self.target_timestamp = next_timestamp;
+                model
+            }
         }
     }
 }
@@ -319,7 +427,7 @@ mod tests {
             store: Box::new(FakeStore::new()),
             cached_sample: None,
             target_timestamp: util::get_system_time(timestamp),
-            _current_direction: Direction::Forward,
+            current_direction: Direction::Forward,
         }
     }
 
@@ -482,5 +590,89 @@ mod tests {
 
         // case 4: timestamp later than last sample
         check_advance!(60 /*init_time*/, None /*expected*/);
+    }
+
+    macro_rules! advance {
+        ($adv:expr, $direction:expr, $expected_cache:expr, $model:expr) => {
+            let res = $adv.advance($direction);
+            assert_eq!(res, $model);
+            assert_eq!($adv.cached_sample, Some($expected_cache));
+            assert_eq!(
+                $adv.target_timestamp,
+                util::get_system_time($expected_cache)
+            );
+            assert_eq!($adv.current_direction, $direction);
+        };
+    }
+
+    #[test]
+    fn advance_test_advance_continous_move() {
+        // Samples: [3, 10, 20, 50]
+        let mut advance = get_advance_with_fake_store(3);
+        advance.initialize();
+        for (old, new) in [(3, 10), (10, 20), (20, 50)].iter() {
+            advance!(
+                advance,
+                Direction::Forward,
+                *new, /*expected_cache*/
+                Some(format!("{}_{}_{}_{}", old, new, new, new - old))
+            );
+        }
+
+        // Continuous move forward should return nothing
+        for _ in 0..5 {
+            advance!(
+                advance,
+                Direction::Forward,
+                50, /*expected_cache*/
+                None
+            );
+        }
+
+        // Reverse
+        for (old, new) in [(10, 20), (3, 10)].iter() {
+            advance!(
+                advance,
+                Direction::Reverse,
+                *old, /*expected_cache*/
+                Some(format!("{}_{}_{}_{}", old, new, new, new - old))
+            );
+        }
+
+        // Continuous move backward should return nothing
+        for _ in 0..5 {
+            advance!(advance, Direction::Reverse, 3 /*expected_cache*/, None);
+        }
+    }
+
+    #[test]
+    fn advance_test_advance_direction_change() {
+        // Samples: [3, 10, 20, 50]
+        let mut advance = get_advance_with_fake_store(10);
+        advance.initialize();
+        // Displaying 20
+        advance!(
+            advance,
+            Direction::Forward,
+            20,                         /*expected_cache*/
+            Some("10_20_20_10".into())  /*old_new_ts_duration*/
+        );
+        // Displaying 10
+        advance!(
+            advance,
+            Direction::Reverse,
+            3,                        /*expected_cache*/
+            Some("3_10_10_7".into())  /*old_new_ts_duration*/
+        );
+
+        // Displaying 10 but direction and cached_sample
+        let mut advance = get_advance_with_fake_store(10);
+        advance.initialize();
+        advance!(
+            advance,
+            Direction::Reverse,
+            3,    /*expected_cache*/
+            None  /*old_new_ts_duration*/
+        );
     }
 }
