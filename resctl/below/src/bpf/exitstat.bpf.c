@@ -88,7 +88,7 @@ int tracepoint__sched__sched_process_exit(
 
   bpf_perf_event_output(
       args, &events, BPF_F_CURRENT_CPU, &data, sizeof(struct event));
-  return 0;
+  return 1;
 }
 
 char _license[] SEC("license") = "GPL";
