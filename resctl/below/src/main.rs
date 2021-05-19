@@ -365,7 +365,7 @@ where
 }
 
 #[cfg(fbcode_build)]
-#[fbinit::main(disable_fatal_signals = 0xffff)]
+#[fbinit::main(disable_fatal_signals = all)]
 fn main(fb: FacebookInit) {
     real_main(init::InitToken { fb })
 }
