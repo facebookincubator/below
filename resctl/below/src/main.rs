@@ -308,8 +308,8 @@ where
     let logger = logging::setup(init, log_dir, debug, redirect);
     setup_log_on_panic(logger.clone());
 
-    match Signals::new(&[signal_hook::SIGINT, signal_hook::SIGTERM]) {
-        Ok(signals) => {
+    match Signals::new(&[signal_hook::consts::SIGINT, signal_hook::consts::SIGTERM]) {
+        Ok(mut signals) => {
             let logger = logger.clone();
             let err_sender = err_sender.clone();
             thread::spawn(move || {
