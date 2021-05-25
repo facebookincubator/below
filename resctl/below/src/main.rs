@@ -99,7 +99,7 @@ enum Command {
         /// Flag to disable disk_stat collection.
         #[structopt(long)]
         disable_disk_stat: bool,
-        /// Flag to disable bpftrace exitstats
+        /// Flag to disable eBPF-based exitstats
         #[structopt(long)]
         disable_exitstats: bool,
         /// Enable data file compression
