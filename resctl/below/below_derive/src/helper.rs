@@ -12,8 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use quote::ToTokens;
+use quote::{quote, ToTokens};
 use syn::{parse::Parse, punctuated::Punctuated, spanned::Spanned, Attribute, Ident, Token};
+
+/// Render turbofish if generic type exists, e.g. convert Vec<T> to Vec::<T>,
+/// which is required when calling methods on such types.
+pub fn ensure_turbofish(mut ty: syn::Type) -> proc_macro2::TokenStream {
+    if let syn::Type::Path(syn::TypePath { path, .. }) = &mut ty {
+        if let Some(last) = path.segments.last_mut() {
+            if let syn::PathArguments::AngleBracketed(_) = last.arguments {
+                let mut args = syn::PathArguments::None;
+                std::mem::swap(&mut args, &mut last.arguments);
+                let ret = quote! {
+                    #ty :: #args
+                };
+                eprintln!("{:?}", ret);
+                return ret;
+            }
+        }
+    }
+    quote! { #ty }
+}
 
 /// Adapted from strum_macros
 pub fn get_metadata<'a, T: Parse + Spanned>(

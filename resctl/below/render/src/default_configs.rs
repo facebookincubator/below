@@ -400,6 +400,7 @@ impl HasRenderConfig for model::SystemModel {
             OsRelease => rc.title("OS Release").width(50),
             Stat(field_id) => model::ProcStatModel::get_render_config_builder(field_id),
             Cpu(field_id) => model::SingleCpuModel::get_render_config_builder(field_id),
+            Cpus(field_id) => Vec::<model::SingleCpuModel>::get_render_config_builder(field_id),
             Mem(field_id) => model::MemoryModel::get_render_config_builder(field_id),
             Vm(field_id) => model::VmModel::get_render_config_builder(field_id),
         }
@@ -426,7 +427,7 @@ impl HasRenderConfig for model::SingleCpuModel {
         use model::SingleCpuModelFieldId::*;
         let rc = RenderConfigBuilder::new();
         match field_id {
-            Idx => rc.title("CPU"),
+            Idx => rc.title("Idx"),
             UsagePct => rc.title("Usage").suffix("%").format(Precision(2)),
             UserPct => rc.title("User").suffix("%").format(Precision(2)),
             IdlePct => rc.title("Idle").suffix("%").format(Precision(2)),
@@ -439,6 +440,16 @@ impl HasRenderConfig for model::SingleCpuModel {
             GuestPct => rc.title("Guest").suffix("%").format(Precision(2)),
             GuestNicePct => rc.title("Guest Nice").suffix("%").format(Precision(2)),
         }
+    }
+}
+
+impl HasRenderConfig for Vec<model::SingleCpuModel> {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        let mut rc = model::SingleCpuModel::get_render_config_builder(&field_id.subquery_id).get();
+        rc.title = rc
+            .title
+            .map(|title| format!("CPU {} {}", field_id.idx, title));
+        rc.into()
     }
 }
 

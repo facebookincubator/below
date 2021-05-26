@@ -209,6 +209,9 @@ static SYSTEM_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 {all_cpu_fields}
 
+cpus.N.<cpu_field> for individual CPU data. N is individual CPU index and
+<cpu_field> is same as cpu fields above with `cpu.` prefix stripped.
+
 {all_memory_fields}
 
 {all_vm_fields}

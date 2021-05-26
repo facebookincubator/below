@@ -22,7 +22,7 @@
 //! sub-models, making the enum a mapping of the tree structure of its
 //! corresponding Queriable.
 
-use crate::helper::to_snakecase;
+use crate::helper::{ensure_turbofish, to_snakecase};
 
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
@@ -95,9 +95,10 @@ pub fn enum_from_str_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream> 
             match &variant.fields {
                 syn::Fields::Unnamed(unnamed) if unnamed.unnamed.len() == 1 => {
                     let nested_type = &unnamed.unnamed[0].ty;
+                    let turbofish = ensure_turbofish(nested_type.clone());
                     Ok(quote! {
                         _ if s.starts_with(concat!(#snake_str, ".")) => {
-                            #nested_type::from_str(unsafe {
+                            #turbofish::from_str(unsafe {
                                 s.get_unchecked(concat!(#snake_str, ".").len()..)
                             }).map(Self::#variant_name)
                         }
@@ -146,8 +147,9 @@ pub fn enum_iter_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream> {
             match &variant.fields {
                 syn::Fields::Unnamed(unnamed) if unnamed.unnamed.len() == 1 => {
                     let nested_type = &unnamed.unnamed[0].ty;
+                    let turbofish = ensure_turbofish(nested_type.clone());
                     Ok(quote! {
-                        .chain(#nested_type::all_variant_iter().map(Self::#variant_name))
+                        .chain(#turbofish::all_variant_iter().into_iter().map(Self::#variant_name))
                     })
                 }
                 syn::Fields::Unit => Ok(quote! {

@@ -32,7 +32,7 @@ pub struct SystemModel {
     #[queriable(subquery)]
     #[queriable(preferred_name = cpu)]
     pub total_cpu: SingleCpuModel,
-    #[queriable(ignore)]
+    #[queriable(subquery)]
     pub cpus: Vec<SingleCpuModel>,
     #[queriable(subquery)]
     pub mem: MemoryModel,

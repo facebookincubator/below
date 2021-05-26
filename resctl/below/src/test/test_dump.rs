@@ -29,7 +29,15 @@ fn test_dump_sys_content() {
     collector.update_model(&logger).expect("Fail to get model");
 
     let mut opts: GeneralOpt = Default::default();
-    let fields = command::expand_fields(command::DEFAULT_SYSTEM_FIELDS, true);
+    let mut fields = command::expand_fields(command::DEFAULT_SYSTEM_FIELDS, true);
+    for subquery_id in model::SingleCpuModelFieldId::unit_variant_iter() {
+        fields.push(DumpField::FieldId(model::SystemModelFieldId::Cpus(
+            model::VecFieldId {
+                idx: 31,
+                subquery_id,
+            },
+        )));
+    }
     opts.output_format = Some(OutputFormat::Json);
     let system_dumper = system::System::new(&opts, fields.clone());
 
@@ -72,7 +80,15 @@ fn test_dump_sys_content() {
 #[test]
 fn test_dump_sys_titles() {
     let titles = expand_fields(command::DEFAULT_SYSTEM_FIELDS, true)
-        .iter()
+        .into_iter()
+        .chain(
+            model::SingleCpuModelFieldId::unit_variant_iter().map(|subquery_id| {
+                DumpField::FieldId(model::SystemModelFieldId::Cpus(model::VecFieldId {
+                    idx: 31,
+                    subquery_id,
+                }))
+            }),
+        )
         .filter_map(|dump_field| match dump_field {
             DumpField::Common(_) => None,
             DumpField::FieldId(field_id) => {
@@ -150,6 +166,18 @@ fn test_dump_sys_titles() {
         "Total Procs",
         "Running Procs",
         "Blocked Procs",
+        "CPU 31 Idx",
+        "CPU 31 Usage",
+        "CPU 31 User",
+        "CPU 31 System",
+        "CPU 31 Idle",
+        "CPU 31 Nice",
+        "CPU 31 IOWait",
+        "CPU 31 Irq",
+        "CPU 31 SoftIrq",
+        "CPU 31 Stolen",
+        "CPU 31 Guest",
+        "CPU 31 Guest Nice",
     ];
     assert_eq!(titles, expected_titles);
 }

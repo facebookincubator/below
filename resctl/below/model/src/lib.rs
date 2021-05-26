@@ -205,6 +205,64 @@ pub trait Recursive {
     fn get_depth(&self) -> usize;
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct VecFieldId<Q: Queriable> {
+    pub idx: usize,
+    pub subquery_id: Q::FieldId,
+}
+
+impl<Q: Queriable + Sized> FieldId for VecFieldId<Q> {
+    type Queriable = Vec<Q>;
+}
+
+/// Placeholder methods in case they are moved to a trait later.
+impl<Q: Queriable> VecFieldId<Q> {
+    pub fn unit_variant_iter() -> impl std::iter::Iterator<Item = Self> {
+        std::iter::empty()
+    }
+    pub fn all_variant_iter() -> impl std::iter::Iterator<Item = Self> {
+        std::iter::empty()
+    }
+}
+
+impl<Q: Queriable> std::string::ToString for VecFieldId<Q>
+where
+    <Q as Queriable>::FieldId: std::string::ToString,
+{
+    fn to_string(&self) -> String {
+        format!("{}.{}", self.idx, self.subquery_id.to_string())
+    }
+}
+
+impl<Q: Queriable> std::str::FromStr for VecFieldId<Q>
+where
+    <Q as Queriable>::FieldId: std::str::FromStr,
+    <<Q as Queriable>::FieldId as std::str::FromStr>::Err: Into<anyhow::Error>,
+{
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        if let Some(dot_idx) = s.find('.') {
+            Ok(Self {
+                idx: s[..dot_idx].parse()?,
+                subquery_id: Q::FieldId::from_str(&s[dot_idx + 1..]).map_err(Into::into)?,
+            })
+        } else {
+            Err(anyhow!(
+                "Unable to find a variant of the given enum matching string `{}`.",
+                s,
+            ))
+        }
+    }
+}
+
+impl<T: Queriable> Queriable for Vec<T> {
+    type FieldId = VecFieldId<T>;
+    fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
+        self.get(field_id.idx)
+            .and_then(|f| f.query(&field_id.subquery_id))
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct Model {
     pub time_elapsed: Duration,
