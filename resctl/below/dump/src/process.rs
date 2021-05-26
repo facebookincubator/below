@@ -22,15 +22,16 @@ impl HasRenderConfigForDump for model::SingleProcessModel {
         use model::ProcessCpuModelFieldId::{SystemPct, UserPct};
         use model::ProcessIoModelFieldId::RwbytesPerSec;
         use model::SingleProcessModelFieldId::{Cpu, Io};
-        use render::{render_config as rc, HasRenderConfig};
+        use render::HasRenderConfig;
 
-        let config = model::SingleProcessModel::get_render_config(field_id);
+        let rc = model::SingleProcessModel::get_render_config_builder(field_id);
         match field_id {
-            Cpu(UserPct) => config.update(rc!(title("User CPU"))),
-            Cpu(SystemPct) => config.update(rc!(title("Sys CPU"))),
-            Io(RwbytesPerSec) => config.update(rc!(title("RW"))),
-            _ => config,
+            Cpu(UserPct) => rc.title("User CPU"),
+            Cpu(SystemPct) => rc.title("Sys CPU"),
+            Io(RwbytesPerSec) => rc.title("RW"),
+            _ => rc,
         }
+        .get()
     }
 }
 

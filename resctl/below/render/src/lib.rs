@@ -46,7 +46,7 @@ pub enum FoldOption {
 /// roughly by their order of processing.
 #[derive(Default, Clone)]
 pub struct RenderConfig {
-    pub title: Option<&'static str>,
+    pub title: Option<String>,
     /// Converting Field to String.
     pub format: Option<RenderFormat>,
     /// Prefix when rendered with indent. Each extra level adds same number of
@@ -56,8 +56,8 @@ pub struct RenderConfig {
     ///    -* leaf
     /// -* another_leaf
     /// The example above use two prefixes, "-+ " and "-* ". Root has no prefix.
-    pub indented_prefix: Option<&'static str>,
-    pub suffix: Option<&'static str>,
+    pub indented_prefix: Option<String>,
+    pub suffix: Option<String>,
     /// Fit a long rendered Field into smaller width by omitting some characters
     /// in the middle instead of truncating. Only applies when rendering Field
     /// with fixed width. Taken indent, prefix and suffix len into account.
@@ -66,22 +66,53 @@ pub struct RenderConfig {
     pub width: Option<usize>,
 }
 
-/// Create RenderConfig by specifying only some of the fields. Other fields are
-/// set to None. Syntax choosen to work with rustfmt.
-///
-/// ## Example
-///
-/// ```
-/// let name = render_config!(title("Name"), width(2));
-/// ```
-#[macro_export]
-macro_rules! render_config {
-    ($($opt:ident ( $val:expr )),+) => { render_config!($($opt ( $val ),)+) };
-    ($($opt:ident ( $val:expr ),)*) => {
-        $crate::RenderConfig {
-            $($opt: Some($val),)*
-            ..Default::default()
-        }
+#[derive(Default, Clone)]
+pub struct RenderConfigBuilder {
+    rc: RenderConfig,
+}
+
+impl RenderConfigBuilder {
+    pub fn new() -> Self {
+        Default::default()
+    }
+    pub fn get(self) -> RenderConfig {
+        self.rc
+    }
+    pub fn title<T: AsRef<str>>(mut self, title: T) -> Self {
+        self.rc.title = Some(title.as_ref().to_owned());
+        self
+    }
+    pub fn format(mut self, format: RenderFormat) -> Self {
+        self.rc.format = Some(format);
+        self
+    }
+    pub fn indented_prefix<T: AsRef<str>>(mut self, indented_prefix: T) -> Self {
+        self.rc.indented_prefix = Some(indented_prefix.as_ref().to_owned());
+        self
+    }
+    pub fn suffix<T: AsRef<str>>(mut self, suffix: T) -> Self {
+        self.rc.suffix = Some(suffix.as_ref().to_owned());
+        self
+    }
+    pub fn fold(mut self, fold: FoldOption) -> Self {
+        self.rc.fold = Some(fold);
+        self
+    }
+    pub fn width(mut self, width: usize) -> Self {
+        self.rc.width = Some(width);
+        self
+    }
+}
+
+impl From<RenderConfigBuilder> for RenderConfig {
+    fn from(b: RenderConfigBuilder) -> Self {
+        b.rc
+    }
+}
+
+impl From<RenderConfig> for RenderConfigBuilder {
+    fn from(rc: RenderConfig) -> Self {
+        RenderConfigBuilder { rc }
     }
 }
 
@@ -90,7 +121,8 @@ pub fn get_fixed_width(val: &str, width: usize) -> String {
 }
 
 impl RenderConfig {
-    pub fn update(mut self, overrides: Self) -> Self {
+    pub fn update<T: Into<Self>>(mut self, overrides: T) -> Self {
+        let overrides = overrides.into();
         self.title = overrides.title.or(self.title);
         self.format = overrides.format.or(self.format);
         self.indented_prefix = overrides.indented_prefix.or(self.indented_prefix);
@@ -101,7 +133,7 @@ impl RenderConfig {
     }
 
     pub fn get_title(&self) -> &str {
-        self.title.unwrap_or("unknown")
+        self.title.as_deref().unwrap_or("unknown")
     }
 
     /// Value for fixed-width rendering, with default as title width + 2 and
@@ -162,8 +194,8 @@ impl RenderConfig {
                 };
             }
         };
-        let indented_prefix = self.indented_prefix.unwrap_or("");
-        let suffix = self.suffix.unwrap_or("");
+        let indented_prefix = self.indented_prefix.as_deref().unwrap_or("");
+        let suffix = self.suffix.as_deref().unwrap_or("");
         // May contain UTF8 chars
         let indented_prefix_len = indented_prefix.chars().count();
         let suffix_len = suffix.chars().count();
@@ -203,5 +235,8 @@ impl RenderConfig {
 
 /// Provide default RenderConfig for each Field in a Model
 pub trait HasRenderConfig: Queriable {
-    fn get_render_config(field_id: &Self::FieldId) -> RenderConfig;
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder;
+    fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
+        Self::get_render_config_builder(field_id).get()
+    }
 }

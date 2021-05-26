@@ -20,11 +20,12 @@ use render::{HasRenderConfig, RenderConfig};
 impl CommonField {
     /// Default RenderConfig for CommonField
     pub fn get_render_config(&self) -> RenderConfig {
-        use render::render_config as rc;
+        let rc = render::RenderConfigBuilder::new();
         match self {
-            Self::Timestamp => rc!(title("Timestamp"), width(10)),
-            Self::Datetime => rc!(title("Datetime"), width(19)),
+            Self::Timestamp => rc.title("Timestamp").width(10),
+            Self::Datetime => rc.title("Datetime").width(19),
         }
+        .get()
     }
 }
 

@@ -25,7 +25,7 @@ mod render_impl {
 
     use crate::render::ViewItem;
 
-    use base_render::render_config as rc;
+    use base_render::RenderConfigBuilder as Rc;
     use model::{Queriable, SingleDiskModel, SingleNetModel, SystemModel};
 
     /// Renders corresponding Fields From SystemModel.
@@ -82,7 +82,7 @@ mod render_impl {
         for item in items {
             let title = item.config.render_config.get_title();
             row.append(base_render::get_fixed_width(title, ROW_FIELD_NAME_WIDTH));
-            row.append(item.update(rc!(width(ROW_FIELD_WIDTH))).render(model));
+            row.append(item.update(Rc::new().width(ROW_FIELD_WIDTH)).render(model));
         }
         row
     }
@@ -93,8 +93,8 @@ mod render_impl {
         read_item: ViewItem<T::FieldId>,
         write_item: ViewItem<T::FieldId>,
     ) -> StyledString {
-        let read_item = read_item.update(rc!(width(ROW_FIELD_WIDTH_HALVED)));
-        let write_item = write_item.update(rc!(width(ROW_FIELD_WIDTH_HALVED)));
+        let read_item = read_item.update(Rc::new().width(ROW_FIELD_WIDTH_HALVED));
+        let write_item = write_item.update(Rc::new().width(ROW_FIELD_WIDTH_HALVED));
 
         let mut row = StyledString::new();
         row.append(base_render::get_fixed_width(name, ROW_NAME_WIDTH));

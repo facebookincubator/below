@@ -15,7 +15,7 @@
 use crate::core_view::CoreState;
 use crate::render::ViewItem;
 use crate::stats_view::StateCommon;
-use base_render::{get_fixed_width, render_config as rc};
+use base_render::{get_fixed_width, RenderConfigBuilder as Rc};
 use common::util::get_prefix;
 use model::system::{
     MemoryModelFieldId, SingleCpuModelFieldId, SingleDiskModelFieldId, VmModelFieldId,
@@ -94,10 +94,11 @@ impl CoreTab for CoreMem {
         MemoryModelFieldId::unit_variant_iter()
             .map(|field_id| {
                 let mut line = StyledString::new();
-                let item = ViewItem::from_default(field_id).update(rc!(width(FIELD_NAME_WIDTH)));
+                let item =
+                    ViewItem::from_default(field_id).update(Rc::new().width(FIELD_NAME_WIDTH));
                 line.append_plain(item.config.render_title());
                 line.append_plain(" ");
-                line.append(item.update(rc!(width(FIELD_WIDTH))).render(&model.mem));
+                line.append(item.update(Rc::new().width(FIELD_WIDTH)).render(&model.mem));
                 line
             })
             .filter(|s| {
@@ -122,10 +123,11 @@ impl CoreTab for CoreVm {
         VmModelFieldId::unit_variant_iter()
             .map(|field_id| {
                 let mut line = StyledString::new();
-                let item = ViewItem::from_default(field_id).update(rc!(width(FIELD_NAME_WIDTH)));
+                let item =
+                    ViewItem::from_default(field_id).update(Rc::new().width(FIELD_NAME_WIDTH));
                 line.append_plain(item.config.render_title());
                 line.append_plain(" ");
-                line.append(item.update(rc!(width(FIELD_WIDTH))).render(&model.vm));
+                line.append(item.update(Rc::new().width(FIELD_WIDTH)).render(&model.vm));
                 line
             })
             .filter(|s| {
@@ -172,7 +174,7 @@ impl CoreTab for CoreDisk {
                                 let view_item = ViewItem::from_default(field_id.clone());
                                 let rendered = if field_id == SingleDiskModelFieldId::Name {
                                     view_item
-                                        .update(rc!(indented_prefix(get_prefix(collapse))))
+                                        .update(Rc::new().indented_prefix(get_prefix(collapse)))
                                         .render_indented(sdm)
                                 } else {
                                     view_item.render(sdm)

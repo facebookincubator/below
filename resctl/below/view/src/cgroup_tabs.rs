@@ -191,7 +191,7 @@ pub fn calculate_filter_out_set(cgroup: &CgroupModel, filter: &str) -> HashSet<S
 pub mod default_tabs {
     use super::*;
 
-    use base_render::render_config as rc;
+    use base_render::RenderConfigBuilder as Rc;
     use common::util::get_prefix;
     use model::CgroupCpuModelFieldId::{
         NrPeriodsPerSec, NrThrottledPerSec, SystemPct, ThrottledPct, UsagePct, UserPct,
@@ -214,14 +214,16 @@ pub mod default_tabs {
 
     use once_cell::sync::Lazy;
 
-    pub static CGROUP_NAME_ITEM: Lazy<CgroupViewItem> =
-        Lazy::new(|| ViewItem::from_default(Name).update(rc!(indented_prefix(get_prefix(false)))));
-    pub static CGROUP_NAME_ITEM_COLLAPSED: Lazy<CgroupViewItem> =
-        Lazy::new(|| ViewItem::from_default(Name).update(rc!(indented_prefix(get_prefix(true)))));
+    pub static CGROUP_NAME_ITEM: Lazy<CgroupViewItem> = Lazy::new(|| {
+        ViewItem::from_default(Name).update(Rc::new().indented_prefix(get_prefix(false)))
+    });
+    pub static CGROUP_NAME_ITEM_COLLAPSED: Lazy<CgroupViewItem> = Lazy::new(|| {
+        ViewItem::from_default(Name).update(Rc::new().indented_prefix(get_prefix(true)))
+    });
 
     pub static CGROUP_GENERAL_TAB: Lazy<CgroupTab> = Lazy::new(|| {
         CgroupTab::new(vec![
-            ViewItem::from_default(Cpu(UsagePct)).update(rc!(title("CPU"))),
+            ViewItem::from_default(Cpu(UsagePct)).update(Rc::new().title("CPU")),
             ViewItem::from_default(Mem(Total)),
             ViewItem::from_default(Pressure(CpuSomePct)),
             ViewItem::from_default(Pressure(MemoryFullPct)),

@@ -74,7 +74,6 @@ use common::util::{
 };
 use model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
 use store::Advance;
-#[macro_use]
 extern crate render as base_render;
 
 open_source_shim!();

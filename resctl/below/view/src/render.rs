@@ -37,8 +37,8 @@ pub struct ViewConfig {
 }
 
 impl ViewConfig {
-    pub fn update(mut self, render_config: RenderConfig) -> Self {
-        self.render_config = self.render_config.update(render_config);
+    pub fn update<T: Into<RenderConfig>>(mut self, overrides: T) -> Self {
+        self.render_config = self.render_config.update(overrides);
         self
     }
 
@@ -122,8 +122,8 @@ where
 }
 
 impl<F: FieldId> ViewItem<F> {
-    pub fn update(mut self, render_config: RenderConfig) -> Self {
-        self.config = self.config.update(render_config);
+    pub fn update<T: Into<RenderConfig>>(mut self, overrides: T) -> Self {
+        self.config = self.config.update(overrides);
         self
     }
 
