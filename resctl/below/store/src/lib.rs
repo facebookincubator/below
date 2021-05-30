@@ -141,7 +141,6 @@ macro_rules! get_index_entries {
 }
 
 enum SerializedFrame<'a> {
-    Bytes(bytes::Bytes),
     Copy(Vec<u8>),
     Slice(&'a [u8]),
 }
@@ -149,7 +148,6 @@ enum SerializedFrame<'a> {
 impl<'a> SerializedFrame<'a> {
     fn data(&self) -> &[u8] {
         match self {
-            SerializedFrame::Bytes(b) => &b,
             SerializedFrame::Copy(v) => &v,
             SerializedFrame::Slice(s) => s,
         }
@@ -164,7 +162,7 @@ fn serialize_frame(data: &DataFrame, compress: bool) -> Result<SerializedFrame> 
             0,
         )?))
     } else {
-        Ok(SerializedFrame::Bytes(serialized))
+        Ok(SerializedFrame::Copy(serialized.to_vec()))
     }
 }
 
