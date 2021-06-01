@@ -26,13 +26,10 @@ members = [
   "resctl/below/below_derive",
   "resctl/below/common",
   "resctl/below/dump",
-  "resctl/below/if",
   "resctl/below/model",
   "resctl/below/render",
   "resctl/below/store",
   "resctl/below/view",
   "resctl/common/cgroupfs",
-  "resctl/common/cgroupfs/if",
   "resctl/common/procfs",
-  "resctl/common/procfs/if",
 ]

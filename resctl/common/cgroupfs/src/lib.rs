@@ -22,10 +22,16 @@ use nix::sys::statfs::{fstatfs, CGROUP2_SUPER_MAGIC};
 use openat::{AsPath, Dir, SimpleType};
 use thiserror::Error;
 
-pub use cgroupfs_thrift::types::{
+mod types;
+pub use types::{
     CpuPressure, CpuStat, IoPressure, IoStat, MemoryEvents, MemoryPressure, MemoryStat, Pressure,
     PressureMetrics,
 };
+
+#[cfg(fbcode_build)]
+mod facebook;
+#[cfg(fbcode_build)]
+pub use crate::facebook::*;
 
 #[cfg(test)]
 mod test;

@@ -13,3 +13,17 @@
 // limitations under the License.
 
 pub mod remote_store;
+
+use anyhow::Result;
+
+use crate::DataFrame;
+
+pub fn serialize_frame(data: &DataFrame) -> Result<bytes::Bytes> {
+    let bytes = serde_cbor::to_vec(data)?;
+    Ok(bytes::Bytes::from(bytes))
+}
+
+pub fn deserialize_frame(bytes: &[u8]) -> Result<DataFrame> {
+    let data_frame = serde_cbor::from_slice(bytes)?;
+    Ok(data_frame)
+}

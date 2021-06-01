@@ -19,13 +19,12 @@ use std::time::{Duration, Instant, SystemTime};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 
-use below_thrift::types::{CgroupSample, Sample, SystemSample};
-
 #[macro_use]
 pub mod collector;
 pub mod cgroup;
 pub mod network;
 pub mod process;
+pub mod sample;
 mod sample_model;
 pub mod system;
 
@@ -33,7 +32,13 @@ pub use cgroup::*;
 pub use collector::*;
 pub use network::*;
 pub use process::*;
+pub use sample::*;
 pub use system::*;
+
+#[cfg(fbcode_build)]
+mod facebook;
+#[cfg(fbcode_build)]
+pub use crate::facebook::*;
 
 /// A wrapper for different field types used in Models. By this way we can query
 /// different fields in a single function without using Box.
@@ -299,7 +304,8 @@ impl Model {
 /// Get a sample `Model`. There are no guarantees internal consistency of the
 /// model, neither are values in the model supposed to be realistic.
 pub fn get_sample_model() -> Model {
-    serde_json::from_str(sample_model::SAMPLE_MODEL_JSON).unwrap()
+    serde_json::from_str(sample_model::SAMPLE_MODEL_JSON)
+        .expect("Failed to deserialize sample model JSON")
 }
 
 #[cfg(test)]

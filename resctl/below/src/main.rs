@@ -42,12 +42,11 @@ mod exitstat;
 mod test;
 
 use below_config::BelowConfig;
-use below_thrift::DataFrame;
 use common::{cliutil, logutil, open_source_shim};
 use dump::DumpCommand;
 use model;
-use store;
 use store::advance::{new_advance_local, new_advance_remote};
+use store::{self, DataFrame};
 use view::ViewState;
 
 open_source_shim!();

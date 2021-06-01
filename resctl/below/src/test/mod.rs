@@ -22,11 +22,8 @@ use slog::{self, Drain};
 use tempdir::TempDir;
 
 use crate::below_config::BelowConfig;
-use crate::model::{collect_sample, CgroupModel, CgroupPressureModel, Collector, Model};
-use crate::store::{self, advance::new_advance_local};
-
-use below_thrift::types::Sample;
-use below_thrift::DataFrame;
+use crate::model::{collect_sample, CgroupModel, CgroupPressureModel, Collector, Model, Sample};
+use crate::store::{self, advance::new_advance_local, DataFrame};
 
 mod fake_view;
 mod test_config;

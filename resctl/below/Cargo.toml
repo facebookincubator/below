@@ -12,7 +12,6 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.45"
-below_thrift = { version = "0.1.0", path = "if" }
 cgroupfs = { version = "0.1.0", path = "../common/cgroupfs" }
 common = { package = "below-common", version = "0.1.0", path = "common" }
 cursive = { version = "0.16.0", features = ["crossterm", "termion"], default-features = false }

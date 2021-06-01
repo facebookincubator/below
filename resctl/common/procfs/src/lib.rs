@@ -25,7 +25,13 @@ use lazy_static::lazy_static;
 use thiserror::Error;
 use threadpool::ThreadPool;
 
-pub use procfs_thrift::types::*;
+mod types;
+pub use types::*;
+
+#[cfg(fbcode_build)]
+mod facebook;
+#[cfg(fbcode_build)]
+pub use crate::facebook::*;
 
 #[cfg(test)]
 mod test;
@@ -795,31 +801,30 @@ pub trait PidStateExt {
 impl PidStateExt for PidState {
     fn from_char(c: char) -> Option<PidState> {
         match c {
-            'R' => Some(PidState::RUNNING),
-            'S' => Some(PidState::SLEEPING),
-            'D' => Some(PidState::UNINTERRUPTIBLE_SLEEP),
-            'Z' => Some(PidState::ZOMBIE),
-            'T' => Some(PidState::STOPPED),
-            't' => Some(PidState::TRACING_STOPPED),
-            'x' | 'X' => Some(PidState::DEAD),
-            'I' => Some(PidState::IDLE),
-            'P' => Some(PidState::PARKED),
+            'R' => Some(PidState::Running),
+            'S' => Some(PidState::Sleeping),
+            'D' => Some(PidState::UninterruptibleSleep),
+            'Z' => Some(PidState::Zombie),
+            'T' => Some(PidState::Stopped),
+            't' => Some(PidState::TracingStopped),
+            'x' | 'X' => Some(PidState::Dead),
+            'I' => Some(PidState::Idle),
+            'P' => Some(PidState::Parked),
             _ => None,
         }
     }
 
     fn as_char(&self) -> Option<char> {
         match *self {
-            PidState::RUNNING => Some('R'),
-            PidState::SLEEPING => Some('S'),
-            PidState::UNINTERRUPTIBLE_SLEEP => Some('D'),
-            PidState::ZOMBIE => Some('Z'),
-            PidState::STOPPED => Some('T'),
-            PidState::TRACING_STOPPED => Some('t'),
-            PidState::DEAD => Some('X'),
-            PidState::IDLE => Some('I'),
-            PidState::PARKED => Some('P'),
-            _ => None,
+            PidState::Running => Some('R'),
+            PidState::Sleeping => Some('S'),
+            PidState::UninterruptibleSleep => Some('D'),
+            PidState::Zombie => Some('Z'),
+            PidState::Stopped => Some('T'),
+            PidState::TracingStopped => Some('t'),
+            PidState::Dead => Some('X'),
+            PidState::Idle => Some('I'),
+            PidState::Parked => Some('P'),
         }
     }
 }

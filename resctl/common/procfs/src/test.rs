@@ -19,8 +19,7 @@ use std::path::Path;
 
 use tempfile::TempDir;
 
-use procfs_thrift::types::*;
-
+use crate::types::*;
 use crate::NetReader;
 use crate::ProcReader;
 use crate::PAGE_SIZE;
@@ -691,7 +690,7 @@ fn test_pid_stat() {
 
     assert_eq!(pidstat.pid, Some(74718));
     assert_eq!(pidstat.comm, Some("((bash process)".to_string()));
-    assert_eq!(pidstat.state, Some(PidState::UNINTERRUPTIBLE_SLEEP));
+    assert_eq!(pidstat.state, Some(PidState::UninterruptibleSleep));
     assert_eq!(pidstat.ppid, Some(44786));
     assert_eq!(pidstat.pgrp, Some(74718));
     assert_eq!(pidstat.session, Some(74718));

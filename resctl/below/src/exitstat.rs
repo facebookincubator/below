@@ -95,7 +95,7 @@ impl ExitstatDriver {
                     |_| None,
                     |v| v.to_str().map_or_else(|_| None, |v| Some(v.to_string())),
                 ),
-                state: Some(procfs::PidState::DEAD),
+                state: Some(procfs::PidState::Dead),
                 ppid: Some(event.meta.ppid),
                 pgrp: Some(event.meta.pgrp),
                 session: Some(event.meta.sid),

@@ -19,11 +19,10 @@ use std::time::{Duration, SystemTime};
 use anyhow::Result;
 use slog::{self, error};
 
-use below_thrift::DataFrame;
 use common::util;
-use model::Model;
+use model::{self, Model};
 
-use crate::Direction;
+use crate::{DataFrame, Direction};
 
 /// A SamplePackage consists of enough information to construct a Model.
 // A SamplePackage consists of the sample(newer_sample) at target timestamp
@@ -332,7 +331,6 @@ impl<FrameType, ModelType> Advance<FrameType, ModelType> {
             }
         }
     }
-
 
     /// jump to the sample at timestamp.
     // We will always use forward jump to make sure we can get two samples before(at)
