@@ -16,6 +16,9 @@ use anyhow::{anyhow, bail, Result};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::dateutil;
+use crate::util;
+
+const MISSING_SAMPLE_WARN_DURATION_S: u64 = 60;
 
 /// Convert from date to `SystemTime`
 pub fn system_time_from_date(date: &str) -> Result<SystemTime> {
@@ -71,6 +74,61 @@ pub fn system_time_range_from_date_and_adjuster(
         None => SystemTime::now(),
     };
     Ok((start, end))
+}
+
+/// Check that initial sample time is within `MISSING_SAMPLE_WARN_DURATION_S`
+/// seconds of the requested start time.
+pub fn check_initial_sample_time_with_requested_time(
+    initial_sample_time: SystemTime,
+    time_begin: SystemTime,
+) {
+    if initial_sample_time > time_begin + Duration::from_secs(MISSING_SAMPLE_WARN_DURATION_S) {
+        eprintln!(
+            "Warning: Initial sample found at {} which is over {} seconds \
+            after the requested start time of {}",
+            util::systemtime_to_datetime(initial_sample_time),
+            MISSING_SAMPLE_WARN_DURATION_S,
+            util::systemtime_to_datetime(time_begin),
+        );
+    };
+}
+
+/// Check that initial sample time is within `MISSING_SAMPLE_WARN_DURATION_S`
+/// seconds of the requested start time, and is not after the requested end time.
+pub fn check_initial_sample_time_in_time_range(
+    initial_sample_time: SystemTime,
+    time_begin: SystemTime,
+    time_end: SystemTime,
+) -> Result<()> {
+    if initial_sample_time > time_end {
+        bail!(
+            "No samples found in desired time range.\n\
+            Earliest sample found after {} is at {} which is after the \
+            requested end time of {}",
+            util::systemtime_to_datetime(time_begin),
+            util::systemtime_to_datetime(initial_sample_time),
+            util::systemtime_to_datetime(time_end),
+        );
+    }
+    check_initial_sample_time_with_requested_time(initial_sample_time, time_begin);
+    Ok(())
+}
+
+/// Check that final sample time is within `MISSING_SAMPLE_WARN_DURATION_S`
+/// seconds of the requested end time.
+pub fn check_final_sample_time_with_requested_time(
+    final_sample_time: SystemTime,
+    time_end: SystemTime,
+) {
+    if final_sample_time < time_end - Duration::from_secs(MISSING_SAMPLE_WARN_DURATION_S) {
+        eprintln!(
+            "Warning: Final sample processed was for {} which is over {} \
+            seconds before the requested end time of {}",
+            util::systemtime_to_datetime(final_sample_time),
+            MISSING_SAMPLE_WARN_DURATION_S,
+            util::systemtime_to_datetime(time_end),
+        );
+    };
 }
 
 #[cfg(test)]

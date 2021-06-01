@@ -24,7 +24,7 @@ use serde_json::{json, Value};
 use toml::value::Value as TValue;
 
 use common::cliutil;
-use common::util::{get_belowrc_dump_section_key, get_belowrc_filename, translate_datetime};
+use common::util::{get_belowrc_dump_section_key, get_belowrc_filename, timestamp_to_datetime};
 use model::{Field, FieldId, Queriable};
 #[macro_use]
 extern crate render;
@@ -74,7 +74,7 @@ impl CommonField {
     pub fn get_field(&self, ctx: &CommonFieldContext) -> Option<Field> {
         match self {
             Self::Timestamp => Field::from(ctx.timestamp),
-            Self::Datetime => Field::from(translate_datetime(&ctx.timestamp)),
+            Self::Datetime => Field::from(timestamp_to_datetime(&ctx.timestamp)),
         }
         .into()
     }
@@ -104,7 +104,7 @@ fn get_advance(
     host: Option<String>,
     port: Option<u16>,
     opts: &command::GeneralOpt,
-) -> Result<(SystemTime, Advance)> {
+) -> Result<(SystemTime, SystemTime, Advance)> {
     let (time_begin, time_end) = cliutil::system_time_range_from_date_and_adjuster(
         opts.begin.as_str(),
         opts.end.as_deref(),
@@ -119,7 +119,7 @@ fn get_advance(
 
     advance.initialize();
 
-    Ok((time_end, advance))
+    Ok((time_begin, time_end, advance))
 }
 
 /// Try to read $HOME/.config/below/belowrc file and generate a list of keys which will
@@ -190,7 +190,7 @@ pub fn run(
             opts,
             pattern,
         } => {
-            let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
@@ -212,6 +212,7 @@ pub fn run(
             };
             dump_timeseries(
                 advance,
+                time_begin,
                 time_end,
                 &system,
                 output.as_mut(),
@@ -226,7 +227,7 @@ pub fn run(
             select,
             pattern,
         } => {
-            let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
@@ -248,6 +249,7 @@ pub fn run(
             };
             dump_timeseries(
                 advance,
+                time_begin,
                 time_end,
                 &disk,
                 output.as_mut(),
@@ -262,7 +264,7 @@ pub fn run(
             select,
             pattern,
         } => {
-            let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
@@ -284,6 +286,7 @@ pub fn run(
             };
             dump_timeseries(
                 advance,
+                time_begin,
                 time_end,
                 &process,
                 output.as_mut(),
@@ -298,7 +301,7 @@ pub fn run(
             select,
             pattern,
         } => {
-            let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
@@ -320,6 +323,7 @@ pub fn run(
             };
             dump_timeseries(
                 advance,
+                time_begin,
                 time_end,
                 &cgroup,
                 output.as_mut(),
@@ -334,7 +338,7 @@ pub fn run(
             select,
             pattern,
         } => {
-            let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
@@ -356,6 +360,7 @@ pub fn run(
             };
             dump_timeseries(
                 advance,
+                time_begin,
                 time_end,
                 &iface,
                 output.as_mut(),
@@ -369,7 +374,7 @@ pub fn run(
             opts,
             pattern,
         } => {
-            let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
@@ -391,6 +396,7 @@ pub fn run(
             };
             dump_timeseries(
                 advance,
+                time_begin,
                 time_end,
                 &network,
                 output.as_mut(),
@@ -404,7 +410,7 @@ pub fn run(
             opts,
             pattern,
         } => {
-            let (time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
@@ -426,6 +432,7 @@ pub fn run(
             };
             dump_timeseries(
                 advance,
+                time_begin,
                 time_end,
                 &transport,
                 output.as_mut(),

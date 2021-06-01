@@ -537,15 +537,15 @@ fn replay(
 
     let model = match advance.jump_sample_to(timestamp) {
         Some(m) => m,
-        None => {
-            return Err(anyhow!(
-                "No initial model could be found!\n\
+        None => bail!(
+            "No initial sample could be found!\n\
             You may have provided a time in the future or no data was recorded during the provided time. \
             Please check your input and timezone.\n\
             If you are using remote, please make sure the below service on target host is running."
-            ));
-        }
+        ),
     };
+
+    cliutil::check_initial_sample_time_with_requested_time(model.timestamp, timestamp);
 
     let mut view = view::View::new_with_advance(
         model,

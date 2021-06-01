@@ -41,6 +41,7 @@ pub trait Dumper {
 /// and handling formatting between time steps.
 pub fn dump_timeseries(
     mut advance: Advance,
+    time_begin: SystemTime,
     time_end: SystemTime,
     dumper: &dyn Dumper,
     output: &mut dyn Write,
@@ -48,10 +49,17 @@ pub fn dump_timeseries(
     br: Option<String>,
     errs: Receiver<Error>,
 ) -> Result<()> {
-    let mut model = match advance.advance(Direction::Forward) {
+    let mut model = match advance.jump_sample_to(time_begin) {
         Some(m) => m,
-        None => bail!("No initial model could be found!"),
+        None => bail!(
+            "No initial sample could be found!\n\
+            You may have provided a time in the future or no data was recorded during the provided time. \
+            Please check your input and timezone.\n\
+            If you are using remote, please make sure the below service on target host is running."
+        ),
     };
+
+    cliutil::check_initial_sample_time_in_time_range(model.timestamp, time_begin, time_end)?;
 
     let json = output_format == Some(OutputFormat::Json);
     let csv = output_format == Some(OutputFormat::Csv);
@@ -113,6 +121,8 @@ pub fn dump_timeseries(
     if json {
         write!(output, "]")?;
     }
+
+    cliutil::check_final_sample_time_with_requested_time(model.timestamp, time_end);
 
     Ok(())
 }

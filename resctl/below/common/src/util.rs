@@ -87,14 +87,19 @@ where
     format!("{}...{}", front_string, back_string)
 }
 
-/// Convert system time to human readable datetime.
-pub fn translate_datetime(timestamp: &i64) -> String {
+/// Convert system timestamp to human readable datetime.
+pub fn timestamp_to_datetime(timestamp: &i64) -> String {
     let naive = NaiveDateTime::from_timestamp(timestamp.clone(), 0);
     let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
     datetime
         .with_timezone(&Local)
         .format("%Y-%m-%d %H:%M:%S")
         .to_string()
+}
+
+/// Convert system time to human readable datetime.
+pub fn systemtime_to_datetime(system_time: SystemTime) -> String {
+    timestamp_to_datetime(&(get_unix_timestamp(system_time) as i64))
 }
 
 pub fn is_cpu_significant(v: f64) -> Option<cursive::theme::BaseColor> {
