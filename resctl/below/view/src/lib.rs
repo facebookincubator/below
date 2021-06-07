@@ -78,8 +78,6 @@ extern crate render as base_render;
 
 open_source_shim!();
 
-#[macro_use]
-pub mod stats_view;
 mod cgroup_tabs;
 pub mod cgroup_view;
 pub mod command_palette;
@@ -91,6 +89,7 @@ mod help_menu;
 mod process_tabs;
 mod process_view;
 mod render;
+pub mod stats_view;
 mod status_bar;
 mod system_view;
 mod tab_view;
