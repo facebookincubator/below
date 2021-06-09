@@ -28,7 +28,8 @@ use threadpool::ThreadPool;
 mod convert;
 mod types;
 
-pub use procfs_thrift::types::*;
+pub use convert::*;
+pub use types::*;
 
 #[cfg(test)]
 mod test;
@@ -49,7 +50,7 @@ lazy_static! {
     };
 
     /// Size of page in bytes
-    static ref PAGE_SIZE: i64 = {
+    static ref PAGE_SIZE: u64 = {
         page_size()
     };
 }
@@ -61,10 +62,10 @@ fn ticks_per_second() -> u64 {
     }
 }
 
-fn page_size() -> i64 {
+fn page_size() -> u64 {
     match unsafe { libc::sysconf(libc::_SC_PAGESIZE) } {
         -1 => panic!("Failed to query clock tick rate"),
-        x => x as i64,
+        x => x as u64,
     }
 }
 
@@ -121,19 +122,19 @@ macro_rules! parse_item {
 
 macro_rules! parse_usec {
     ($path:expr, $rhs:expr, $line:ident) => {
-        parse_item!($path, $rhs, u64, $line).map(|opt| opt.map(|v| (v * *MICROS_PER_TICK) as i64))
+        parse_item!($path, $rhs, u64, $line).map(|opt| opt.map(|v| v * *MICROS_PER_TICK))
     };
 }
 
 macro_rules! parse_sec {
     ($path:expr, $rhs:expr, $line:ident) => {
-        parse_item!($path, $rhs, u64, $line).map(|opt| opt.map(|v| (v / *TICKS_PER_SECOND) as i64))
+        parse_item!($path, $rhs, u64, $line).map(|opt| opt.map(|v| v / *TICKS_PER_SECOND))
     };
 }
 
 macro_rules! parse_kb {
     ($path:expr, $rhs:expr, $line:ident) => {
-        parse_item!($path, $rhs, u64, $line).map(|opt| opt.map(|v| (v * 1024) as i64))
+        parse_item!($path, $rhs, u64, $line).map(|opt| opt.map(|v| v * 1024))
     };
 }
 
@@ -157,7 +158,7 @@ impl ProcReader {
         reader
     }
 
-    fn read_uptime_secs(&self) -> Result<i64> {
+    fn read_uptime_secs(&self) -> Result<u64> {
         let path = self.path.join("uptime");
         let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
         let mut buf_reader = BufReader::new(file);
@@ -169,7 +170,7 @@ impl ProcReader {
         let mut items = line.split_whitespace();
 
         match parse_item!(path, items.next(), f64, line) {
-            Ok(Some(uptime)) => Ok(uptime.round() as i64),
+            Ok(Some(uptime)) => Ok(uptime.round() as u64),
             Ok(None) => Err(Error::InvalidFileFormat(path)),
             Err(e) => Err(e),
         }
@@ -218,20 +219,20 @@ impl ProcReader {
             if let Some(item) = items.next() {
                 match item {
                     "intr" => {
-                        stat.total_interrupt_count = parse_item!(&path, items.next(), i64, line)?
+                        stat.total_interrupt_count = parse_item!(&path, items.next(), u64, line)?
                     }
-                    "ctxt" => stat.context_switches = parse_item!(&path, items.next(), i64, line)?,
+                    "ctxt" => stat.context_switches = parse_item!(&path, items.next(), u64, line)?,
                     "btime" => {
-                        stat.boot_time_epoch_secs = parse_item!(&path, items.next(), i64, line)?
+                        stat.boot_time_epoch_secs = parse_item!(&path, items.next(), u64, line)?
                     }
                     "processes" => {
-                        stat.total_processes = parse_item!(&path, items.next(), i64, line)?
+                        stat.total_processes = parse_item!(&path, items.next(), u64, line)?
                     }
                     "procs_running" => {
-                        stat.running_processes = parse_item!(&path, items.next(), i32, line)?
+                        stat.running_processes = parse_item!(&path, items.next(), u32, line)?
                     }
                     "procs_blocked" => {
-                        stat.blocked_processes = parse_item!(&path, items.next(), i32, line)?
+                        stat.blocked_processes = parse_item!(&path, items.next(), u32, line)?
                     }
                     x => {
                         if x == "cpu" {
@@ -311,10 +312,10 @@ impl ProcReader {
                         meminfo.file_huge_pages = parse_kb!(path, items.next(), line)?
                     }
                     "HugePages_Total:" => {
-                        meminfo.total_huge_pages = parse_item!(path, items.next(), i64, line)?
+                        meminfo.total_huge_pages = parse_item!(path, items.next(), u64, line)?
                     }
                     "HugePages_Free:" => {
-                        meminfo.free_huge_pages = parse_item!(path, items.next(), i64, line)?
+                        meminfo.free_huge_pages = parse_item!(path, items.next(), u64, line)?
                     }
                     "Hugepagesize:" => {
                         meminfo.huge_page_size = parse_kb!(path, items.next(), line)?
@@ -350,42 +351,23 @@ impl ProcReader {
             let mut items = line.split_whitespace();
             if let Some(item) = items.next() {
                 match item {
-                    "pgpgin" => {
-                        vmstat.pgpgin =
-                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
-                    }
-                    "pgpgout" => {
-                        vmstat.pgpgout =
-                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
-                    }
-                    "pswpin" => {
-                        vmstat.pswpin =
-                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
-                    }
-                    "pswpout" => {
-                        vmstat.pswpout =
-                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
-                    }
+                    "pgpgin" => vmstat.pgpgin = parse_item!(path, items.next(), u64, line)?,
+                    "pgpgout" => vmstat.pgpgout = parse_item!(path, items.next(), u64, line)?,
+                    "pswpin" => vmstat.pswpin = parse_item!(path, items.next(), u64, line)?,
+                    "pswpout" => vmstat.pswpout = parse_item!(path, items.next(), u64, line)?,
                     "pgsteal_kswapd" => {
-                        vmstat.pgsteal_kswapd =
-                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
+                        vmstat.pgsteal_kswapd = parse_item!(path, items.next(), u64, line)?
                     }
                     "pgsteal_direct" => {
-                        vmstat.pgsteal_direct =
-                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
+                        vmstat.pgsteal_direct = parse_item!(path, items.next(), u64, line)?
                     }
                     "pgscan_kswapd" => {
-                        vmstat.pgscan_kswapd =
-                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
+                        vmstat.pgscan_kswapd = parse_item!(path, items.next(), u64, line)?
                     }
                     "pgscan_direct" => {
-                        vmstat.pgscan_direct =
-                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
+                        vmstat.pgscan_direct = parse_item!(path, items.next(), u64, line)?
                     }
-                    "oom_kill" => {
-                        vmstat.oom_kill =
-                            parse_item!(path, items.next(), u64, line)?.map(|val| val as i64)
-                    }
+                    "oom_kill" => vmstat.oom_kill = parse_item!(path, items.next(), u64, line)?,
                     _ => {}
                 }
             }
@@ -409,44 +391,32 @@ impl ProcReader {
 
             let stats_vec: Vec<&str> = line.split(' ').filter(|item| !item.is_empty()).collect();
             let mut stats_iter = stats_vec.iter();
-            let mut disk_stat: DiskStat = Default::default();
-            disk_stat.major =
-                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            let mut disk_stat = DiskStat {
+                major: parse_item!(path, stats_iter.next(), u64, line)?,
+                ..Default::default()
+            };
             if disk_stat.major.is_none() {
                 continue;
             }
-            disk_stat.minor =
-                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            disk_stat.minor = parse_item!(path, stats_iter.next(), u64, line)?;
 
             disk_stat.name = parse_item!(path, stats_iter.next(), String, line)?;
 
             let disk_name = disk_stat.name.as_ref().unwrap().to_string();
 
-            disk_stat.read_completed =
-                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
-            disk_stat.read_merged =
-                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
-            disk_stat.read_sectors =
-                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
-            disk_stat.time_spend_read_ms =
-                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
-            disk_stat.write_completed =
-                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
-            disk_stat.write_merged =
-                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
-            disk_stat.write_sectors =
-                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
-            disk_stat.time_spend_write_ms =
-                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            disk_stat.read_completed = parse_item!(path, stats_iter.next(), u64, line)?;
+            disk_stat.read_merged = parse_item!(path, stats_iter.next(), u64, line)?;
+            disk_stat.read_sectors = parse_item!(path, stats_iter.next(), u64, line)?;
+            disk_stat.time_spend_read_ms = parse_item!(path, stats_iter.next(), u64, line)?;
+            disk_stat.write_completed = parse_item!(path, stats_iter.next(), u64, line)?;
+            disk_stat.write_merged = parse_item!(path, stats_iter.next(), u64, line)?;
+            disk_stat.write_sectors = parse_item!(path, stats_iter.next(), u64, line)?;
+            disk_stat.time_spend_write_ms = parse_item!(path, stats_iter.next(), u64, line)?;
             let mut stats_iter = stats_iter.skip(3);
-            disk_stat.discard_completed =
-                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
-            disk_stat.discard_merged =
-                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
-            disk_stat.discard_sectors =
-                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
-            disk_stat.time_spend_discard_ms =
-                parse_item!(path, stats_iter.next(), u64, line)?.map(|val| val as i64);
+            disk_stat.discard_completed = parse_item!(path, stats_iter.next(), u64, line)?;
+            disk_stat.discard_merged = parse_item!(path, stats_iter.next(), u64, line)?;
+            disk_stat.discard_sectors = parse_item!(path, stats_iter.next(), u64, line)?;
+            disk_stat.time_spend_discard_ms = parse_item!(path, stats_iter.next(), u64, line)?;
 
             disk_map.insert(disk_name, disk_stat);
         }
@@ -490,18 +460,18 @@ impl ProcReader {
         pidstat.ppid = parse_item!(path, items.get(2), i32, line)?;
         pidstat.pgrp = parse_item!(path, items.get(3), i32, line)?;
         pidstat.session = parse_item!(path, items.get(4), i32, line)?;
-        pidstat.minflt = parse_item!(path, items.get(8), i64, line)?;
-        pidstat.majflt = parse_item!(path, items.get(10), i64, line)?;
+        pidstat.minflt = parse_item!(path, items.get(8), u64, line)?;
+        pidstat.majflt = parse_item!(path, items.get(10), u64, line)?;
         pidstat.user_usecs = parse_usec!(path, items.get(12), line)?;
         pidstat.system_usecs = parse_usec!(path, items.get(13), line)?;
-        pidstat.num_threads = parse_item!(path, items.get(18), i64, line)?;
+        pidstat.num_threads = parse_item!(path, items.get(18), u64, line)?;
 
         let uptime = self.read_uptime_secs()?;
         pidstat.running_secs = parse_sec!(path, items.get(20), line)?
-            .map(|running_secs_since_boot| uptime - running_secs_since_boot);
+            .map(|running_secs_since_boot| (uptime - running_secs_since_boot) as u64);
 
         pidstat.rss_bytes =
-            parse_item!(path, items.get(22), i64, line)?.map(|pages| pages * *PAGE_SIZE);
+            parse_item!(path, items.get(22), u64, line)?.map(|pages| pages * *PAGE_SIZE);
         pidstat.processor = parse_item!(path, items.get(37), i32, line)?;
 
         if pidstat == Default::default() {
@@ -561,8 +531,8 @@ impl ProcReader {
             let mut items = line.split_whitespace();
             if let Some(item) = items.next() {
                 match item {
-                    "read_bytes:" => pidio.rbytes = parse_item!(path, items.next(), i64, line)?,
-                    "write_bytes:" => pidio.wbytes = parse_item!(path, items.next(), i64, line)?,
+                    "read_bytes:" => pidio.rbytes = parse_item!(path, items.next(), u64, line)?,
+                    "write_bytes:" => pidio.wbytes = parse_item!(path, items.next(), u64, line)?,
                     _ => {}
                 }
             }
@@ -798,31 +768,30 @@ pub trait PidStateExt {
 impl PidStateExt for PidState {
     fn from_char(c: char) -> Option<PidState> {
         match c {
-            'R' => Some(PidState::RUNNING),
-            'S' => Some(PidState::SLEEPING),
-            'D' => Some(PidState::UNINTERRUPTIBLE_SLEEP),
-            'Z' => Some(PidState::ZOMBIE),
-            'T' => Some(PidState::STOPPED),
-            't' => Some(PidState::TRACING_STOPPED),
-            'x' | 'X' => Some(PidState::DEAD),
-            'I' => Some(PidState::IDLE),
-            'P' => Some(PidState::PARKED),
+            'R' => Some(PidState::Running),
+            'S' => Some(PidState::Sleeping),
+            'D' => Some(PidState::UninterruptibleSleep),
+            'Z' => Some(PidState::Zombie),
+            'T' => Some(PidState::Stopped),
+            't' => Some(PidState::TracingStopped),
+            'x' | 'X' => Some(PidState::Dead),
+            'I' => Some(PidState::Idle),
+            'P' => Some(PidState::Parked),
             _ => None,
         }
     }
 
     fn as_char(&self) -> Option<char> {
         match *self {
-            PidState::RUNNING => Some('R'),
-            PidState::SLEEPING => Some('S'),
-            PidState::UNINTERRUPTIBLE_SLEEP => Some('D'),
-            PidState::ZOMBIE => Some('Z'),
-            PidState::STOPPED => Some('T'),
-            PidState::TRACING_STOPPED => Some('t'),
-            PidState::DEAD => Some('X'),
-            PidState::IDLE => Some('I'),
-            PidState::PARKED => Some('P'),
-            _ => None,
+            PidState::Running => Some('R'),
+            PidState::Sleeping => Some('S'),
+            PidState::UninterruptibleSleep => Some('D'),
+            PidState::Zombie => Some('Z'),
+            PidState::Stopped => Some('T'),
+            PidState::TracingStopped => Some('t'),
+            PidState::Dead => Some('X'),
+            PidState::Idle => Some('I'),
+            PidState::Parked => Some('P'),
         }
     }
 }
@@ -836,7 +805,7 @@ macro_rules! parse_interface_stats {
 macro_rules! get_val_from_stats_map {
     ($map:ident, $stat_item:ident {$($field:ident: $key:tt,)*}) => {
         $stat_item {
-            $($field: $map.get($key).map(|v| *v as i64)),*
+            $($field: $map.get($key).map(|x| *x)),*
         }
     }
 }
@@ -870,7 +839,7 @@ impl NetReader {
         interface_dir: &Dir,
         cur_path: &PathBuf,
         stat_item: &str,
-    ) -> Result<Option<i64>> {
+    ) -> Result<Option<u64>> {
         let file = match interface_dir.open_file(stat_item) {
             Ok(f) => f,
             Err(e) => {
@@ -886,7 +855,7 @@ impl NetReader {
             Some(line) => {
                 let line = line.map_err(|e| Error::IoError(cur_path.join(stat_item), e))?;
                 line.parse::<u64>()
-                    .map(|v| Some(v as i64))
+                    .map(Some)
                     .map_err(move |_| Error::UnexpectedLine(cur_path.join(stat_item), line))
             }
             None => Err(Error::InvalidFileFormat(cur_path.join(stat_item))),

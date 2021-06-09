@@ -147,18 +147,25 @@ pub fn collect_sample(
             logger,
             &cgroup_re,
         )?,
-        processes: merge_procfs_and_exit_data(reader.read_all_pids()?, exit_pidmap),
+        processes: merge_procfs_and_exit_data(
+            reader
+                .read_all_pids()?
+                .into_iter()
+                .map(|(k, v)| (k, v.into()))
+                .collect(),
+            exit_pidmap,
+        ),
         netstats: match procfs::NetReader::new().and_then(|v| v.read_netstat()) {
-            Ok(ns) => ns,
+            Ok(ns) => ns.into(),
             Err(e) => {
                 error!(logger, "{:#}", e);
                 Default::default()
             }
         },
         system: SystemSample {
-            stat: reader.read_stat()?,
-            meminfo: reader.read_meminfo()?,
-            vmstat: reader.read_vmstat()?,
+            stat: reader.read_stat()?.into(),
+            meminfo: reader.read_meminfo()?.into(),
+            vmstat: reader.read_vmstat()?.into(),
             hostname: get_hostname()?,
             kernel_version: match reader.read_kernel_version() {
                 Ok(k) => Some(k),
@@ -177,6 +184,7 @@ pub fn collect_sample(
             disks: match (disable_disk_stat, reader.read_disk_stats()) {
                 (false, Ok(disks)) => disks
                     .into_iter()
+                    .map(|(disk_name, disk_stat)| (disk_name, disk_stat.into()))
                     .filter(|(disk_name, disk_stat)| {
                         if disk_name.starts_with("ram") || disk_name.starts_with("loop") {
                             return false;

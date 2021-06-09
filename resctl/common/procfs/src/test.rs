@@ -19,8 +19,7 @@ use std::path::Path;
 
 use tempfile::TempDir;
 
-use procfs_thrift::types::*;
-
+use crate::types::*;
 use crate::NetReader;
 use crate::ProcReader;
 use crate::PAGE_SIZE;
@@ -691,7 +690,7 @@ fn test_pid_stat() {
 
     assert_eq!(pidstat.pid, Some(74718));
     assert_eq!(pidstat.comm, Some("((bash process)".to_string()));
-    assert_eq!(pidstat.state, Some(PidState::UNINTERRUPTIBLE_SLEEP));
+    assert_eq!(pidstat.state, Some(PidState::UninterruptibleSleep));
     assert_eq!(pidstat.ppid, Some(44786));
     assert_eq!(pidstat.pgrp, Some(74718));
     assert_eq!(pidstat.session, Some(74718));
@@ -1318,7 +1317,7 @@ fn verify_interfaces(netstat: &NetStat) {
         let netstat = netmap.get(*interface).expect("Fail to find interface");
         assert_eq!(netstat.collisions, Some(1));
         assert_eq!(netstat.multicast, Some(2));
-        assert_eq!(netstat.rx_bytes, Some(2_087_593_014_826 as i64));
+        assert_eq!(netstat.rx_bytes, Some(2_087_593_014_826));
         assert_eq!(netstat.rx_compressed, Some(4));
         assert_eq!(netstat.rx_crc_errors, Some(5));
         assert_eq!(netstat.rx_dropped, Some(6));
@@ -1331,7 +1330,7 @@ fn verify_interfaces(netstat: &NetStat) {
         assert_eq!(netstat.rx_over_errors, Some(13));
         assert_eq!(netstat.rx_packets, Some(14));
         assert_eq!(netstat.tx_aborted_errors, Some(15));
-        assert_eq!(netstat.tx_bytes, Some(1_401_221_862_430 as i64));
+        assert_eq!(netstat.tx_bytes, Some(1_401_221_862_430));
         assert_eq!(netstat.tx_carrier_errors, Some(17));
         assert_eq!(netstat.tx_compressed, Some(18));
         assert_eq!(netstat.tx_dropped, Some(19));
