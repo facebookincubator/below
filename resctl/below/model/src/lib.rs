@@ -28,6 +28,7 @@ pub mod collector;
 pub mod cgroup;
 pub mod network;
 pub mod process;
+pub mod sample;
 mod sample_model;
 pub mod system;
 
