@@ -255,11 +255,11 @@ fn collect_cgroup_sample(
         None
     };
     Ok(CgroupSample {
-        cpu_stat: wrap(reader.read_cpu_stat())?,
-        io_stat,
+        cpu_stat: wrap(reader.read_cpu_stat())?.map(Into::into),
+        io_stat: io_stat.map(|m| m.into_iter().map(|(k, v)| (k, v.into())).collect()),
         memory_current: wrap(reader.read_memory_current().map(|v| v as i64))?,
-        memory_stat: wrap(reader.read_memory_stat())?,
-        pressure: wrap(reader.read_pressure())?,
+        memory_stat: wrap(reader.read_memory_stat())?.map(Into::into),
+        pressure: wrap(reader.read_pressure())?.map(Into::into),
         // We transpose at the end here to convert the
         // Option<Result<BTreeMap... into Result<Option<BTreeMap and
         // then bail any errors with `?` - leaving us with the
@@ -297,8 +297,8 @@ fn collect_cgroup_sample(
             })
             .transpose()?,
         memory_swap_current: wrap(reader.read_memory_swap_current().map(|v| v as i64))?,
-        memory_high: reader.read_memory_high()?,
-        memory_events: wrap(reader.read_memory_events())?,
+        memory_high: reader.read_memory_high()?.map(Into::into),
+        memory_events: wrap(reader.read_memory_events())?.map(Into::into),
         inode_number: match reader.read_inode_number() {
             Ok(st_ino) => Some(st_ino as i64),
             Err(e) => {

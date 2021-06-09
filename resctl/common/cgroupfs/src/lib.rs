@@ -25,10 +25,8 @@ use thiserror::Error;
 mod convert;
 mod types;
 
-pub use cgroupfs_thrift::types::{
-    CpuPressure, CpuStat, IoPressure, IoStat, MemoryEvents, MemoryPressure, MemoryStat, Pressure,
-    PressureMetrics,
-};
+pub use convert::*;
+pub use types::*;
 
 #[cfg(test)]
 mod test;
@@ -292,7 +290,7 @@ macro_rules! key_values_format {
                         return Err(r.unexpected_line(file_name, line));
                     }
                     let key = items[0];
-                    let val = items[1].parse::<u64>().map_err(|_| r.unexpected_line(file_name, line.clone()))? as i64;
+                    let val = items[1].parse::<u64>().map_err(|_| r.unexpected_line(file_name, line.clone()))?;
                     match key.as_ref() {
                         $(stringify!($field) => s.$field = Some(val),)*
                         _ => (),
