@@ -35,7 +35,10 @@ pub struct NetworkModel {
 }
 
 impl NetworkModel {
-    pub fn new(sample: &procfs::NetStat, last: Option<(&procfs::NetStat, Duration)>) -> Self {
+    pub fn new(
+        sample: &procfs_thrift::NetStat,
+        last: Option<(&procfs_thrift::NetStat, Duration)>,
+    ) -> Self {
         let mut interfaces: BTreeMap<String, SingleNetModel> = BTreeMap::new();
 
         if let Some(ifaces) = sample.interfaces.as_ref() {
@@ -110,7 +113,10 @@ pub struct TcpModel {
 }
 
 impl TcpModel {
-    pub fn new(sample: &procfs::TcpStat, last: Option<(&procfs::TcpStat, Duration)>) -> TcpModel {
+    pub fn new(
+        sample: &procfs_thrift::TcpStat,
+        last: Option<(&procfs_thrift::TcpStat, Duration)>,
+    ) -> TcpModel {
         TcpModel {
             active_opens_per_sec: get_option_rate!(active_opens, sample, last),
             passive_opens_per_sec: get_option_rate!(passive_opens, sample, last),
@@ -154,10 +160,10 @@ pub struct IpModel {
 
 impl IpModel {
     pub fn new(
-        sample: &procfs::IpStat,
-        last: Option<(&procfs::IpStat, Duration)>,
-        sample_ext: &procfs::IpExtStat,
-        last_ext: Option<(&procfs::IpExtStat, Duration)>,
+        sample: &procfs_thrift::IpStat,
+        last: Option<(&procfs_thrift::IpStat, Duration)>,
+        sample_ext: &procfs_thrift::IpExtStat,
+        last_ext: Option<(&procfs_thrift::IpExtStat, Duration)>,
     ) -> IpModel {
         IpModel {
             forwarding_pkts_per_sec: get_option_rate!(forwarding, sample, last),
@@ -206,7 +212,10 @@ pub struct Ip6Model {
 }
 
 impl Ip6Model {
-    pub fn new(sample: &procfs::Ip6Stat, last: Option<(&procfs::Ip6Stat, Duration)>) -> Ip6Model {
+    pub fn new(
+        sample: &procfs_thrift::Ip6Stat,
+        last: Option<(&procfs_thrift::Ip6Stat, Duration)>,
+    ) -> Ip6Model {
         Ip6Model {
             in_receives_pkts_per_sec: get_option_rate!(in_receives, sample, last),
             in_hdr_errors: sample.in_hdr_errors.map(|s| s as u64),
@@ -241,8 +250,8 @@ pub struct IcmpModel {
 
 impl IcmpModel {
     pub fn new(
-        sample: &procfs::IcmpStat,
-        last: Option<(&procfs::IcmpStat, Duration)>,
+        sample: &procfs_thrift::IcmpStat,
+        last: Option<(&procfs_thrift::IcmpStat, Duration)>,
     ) -> IcmpModel {
         IcmpModel {
             in_msgs_per_sec: get_option_rate!(in_msgs, sample, last),
@@ -267,8 +276,8 @@ pub struct Icmp6Model {
 
 impl Icmp6Model {
     pub fn new(
-        sample: &procfs::Icmp6Stat,
-        last: Option<(&procfs::Icmp6Stat, Duration)>,
+        sample: &procfs_thrift::Icmp6Stat,
+        last: Option<(&procfs_thrift::Icmp6Stat, Duration)>,
     ) -> Icmp6Model {
         Icmp6Model {
             in_msgs_per_sec: get_option_rate!(in_msgs, sample, last),
@@ -293,7 +302,10 @@ pub struct UdpModel {
 }
 
 impl UdpModel {
-    pub fn new(sample: &procfs::UdpStat, last: Option<(&procfs::UdpStat, Duration)>) -> UdpModel {
+    pub fn new(
+        sample: &procfs_thrift::UdpStat,
+        last: Option<(&procfs_thrift::UdpStat, Duration)>,
+    ) -> UdpModel {
         UdpModel {
             in_datagrams_pkts_per_sec: get_option_rate!(in_datagrams, sample, last),
             no_ports: sample.no_ports.map(|s| s as u64),
@@ -320,8 +332,8 @@ pub struct Udp6Model {
 
 impl Udp6Model {
     pub fn new(
-        sample: &procfs::Udp6Stat,
-        last: Option<(&procfs::Udp6Stat, Duration)>,
+        sample: &procfs_thrift::Udp6Stat,
+        last: Option<(&procfs_thrift::Udp6Stat, Duration)>,
     ) -> Udp6Model {
         Udp6Model {
             in_datagrams_pkts_per_sec: get_option_rate!(in_datagrams, sample, last),
@@ -373,8 +385,8 @@ pub struct SingleNetModel {
 impl SingleNetModel {
     fn new(
         interface: &str,
-        sample: &procfs::InterfaceStat,
-        last: Option<(&procfs::InterfaceStat, Duration)>,
+        sample: &procfs_thrift::InterfaceStat,
+        last: Option<(&procfs_thrift::InterfaceStat, Duration)>,
     ) -> SingleNetModel {
         let rx_bytes_per_sec = last
             .map(|(l, d)| {

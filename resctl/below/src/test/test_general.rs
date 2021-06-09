@@ -218,7 +218,7 @@ fn calculate_cpu_usage() {
     let mut sample: Sample = Default::default();
     let mut last_sample: Sample = Default::default();
     // Actual elapse is (1 + 3 + 4 + 2) = 10s
-    sample.system.stat.total_cpu = Some(procfs::CpuStat {
+    sample.system.stat.total_cpu = Some(procfs_thrift::CpuStat {
         user_usec: Some(1_000_000),
         nice_usec: Some(0),
         system_usec: Some(3_000_000),
@@ -230,7 +230,7 @@ fn calculate_cpu_usage() {
         guest_usec: Some(0),
         guest_nice_usec: Some(0),
     });
-    last_sample.system.stat.total_cpu = Some(procfs::CpuStat {
+    last_sample.system.stat.total_cpu = Some(procfs_thrift::CpuStat {
         user_usec: Some(0),
         nice_usec: Some(0),
         system_usec: Some(0),
@@ -259,40 +259,40 @@ fn calculate_pressure() {
     let mut sample: Sample = Default::default();
     let mut last_sample: Sample = Default::default();
     // Two measurements are at least 6s apart
-    let pressure = cgroupfs::PressureMetrics {
+    let pressure = cgroupfs_thrift::PressureMetrics {
         avg10: Some(90.0),
         avg60: Some(35.0),
         avg300: Some(16.0),
         total: Some(16_000_000),
     };
-    let last_pressure = cgroupfs::PressureMetrics {
+    let last_pressure = cgroupfs_thrift::PressureMetrics {
         avg10: Some(80.0),
         avg60: Some(30.0),
         avg300: Some(15.0),
         total: Some(10_000_000),
     };
-    sample.cgroup.pressure = Some(cgroupfs::Pressure {
-        cpu: cgroupfs::CpuPressure {
+    sample.cgroup.pressure = Some(cgroupfs_thrift::Pressure {
+        cpu: cgroupfs_thrift::CpuPressure {
             some: pressure.clone(),
         },
-        io: cgroupfs::IoPressure {
+        io: cgroupfs_thrift::IoPressure {
             some: pressure.clone(),
             full: pressure.clone(),
         },
-        memory: cgroupfs::MemoryPressure {
+        memory: cgroupfs_thrift::MemoryPressure {
             some: pressure.clone(),
             full: pressure,
         },
     });
-    last_sample.cgroup.pressure = Some(cgroupfs::Pressure {
-        cpu: cgroupfs::CpuPressure {
+    last_sample.cgroup.pressure = Some(cgroupfs_thrift::Pressure {
+        cpu: cgroupfs_thrift::CpuPressure {
             some: last_pressure.clone(),
         },
-        io: cgroupfs::IoPressure {
+        io: cgroupfs_thrift::IoPressure {
             some: last_pressure.clone(),
             full: last_pressure.clone(),
         },
-        memory: cgroupfs::MemoryPressure {
+        memory: cgroupfs_thrift::MemoryPressure {
             some: last_pressure.clone(),
             full: last_pressure,
         },

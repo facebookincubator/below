@@ -20,6 +20,8 @@ use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 
 use below_thrift::types::{CgroupSample, Sample, SystemSample};
+use cgroupfs_thrift::types as cgroupfs_thrift;
+use procfs_thrift::types as procfs_thrift;
 
 #[macro_use]
 pub mod collector;
@@ -44,7 +46,7 @@ pub enum Field {
     I64(i64),
     F64(f64),
     Str(String),
-    PidState(procfs::PidState),
+    PidState(procfs_thrift::PidState),
 }
 
 impl From<Field> for i64 {
@@ -108,8 +110,8 @@ impl From<String> for Field {
     }
 }
 
-impl From<procfs::PidState> for Field {
-    fn from(v: procfs::PidState) -> Self {
+impl From<procfs_thrift::PidState> for Field {
+    fn from(v: procfs_thrift::PidState) -> Self {
         Field::PidState(v)
     }
 }

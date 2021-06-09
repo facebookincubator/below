@@ -20,7 +20,10 @@ pub struct ProcessModel {
 }
 
 impl ProcessModel {
-    pub fn new(sample: &procfs::PidMap, last: Option<(&procfs::PidMap, Duration)>) -> ProcessModel {
+    pub fn new(
+        sample: &procfs_thrift::PidMap,
+        last: Option<(&procfs_thrift::PidMap, Duration)>,
+    ) -> ProcessModel {
         let mut processes: BTreeMap<i32, SingleProcessModel> = BTreeMap::new();
 
         for (pid, pidinfo) in sample.iter() {
@@ -42,7 +45,7 @@ pub struct SingleProcessModel {
     pub pid: Option<i32>,
     pub ppid: Option<i32>,
     pub comm: Option<String>,
-    pub state: Option<procfs::PidState>,
+    pub state: Option<procfs_thrift::PidState>,
     pub uptime_secs: Option<u64>,
     pub cgroup: Option<String>,
     #[queriable(subquery)]
@@ -57,8 +60,8 @@ pub struct SingleProcessModel {
 
 impl SingleProcessModel {
     fn new(
-        sample: &procfs::PidInfo,
-        last: Option<(&procfs::PidInfo, Duration)>,
+        sample: &procfs_thrift::PidInfo,
+        last: Option<(&procfs_thrift::PidInfo, Duration)>,
     ) -> SingleProcessModel {
         SingleProcessModel {
             pid: sample.stat.pid,
@@ -88,7 +91,11 @@ pub struct ProcessIoModel {
 }
 
 impl ProcessIoModel {
-    fn new(begin: &procfs::PidIo, end: &procfs::PidIo, delta: Duration) -> ProcessIoModel {
+    fn new(
+        begin: &procfs_thrift::PidIo,
+        end: &procfs_thrift::PidIo,
+        delta: Duration,
+    ) -> ProcessIoModel {
         let rbytes_per_sec = count_per_sec!(begin.rbytes, end.rbytes, delta);
         let wbytes_per_sec = count_per_sec!(begin.wbytes, end.wbytes, delta);
         let rwbytes_per_sec = Some(
@@ -111,7 +118,11 @@ pub struct ProcessCpuModel {
 }
 
 impl ProcessCpuModel {
-    fn new(begin: &procfs::PidStat, end: &procfs::PidStat, delta: Duration) -> ProcessCpuModel {
+    fn new(
+        begin: &procfs_thrift::PidStat,
+        end: &procfs_thrift::PidStat,
+        delta: Duration,
+    ) -> ProcessCpuModel {
         let user_pct = usec_pct!(begin.user_usecs, end.user_usecs, delta);
         let system_pct = usec_pct!(begin.system_usecs, end.system_usecs, delta);
         let usage_pct = collector::opt_add(user_pct.clone(), system_pct.clone());
@@ -141,7 +152,11 @@ pub struct ProcessMemoryModel {
 }
 
 impl ProcessMemoryModel {
-    fn new(begin: &procfs::PidInfo, end: &procfs::PidInfo, delta: Duration) -> ProcessMemoryModel {
+    fn new(
+        begin: &procfs_thrift::PidInfo,
+        end: &procfs_thrift::PidInfo,
+        delta: Duration,
+    ) -> ProcessMemoryModel {
         ProcessMemoryModel {
             minorfaults_per_sec: count_per_sec!(begin.stat.minflt, end.stat.minflt, delta),
             majorfaults_per_sec: count_per_sec!(begin.stat.majflt, end.stat.majflt, delta),

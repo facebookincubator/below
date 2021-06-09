@@ -10,6 +10,8 @@ use slog::warn;
 
 use crate::ExitstatSkelBuilder;
 
+use procfs_thrift::types as procfs_thrift;
+
 static PAGE_SIZE: Lazy<i64> = Lazy::new(|| page_size());
 
 #[repr(C)]
@@ -57,7 +59,7 @@ fn page_size() -> i64 {
 pub struct ExitstatDriver {
     logger: slog::Logger,
     debug: bool,
-    buffer: Arc<Mutex<procfs::PidMap>>,
+    buffer: Arc<Mutex<procfs_thrift::PidMap>>,
 }
 
 impl ExitstatDriver {
@@ -65,15 +67,15 @@ impl ExitstatDriver {
         Self {
             logger,
             debug,
-            buffer: Arc::new(Mutex::new(procfs::PidMap::default())),
+            buffer: Arc::new(Mutex::new(procfs_thrift::PidMap::default())),
         }
     }
 
-    pub fn get_buffer(&self) -> Arc<Mutex<procfs::PidMap>> {
+    pub fn get_buffer(&self) -> Arc<Mutex<procfs_thrift::PidMap>> {
         self.buffer.clone()
     }
 
-    fn handle_event(handle: &Arc<Mutex<procfs::PidMap>>, data: &[u8]) {
+    fn handle_event(handle: &Arc<Mutex<procfs_thrift::PidMap>>, data: &[u8]) {
         let mut event = Event::default();
         plain::copy_from_bytes(&mut event, data).expect("Data buffer was too short");
 
@@ -88,14 +90,14 @@ impl ExitstatDriver {
         }
         comm_no_interior_nul.push(0);
 
-        let pidinfo = procfs::PidInfo {
-            stat: procfs::PidStat {
+        let pidinfo = procfs_thrift::PidInfo {
+            stat: procfs_thrift::PidStat {
                 pid: Some(event.meta.tid), // event.meta.pid is actually tgid
                 comm: CStr::from_bytes_with_nul(&comm_no_interior_nul).map_or_else(
                     |_| None,
                     |v| v.to_str().map_or_else(|_| None, |v| Some(v.to_string())),
                 ),
-                state: Some(procfs::PidState::DEAD),
+                state: Some(procfs_thrift::PidState::DEAD),
                 ppid: Some(event.meta.ppid),
                 pgrp: Some(event.meta.pgrp),
                 session: Some(event.meta.sid),
@@ -108,7 +110,7 @@ impl ExitstatDriver {
                 rss_bytes: Some(event.stats.active_rss_pages * *PAGE_SIZE),
                 processor: Some(event.meta.cpu),
             },
-            io: procfs::PidIo {
+            io: procfs_thrift::PidIo {
                 rbytes: Some(event.stats.io_read_bytes),
                 wbytes: Some(event.stats.io_write_bytes),
             },
