@@ -22,11 +22,13 @@ use nix::sys::statfs::{fstatfs, CGROUP2_SUPER_MAGIC};
 use openat::{AsPath, Dir, SimpleType};
 use thiserror::Error;
 
-mod convert;
 mod types;
-
-pub use convert::*;
 pub use types::*;
+
+#[cfg(fbcode_build)]
+mod facebook;
+#[cfg(fbcode_build)]
+pub use crate::facebook::*;
 
 #[cfg(test)]
 mod test;

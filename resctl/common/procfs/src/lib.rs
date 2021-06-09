@@ -25,11 +25,13 @@ use lazy_static::lazy_static;
 use thiserror::Error;
 use threadpool::ThreadPool;
 
-mod convert;
 mod types;
-
-pub use convert::*;
 pub use types::*;
+
+#[cfg(fbcode_build)]
+mod facebook;
+#[cfg(fbcode_build)]
+pub use crate::facebook::*;
 
 #[cfg(test)]
 mod test;

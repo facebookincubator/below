@@ -11,7 +11,6 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "1.0"
 below_derive = { version = "0.1.0", path = "../below_derive" }
-below_thrift = { version = "0.1.0", path = "../if" }
 cgroupfs = { version = "0.1.0", path = "../../common/cgroupfs" }
 hostname = "0.3"
 os_info = "=2.0.1"
