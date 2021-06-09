@@ -25,6 +25,9 @@ use lazy_static::lazy_static;
 use thiserror::Error;
 use threadpool::ThreadPool;
 
+mod convert;
+mod types;
+
 pub use procfs_thrift::types::*;
 
 #[cfg(test)]
