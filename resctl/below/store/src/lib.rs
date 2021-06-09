@@ -29,6 +29,8 @@ use zstd::stream::decode_all;
 use common::util::get_unix_timestamp;
 
 pub mod advance;
+#[cfg(test)]
+mod test;
 
 pub type Advance = advance::Advance<DataFrame, model::Model>;
 
