@@ -42,14 +42,12 @@ mod exitstat;
 mod test;
 
 use below_config::BelowConfig;
-use below_thrift::DataFrame;
-use procfs_thrift::types as procfs_thrift;
 
 use common::{cliutil, logutil, open_source_shim};
 use dump::DumpCommand;
 use model;
-use store;
 use store::advance::{new_advance_local, new_advance_remote};
+use store::{self, DataFrame};
 use view::ViewState;
 
 open_source_shim!();
@@ -239,7 +237,7 @@ fn create_log_dir(path: &PathBuf) -> Result<()> {
 fn start_exitstat(
     logger: slog::Logger,
     debug: bool,
-) -> (Arc<Mutex<procfs_thrift::PidMap>>, Option<Receiver<Error>>) {
+) -> (Arc<Mutex<procfs::PidMap>>, Option<Receiver<Error>>) {
     let mut exit_driver = exitstat::ExitstatDriver::new(logger, debug);
     let exit_buffer = exit_driver.get_buffer();
     let (bpf_err_send, bpf_err_recv) = channel();
@@ -595,7 +593,7 @@ fn record(
     let mut stats = statistics::Statistics::new();
 
     let (exit_buffer, bpf_errs) = if disable_exitstats {
-        (Arc::new(Mutex::new(procfs_thrift::PidMap::new())), None)
+        (Arc::new(Mutex::new(procfs::PidMap::new())), None)
     } else {
         start_exitstat(logger.clone(), debug)
     };

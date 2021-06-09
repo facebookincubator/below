@@ -21,11 +21,11 @@ use slog::{self, error};
 /// Collects data samples and maintains the latest data
 pub struct Collector {
     last: Option<(Sample, Instant)>,
-    exit_data: Arc<Mutex<procfs_thrift::PidMap>>,
+    exit_data: Arc<Mutex<procfs::PidMap>>,
 }
 
 impl Collector {
-    pub fn new(exit_data: Arc<Mutex<procfs_thrift::PidMap>>) -> Collector {
+    pub fn new(exit_data: Arc<Mutex<procfs::PidMap>>) -> Collector {
         Collector {
             last: None,
             exit_data,
@@ -91,9 +91,9 @@ pub fn get_os_release() -> Result<String> {
 }
 
 fn merge_procfs_and_exit_data(
-    mut procfs_data: procfs_thrift::PidMap,
-    exit_data: procfs_thrift::PidMap,
-) -> procfs_thrift::PidMap {
+    mut procfs_data: procfs::PidMap,
+    exit_data: procfs::PidMap,
+) -> procfs::PidMap {
     exit_data
         .iter()
         // If `procfs_data` already has the pid, then we use the procfs data because the time delta
@@ -110,7 +110,7 @@ fn merge_procfs_and_exit_data(
 
 /// This function will test if all field of DiskStat are zero, if so we will need to skip
 /// this sample inside collector.
-fn is_all_zero_disk_stats(disk_stats: &procfs_thrift::DiskStat) -> bool {
+fn is_all_zero_disk_stats(disk_stats: &procfs::DiskStat) -> bool {
     disk_stats.read_completed == Some(0)
         && disk_stats.write_completed == Some(0)
         && disk_stats.discard_completed == Some(0)
@@ -126,7 +126,7 @@ fn is_all_zero_disk_stats(disk_stats: &procfs_thrift::DiskStat) -> bool {
 }
 
 pub fn collect_sample(
-    exit_data: &Arc<Mutex<procfs_thrift::PidMap>>,
+    exit_data: &Arc<Mutex<procfs::PidMap>>,
     collect_io_stat: bool,
     logger: &slog::Logger,
     disable_disk_stat: bool,

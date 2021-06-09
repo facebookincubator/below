@@ -13,11 +13,9 @@ anyhow = "1.0"
 below_derive = { version = "0.1.0", path = "../below_derive" }
 below_thrift = { version = "0.1.0", path = "../if" }
 cgroupfs = { version = "0.1.0", path = "../../common/cgroupfs" }
-cgroupfs_thrift = { version = "0.1.0", path = "../../common/cgroupfs/if" }
 hostname = "0.3"
 os_info = "=2.0.1"
 procfs = { package = "fb_procfs", version = "0.1.0", path = "../../common/procfs" }
-procfs_thrift = { version = "0.1.0", path = "../../common/procfs/if" }
 regex = "1.4.2"
 serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }

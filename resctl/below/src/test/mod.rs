@@ -22,13 +22,8 @@ use slog::{self, Drain};
 use tempdir::TempDir;
 
 use crate::below_config::BelowConfig;
-use crate::model::{collect_sample, CgroupModel, CgroupPressureModel, Collector, Model};
-use crate::store::{self, advance::new_advance_local};
-
-use below_thrift::types::Sample;
-use below_thrift::DataFrame;
-
-use cgroupfs_thrift::types as cgroupfs_thrift;
+use crate::model::{collect_sample, CgroupModel, CgroupPressureModel, Collector, Model, Sample};
+use crate::store::{self, advance::new_advance_local, DataFrame};
 
 mod fake_view;
 mod test_config;
@@ -41,6 +36,6 @@ pub fn get_logger() -> slog::Logger {
     slog::Logger::root(slog_term::FullFormat::new(plain).build().fuse(), slog::o!())
 }
 
-fn get_dummy_exit_data() -> Arc<Mutex<procfs_thrift::PidMap>> {
-    Arc::new(Mutex::new(procfs_thrift::PidMap::default()))
+fn get_dummy_exit_data() -> Arc<Mutex<procfs::PidMap>> {
+    Arc::new(Mutex::new(procfs::PidMap::default()))
 }

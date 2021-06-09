@@ -21,17 +21,16 @@ use std::time::SystemTime;
 
 use anyhow::{Context, Result};
 use bitflags::bitflags;
-use fbthrift::compact_protocol;
+use serde::{Deserialize, Serialize};
 use slog::warn;
 use static_assertions::const_assert;
 use zstd::stream::decode_all;
 
-use below_thrift::DataFrame;
 use common::util::get_unix_timestamp;
 
 pub mod advance;
 
-pub type Advance = advance::Advance<below_thrift::DataFrame, model::Model>;
+pub type Advance = advance::Advance<DataFrame, model::Model>;
 
 // Shim between facebook types and open source types.
 //
@@ -68,6 +67,11 @@ use crate::open_source::*;
 /// only contains data or index entries whose timestamps are congruent
 /// modulo SHARD_TIME. This allows data and index files to be cleaned
 /// up by just unlinking the files.
+
+#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct DataFrame {
+    pub sample: model::Sample,
+}
 
 const SHARD_TIME: u64 = 24 * 60 * 60;
 
@@ -153,18 +157,6 @@ impl<'a> SerializedFrame<'a> {
             SerializedFrame::Copy(v) => &v,
             SerializedFrame::Slice(s) => s,
         }
-    }
-}
-
-fn serialize_frame(data: &DataFrame, compress: bool) -> Result<SerializedFrame> {
-    let serialized = compact_protocol::serialize(data);
-    if compress {
-        Ok(SerializedFrame::Copy(zstd::block::compress(
-            &serialized,
-            0,
-        )?))
-    } else {
-        Ok(SerializedFrame::Bytes(serialized))
     }
 }
 
@@ -292,8 +284,17 @@ impl StoreWriter {
         // most filesystems do not provide ordering guarantees for
         // appends to different files anyways. We just need to handle
         // various failure cases on the read side.
-        let serialized =
-            serialize_frame(data, self.compress).context("Failed to serialize data frame")?;
+        let serialized = {
+            let frame_bytes = serialize_frame(data).context("Failed to serialize data frame")?;
+            if self.compress {
+                SerializedFrame::Copy(
+                    zstd::block::compress(&frame_bytes, 0)
+                        .context("Failed to compress data serialized data frame")?,
+                )
+            } else {
+                SerializedFrame::Bytes(frame_bytes)
+            }
+        };
         // Appends to data file are large and cannot be atomic. We may have
         // partial writes that increases the file size without updating the
         // stored state. Thus always read actual data file length.
@@ -590,11 +591,10 @@ pub fn read_next_sample<P: AsRef<Path>>(
                 SerializedFrame::Slice(data_slice)
             };
 
+            let data_frame = deserialize_frame(data_decompressed.data())
+                .context("Failed to deserialized data frame")?;
             let ts = std::time::UNIX_EPOCH + std::time::Duration::from_secs(index_entry.timestamp);
-            return Some(
-                compact_protocol::deserialize(data_decompressed.data()).map(|df| (ts, df)),
-            )
-            .transpose();
+            return Ok(Some((ts, data_frame)));
         }
     }
     Ok(None)

@@ -196,8 +196,8 @@ pub struct CgroupCpuModel {
 
 impl CgroupCpuModel {
     pub fn new(
-        begin: &cgroupfs_thrift::CpuStat,
-        end: &cgroupfs_thrift::CpuStat,
+        begin: &cgroupfs::CpuStat,
+        end: &cgroupfs::CpuStat,
         delta: Duration,
     ) -> CgroupCpuModel {
         CgroupCpuModel {
@@ -231,11 +231,7 @@ pub struct CgroupIoModel {
 }
 
 impl CgroupIoModel {
-    pub fn new(
-        begin: &cgroupfs_thrift::IoStat,
-        end: &cgroupfs_thrift::IoStat,
-        delta: Duration,
-    ) -> CgroupIoModel {
+    pub fn new(begin: &cgroupfs::IoStat, end: &cgroupfs::IoStat, delta: Duration) -> CgroupIoModel {
         let rbytes_per_sec = count_per_sec!(begin.rbytes, end.rbytes, delta);
         let wbytes_per_sec = count_per_sec!(begin.wbytes, end.wbytes, delta);
         let rwbytes_per_sec = opt_add(rbytes_per_sec.clone(), wbytes_per_sec.clone());
@@ -493,7 +489,7 @@ pub struct CgroupPressureModel {
 }
 
 impl CgroupPressureModel {
-    fn new(pressure: &cgroupfs_thrift::Pressure) -> CgroupPressureModel {
+    fn new(pressure: &cgroupfs::Pressure) -> CgroupPressureModel {
         // Use avg10 instead of calculating pressure with the total metric. If
         // elapsed time between reading pressure total and recording time is too
         // long, pressure could exceed 100%.

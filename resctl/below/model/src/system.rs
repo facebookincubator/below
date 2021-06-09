@@ -111,16 +111,16 @@ impl SystemModel {
     below_derive::Queriable
 )]
 pub struct ProcStatModel {
-    pub total_interrupt_ct: Option<i64>,
-    pub context_switches: Option<i64>,
-    pub boot_time_epoch_secs: Option<i64>,
-    pub total_processes: Option<i64>,
-    pub running_processes: Option<i32>,
-    pub blocked_processes: Option<i32>,
+    pub total_interrupt_ct: Option<u64>,
+    pub context_switches: Option<u64>,
+    pub boot_time_epoch_secs: Option<u64>,
+    pub total_processes: Option<u64>,
+    pub running_processes: Option<u32>,
+    pub blocked_processes: Option<u32>,
 }
 
 impl ProcStatModel {
-    pub fn new(stat: &procfs_thrift::Stat) -> Self {
+    pub fn new(stat: &procfs::Stat) -> Self {
         ProcStatModel {
             total_interrupt_ct: stat.total_interrupt_count,
             context_switches: stat.context_switches,
@@ -157,15 +157,11 @@ pub struct SingleCpuModel {
 }
 
 impl SingleCpuModel {
-    pub fn new(
-        idx: i32,
-        begin: &procfs_thrift::CpuStat,
-        end: &procfs_thrift::CpuStat,
-    ) -> SingleCpuModel {
+    pub fn new(idx: i32, begin: &procfs::CpuStat, end: &procfs::CpuStat) -> SingleCpuModel {
         match (begin, end) {
             // guest and guest_nice are ignored
             (
-                procfs_thrift::CpuStat {
+                procfs::CpuStat {
                     user_usec: Some(prev_user),
                     nice_usec: Some(prev_nice),
                     system_usec: Some(prev_system),
@@ -177,7 +173,7 @@ impl SingleCpuModel {
                     guest_usec: Some(prev_guest),
                     guest_nice_usec: Some(prev_guest_nice),
                 },
-                procfs_thrift::CpuStat {
+                procfs::CpuStat {
                     user_usec: Some(curr_user),
                     nice_usec: Some(curr_nice),
                     system_usec: Some(curr_system),
@@ -279,7 +275,7 @@ pub struct MemoryModel {
 }
 
 impl MemoryModel {
-    fn new(meminfo: &procfs_thrift::MemInfo) -> MemoryModel {
+    fn new(meminfo: &procfs::MemInfo) -> MemoryModel {
         MemoryModel {
             total: meminfo.total.map(|v| v as u64),
             free: meminfo.free.map(|v| v as u64),
@@ -348,11 +344,7 @@ pub struct VmModel {
 }
 
 impl VmModel {
-    fn new(
-        begin: &procfs_thrift::VmStat,
-        end: &procfs_thrift::VmStat,
-        duration: Duration,
-    ) -> VmModel {
+    fn new(begin: &procfs::VmStat, end: &procfs::VmStat, duration: Duration) -> VmModel {
         VmModel {
             pgpgin_per_sec: count_per_sec!(begin.pgpgin, end.pgpgin, duration),
             pgpgout_per_sec: count_per_sec!(begin.pgpgout, end.pgpgout, duration),
@@ -406,8 +398,8 @@ impl Recursive for SingleDiskModel {
 
 impl SingleDiskModel {
     fn new(
-        begin: &procfs_thrift::DiskStat,
-        end: &procfs_thrift::DiskStat,
+        begin: &procfs::DiskStat,
+        end: &procfs::DiskStat,
         duration: Duration,
     ) -> SingleDiskModel {
         let read_bytes_per_sec =

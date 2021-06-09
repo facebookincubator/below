@@ -19,10 +19,6 @@ use std::time::{Duration, Instant, SystemTime};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 
-use below_thrift::types::{CgroupSample, Sample, SystemSample};
-use cgroupfs_thrift::types as cgroupfs_thrift;
-use procfs_thrift::types as procfs_thrift;
-
 #[macro_use]
 pub mod collector;
 pub mod cgroup;
@@ -36,18 +32,25 @@ pub use cgroup::*;
 pub use collector::*;
 pub use network::*;
 pub use process::*;
+pub use sample::*;
 pub use system::*;
+
+#[cfg(fbcode_build)]
+mod facebook;
+#[cfg(fbcode_build)]
+pub use crate::facebook::*;
 
 /// A wrapper for different field types used in Models. By this way we can query
 /// different fields in a single function without using Box.
 #[derive(Clone, Debug)]
 pub enum Field {
+    U32(u32),
     U64(u64),
     I32(i32),
     I64(i64),
     F64(f64),
     Str(String),
-    PidState(procfs_thrift::PidState),
+    PidState(procfs::PidState),
 }
 
 impl From<Field> for i64 {
@@ -63,6 +66,7 @@ impl From<Field> for i64 {
 impl From<Field> for f64 {
     fn from(field: Field) -> f64 {
         match field {
+            Field::U32(v) => v as f64,
             Field::U64(v) => v as f64,
             Field::I32(v) => v as f64,
             Field::I64(v) => v as f64,
@@ -78,6 +82,12 @@ impl From<Field> for String {
             Field::Str(v) => v,
             _ => panic!("Operation for unsupported types"),
         }
+    }
+}
+
+impl From<u32> for Field {
+    fn from(v: u32) -> Self {
+        Field::U32(v)
     }
 }
 
@@ -111,8 +121,8 @@ impl From<String> for Field {
     }
 }
 
-impl From<procfs_thrift::PidState> for Field {
-    fn from(v: procfs_thrift::PidState) -> Self {
+impl From<procfs::PidState> for Field {
+    fn from(v: procfs::PidState) -> Self {
         Field::PidState(v)
     }
 }
@@ -169,6 +179,7 @@ impl PartialOrd for Field {
 impl fmt::Display for Field {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Field::U32(v) => v.fmt(f),
             Field::U64(v) => v.fmt(f),
             Field::I32(v) => v.fmt(f),
             Field::I64(v) => v.fmt(f),
@@ -302,7 +313,8 @@ impl Model {
 /// Get a sample `Model`. There are no guarantees internal consistency of the
 /// model, neither are values in the model supposed to be realistic.
 pub fn get_sample_model() -> Model {
-    serde_json::from_str(sample_model::SAMPLE_MODEL_JSON).unwrap()
+    serde_json::from_str(sample_model::SAMPLE_MODEL_JSON)
+        .expect("Failed to deserialize sample model JSON")
 }
 
 #[cfg(test)]

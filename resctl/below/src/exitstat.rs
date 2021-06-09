@@ -10,9 +10,7 @@ use slog::warn;
 
 use crate::ExitstatSkelBuilder;
 
-use procfs_thrift::types as procfs_thrift;
-
-static PAGE_SIZE: Lazy<i64> = Lazy::new(|| page_size());
+static PAGE_SIZE: Lazy<u64> = Lazy::new(page_size);
 
 #[repr(C)]
 #[derive(Default)]
@@ -29,15 +27,15 @@ pub struct Metadata {
 #[repr(C)]
 #[derive(Default)]
 pub struct ExitStats {
-    pub min_flt: i64,
-    pub maj_flt: i64,
-    pub utime_us: i64,
-    pub stime_us: i64,
-    pub etime_us: i64,
-    pub nr_threads: i64,
-    pub io_read_bytes: i64,
-    pub io_write_bytes: i64,
-    active_rss_pages: i64,
+    pub min_flt: u64,
+    pub maj_flt: u64,
+    pub utime_us: u64,
+    pub stime_us: u64,
+    pub etime_us: u64,
+    pub nr_threads: u64,
+    pub io_read_bytes: u64,
+    pub io_write_bytes: u64,
+    active_rss_pages: u64,
 }
 
 #[repr(C)]
@@ -49,17 +47,17 @@ pub struct Event {
 
 unsafe impl Plain for Event {}
 
-fn page_size() -> i64 {
+fn page_size() -> u64 {
     match unsafe { libc::sysconf(libc::_SC_PAGESIZE) } {
         -1 => panic!("Failed to query page size"),
-        x => x as i64,
+        x => x as u64,
     }
 }
 
 pub struct ExitstatDriver {
     logger: slog::Logger,
     debug: bool,
-    buffer: Arc<Mutex<procfs_thrift::PidMap>>,
+    buffer: Arc<Mutex<procfs::PidMap>>,
 }
 
 impl ExitstatDriver {
@@ -67,15 +65,15 @@ impl ExitstatDriver {
         Self {
             logger,
             debug,
-            buffer: Arc::new(Mutex::new(procfs_thrift::PidMap::default())),
+            buffer: Arc::new(Mutex::new(procfs::PidMap::default())),
         }
     }
 
-    pub fn get_buffer(&self) -> Arc<Mutex<procfs_thrift::PidMap>> {
+    pub fn get_buffer(&self) -> Arc<Mutex<procfs::PidMap>> {
         self.buffer.clone()
     }
 
-    fn handle_event(handle: &Arc<Mutex<procfs_thrift::PidMap>>, data: &[u8]) {
+    fn handle_event(handle: &Arc<Mutex<procfs::PidMap>>, data: &[u8]) {
         let mut event = Event::default();
         plain::copy_from_bytes(&mut event, data).expect("Data buffer was too short");
 
@@ -90,14 +88,14 @@ impl ExitstatDriver {
         }
         comm_no_interior_nul.push(0);
 
-        let pidinfo = procfs_thrift::PidInfo {
-            stat: procfs_thrift::PidStat {
+        let pidinfo = procfs::PidInfo {
+            stat: procfs::PidStat {
                 pid: Some(event.meta.tid), // event.meta.pid is actually tgid
                 comm: CStr::from_bytes_with_nul(&comm_no_interior_nul).map_or_else(
                     |_| None,
                     |v| v.to_str().map_or_else(|_| None, |v| Some(v.to_string())),
                 ),
-                state: Some(procfs_thrift::PidState::DEAD),
+                state: Some(procfs::PidState::Dead),
                 ppid: Some(event.meta.ppid),
                 pgrp: Some(event.meta.pgrp),
                 session: Some(event.meta.sid),
@@ -110,7 +108,7 @@ impl ExitstatDriver {
                 rss_bytes: Some(event.stats.active_rss_pages * *PAGE_SIZE),
                 processor: Some(event.meta.cpu),
             },
-            io: procfs_thrift::PidIo {
+            io: procfs::PidIo {
                 rbytes: Some(event.stats.io_read_bytes),
                 wbytes: Some(event.stats.io_write_bytes),
             },

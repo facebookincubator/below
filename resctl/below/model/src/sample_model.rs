@@ -514,7 +514,7 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                 "pid": 1,
                 "ppid": 0,
                 "comm": "systemd",
-                "state": 0,
+                "state": "Running",
                 "uptime_secs": 4000000,
                 "cgroup": "/init.scope",
                 "io": {
