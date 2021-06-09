@@ -22,6 +22,9 @@ use nix::sys::statfs::{fstatfs, CGROUP2_SUPER_MAGIC};
 use openat::{AsPath, Dir, SimpleType};
 use thiserror::Error;
 
+mod convert;
+mod types;
+
 pub use cgroupfs_thrift::types::{
     CpuPressure, CpuStat, IoPressure, IoStat, MemoryEvents, MemoryPressure, MemoryStat, Pressure,
     PressureMetrics,
