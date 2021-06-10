@@ -18,17 +18,8 @@ RUN apt-get install -y \
   zlib1g-dev
 
 WORKDIR /
-ADD . /resctl
 
-# Build and install fbthrift
-RUN mkdir /fbthrift
-
-RUN /resctl/build/fbcode_builder/getdeps.py build fbthrift --install-prefix /fbthrift
-
-# Must set THRIFT env var for build to find fbthrift installation
-ENV THRIFT /fbthrift/fbthrift/bin/thrift1
-
-# Install nightly rust
+# Install rustup
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /rustup.sh
 RUN chmod +x /rustup.sh
 RUN bash /rustup.sh -y
@@ -36,6 +27,7 @@ RUN bash /rustup.sh -y
 # Install libbpf-rs tooling
 RUN /root/.cargo/bin/cargo install libbpf-cargo
 
+ADD . /resctl
 # Build below
 WORKDIR resctl
 RUN /root/.cargo/bin/cargo libbpf make -- --release --package below
@@ -53,7 +45,6 @@ RUN if [[ -n "$RUN_TESTS" ]]; then     \
 # Now create stage 2 image. We drop all the build dependencies and only install
 # runtime dependencies. This will create a smaller image suitable for
 # distribution.
-
 FROM ubuntu:groovy
 
 # Default locale is "POSIX" which doesn't seem to play well with UTF-8. Cursive
