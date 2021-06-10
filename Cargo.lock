@@ -70,12 +70,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
-name = "base64"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b41b7ea54a0c9d92199de89e20e58d49f02f8e699814ef3fdf266f6f748d15c7"
-
-[[package]]
 name = "below"
 version = "0.1.0"
 dependencies = [
@@ -86,7 +80,6 @@ dependencies = [
  "below-model",
  "below-store",
  "below-view",
- "below_thrift",
  "cgroupfs",
  "cursive",
  "fb_procfs",
@@ -100,7 +93,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "signal-hook 0.3.8",
+ "signal-hook 0.3.9",
  "slog",
  "slog-async",
  "slog-term",
@@ -150,7 +143,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "below_derive",
- "below_thrift",
  "cgroupfs",
  "fb_procfs",
  "hostname",
@@ -176,16 +168,18 @@ dependencies = [
  "anyhow",
  "below-common",
  "below-model",
- "below_thrift",
  "bitflags",
  "bytes 1.0.1",
- "fbthrift",
  "futures 0.3.15",
  "humantime",
+ "itertools",
+ "lazy_static",
  "maplit",
  "memmap",
  "nix 0.19.1",
  "paste",
+ "serde",
+ "serde_cbor",
  "slog",
  "slog-term",
  "static_assertions",
@@ -224,39 +218,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "below_thrift"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "cgroupfs_thrift",
- "codegen_includer_proc_macro",
- "const-cstr",
- "fbthrift",
- "futures 0.3.15",
- "once_cell",
- "procfs_thrift",
- "ref-cast",
- "serde",
- "serde_derive",
- "thiserror",
- "thrift_compiler",
-]
-
-[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
-
-[[package]]
-name = "bufsize"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47989b37d1323184a2e6cab5a76bcdafe984a57259f77b3f1edeb169a8ec8cd6"
-dependencies = [
- "bytes 1.0.1",
-]
 
 [[package]]
 name = "bytes"
@@ -298,29 +263,11 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 name = "cgroupfs"
 version = "0.1.0"
 dependencies = [
- "cgroupfs_thrift",
  "nix 0.19.1",
  "openat",
+ "serde",
  "tempfile",
  "thiserror",
-]
-
-[[package]]
-name = "cgroupfs_thrift"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "codegen_includer_proc_macro",
- "const-cstr",
- "fbthrift",
- "futures 0.3.15",
- "once_cell",
- "ref-cast",
- "serde",
- "serde_derive",
- "thiserror",
- "thrift_compiler",
 ]
 
 [[package]]
@@ -353,20 +300,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "codegen_includer_proc_macro"
-version = "0.1.0"
-source = "git+https://github.com/facebookexperimental/rust-shed.git?branch=master#5e8c421663b18432a76c067593af240329e72334"
-dependencies = [
- "quote",
-]
-
-[[package]]
-name = "const-cstr"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed3d0b5ff30645a68f35ece8cea4556ca14ef8a1651455f789a099a0513532a6"
-
-[[package]]
 name = "crossbeam-channel"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -378,11 +311,10 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-utils"
-version = "0.8.4"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4feb231f0d4d6af81aed15928e58ecf5816aa62a2393e2c82f46973e92a9a278"
+checksum = "d82cfc11ce7f2c3faef78d8a684447b40d503d9681acebed6cb728d45940c4db"
 dependencies = [
- "autocfg",
  "cfg-if 1.0.0",
  "lazy_static",
 ]
@@ -427,7 +359,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "log",
- "signal-hook 0.3.8",
+ "signal-hook 0.3.9",
  "termion",
  "unicode-segmentation",
  "unicode-width",
@@ -538,6 +470,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "either"
+version = "1.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
+
+[[package]]
 name = "enum-map"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -565,30 +503,10 @@ dependencies = [
  "lazy_static",
  "libc",
  "openat",
- "procfs_thrift",
+ "serde",
  "tempfile",
  "thiserror",
  "threadpool",
-]
-
-[[package]]
-name = "fbthrift"
-version = "0.0.1+unstable"
-source = "git+https://github.com/facebook/fbthrift.git?branch=master#56e5d55e7b8daf38ac033e90816d4d9130660676"
-dependencies = [
- "anyhow",
- "async-trait",
- "base64",
- "bufsize",
- "bytes 1.0.1",
- "const-cstr",
- "futures 0.3.15",
- "ghost",
- "num-derive",
- "num-traits",
- "ordered-float",
- "serde_json",
- "thiserror",
 ]
 
 [[package]]
@@ -743,21 +661,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "ghost"
-version = "0.1.2"
+name = "half"
+version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a5bcf1bbeab73aa4cf2fde60a846858dc036163c7c33bec309f8d17de785479"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
+checksum = "62aca2aba2d62b4a7f5b33f3712cb1b0692779a56fb510499d5c0aa594daeaf3"
 
 [[package]]
 name = "heck"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87cbf45460356b7deeb5e3415b5563308c0a9b057c85e12b06ad551f98d0a6ac"
+checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
 dependencies = [
  "unicode-segmentation",
 ]
@@ -816,6 +729,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f56a2d0bc861f9165be4eb3442afd3c236d8a98afd426f65d92324ae1091a484"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -848,9 +770,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libbpf-rs"
-version = "0.9.3"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bef620909c77a9eec202e8add0e93a31d5e3bed33af0b752539071d2bc3ff074"
+checksum = "f93d5967c924de0e9c03a76515cd816191968d8fe7cd56bc29bd3b9423081cf6"
 dependencies = [
  "bitflags",
  "libbpf-sys",
@@ -873,9 +795,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.95"
+version = "0.2.96"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "789da6d93f1b866ffe175afc5322a4d76c038605a1c3319bb57b06967ca98a36"
+checksum = "5600b4e6efc5421841a2138a6b082e07fe12f9aaa12783d50e5d13325b26b4fc"
 
 [[package]]
 name = "lock_api"
@@ -1067,17 +989,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "num-derive"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "876a53fff98e03a936a674b29568b0e605f06b29372c2489ff4de23f1949743d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "num-integer"
 version = "0.1.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1169,16 +1080,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95aa7c05907b3ebde2610d602f4ddd992145cc6a84493647c30396f30ba83abe"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "ordered-float"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3305af35278dd29f46fcdd139e0b1fbfae2153f0e5928b39b035542dd31e37b7"
-dependencies = [
- "num-traits",
- "serde",
 ]
 
 [[package]]
@@ -1323,24 +1224,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "procfs_thrift"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "codegen_includer_proc_macro",
- "const-cstr",
- "fbthrift",
- "futures 0.3.15",
- "once_cell",
- "ref-cast",
- "serde",
- "serde_derive",
- "thiserror",
- "thrift_compiler",
-]
-
-[[package]]
 name = "quick-error"
 version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1389,7 +1272,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ef9e7e66b4468674bfcb0c81af8b7fa0bb154fa9f28eb840da5c447baeb8d7e"
 dependencies = [
  "libc",
- "rand_chacha 0.3.0",
+ "rand_chacha 0.3.1",
  "rand_core 0.6.2",
  "rand_hc 0.3.0",
 ]
@@ -1406,9 +1289,9 @@ dependencies = [
 
 [[package]]
 name = "rand_chacha"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e12735cf05c9e10bf21534da50a147b924d555dc7a547c42e6bb2d5b6017ae0d"
+checksum = "e6c10a63a0fa32252be49d21e7709d4d4baf8d231c2dbce1eaa8141b9b127d88"
 dependencies = [
  "ppv-lite86",
  "rand_core 0.6.2",
@@ -1512,26 +1395,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ref-cast"
-version = "1.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "300f2a835d808734ee295d45007adacb9ebb29dd3ae2424acfa17930cae541da"
-dependencies = [
- "ref-cast-impl",
-]
-
-[[package]]
-name = "ref-cast-impl"
-version = "1.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c38e3aecd2b21cb3959637b883bb3714bc7e43f0268b9a29d3743ee3e55cdd2"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "regex"
 version = "1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1594,6 +1457,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_cbor"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e18acfa2f90e8b735b2836ab8d538de304cbb6729a7360729ea5a895d15a622"
+dependencies = [
+ "half",
+ "serde",
+]
+
+[[package]]
 name = "serde_derive"
 version = "1.0.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1628,9 +1501,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef33d6d0cd06e0840fba9985aab098c147e67e05cee14d412d3345ed14ff30ac"
+checksum = "470c5a6397076fae0094aaf06a08e6ba6f37acb77d3b1b91ea92b4d6c8650c39"
 dependencies = [
  "libc",
  "signal-hook-registry",
@@ -1638,9 +1511,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook-registry"
-version = "1.3.0"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16f1d0fef1604ba8f7a073c7e701f213e056707210e9020af4528e0101ce11a6"
+checksum = "e51e73328dc4ac0c7ccbda3a494dfa03df1de2f46018127f60c693f2648455b0"
 dependencies = [
  "libc",
 ]
@@ -1750,9 +1623,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.72"
+version = "1.0.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1e8cdbefb79a9a5a65e0db8b47b723ee907b7c7f8496c76a1770b5c310bab82"
+checksum = "f71489ff30030d2ae598524f61326b902466f72a0fb1a8564c001cc63425bcc7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1860,15 +1733,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "thrift_compiler"
-version = "0.1.0"
-source = "git+https://github.com/facebookexperimental/rust-shed.git?branch=master#5e8c421663b18432a76c067593af240329e72334"
-dependencies = [
- "anyhow",
- "clap",
-]
-
-[[package]]
 name = "time"
 version = "0.1.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1916,7 +1780,8 @@ dependencies = [
 [[package]]
 name = "toml"
 version = "0.5.7"
-source = "git+https://github.com/jsgf/toml-rs?branch=dotted-table-0.5.7#6aa10ea2acf85ec6ef8cbf4b70aa213a2a13954f"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75cf45bb0bef80604d001caaec0d09da99611b3c0fd39d3080468875cdb65645"
 dependencies = [
  "serde",
 ]
@@ -2082,18 +1947,18 @@ checksum = "a67300977d3dc3f8034dae89778f502b6ba20b269527b3223ba59c0cf393bb8a"
 
 [[package]]
 name = "zstd"
-version = "0.7.0+zstd.1.4.9"
+version = "0.8.3+zstd.1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9428752481d8372e15b1bf779ea518a179ad6c771cca2d2c60e4fbff3cc2cd52"
+checksum = "5ea7094c7b4a58fbd738eb0d4a2fc7684a0e6949a31597e074ffe20a07cbc2bf"
 dependencies = [
  "zstd-safe",
 ]
 
 [[package]]
 name = "zstd-safe"
-version = "3.1.0+zstd.1.4.9"
+version = "4.1.0+zstd.1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5aa1926623ad7fe406e090555387daf73db555b948134b4d73eac5eb08fb666d"
+checksum = "d30375f78e185ca4c91930f42ea2c0162f9aa29737032501f93b79266d985ae7"
 dependencies = [
  "libc",
  "zstd-sys",
@@ -2101,105 +1966,10 @@ dependencies = [
 
 [[package]]
 name = "zstd-sys"
-version = "1.5.0+zstd.1.4.9"
+version = "1.6.0+zstd.1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e6c094340240369025fc6b731b054ee2a834328fa584310ac96aa4baebdc465"
+checksum = "2141bed8922b427761470e6bbfeff255da94fa20b0bbeab0d9297fcaf71e3aa7"
 dependencies = [
  "cc",
  "libc",
 ]
-
-[[patch.unused]]
-name = "addr2line"
-version = "0.14.0"
-source = "git+https://github.com/gimli-rs/addr2line.git?rev=0b6b6018b5b252a18e628fba03885f7d21844b3c#0b6b6018b5b252a18e628fba03885f7d21844b3c"
-
-[[patch.unused]]
-name = "bytecount"
-version = "0.6.0"
-source = "git+https://github.com/llogiq/bytecount?rev=469eaf8395c99397cd64d059737a9054aa014088#469eaf8395c99397cd64d059737a9054aa014088"
-
-[[patch.unused]]
-name = "chashmap"
-version = "2.2.2"
-source = "git+https://gitlab.redox-os.org/ahornby/chashmap?rev=901ace2ca3cdbc2095adb1af111d211e254e2aae#901ace2ca3cdbc2095adb1af111d211e254e2aae"
-
-[[patch.unused]]
-name = "const-random"
-version = "0.1.8"
-source = "git+https://github.com/fbsource/const-random?rev=374c5b46427fe2ffbf6acbd9c1687e0f1a809f95#374c5b46427fe2ffbf6acbd9c1687e0f1a809f95"
-
-[[patch.unused]]
-name = "curl"
-version = "0.4.33"
-source = "git+https://github.com/kulshrax/curl-rust?rev=2a15bbd8dbbd54734313fa703a64db7ce6ddaff0#2a15bbd8dbbd54734313fa703a64db7ce6ddaff0"
-
-[[patch.unused]]
-name = "curl-sys"
-version = "0.4.36+curl-7.71.1"
-source = "git+https://github.com/kulshrax/curl-rust?rev=2a15bbd8dbbd54734313fa703a64db7ce6ddaff0#2a15bbd8dbbd54734313fa703a64db7ce6ddaff0"
-
-[[patch.unused]]
-name = "enumset"
-version = "1.0.1"
-source = "git+https://github.com/danobi/enumset?rev=4c01c583c27a725948fededbfb3461c572a669a4#4c01c583c27a725948fededbfb3461c572a669a4"
-
-[[patch.unused]]
-name = "lru-disk-cache"
-version = "0.4.0"
-source = "git+https://github.com/mozilla/sccache?rev=033ebaae69beeb0ac04e8c35d6ff1103487bd9a3#033ebaae69beeb0ac04e8c35d6ff1103487bd9a3"
-
-[[patch.unused]]
-name = "mysql_common"
-version = "0.22.2"
-source = "git+https://github.com/iammxt/rust_mysql_common?rev=0e4c86952f1e799960e736c0b2bb9d2a6d935bf1#0e4c86952f1e799960e736c0b2bb9d2a6d935bf1"
-
-[[patch.unused]]
-name = "openssl"
-version = "0.10.32"
-source = "git+https://github.com/sfackler/rust-openssl?rev=68fc8ba890d77986b06ca5ce29d1089285fbbcf9#68fc8ba890d77986b06ca5ce29d1089285fbbcf9"
-
-[[patch.unused]]
-name = "openssl-sys"
-version = "0.9.60"
-source = "git+https://github.com/sfackler/rust-openssl?rev=68fc8ba890d77986b06ca5ce29d1089285fbbcf9#68fc8ba890d77986b06ca5ce29d1089285fbbcf9"
-
-[[patch.unused]]
-name = "petgraph"
-version = "0.5.1"
-source = "git+https://github.com/jkeljo/petgraph?rev=e3e9dd8632d23973fdc0b42c1117d5e5fc5fa384#e3e9dd8632d23973fdc0b42c1117d5e5fc5fa384"
-
-[[patch.unused]]
-name = "prost"
-version = "0.6.1"
-source = "git+https://github.com/gabrielrussoc/prost?branch=protoc-runtime#37bbe7578d2c846ea73d0222185c2386ce2fa81e"
-
-[[patch.unused]]
-name = "prost-build"
-version = "0.6.1"
-source = "git+https://github.com/gabrielrussoc/prost?branch=protoc-runtime#37bbe7578d2c846ea73d0222185c2386ce2fa81e"
-
-[[patch.unused]]
-name = "prost-derive"
-version = "0.6.1"
-source = "git+https://github.com/gabrielrussoc/prost?branch=protoc-runtime#37bbe7578d2c846ea73d0222185c2386ce2fa81e"
-
-[[patch.unused]]
-name = "prost-types"
-version = "0.6.1"
-source = "git+https://github.com/gabrielrussoc/prost?branch=protoc-runtime#37bbe7578d2c846ea73d0222185c2386ce2fa81e"
-
-[[patch.unused]]
-name = "r2d2_sqlite"
-version = "0.16.0"
-source = "git+https://github.com/jsgf/r2d2-sqlite.git?rev=6d77a828ca0a3c507a3f58561532a1b6c66c7918#6d77a828ca0a3c507a3f58561532a1b6c66c7918"
-
-[[patch.unused]]
-name = "rustfilt"
-version = "0.2.1"
-source = "git+https://github.com/jsgf/rustfilt.git?rev=8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5#8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5"
-
-[[patch.unused]]
-name = "tokio-core"
-version = "0.1.17"
-source = "git+https://github.com/bolinfest/tokio-core?rev=5f37aa3c627d56ee49154bc851d6930f5ab4398f#5f37aa3c627d56ee49154bc851d6930f5ab4398f"
