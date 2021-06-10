@@ -18,16 +18,28 @@ use anyhow::{bail, Result};
 
 use crate::{DataFrame, Format};
 
-/// Serialize a data frame. As there is no support for Thrift in open source,
-/// format is ignored and we serialize as CBOR.
-pub fn serialize_frame(data: &DataFrame, _format: Format) -> Result<bytes::Bytes> {
-    let bytes = serde_cbor::to_vec(data)?;
-    Ok(bytes::Bytes::from(bytes))
+/// Deserialize a single data frame with `format` format.
+pub fn serialize_frame(data: &DataFrame, format: Format) -> Result<bytes::Bytes> {
+    match format {
+        Format::Thrift => {
+            bail!("Data format Thrift is unsupported");
+        }
+        Format::Cbor => {
+            let bytes = serde_cbor::to_vec(data)?;
+            Ok(bytes::Bytes::from(bytes))
+        }
+    }
 }
 
-/// Serialize a data frame. As there is no support for Thrift in open source,
-/// format is ignored and we deserialize as CBOR.
-pub fn deserialize_frame(bytes: &[u8], _format: Format) -> Result<DataFrame> {
-    let data_frame = serde_cbor::from_slice(bytes)?;
-    Ok(data_frame)
+/// Deserialize a single data frame with `format` format.
+pub fn deserialize_frame(bytes: &[u8], format: Format) -> Result<DataFrame> {
+    match format {
+        Format::Thrift => {
+            bail!("Data format Thrift is unsupported");
+        }
+        Format::Cbor => {
+            let data_frame = serde_cbor::from_slice(bytes)?;
+            Ok(data_frame)
+        }
+    }
 }

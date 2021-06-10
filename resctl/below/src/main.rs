@@ -600,11 +600,14 @@ fn record(
     }
 
     // TODO(T92471373): Remove --use-cbor flag and hardcode format as CBOR.
-    let format = if use_cbor {
+    // This is already the case for open source.
+    let format = if !cfg!(fbcode_build) || use_cbor {
         store::Format::Cbor
     } else {
         store::Format::Thrift
     };
+
+
     let mut store = store::StoreWriter::new(&below_config.store_dir, compress, format)?;
     let mut stats = statistics::Statistics::new();
 
