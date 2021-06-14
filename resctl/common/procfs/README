@@ -1,1 +1,2 @@
-A crate for reading procfs
+`procfs` is a rust library that parses
+[procfs](https://www.man7.org/linux/man-pages/man5/procfs.5.html) files.

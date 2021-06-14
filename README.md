@@ -1,14 +1,7 @@
-# resctl
+# below
 
-[![CI](https://github.com/facebookincubator/resctl/workflows/CI/badge.svg)](https://github.com/facebookincubator/resctl/actions?query=workflow%3ACI+branch%3Amaster+)
+[![CI](https://github.com/facebookincubator/below/workflows/CI/badge.svg)](https://github.com/facebookincubator/below/actions?query=workflow%3ACI+branch%3Amaster+)
 [![Matrix chat](https://img.shields.io/matrix/below:matrix.org)](https://matrix.to/#/!SrWxtbLuRUMrDbftgA:matrix.org?via=matrix.org)
-
-resctl is an umbrella repository for **res**ource **c**on**t**ro**l** projects
-at Facebook.
-
-## Projects
-
-### below
 
 `below` is an interactive tool to view and record historical system data. It
 has support for:
@@ -20,36 +13,31 @@ has support for:
 * `record` mode to record system data
 * `replay` mode to replay historical system data
 * `live` mode to view live system data
-* `dump` subcommand to report script-friendly information (eg json and csv)
+* `dump` subcommand to report script-friendly information (eg JSON and CSV)
 
 below does **not** have support for cgroup1.
 
 The name "below" stems from the fact that the below developers rejected many
 of [atop](https://linux.die.net/man/1/atop)'s design and style decisions.
 
-#### Demo
+## Demo
 
 <a href="https://asciinema.org/a/355506">
 <img src="https://asciinema.org/a/355506.svg" width="500">
 </a>
 
-#### Comparison with alternative tools
+## Comparison with alternative tools
 
 See [comparison.md](resctl/below/docs/comparison.md) for a feature comparison
 with alternative tools.
 
-### procfs
-
-`procfs` is a rust library that parses
-[procfs](https://www.man7.org/linux/man-pages/man5/procfs.5.html) files.
-
-### cgroupfs
-
-`cgroupfs` is a rust library that parses
-[cgroup2](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html)
-control files.
-
 ## Installing
+
+For convenience, we provide a Dockerfile and
+[pre-built images](https://hub.docker.com/r/below/below) on Docker Hub.
+
+Alternatively, see [building.md](resctl/below/docs/building.md) for non-docker
+build instructions.
 
 Live view of system:
 
@@ -72,9 +60,6 @@ $ podman run --mount='type=bind,src=/var/log/below,dst=/var/log/below' -it below
 ```
 
 See [docker.md](resctl/below/docs/docker.md) for more details.
-
-Alternatively, see [building.md](resctl/below/docs/building.md) for non-docker
-build instructions.
 
 ## Contributing
 

@@ -1,7 +1,7 @@
 # Comparison with alternative tools
 
 Missing anything? File an
-[issue](https://github.com/facebookincubator/resctl/issues).
+[issue](https://github.com/facebookincubator/below/issues).
 
 ## Atop
 
@@ -53,7 +53,7 @@ https://htop.dev/
 
 ## below
 
-https://github.com/facebookincubator/resctl
+https://github.com/facebookincubator/below
 
 * Terminal interface
   * Supports filtering, zooming, pausing, sorting, scrolling

@@ -10,10 +10,10 @@ $ podman run --privileged --cgroupns=host --pid=host -it below/below:latest
 # Local build
 
 ```shell
-$ git clone https://github.com/facebookincubator/resctl.git ~/dev/resctl
+$ git clone https://github.com/facebookincubator/below.git ~/dev/below
 <...>
 
-$ cd ~/dev/resctl
+$ cd ~/dev/below
 
 $ podman build -t below .
 <...>
