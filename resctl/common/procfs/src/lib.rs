@@ -322,6 +322,7 @@ impl ProcReader {
                     "Hugepagesize:" => {
                         meminfo.huge_page_size = parse_kb!(path, items.next(), line)?
                     }
+                    "Hugetlb:" => meminfo.hugetlb = parse_kb!(path, items.next(), line)?,
                     "CmaTotal:" => meminfo.cma_total = parse_kb!(path, items.next(), line)?,
                     "CmaFree:" => meminfo.cma_free = parse_kb!(path, items.next(), line)?,
                     "VmallocTotal:" => meminfo.vmalloc_total = parse_kb!(path, items.next(), line)?,

@@ -486,7 +486,7 @@ impl HasRenderConfig for model::MemoryModel {
             AnonHugePagesBytes => rc.title("Anon Huge Pages").format(ReadableSize),
             ShmemHugePagesBytes => rc.title("Shmem Huge Pages").format(ReadableSize),
             FileHugePagesBytes => rc.title("File Huge Pages").format(ReadableSize),
-            TotalHugePagesBytes => rc.title("Total Huge Pages").format(ReadableSize),
+            Hugetlb => rc.title("Hugetlb").format(ReadableSize),
             FreeHugePagesBytes => rc.title("Free Huge Pages").format(ReadableSize),
             HugePageSize => rc.title("Huge Page Size").format(ReadableSize),
             CmaTotal => rc.title("Cma Total").format(ReadableSize),

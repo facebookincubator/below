@@ -138,7 +138,7 @@ fn test_dump_sys_titles() {
         "Anon Huge Pages",
         "Shmem Huge Pages",
         "File Huge Pages",
-        "Total Huge Pages",
+        "Hugetlb",
         "Free Huge Pages",
         "Huge Page Size",
         "Cma Total",

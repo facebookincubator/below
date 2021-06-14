@@ -110,7 +110,7 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
             "anon_huge_pages_bytes": 9,
             "shmem_huge_pages_bytes": 0,
             "file_huge_pages_bytes": 0,
-            "total_huge_pages_bytes": 0,
+            "hugetlb": 0,
             "free_huge_pages_bytes": 0,
             "huge_page_size": 0,
             "cma_total": 0,

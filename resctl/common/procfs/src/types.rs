@@ -88,6 +88,7 @@ pub struct MemInfo {
     pub direct_map_4k: Option<u64>,
     pub direct_map_2m: Option<u64>,
     pub direct_map_1g: Option<u64>,
+    pub hugetlb: Option<u64>,
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
