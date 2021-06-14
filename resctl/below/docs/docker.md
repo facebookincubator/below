@@ -1,10 +1,3 @@
-`below` depends on fbthrift which in turn depends on
-[folly](https://github.com/facebook/folly),
-[wangle](https://github.com/facebook/wangle),
-[glog](https://github.com/google/glog), and other tricky-to-build dependencies.
-To ease the pain, we provide a Dockerfile as well as prebuilt images on docker
-hub.
-
 Note the instructions use `podman` instead of `docker` because at time of
 writing, docker doesn't yet have support for cgroup2.
 
