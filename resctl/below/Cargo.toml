@@ -43,5 +43,8 @@ maplit = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
 tempdir = "0.3"
 
+[build-dependencies]
+libbpf-cargo = "0.7.0"
+
 [features]
 enable_backtrace = []
