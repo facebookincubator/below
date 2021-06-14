@@ -14,7 +14,7 @@
 
 pub mod remote_store;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 
 use crate::{DataFrame, Format};
 
