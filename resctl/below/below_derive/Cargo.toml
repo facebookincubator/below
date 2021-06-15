@@ -1,10 +1,9 @@
 [package]
 name = "below_derive"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
 edition = "2018"
 description = "Proc macros for below"
-homepage = "https://github.com/facebookincubator/below"
 repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
