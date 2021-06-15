@@ -73,7 +73,7 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
 name = "below"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -110,7 +110,7 @@ dependencies = [
 
 [[package]]
 name = "below-common"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -124,7 +124,7 @@ dependencies = [
 
 [[package]]
 name = "below-dump"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "below-common",
@@ -142,7 +142,7 @@ dependencies = [
 
 [[package]]
 name = "below-model"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "below_derive",
@@ -158,7 +158,7 @@ dependencies = [
 
 [[package]]
 name = "below-render"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "below-common",
  "below-model",
@@ -166,7 +166,7 @@ dependencies = [
 
 [[package]]
 name = "below-store"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "below-common",
@@ -192,7 +192,7 @@ dependencies = [
 
 [[package]]
 name = "below-view"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "below-common",
@@ -213,7 +213,7 @@ dependencies = [
 
 [[package]]
 name = "below_derive"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -286,7 +286,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "cgroupfs"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "nix 0.19.1",
  "openat",
@@ -523,7 +523,7 @@ dependencies = [
 
 [[package]]
 name = "fb_procfs"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "lazy_static",
  "libc",
