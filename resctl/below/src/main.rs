@@ -294,7 +294,7 @@ pub fn run<F>(
     init: init::InitToken,
     debug: bool,
     below_config: BelowConfig,
-    service: Service,
+    _service: Service,
     redirect: RedirectLogOnFail,
     command: F,
 ) -> i32
@@ -342,7 +342,7 @@ where
     facebook::init(
         init,
         logger.clone(),
-        service,
+        _service,
         below_config.store_dir.clone(),
         err_sender,
     );
