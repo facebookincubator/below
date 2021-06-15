@@ -6,6 +6,7 @@ Several dependencies need to be installed before we can build.
 * libz (dynamically linked)
 * libelf (dynamically linked)
 * libncursesw (dynamically linked)
+* clang (for building BPF program at build time)
 
 # Building
 
