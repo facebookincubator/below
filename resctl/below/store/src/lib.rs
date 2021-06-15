@@ -26,6 +26,7 @@ use slog::warn;
 use static_assertions::const_assert;
 use zstd::stream::decode_all;
 
+use common::open_source_shim;
 use common::util::get_unix_timestamp;
 
 pub mod advance;
@@ -34,20 +35,7 @@ mod test;
 
 pub type Advance = advance::Advance<DataFrame, model::Model>;
 
-// Shim between facebook types and open source types.
-//
-// The type interfaces and module hierarchy should be identical on
-// both "branches". And since we glob import, all the submodules in
-// this crate will inherit our name bindings and can use generic paths,
-// eg `crate::logging::setup(..)`.
-#[cfg(fbcode_build)]
-mod facebook;
-#[cfg(fbcode_build)]
-use crate::facebook::*;
-#[cfg(not(fbcode_build))]
-mod open_source;
-#[cfg(not(fbcode_build))]
-use crate::open_source::*;
+open_source_shim!();
 
 /// This data store works as follows:
 ///
