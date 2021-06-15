@@ -107,11 +107,11 @@ enum Command {
         /// You can expect up to ~4.5x smaller data files
         #[structopt(long)]
         compress: bool,
-        /// WARNING: This flag is temporary and will likely be removed in the
-        ///          near future.
+        /// WARNING: This flag is ignored in open source. In open source, data
+        ///          is stored as CBOR. This flag is temporary and will be removed in
+        ///          the near future.
         ///
-        /// Store data as CBOR. If unset, the default serialization method is
-        /// used. This is also CBOR in the case of open source build.
+        /// Store data as CBOR. If unset, data is stored as Thrift.
         #[structopt(long, hidden = true)]
         use_cbor: bool,
     },
@@ -600,11 +600,13 @@ fn record(
     }
 
     // TODO(T92471373): Remove --use-cbor flag and hardcode format as CBOR.
-    let format = if use_cbor {
+    // This is already the case for open source.
+    let format = if !cfg!(fbcode_build) || use_cbor {
         store::Format::Cbor
     } else {
         store::Format::Thrift
     };
+
     let mut store = store::StoreWriter::new(&below_config.store_dir, compress, format)?;
     let mut stats = statistics::Statistics::new();
 

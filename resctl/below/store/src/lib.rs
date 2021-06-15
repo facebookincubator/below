@@ -625,7 +625,7 @@ pub fn read_next_sample<P: AsRef<Path>>(
                 Format::Thrift
             };
             let data_frame = deserialize_frame(data_decompressed.data(), format)
-                .context("Failed to deserialized data frame")?;
+                .context("Failed to deserialize data frame")?;
 
             let ts = std::time::UNIX_EPOCH + std::time::Duration::from_secs(index_entry.timestamp);
             return Ok(Some((ts, data_frame)));
