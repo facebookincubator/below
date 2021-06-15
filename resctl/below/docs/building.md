@@ -15,18 +15,6 @@ release mode.
 In the root of the repository:
 
 ```shell
-$ cargo install libbpf-cargo
-$ cargo libbpf make -- --release
-$ cargo test
-```
-
-`cargo libbpf make` is a convenience wrapper for the BPF components. Alternatively,
-you could do:
-
-```shell
-$ cargo install libbpf-cargo
-$ cargo libbpf build
-$ cargo libbpf gen
 $ cargo build --release
 $ cargo test
 ```

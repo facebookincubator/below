@@ -24,13 +24,10 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /rustup.sh
 RUN chmod +x /rustup.sh
 RUN bash /rustup.sh -y
 
-# Install libbpf-rs tooling
-RUN /root/.cargo/bin/cargo install libbpf-cargo
-
 ADD . /resctl
 # Build below
 WORKDIR resctl
-RUN /root/.cargo/bin/cargo libbpf make -- --release --package below
+RUN /root/.cargo/bin/cargo build --release --package below
 
 # Run tests if requested
 RUN if [[ -n "$RUN_TESTS" ]]; then     \
