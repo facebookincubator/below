@@ -15,7 +15,7 @@
 /// View Module defines how to render below inside terminal.
 ///
 /// ## High level architecture
-/// ```
+/// ```text
 ///  ------------------------------------------------------------
 /// |                      Status Bar                            |
 ///  ------------------------------------------------------------
@@ -31,7 +31,7 @@
 /// * Stats View: Display the detailed stats. Please check the stats view section for more details.
 ///
 /// ### Stats View
-/// ```
+/// ```text
 ///  ------------------------------------------------------------
 /// |                         Tabs                               |
 /// | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
