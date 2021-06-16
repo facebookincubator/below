@@ -110,7 +110,7 @@ impl CgroupReader {
             .dir
             .metadata(".")
             .map_err(|e| self.io_error(self.dir.recover_path().unwrap_or_else(|_| "".into()), e))?;
-        Ok(meta.stat().st_ino)
+        Ok(meta.stat().st_ino as u64)
     }
 
     /// Read a stat from a file that has a single line

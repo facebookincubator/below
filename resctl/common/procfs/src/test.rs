@@ -92,7 +92,7 @@ impl TestProcfs {
         &self,
         interface: &str,
         p: P,
-        content: usize,
+        content: u64,
     ) {
         let interface_dir = self.path().join(interface);
         if !interface_dir.exists() {
