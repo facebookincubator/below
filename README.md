@@ -33,8 +33,14 @@ with alternative tools.
 
 ## Installing
 
-For convenience, we provide a Dockerfile and
+```shell
+$ cargo install below
+$ below --help
+```
+
+For convenience, we also provide a Dockerfile and
 [pre-built images](https://hub.docker.com/r/below/below) on Docker Hub.
+See [docker.md](resctl/below/docs/docker.md) for how to use them.
 
 Alternatively, see [building.md](resctl/below/docs/building.md) for non-docker
 build instructions.
@@ -42,12 +48,13 @@ build instructions.
 Live view of system:
 
 ```shell
-$ podman run --privileged --cgroupns=host --pid=host -it below/below:latest
+$ sudo below live
 ```
 
 Run recording daemon:
 
 ```shell
+$ sudo cp ~/.cargo/bin/below /bin/below  # if using cargo-install
 $ sudo cp resctl/below/etc/below.service /etc/systemd/system
 $ sudo systemctl daemon-reload
 $ sudo systemctl start below
@@ -56,10 +63,8 @@ $ sudo systemctl start below
 Replay historical data:
 
 ```shell
-$ podman run --mount='type=bind,src=/var/log/below,dst=/var/log/below' -it below/below replay -t "3m ago"
+$ below replay -t "3m ago"
 ```
-
-See [docker.md](resctl/below/docs/docker.md) for more details.
 
 ## Contributing
 
