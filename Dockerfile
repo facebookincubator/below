@@ -30,13 +30,18 @@ WORKDIR resctl
 RUN /root/.cargo/bin/cargo build --release --package below
 
 # Run tests if requested
-RUN if [[ -n "$RUN_TESTS" ]]; then     \
-    /root/.cargo/bin/cargo test --     \
-    --skip test_dump                   \
-    --skip advance_forward_and_reverse \
-    --skip disable_disk_stat           \
-    stdout                             \
-    --skip disable_io_stat;            \
+RUN if [ -n "$RUN_TESTS" ]; then                 \
+    /root/.cargo/bin/cargo test --               \
+    --skip test_dump                             \
+    --skip advance_forward_and_reverse           \
+    --skip disable_disk_stat                     \
+    --skip disable_io_stat                       \
+    --skip record_replay_integration             \
+    --skip test_viewrc_collapse_cgroups          \
+    --skip test_viewrc_default_view              \
+    --skip test_belowrc_to_event                 \
+    --skip test_event_controller_override_failed \
+    --skip test_event_controller_override        \
   fi
 
 # Now create stage 2 image. We drop all the build dependencies and only install
