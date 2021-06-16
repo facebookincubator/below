@@ -731,19 +731,21 @@ mod tests {
 
             paste! {
                 #[test]
-                fn [<$name _compressed_thrift>]() {
-                    $func(true, Format::Thrift);
-                }
-            }
-
-            paste! {
-                #[test]
                 fn [<$name _uncompressed_cbor>]() {
                     $func(false, Format::Cbor);
                 }
             }
 
             paste! {
+                #[cfg(fbcode_build)]
+                #[test]
+                fn [<$name _compressed_thrift>]() {
+                    $func(true, Format::Thrift);
+                }
+            }
+
+            paste! {
+                #[cfg(fbcode_build)]
                 #[test]
                 fn [<$name _uncompressed_thrift>]() {
                     $func(false, Format::Thrift);
@@ -752,6 +754,7 @@ mod tests {
         };
     }
 
+    #[cfg(fbcode_build)]
     #[test]
     fn writing_to_already_written_index_with_different_compression_format_works() {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
