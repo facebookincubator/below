@@ -23,11 +23,9 @@ pub fn ensure_turbofish(mut ty: syn::Type) -> proc_macro2::TokenStream {
             if let syn::PathArguments::AngleBracketed(_) = last.arguments {
                 let mut args = syn::PathArguments::None;
                 std::mem::swap(&mut args, &mut last.arguments);
-                let ret = quote! {
+                return quote! {
                     #ty :: #args
                 };
-                eprintln!("{:?}", ret);
-                return ret;
             }
         }
     }
