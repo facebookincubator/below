@@ -111,8 +111,6 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
             "shmem_huge_pages_bytes": 0,
             "file_huge_pages_bytes": 0,
             "hugetlb": 0,
-            "free_huge_pages_bytes": 0,
-            "huge_page_size": 0,
             "cma_total": 0,
             "cma_free": 0,
             "vmalloc_total": 300000000,

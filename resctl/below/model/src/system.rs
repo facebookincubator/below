@@ -262,8 +262,6 @@ pub struct MemoryModel {
     pub shmem_huge_pages_bytes: Option<u64>,
     pub file_huge_pages_bytes: Option<u64>,
     pub hugetlb: Option<u64>,
-    pub free_huge_pages_bytes: Option<u64>,
-    pub huge_page_size: Option<u64>,
     pub cma_total: Option<u64>,
     pub cma_free: Option<u64>,
     pub vmalloc_total: Option<u64>,
@@ -306,9 +304,6 @@ impl MemoryModel {
             shmem_huge_pages_bytes: meminfo.shmem_huge_pages.map(|x| x as u64),
             file_huge_pages_bytes: meminfo.file_huge_pages.map(|x| x as u64),
             hugetlb: meminfo.hugetlb.map(|x| x as u64),
-            free_huge_pages_bytes: opt_multiply(meminfo.free_huge_pages, meminfo.huge_page_size)
-                .map(|x| x as u64),
-            huge_page_size: meminfo.huge_page_size.map(|v| v as u64),
             cma_total: meminfo.cma_total.map(|v| v as u64),
             cma_free: meminfo.cma_free.map(|v| v as u64),
             vmalloc_total: meminfo.vmalloc_total.map(|v| v as u64),

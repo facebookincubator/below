@@ -139,8 +139,6 @@ fn test_dump_sys_titles() {
         "Shmem Huge Pages",
         "File Huge Pages",
         "Hugetlb",
-        "Free Huge Pages",
-        "Huge Page Size",
         "Cma Total",
         "Cma Free",
         "Vmalloc Total",
