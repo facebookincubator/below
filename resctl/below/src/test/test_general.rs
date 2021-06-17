@@ -27,19 +27,16 @@ fn record_replay_integration() {
         .expect("failed to collect sample");
 
     // Validate some data in the sample
-    assert!(
-        sample
-            .cgroup
-            .pressure
-            .as_ref()
-            .expect("missing memory.pressure")
-            .memory
-            .full
-            .total
-            .as_ref()
-            .expect("missing memory.pressure.total")
-            > &0
-    );
+    sample
+        .cgroup
+        .pressure
+        .as_ref()
+        .expect("missing memory.pressure")
+        .memory
+        .full
+        .total
+        .as_ref()
+        .expect("missing memory.pressure.total");
     let nr_procs = sample.processes.len();
     let hostname = sample.system.hostname.clone();
     let proc0_cgroup = sample
@@ -75,17 +72,14 @@ fn record_replay_integration() {
         .expect("failed to get advanced data");
 
     // Validate some values in restored sample
-    assert!(
-        *restored_sample
-            .cgroup
-            .io_total
-            .as_ref()
-            .expect("missing io.stat")
-            .rbytes_per_sec
-            .as_ref()
-            .expect("missing io stat read bytes per second")
-            == 0.0
-    );
+    restored_sample
+        .cgroup
+        .io_total
+        .as_ref()
+        .expect("missing io.stat")
+        .rbytes_per_sec
+        .as_ref()
+        .expect("missing io stat read bytes per second");
     assert!(restored_sample.process.processes.len() == nr_procs);
     assert!(restored_sample.system.hostname == hostname);
     assert!(
