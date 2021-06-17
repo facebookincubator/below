@@ -9,9 +9,9 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
-nix = "0.19"
+nix = "0.20"
 openat = "0.1.20"
-serde = { version = "=1.0.118", features = ["derive", "rc"] }
+serde = { version = "1.0.126", features = ["derive", "rc"] }
 thiserror = "1.0"
 
 [dev-dependencies]
