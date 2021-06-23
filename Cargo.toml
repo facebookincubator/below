@@ -2,12 +2,12 @@
 members = [
   "resctl/below",
   "resctl/below/below_derive",
+  "resctl/below/cgroupfs",
   "resctl/below/common",
   "resctl/below/dump",
   "resctl/below/model",
+  "resctl/below/procfs",
   "resctl/below/render",
   "resctl/below/store",
   "resctl/below/view",
-  "resctl/common/cgroupfs",
-  "resctl/common/procfs",
 ]
