@@ -33,8 +33,6 @@ use signal_hook::iterator::Signals;
 use slog::{self, debug, error, warn};
 use structopt::StructOpt;
 use users::{get_current_uid, get_user_by_uid};
-// Open source dep -- silence linter warning
-use slog_term as _;
 
 mod below_config;
 mod exitstat;
