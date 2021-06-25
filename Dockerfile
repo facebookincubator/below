@@ -24,9 +24,9 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /rustup.sh
 RUN chmod +x /rustup.sh
 RUN bash /rustup.sh -y
 
-ADD . /resctl
+ADD . /below
 # Build below
-WORKDIR resctl
+WORKDIR below
 RUN /root/.cargo/bin/cargo build --release --package below
 
 # Run tests if requested
@@ -55,6 +55,6 @@ RUN apt-get install -y \
   libncursesw5 \
   zlib1g
 
-COPY --from=build /resctl/target/release/below /below
+COPY --from=build /below/target/release/below /below
 
 ENTRYPOINT ["/below"]
