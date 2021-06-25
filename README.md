@@ -35,9 +35,9 @@ $ below --help
 
 For convenience, we also provide a Dockerfile and
 [pre-built images](https://hub.docker.com/r/below/below) on Docker Hub.
-See [docker.md](resctl/below/docs/docker.md) for how to use them.
+See [docker.md](docs/docker.md) for how to use them.
 
-Alternatively, see [building.md](resctl/below/docs/building.md) for non-docker
+Alternatively, see [building.md](docs/building.md) for non-docker
 build instructions.
 
 ## Quickstart
@@ -65,7 +65,7 @@ $ below replay -t "3m ago"
 
 ## Comparison with alternative tools
 
-See [comparison.md](resctl/below/docs/comparison.md) for a feature comparison
+See [comparison.md](docs/comparison.md) for a feature comparison
 with alternative tools.
 
 ## Contributing
