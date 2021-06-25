@@ -28,6 +28,8 @@ of [atop](https://linux.die.net/man/1/atop)'s design and style decisions.
 
 ## Installing
 
+First, install dependencies listed in [building.md](docs/building.md).
+
 ```shell
 $ cargo install below
 $ below --help
@@ -36,9 +38,6 @@ $ below --help
 For convenience, we also provide a Dockerfile and
 [pre-built images](https://hub.docker.com/r/below/below) on Docker Hub.
 See [docker.md](docs/docker.md) for how to use them.
-
-Alternatively, see [building.md](docs/building.md) for non-docker
-build instructions.
 
 ## Quickstart
 
