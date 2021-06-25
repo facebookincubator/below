@@ -1,13 +1,13 @@
 [workspace]
 members = [
-  "resctl/below",
-  "resctl/below/below_derive",
-  "resctl/below/cgroupfs",
-  "resctl/below/common",
-  "resctl/below/dump",
-  "resctl/below/model",
-  "resctl/below/procfs",
-  "resctl/below/render",
-  "resctl/below/store",
-  "resctl/below/view",
+  "below/",
+  "below/below_derive",
+  "below/cgroupfs",
+  "below/common",
+  "below/dump",
+  "below/model",
+  "below/procfs",
+  "below/render",
+  "below/store",
+  "below/view",
 ]

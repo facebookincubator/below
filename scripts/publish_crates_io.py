@@ -10,16 +10,16 @@ from os import path
 # Paths to crates relative to repository root
 # NB: Order the list based on dependencies: least deps first, most deps last
 PACKAGES = [
-    "resctl/below/cgroupfs",
-    "resctl/below/procfs",
-    "resctl/below/common",
-    "resctl/below/below_derive",
-    "resctl/below/model",
-    "resctl/below/render",
-    "resctl/below/store",
-    "resctl/below/view",
-    "resctl/below/dump",
-    "resctl/below",
+    "below/cgroupfs",
+    "below/procfs",
+    "below/common",
+    "below/below_derive",
+    "below/model",
+    "below/render",
+    "below/store",
+    "below/view",
+    "below/dump",
+    "below",
 ]
 
 
