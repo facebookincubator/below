@@ -22,7 +22,7 @@ pub enum Command {}
 pub fn run_command(
     _init: crate::init::InitToken,
     _debug: bool,
-    _below_config: crate::BelowConfig,
+    _below_config: &crate::BelowConfig,
     _cmd: &Command,
 ) -> i32 {
     0
