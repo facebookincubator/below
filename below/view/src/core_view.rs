@@ -141,8 +141,8 @@ impl ViewBridge for CoreView {
     fn get_rows(
         &mut self,
         state: &Self::StateType,
-        _offset: Option<usize>,
+        offset: Option<usize>,
     ) -> Vec<(StyledString, String)> {
-        self.get_inner().get_rows(state)
+        self.get_inner().get_rows(state, offset)
     }
 }

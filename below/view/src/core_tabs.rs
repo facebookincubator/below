@@ -34,7 +34,7 @@ pub trait CoreTab {
         ]
     }
 
-    fn get_rows(&self, state: &CoreState) -> Vec<(StyledString, String)>;
+    fn get_rows(&self, state: &CoreState, offset: Option<usize>) -> Vec<(StyledString, String)>;
 }
 
 #[derive(Default, Clone)]
@@ -47,7 +47,7 @@ impl CoreTab for CoreCpu {
             .collect()
     }
 
-    fn get_rows(&self, state: &CoreState) -> Vec<(StyledString, String)> {
+    fn get_rows(&self, state: &CoreState, offset: Option<usize>) -> Vec<(StyledString, String)> {
         let model = state.get_model();
         model
             .cpus
@@ -62,9 +62,12 @@ impl CoreTab for CoreCpu {
             .chain(std::iter::once(&model.total_cpu))
             .map(|scm| {
                 (
-                    SingleCpuModelFieldId::unit_variant_iter().fold(
-                        StyledString::new(),
-                        |mut line, field_id| {
+                    std::iter::once(SingleCpuModelFieldId::Idx)
+                        .chain(
+                            SingleCpuModelFieldId::unit_variant_iter()
+                                .skip(offset.unwrap_or(0) + 1),
+                        )
+                        .fold(StyledString::new(), |mut line, field_id| {
                             let view_item = ViewItem::from_default(field_id.clone());
                             let rendered =
                                 if field_id == SingleCpuModelFieldId::Idx && scm.idx == -1 {
@@ -75,8 +78,7 @@ impl CoreTab for CoreCpu {
                             line.append(rendered);
                             line.append_plain(" ");
                             line
-                        },
-                    ),
+                        }),
                     "".to_owned(),
                 )
             })
@@ -88,7 +90,7 @@ impl CoreTab for CoreCpu {
 pub struct CoreMem;
 
 impl CoreTab for CoreMem {
-    fn get_rows(&self, state: &CoreState) -> Vec<(StyledString, String)> {
+    fn get_rows(&self, state: &CoreState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
         let model = state.get_model();
 
         MemoryModelFieldId::unit_variant_iter()
@@ -117,7 +119,7 @@ impl CoreTab for CoreMem {
 pub struct CoreVm;
 
 impl CoreTab for CoreVm {
-    fn get_rows(&self, state: &CoreState) -> Vec<(StyledString, String)> {
+    fn get_rows(&self, state: &CoreState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
         let model = state.get_model();
 
         VmModelFieldId::unit_variant_iter()
@@ -152,7 +154,7 @@ impl CoreTab for CoreDisk {
             .collect()
     }
 
-    fn get_rows(&self, state: &CoreState) -> Vec<(StyledString, String)> {
+    fn get_rows(&self, state: &CoreState, offset: Option<usize>) -> Vec<(StyledString, String)> {
         state
             .get_model()
             .disks
@@ -168,9 +170,12 @@ impl CoreTab for CoreDisk {
                     .map_or(!collapse, |f| dn.starts_with(f))
                 {
                     Some((
-                        SingleDiskModelFieldId::unit_variant_iter().fold(
-                            StyledString::new(),
-                            |mut line, field_id| {
+                        std::iter::once(SingleDiskModelFieldId::Name)
+                            .chain(
+                                SingleDiskModelFieldId::unit_variant_iter()
+                                    .skip(offset.unwrap_or(0) + 1),
+                            )
+                            .fold(StyledString::new(), |mut line, field_id| {
                                 let view_item = ViewItem::from_default(field_id.clone());
                                 let rendered = if field_id == SingleDiskModelFieldId::Name {
                                     view_item
@@ -182,8 +187,7 @@ impl CoreTab for CoreDisk {
                                 line.append(rendered);
                                 line.append_plain(" ");
                                 line
-                            },
-                        ),
+                            }),
                         idx,
                     ))
                 } else {

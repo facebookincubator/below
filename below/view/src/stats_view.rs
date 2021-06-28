@@ -73,7 +73,7 @@ pub trait ViewBridge {
     /// return a Vec of (Stats String Line, Key) tuple.
     /// # Arguments
     /// * `state`: The concrete view state
-    /// * `offset`: Indicates how many columns we should pass after the first column when generating a line. (Cgroup only)
+    /// * `offset`: Indicates how many columns we should pass after the first column when generating a line.
     fn get_rows(
         &mut self,
         state: &Self::StateType,
