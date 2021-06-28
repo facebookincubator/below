@@ -34,14 +34,12 @@ use slog::{self, debug, error, warn};
 use structopt::StructOpt;
 use users::{get_current_uid, get_user_by_uid};
 
-mod below_config;
 mod exitstat;
 #[cfg(test)]
 mod test;
 
-use below_config::BelowConfig;
-
 use common::{cliutil, logutil, open_source_shim};
+use config::BelowConfig;
 use dump::DumpCommand;
 use model;
 use store::advance::{new_advance_local, new_advance_remote};
@@ -55,7 +53,7 @@ static LIVE_REMOTE_MAX_LATENCY_SEC: u64 = 10;
 #[derive(Debug, StructOpt)]
 #[structopt(no_version)]
 struct Opt {
-    #[structopt(long, parse(from_os_str), default_value = below_config::BELOW_DEFAULT_CONF)]
+    #[structopt(long, parse(from_os_str), default_value = config::BELOW_DEFAULT_CONF)]
     config: PathBuf,
     #[structopt(short, long)]
     debug: bool,

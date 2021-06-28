@@ -14,11 +14,13 @@
 
 use std::default::Default;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
-use toml;
+
+#[cfg(test)]
+mod test;
 
 pub const BELOW_DEFAULT_CONF: &str = "/etc/below/below.conf";
 const BELOW_DEFAULT_LOG: &str = "/var/log/below";
@@ -44,7 +46,7 @@ impl Default for BelowConfig {
 }
 
 impl BelowConfig {
-    pub fn load(path: &PathBuf) -> Result<Self> {
+    pub fn load(path: &Path) -> Result<Self> {
         match path.exists() {
             true if !path.is_file() => bail!("{} exists and is not a file", path.to_string_lossy()),
             true => BelowConfig::load_exists(path),
@@ -53,7 +55,7 @@ impl BelowConfig {
         }
     }
 
-    fn load_exists(path: &PathBuf) -> Result<Self> {
+    fn load_exists(path: &Path) -> Result<Self> {
         let string_config = match fs::read_to_string(path) {
             Ok(sc) => sc,
             Err(e) => {

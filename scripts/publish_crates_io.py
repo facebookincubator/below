@@ -13,6 +13,7 @@ PACKAGES = [
     "below/cgroupfs",
     "below/procfs",
     "below/common",
+    "below/config",
     "below/below_derive",
     "below/model",
     "below/render",

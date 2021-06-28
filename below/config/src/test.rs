@@ -14,6 +14,10 @@
 
 use super::*;
 
+use std::io::Write;
+
+use tempdir::TempDir;
+
 #[test]
 fn test_config_default() {
     let below_config: BelowConfig = Default::default();

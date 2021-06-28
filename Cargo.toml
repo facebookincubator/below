@@ -4,6 +4,7 @@ members = [
   "below/below_derive",
   "below/cgroupfs",
   "below/common",
+  "below/config",
   "below/dump",
   "below/model",
   "below/procfs",
