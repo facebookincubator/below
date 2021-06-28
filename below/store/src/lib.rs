@@ -118,26 +118,24 @@ pub struct StoreWriter {
 
 // Given path to the store dir, get a Vec<String> of the index file
 // names, sorted
-macro_rules! get_index_entries {
-    ($path:expr) => {{
-        let mut entries = fs::read_dir($path)
-            .with_context(|| format!("Failed to read directory {}", $path.display()))?
-            .filter_map(|res_ent| {
-                res_ent
-                    .map(|ent| {
-                        ent.file_name()
-                            .to_str()
-                            .filter(|s| s.starts_with("index"))
-                            .map(|s| s.to_string())
-                    })
-                    .transpose()
-            })
-            .collect::<Result<Vec<_>, std::io::Error>>()
-            .with_context(|| format!("Failed to read directory entries in {}", $path.display()))?;
+fn get_index_files(path: &Path) -> Result<Vec<String>> {
+    let mut entries = fs::read_dir(path)
+        .with_context(|| format!("Failed to read directory {}", path.display()))?
+        .filter_map(|res_ent| {
+            res_ent
+                .map(|ent| {
+                    ent.file_name()
+                        .to_str()
+                        .filter(|s| s.starts_with("index"))
+                        .map(|s| s.to_string())
+                })
+                .transpose()
+        })
+        .collect::<Result<Vec<_>, std::io::Error>>()
+        .with_context(|| format!("Failed to read directory entries in {}", path.display()))?;
 
-        entries.sort_unstable();
-        entries
-    }};
+    entries.sort_unstable();
+    Ok(entries)
 }
 
 enum SerializedFrame<'a> {
@@ -374,7 +372,7 @@ impl StoreWriter {
     /// which can only contain earlier data and remove them.
     pub fn discard_earlier(&mut self, timestamp: SystemTime, logger: slog::Logger) -> Result<()> {
         let shard = calculate_shard(timestamp);
-        let entries = get_index_entries!(self.dir.as_path());
+        let entries = get_index_files(self.dir.as_path())?;
 
         for entry in entries {
             let v: Vec<&str> = entry.split('_').collect();
@@ -450,7 +448,7 @@ pub fn read_next_sample<P: AsRef<Path>>(
 ) -> Result<Option<(SystemTime, DataFrame)>> {
     let shard = calculate_shard(timestamp);
 
-    let entries = get_index_entries!(path.as_ref());
+    let entries = get_index_files(path.as_ref())?;
 
     // Here we find the first index with shard >= the timestamp's
     // shard. Then perform a linear scan on that index until we find
