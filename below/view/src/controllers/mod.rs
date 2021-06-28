@@ -81,6 +81,9 @@ mod content_controllers;
 mod sample_controllers;
 mod view_controllers;
 
+#[cfg(test)]
+mod test;
+
 use crate::stats_view::{StateCommon, StatsView, ViewBridge};
 use crate::{refresh, ViewState};
 

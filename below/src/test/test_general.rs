@@ -23,7 +23,7 @@ fn record_replay_integration() {
 
     // Collect a sample
     let logger = get_logger();
-    let sample = collect_sample(&get_dummy_exit_data(), true, &logger, false, &None)
+    let sample = collect_sample(&Default::default(), true, &logger, false, &None)
         .expect("failed to collect sample");
 
     // Validate some data in the sample
@@ -107,7 +107,7 @@ fn advance_forward_and_reverse() {
     let timestamp = 554433;
     let unix_ts = UNIX_EPOCH + Duration::from_secs(timestamp);
     let logger = get_logger();
-    let sample = collect_sample(&get_dummy_exit_data(), true, &logger, false, &None)
+    let sample = collect_sample(&Default::default(), true, &logger, false, &None)
         .expect("failed to collect sample");
     for i in 0..3 {
         let df = DataFrame {
@@ -154,7 +154,7 @@ fn advance_forward_and_reverse() {
 #[test]
 fn disable_io_stat() {
     let logger = get_logger();
-    let sample = collect_sample(&get_dummy_exit_data(), false, &logger, false, &None)
+    let sample = collect_sample(&Default::default(), false, &logger, false, &None)
         .expect("failed to collect sample");
 
     assert_eq!(sample.cgroup.io_stat, None);
@@ -163,7 +163,7 @@ fn disable_io_stat() {
 #[test]
 fn disable_disk_stat() {
     let logger = get_logger();
-    let sample = collect_sample(&get_dummy_exit_data(), false, &logger, true, &None)
+    let sample = collect_sample(&Default::default(), false, &logger, true, &None)
         .expect("failed to collect sample");
     assert!(sample.system.disks.is_empty());
 }

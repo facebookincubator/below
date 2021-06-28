@@ -16,15 +16,17 @@ use serde_json::Value;
 
 use super::*;
 use command::{expand_fields, GeneralOpt, OutputFormat};
-use dump::*;
-use model::Queriable;
+use common::logutil::get_logger;
+use model::{Collector, Queriable};
 use print::HasRenderConfigForDump;
 use tmain::Dumper;
+
+use tempdir::TempDir;
 
 #[test]
 // Test correctness of system decoration
 fn test_dump_sys_content() {
-    let mut collector = Collector::new(get_dummy_exit_data());
+    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
 
@@ -184,7 +186,7 @@ fn test_dump_sys_titles() {
 // Test correctness of process decoration
 // This test will also test JSON correctness.
 fn test_dump_process_content() {
-    let mut collector = Collector::new(get_dummy_exit_data());
+    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
 
@@ -290,7 +292,7 @@ fn test_dump_proc_titles() {
 
 #[test]
 fn test_dump_proc_select() {
-    let mut collector = Collector::new(get_dummy_exit_data());
+    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
     // update model again to populate cpu and io data
@@ -379,12 +381,12 @@ fn test_dump_proc_select() {
     }
 }
 
-fn traverse_cgroup_tree(model: &CgroupModel, jval: &Value) {
+fn traverse_cgroup_tree(model: &model::CgroupModel, jval: &Value) {
     for dump_field in expand_fields(command::DEFAULT_CGROUP_FIELDS, true) {
         match dump_field {
             DumpField::Common(_) => continue,
             DumpField::FieldId(field_id) => {
-                let rc = CgroupModel::get_render_config_for_dump(&field_id);
+                let rc = model::CgroupModel::get_render_config_for_dump(&field_id);
                 assert_eq!(
                     rc.render(model.query(&field_id), false),
                     jval[rc.render_title(false)]
@@ -410,7 +412,7 @@ fn traverse_cgroup_tree(model: &CgroupModel, jval: &Value) {
 
 #[test]
 fn test_dump_cgroup_content() {
-    let mut collector = Collector::new(get_dummy_exit_data());
+    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
 
@@ -442,7 +444,7 @@ fn test_dump_cgroup_titles() {
         .filter_map(|dump_field| match dump_field {
             DumpField::Common(_) => None,
             DumpField::FieldId(field_id) => {
-                let rc = CgroupModel::get_render_config_for_dump(&field_id);
+                let rc = model::CgroupModel::get_render_config_for_dump(&field_id);
                 Some(rc.render_title(false))
             }
         })
@@ -515,7 +517,7 @@ fn test_dump_cgroup_titles() {
 // Test correctness of iface decoration
 // This test will also test JSON correctness.
 fn test_dump_iface_content() {
-    let mut collector = Collector::new(get_dummy_exit_data());
+    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
 
@@ -626,7 +628,7 @@ fn test_dump_iface_titles() {
 // Test correctness of network decoration
 // This test will also test JSON correctness.
 fn test_dump_network_content() {
-    let mut collector = Collector::new(get_dummy_exit_data());
+    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
 
@@ -740,7 +742,7 @@ fn test_dump_network_titles() {
 // Test correctness of transport decoration
 // This test will also test JSON correctness.
 fn test_dump_transport_content() {
-    let mut collector = Collector::new(get_dummy_exit_data());
+    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
 
@@ -833,7 +835,7 @@ fn test_dump_transport_titles() {
 // Test correctness of disk decoration
 // This test will also test JSON correctness.
 fn test_dump_disk_content() {
-    let mut collector = Collector::new(get_dummy_exit_data());
+    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
     collector.update_model(&logger).expect("Fail to get model");
 

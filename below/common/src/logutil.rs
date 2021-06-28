@@ -236,3 +236,8 @@ where
         self.drain.log(record, values).map(Some).map_err(Some)
     }
 }
+
+pub fn get_logger() -> slog::Logger {
+    let plain = slog_term::PlainSyncDecorator::new(std::io::stderr());
+    slog::Logger::root(slog_term::FullFormat::new(plain).build().fuse(), slog::o!())
+}

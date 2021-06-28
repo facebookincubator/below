@@ -14,28 +14,14 @@
 
 use std::collections::BTreeMap;
 use std::io::prelude::*;
-use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use slog::{self, Drain};
 use tempdir::TempDir;
 
 use crate::below_config::BelowConfig;
-use crate::model::{collect_sample, CgroupModel, CgroupPressureModel, Collector, Model, Sample};
+use crate::model::{collect_sample, CgroupPressureModel, Model, Sample};
 use crate::store::{self, advance::new_advance_local, DataFrame};
+use common::logutil::get_logger;
 
-mod fake_view;
 mod test_config;
-mod test_controllers;
-mod test_dump;
 mod test_general;
-
-pub fn get_logger() -> slog::Logger {
-    let plain = slog_term::PlainSyncDecorator::new(std::io::stderr());
-    slog::Logger::root(slog_term::FullFormat::new(plain).build().fuse(), slog::o!())
-}
-
-fn get_dummy_exit_data() -> Arc<Mutex<procfs::PidMap>> {
-    Arc::new(Mutex::new(procfs::PidMap::default()))
-}

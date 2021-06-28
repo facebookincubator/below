@@ -42,6 +42,9 @@ pub mod system;
 pub mod tmain;
 pub mod transport;
 
+#[cfg(test)]
+mod test;
+
 pub use command::DumpCommand;
 use command::{expand_fields, GeneralOpt, OutputFormat};
 use print::HasRenderConfigForDump;

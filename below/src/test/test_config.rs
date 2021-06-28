@@ -12,11 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::fake_view::FakeView;
 use super::*;
-use cursive::Cursive;
-use view::viewrc::{DefaultFrontView, ViewRc};
-use view::{cgroup_view::CgroupView, MainViewState, ViewState};
 
 #[test]
 fn test_config_default() {
@@ -140,77 +136,4 @@ fn test_config_partial_load() {
         below_config.store_dir.to_string_lossy(),
         "/var/log/below/store"
     );
-}
-
-#[test]
-fn test_viewrc_collapse_cgroups() {
-    let cgroup_collapsed = |c: &mut Cursive| -> bool {
-        let cgroup_view = CgroupView::get_cgroup_view(c);
-        let res = cgroup_view.state.borrow_mut().collapse_all_top_level_cgroup;
-        res
-    };
-    let mut view = FakeView::new();
-    view.add_cgroup_view();
-
-    // Test for default setup
-    {
-        let viewrc: ViewRc = Default::default();
-        viewrc.process_collapse_cgroups(&mut view.inner);
-        assert!(!cgroup_collapsed(&mut view.inner));
-    }
-
-    // Test for collapse_cgroups = false
-    {
-        let viewrc = ViewRc {
-            collapse_cgroups: Some(false),
-            ..Default::default()
-        };
-        viewrc.process_collapse_cgroups(&mut view.inner);
-        assert!(!cgroup_collapsed(&mut view.inner));
-    }
-
-    // Test for collapse_cgroups = true
-    {
-        let viewrc = ViewRc {
-            collapse_cgroups: Some(true),
-            ..Default::default()
-        };
-        viewrc.process_collapse_cgroups(&mut view.inner);
-        assert!(cgroup_collapsed(&mut view.inner));
-    }
-}
-
-#[test]
-fn test_viewrc_default_view() {
-    let mut view = FakeView::new();
-
-    let desired_state = vec![
-        None,
-        Some(DefaultFrontView::Cgroup),
-        Some(DefaultFrontView::Process),
-        Some(DefaultFrontView::System),
-    ];
-    let expected_state = vec![
-        MainViewState::Cgroup,
-        MainViewState::Cgroup,
-        MainViewState::Process,
-        MainViewState::Core,
-    ];
-    desired_state
-        .into_iter()
-        .zip(expected_state)
-        .for_each(move |(desired, expected)| {
-            let viewrc = ViewRc {
-                default_view: desired,
-                ..Default::default()
-            };
-            viewrc.process_default_view(&mut view.inner);
-            let current_state = view
-                .inner
-                .user_data::<ViewState>()
-                .expect("No data stored in Cursive object!")
-                .main_view_state
-                .clone();
-            assert_eq!(current_state, expected);
-        });
 }

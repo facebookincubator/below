@@ -367,3 +367,56 @@ impl View {
         Ok(())
     }
 }
+
+#[cfg(test)]
+pub mod fake_view {
+    use cursive::views::ViewRef;
+
+    use super::*;
+    use crate::{
+        cgroup_view::CgroupView, command_palette::CommandPalette, stats_view::StatsView,
+        MainViewState, ViewMode, ViewState,
+    };
+    use common::logutil::get_logger;
+    use model::Collector;
+    use store::advance::new_advance_local;
+
+    use std::cell::RefCell;
+    use std::path::PathBuf;
+    use std::rc::Rc;
+
+    pub struct FakeView {
+        pub inner: CursiveRunnable,
+    }
+
+    impl FakeView {
+        pub fn new() -> Self {
+            let time = SystemTime::now();
+            let logger = get_logger();
+            let advance = new_advance_local(logger.clone(), PathBuf::new(), time);
+            let mut collector = Collector::new(Default::default());
+            let model = collector.update_model(&logger).expect("Fail to get model");
+
+            let mut inner = CursiveRunnable::dummy();
+            inner.set_user_data(ViewState::new_with_advance(
+                MainViewState::Cgroup,
+                model,
+                ViewMode::Live(Rc::new(RefCell::new(advance))),
+            ));
+
+            Self { inner }
+        }
+
+        pub fn add_cgroup_view(&mut self) {
+            let cgroup_view = CgroupView::new(&mut self.inner);
+            self.inner.add_layer(cgroup_view);
+        }
+
+        pub fn get_cmd_palette(&mut self, name: &str) -> ViewRef<CommandPalette> {
+            self.inner
+                .find_name::<StatsView<CgroupView>>(name)
+                .expect("Failed to dereference command palette")
+                .get_cmd_palette()
+        }
+    }
+}

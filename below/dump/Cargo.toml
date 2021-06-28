@@ -20,3 +20,6 @@ slog = { version = "2.5", features = ["max_level_trace"] }
 store = { package = "below-store", version = "0.2.0", path = "../store" }
 structopt = "0.3.21"
 toml = "=0.5.7"
+
+[dev-dependencies]
+tempdir = "0.3"
