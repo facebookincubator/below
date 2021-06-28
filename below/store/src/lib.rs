@@ -26,6 +26,8 @@ use slog::warn;
 use static_assertions::const_assert;
 use zstd::stream::decode_all;
 
+use crate::cursor::{Cursor, KeyedCursor};
+
 use common::open_source_shim;
 use common::util::get_unix_timestamp;
 
@@ -449,6 +451,31 @@ impl Direction {
     }
 }
 
+pub fn read_next_sample<P: AsRef<Path>>(
+    path: P,
+    timestamp: SystemTime,
+    direction: Direction,
+    logger: slog::Logger,
+) -> Result<Option<(SystemTime, DataFrame)>> {
+    if config::BELOW_CONFIG
+        .get_or_init(Default::default)
+        .killswitch_store_cursor
+    {
+        old_read_next_sample(path, timestamp, direction, logger)
+    } else {
+        let mut cursor = cursor::StoreCursor::new(logger, path.as_ref().to_path_buf());
+        if cursor.jump_to_key(&get_unix_timestamp(timestamp), direction)? {
+            if let Some(item) = cursor.get() {
+                Ok(Some(item))
+            } else {
+                cursor.next(direction)
+            }
+        } else {
+            Ok(None)
+        }
+    }
+}
+
 /// Reads the next sample recorded at time >= timestamp (if
 /// Direction::Forward) or time <= timestamp (if Direction::Reverse)
 ///
@@ -456,7 +483,7 @@ impl Direction {
 /// optimization, but under the expectation that most reads will be
 /// happening over some connection, we rather not need to maintain
 /// state of ongoing reads and instead just make stateless reads fast.
-pub fn read_next_sample<P: AsRef<Path>>(
+fn old_read_next_sample<P: AsRef<Path>>(
     path: P,
     timestamp: SystemTime,
     direction: Direction,

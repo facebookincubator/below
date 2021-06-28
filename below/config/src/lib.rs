@@ -37,6 +37,8 @@ pub struct BelowConfig {
     pub log_dir: PathBuf,
     pub store_dir: PathBuf,
     pub cgroup_filter_out: String,
+    /// store: Disable StoreCursor and use old read_next_sample. Default: false
+    pub killswitch_store_cursor: bool,
 }
 
 impl Default for BelowConfig {
@@ -45,6 +47,7 @@ impl Default for BelowConfig {
             log_dir: BELOW_DEFAULT_LOG.into(),
             store_dir: BELOW_DEFAULT_STORE.into(),
             cgroup_filter_out: String::new(),
+            killswitch_store_cursor: false,
         }
     }
 }
