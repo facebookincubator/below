@@ -30,6 +30,7 @@ use common::open_source_shim;
 use common::util::get_unix_timestamp;
 
 pub mod advance;
+pub mod cursor;
 #[cfg(test)]
 mod test;
 
@@ -430,6 +431,22 @@ impl StoreWriter {
 pub enum Direction {
     Forward,
     Reverse,
+}
+
+impl Direction {
+    pub fn get_skip_order(&self) -> std::cmp::Ordering {
+        match self {
+            Direction::Forward => std::cmp::Ordering::Less,
+            Direction::Reverse => std::cmp::Ordering::Greater,
+        }
+    }
+
+    pub fn flip(&self) -> Self {
+        match self {
+            Direction::Forward => Direction::Reverse,
+            Direction::Reverse => Direction::Forward,
+        }
+    }
 }
 
 /// Reads the next sample recorded at time >= timestamp (if
