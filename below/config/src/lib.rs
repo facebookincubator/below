@@ -17,6 +17,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
+use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
@@ -25,6 +26,9 @@ mod test;
 pub const BELOW_DEFAULT_CONF: &str = "/etc/below/below.conf";
 const BELOW_DEFAULT_LOG: &str = "/var/log/below";
 const BELOW_DEFAULT_STORE: &str = "/var/log/below/store";
+
+/// Global below config
+pub static BELOW_CONFIG: OnceCell<BelowConfig> = OnceCell::new();
 
 #[derive(Serialize, Deserialize, Debug)]
 // If value is missing during deserialization, use the Default::default()

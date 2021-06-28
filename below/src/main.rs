@@ -289,13 +289,13 @@ impl std::fmt::Display for StopSignal {
 pub fn run<F>(
     init: init::InitToken,
     debug: bool,
-    below_config: BelowConfig,
+    below_config: &BelowConfig,
     _service: Service,
     redirect: RedirectLogOnFail,
     command: F,
 ) -> i32
 where
-    F: FnOnce(init::InitToken, BelowConfig, slog::Logger, Receiver<Error>) -> Result<()>,
+    F: FnOnce(init::InitToken, &BelowConfig, slog::Logger, Receiver<Error>) -> Result<()>,
 {
     let (err_sender, err_receiver) = channel();
     let mut log_dir = below_config.log_dir.clone();
@@ -381,13 +381,18 @@ fn main() {
 fn real_main(init: init::InitToken) {
     let opts = Opt::from_args();
     let debug = opts.debug;
-    let below_config = match BelowConfig::load(&opts.config) {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("{:#}", e);
-            exit(1);
-        }
-    };
+    config::BELOW_CONFIG
+        .set(match BelowConfig::load(&opts.config) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("{:#}", e);
+                exit(1);
+            }
+        })
+        .expect("BELOW_CONFIG singleton set twice");
+    let below_config = config::BELOW_CONFIG
+        .get()
+        .expect("BELOW_CONFIG empty after set");
 
     // Use live mode as default
     let cmd = opts.cmd.as_ref().unwrap_or(&Command::Live {
@@ -522,7 +527,7 @@ fn replay(
     logger: slog::Logger,
     errs: Receiver<Error>,
     time: String,
-    below_config: BelowConfig,
+    below_config: &BelowConfig,
     host: Option<String>,
     port: Option<u16>,
     days_adjuster: Option<String>,
@@ -533,7 +538,7 @@ fn replay(
     let mut advance = if let Some(host) = host {
         new_advance_remote(logger.clone(), host, port, timestamp)?
     } else {
-        new_advance_local(logger.clone(), below_config.store_dir, timestamp)
+        new_advance_local(logger.clone(), below_config.store_dir.clone(), timestamp)
     };
 
     // Fill the last_sample for forward iteration. If no previous sample exists,
@@ -579,7 +584,7 @@ fn record(
     logger: slog::Logger,
     errs: Receiver<Error>,
     interval: Duration,
-    below_config: BelowConfig,
+    below_config: &BelowConfig,
     retain: Option<Duration>,
     collect_io_stat: bool,
     skew_detection_threshold: Duration,
@@ -708,7 +713,7 @@ fn live_local(
     errs: Receiver<Error>,
     interval: Duration,
     debug: bool,
-    below_config: BelowConfig,
+    below_config: &BelowConfig,
 ) -> Result<()> {
     match bump_memlock_rlimit() {
         Err(e) => {
@@ -729,7 +734,11 @@ fn live_local(
     let mut collector = model::Collector::new(exit_buffer);
     logutil::set_current_log_target(logutil::TargetLog::File);
     // Prepare advance obj for pause mode
-    let mut adv = new_advance_local(logger.clone(), below_config.store_dir, SystemTime::now());
+    let mut adv = new_advance_local(
+        logger.clone(),
+        below_config.store_dir.clone(),
+        SystemTime::now(),
+    );
     adv.initialize();
     let mut view = view::View::new_with_advance(
         collector.update_model(&logger)?,
@@ -859,7 +868,7 @@ fn live(
     errs: Receiver<Error>,
     interval: Duration,
     debug: bool,
-    below_config: BelowConfig,
+    below_config: &BelowConfig,
     host: Option<String>,
     port: Option<u16>,
 ) -> Result<()> {
@@ -873,7 +882,7 @@ fn live(
 fn dump_store(
     logger: slog::Logger,
     time: String,
-    below_config: BelowConfig,
+    below_config: &BelowConfig,
     json: bool,
 ) -> Result<()> {
     let timestamp = cliutil::system_time_from_date(time.as_str())?;
