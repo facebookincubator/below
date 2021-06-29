@@ -146,26 +146,26 @@ mod tests {
     #[test]
     fn test_system_time_from_date_and_adjuster() {
         assert_eq!(
-            system_time_from_date_and_adjuster("2006-02-01 13:00:30", None).unwrap(),
-            t("2006-02-01 13:00:30")
+            system_time_from_date_and_adjuster("2006-02-01 13:00:30 UTC", None).unwrap(),
+            t("2006-02-01 13:00:30 UTC")
         );
         assert_eq!(
-            system_time_from_date_and_adjuster("2006-02-01 13:00:30", Some("y")).unwrap(),
-            t("2006-01-31 13:00:30")
+            system_time_from_date_and_adjuster("2006-02-01 13:00:30 UTC", Some("y")).unwrap(),
+            t("2006-01-31 13:00:30 UTC")
         );
         assert_eq!(
-            system_time_from_date_and_adjuster("2006-02-01 13:00:30", Some("yy")).unwrap(),
-            t("2006-01-30 13:00:30")
+            system_time_from_date_and_adjuster("2006-02-01 13:00:30 UTC", Some("yy")).unwrap(),
+            t("2006-01-30 13:00:30 UTC")
         );
         assert_eq!(
-            system_time_from_date_and_adjuster("2006-02-01 13:00:30", Some("yyy")).unwrap(),
-            t("2006-01-29 13:00:30")
+            system_time_from_date_and_adjuster("2006-02-01 13:00:30 UTC", Some("yyy")).unwrap(),
+            t("2006-01-29 13:00:30 UTC")
         );
     }
 
     #[test]
     fn test_system_time_from_date_and_adjuster_fail() {
-        match system_time_from_date_and_adjuster("2006-02-01 13:00:30", Some("invalid")) {
+        match system_time_from_date_and_adjuster("2006-02-01 13:00:30 UTC", Some("invalid")) {
             Ok(_) => panic!("Expected fo fail as adjuster is invalid"),
             Err(_) => {}
         }
@@ -175,12 +175,12 @@ mod tests {
     fn test_system_time_range_from_date_and_adjuster() {
         assert_eq!(
             system_time_range_from_date_and_adjuster(
-                "2006-02-01 13:00:30",
-                Some("2006-02-01 15:00:30"),
+                "2006-02-01 13:00:30 UTC",
+                Some("2006-02-01 15:00:30 UTC"),
                 Some("y")
             )
             .unwrap(),
-            (t("2006-01-31 13:00:30"), t("2006-01-31 15:00:30"))
+            (t("2006-01-31 13:00:30 UTC"), t("2006-01-31 15:00:30 UTC"))
         )
     }
 
