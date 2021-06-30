@@ -34,7 +34,6 @@ view = { package = "below-view", version = "0.2.0", path = "view" }
 walkdir = "2.2.9"
 
 [dev-dependencies]
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
 maplit = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
 tempdir = "0.3"
