@@ -118,4 +118,6 @@ make_controllers!(
     Cgroup: CgroupView,
     System: SystemView,
     Zoom: ZoomView,
+    NextPage: NextPageImpl,
+    PrevPage: PrevPageImpl,
 );

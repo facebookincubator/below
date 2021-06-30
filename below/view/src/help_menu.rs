@@ -80,6 +80,8 @@ fn get_description(controller: &Controllers) -> &'static str {
         Controllers::Cgroup => "Show cgroup view.",
         Controllers::System => "Show system core view.",
         Controllers::Zoom => "Zoom into process view filtered by selected cgroup.",
+        Controllers::NextPage => "scroll down 15 lines primary display.",
+        Controllers::PrevPage => "scroll up 15 lines primary display.",
         _ => "Unknown",
     }
 }
@@ -153,6 +155,8 @@ fn fill_controllers(
         cmd_map.get(&Controllers::Process).unwrap().to_string(),
         cmd_map.get(&Controllers::Cgroup).unwrap().to_string(),
         cmd_map.get(&Controllers::System).unwrap().to_string(),
+        cmd_map.get(&Controllers::NextPage).unwrap().to_string(),
+        cmd_map.get(&Controllers::PrevPage).unwrap().to_string(),
     ];
 
     v.add_all_str(controllers);

@@ -333,3 +333,57 @@ make_event_controller!(
         refresh(c)
     }
 );
+
+// utl function to parse page length
+fn parse_page_length(cmd_vec: &[&str]) -> Result<usize, String> {
+    static DEFAULT_PAGE_LENGTH: usize = 15;
+
+    if cmd_vec.len() > 1 {
+        match cmd_vec[1].parse::<usize>() {
+            Ok(p) => Ok(p),
+            Err(e) => Err(format!("Fail to parse argument: {}, {}", cmd_vec[1], e)),
+        }
+    } else {
+        Ok(DEFAULT_PAGE_LENGTH)
+    }
+}
+
+// Next Page
+make_event_controller!(
+    NextPageImpl,
+    "next_page",
+    "np",
+    Event::CtrlChar('f'),
+    |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
+    |c: &mut Cursive, cmd_vec: &[&str]| {
+        match parse_page_length(cmd_vec) {
+            Ok(p) => {
+                let mut view = StatsView::<T>::get_view(c);
+                view.get_detail_view().select_down(p)(c);
+                view.get_list_scroll_view().scroll_to_important_area();
+            }
+            Err(e) => StatsView::<T>::get_view(c).get_cmd_palette().set_alert(e),
+        };
+        StatsView::<T>::refresh_myself(c);
+    }
+);
+
+// Prev Page
+make_event_controller!(
+    PrevPageImpl,
+    "prev_page",
+    "pp",
+    Event::CtrlChar('b'),
+    |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
+    |c: &mut Cursive, cmd_vec: &[&str]| {
+        match parse_page_length(cmd_vec) {
+            Ok(p) => {
+                let mut view = StatsView::<T>::get_view(c);
+                view.get_detail_view().select_up(p)(c);
+                view.get_list_scroll_view().scroll_to_important_area();
+            }
+            Err(e) => StatsView::<T>::get_view(c).get_cmd_palette().set_alert(e),
+        };
+        StatsView::<T>::refresh_myself(c);
+    }
+);

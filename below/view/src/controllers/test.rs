@@ -45,6 +45,8 @@ pause_resume = 's'
 sort = 't'
 filter = 'u'
 clear_filter = 'v'
+next_page = 'x'
+prev_page = 'y'
 ";
     let cmdrc_val = std::str::from_utf8(cmdrc_str)
         .expect("Failed to parse [u8] to str")
@@ -135,6 +137,14 @@ clear_filter = 'v'
     assert_eq!(
         event_controllers.get(&Event::Char('m')),
         Some(&Controllers::Zoom)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('x')),
+        Some(&Controllers::NextPage)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('y')),
+        Some(&Controllers::PrevPage)
     );
 }
 

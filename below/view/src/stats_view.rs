@@ -287,8 +287,8 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         title_named.get_mut()
     }
 
-    // A convenience function to get the detail stats SelectView
-    pub fn get_detail_view(&mut self) -> ViewRef<SelectView> {
+    // A convenience function to get the scroll view of the list
+    pub fn get_list_scroll_view(&mut self) -> &mut ScrollView<NamedView<SelectView>> {
         let scroll_view = self.get_scroll_view();
 
         let select_named: &mut ResizedView<ScrollView<NamedView<SelectView>>> = scroll_view
@@ -298,7 +298,12 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             .downcast_mut()
             .expect("Fail to downcast to title, StatsView may not properly init");
 
-        select_named.get_inner_mut().get_inner_mut().get_mut()
+        select_named.get_inner_mut()
+    }
+
+    // A convenience function to get the detail stats SelectView
+    pub fn get_detail_view(&mut self) -> ViewRef<SelectView> {
+        self.get_list_scroll_view().get_inner_mut().get_mut()
     }
 
     // A convenience function to get the command palette
