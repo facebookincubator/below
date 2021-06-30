@@ -28,6 +28,21 @@ of [atop](https://linux.die.net/man/1/atop)'s design and style decisions.
 
 ## Installing
 
+`below` is packaged in Fedora as of Fedora 34, and can be installed with:
+
+```shell
+sudo dnf install below
+```
+
+Optionally, the systemd service for persistent data collection can also be
+enabled with:
+
+```shell
+sudo systemctl enable --now below
+```
+
+## Installing from source
+
 First, install dependencies listed in [building.md](docs/building.md).
 
 ```shell
