@@ -702,9 +702,13 @@ fn record(
         stats.report_store_size(below_config.store_dir.as_path());
 
         let collect_duration = Instant::now().duration_since(collect_instant);
-        if collect_duration < interval {
-            std::thread::sleep(interval - collect_duration);
-        }
+        // Sleep for at least 1s to avoid sample collision
+        let sleep_duration = if interval > collect_duration {
+            std::cmp::max(Duration::from_secs(1), interval - collect_duration)
+        } else {
+            Duration::from_secs(1)
+        };
+        std::thread::sleep(sleep_duration);
     }
 }
 
