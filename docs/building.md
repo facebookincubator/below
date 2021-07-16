@@ -2,7 +2,6 @@
 
 Several dependencies need to be installed before we can build.
 
-* libbpf-dev (for headers)
 * libz (dynamically linked)
 * libelf (dynamically linked)
 * libncursesw (dynamically linked)
