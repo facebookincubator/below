@@ -1,6 +1,6 @@
 [package]
 name = "below-model"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
 edition = "2018"
 description = "Model crate for below"
@@ -9,11 +9,11 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "1.0"
-below_derive = { version = "0.2.0", path = "../below_derive" }
-cgroupfs = { version = "0.2.0", path = "../cgroupfs" }
+below_derive = { version = "0.3.0", path = "../below_derive" }
+cgroupfs = { version = "0.3.0", path = "../cgroupfs" }
 hostname = "0.3"
 os_info = "=3.0.6"
-procfs = { package = "fb_procfs", version = "0.2.0", path = "../procfs" }
+procfs = { package = "fb_procfs", version = "0.3.0", path = "../procfs" }
 regex = "1.4.2"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }

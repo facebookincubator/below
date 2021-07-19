@@ -1,6 +1,6 @@
 [package]
 name = "below-config"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
 edition = "2018"
 description = "Configerations for below"
