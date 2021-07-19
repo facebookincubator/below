@@ -9,7 +9,6 @@ RUN apt-get install -y \
   clang \
   curl \
   git \
-  libbpf-dev \
   libelf-dev \
   libncursesw5-dev \
   libssl-dev \
