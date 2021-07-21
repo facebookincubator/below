@@ -14,6 +14,22 @@
 
 use super::*;
 
+/// Folds two optionals together with either `+` operator or provided closure
+macro_rules! fold_optionals {
+    ($left:expr, $right:expr) => {
+        fold_optionals!($left, $right, |l, r| l + r)
+    };
+
+    ($left:expr, $right:expr, $f:expr) => {
+        match ($left, $right) {
+            (Some(l), Some(r)) => Some($f(l, r)),
+            (Some(l), None) => Some(l.clone()),
+            (None, Some(r)) => Some(r.clone()),
+            (None, None) => None,
+        }
+    };
+}
+
 #[derive(Default, Serialize, Deserialize)]
 pub struct ProcessModel {
     pub processes: BTreeMap<i32, SingleProcessModel>,
@@ -78,6 +94,25 @@ impl SingleProcessModel {
             exe_path: sample.exe_path.clone(),
         }
     }
+
+    /// Sums stats between two process models together, None'ing out fields that semantically
+    /// cannot be summed
+    pub fn fold(left: &SingleProcessModel, right: &SingleProcessModel) -> SingleProcessModel {
+        SingleProcessModel {
+            pid: None,
+            ppid: None,
+            comm: None,
+            state: None,
+            // 80% sure it should be None here. Don't know what someone can infer from summed uptime
+            uptime_secs: None,
+            cgroup: None,
+            io: fold_optionals!(&left.io, &right.io, ProcessIoModel::fold),
+            mem: fold_optionals!(&left.mem, &right.mem, ProcessMemoryModel::fold),
+            cpu: fold_optionals!(&left.cpu, &right.cpu, ProcessCpuModel::fold),
+            cmdline: None,
+            exe_path: None,
+        }
+    }
 }
 
 #[derive(Clone, Default, Serialize, Deserialize, below_derive::Queriable)]
@@ -100,6 +135,15 @@ impl ProcessIoModel {
             rwbytes_per_sec,
         }
     }
+
+    /// See `SingleProcessModel::fold`
+    pub fn fold(left: &ProcessIoModel, right: &ProcessIoModel) -> ProcessIoModel {
+        ProcessIoModel {
+            rbytes_per_sec: fold_optionals!(left.rbytes_per_sec, right.rbytes_per_sec),
+            wbytes_per_sec: fold_optionals!(left.wbytes_per_sec, right.wbytes_per_sec),
+            rwbytes_per_sec: fold_optionals!(left.rwbytes_per_sec, right.rwbytes_per_sec),
+        }
+    }
 }
 
 #[derive(Clone, Default, Serialize, Deserialize, below_derive::Queriable)]
@@ -120,6 +164,16 @@ impl ProcessCpuModel {
             user_pct,
             system_pct,
             num_threads: end.num_threads.map(|t| t as u64),
+        }
+    }
+
+    /// See `SingleProcessModel::fold`
+    pub fn fold(left: &ProcessCpuModel, right: &ProcessCpuModel) -> ProcessCpuModel {
+        ProcessCpuModel {
+            usage_pct: fold_optionals!(left.usage_pct, right.usage_pct),
+            user_pct: fold_optionals!(left.user_pct, right.user_pct),
+            system_pct: fold_optionals!(left.system_pct, right.system_pct),
+            num_threads: fold_optionals!(left.num_threads, right.num_threads),
         }
     }
 }
@@ -155,6 +209,30 @@ impl ProcessMemoryModel {
             pte: end.mem.pte.map(|i| i as u64),
             swap: end.mem.swap.map(|i| i as u64),
             huge_tlb: end.mem.huge_tlb.map(|i| i as u64),
+        }
+    }
+
+    /// See `SingleProcessModel::fold`
+    pub fn fold(left: &ProcessMemoryModel, right: &ProcessMemoryModel) -> ProcessMemoryModel {
+        ProcessMemoryModel {
+            minorfaults_per_sec: fold_optionals!(
+                left.minorfaults_per_sec,
+                right.minorfaults_per_sec
+            ),
+            majorfaults_per_sec: fold_optionals!(
+                left.majorfaults_per_sec,
+                right.majorfaults_per_sec
+            ),
+            rss_bytes: fold_optionals!(left.rss_bytes, right.rss_bytes),
+            vm_size: fold_optionals!(left.vm_size, right.vm_size),
+            lock: fold_optionals!(left.lock, right.lock),
+            pin: fold_optionals!(left.pin, right.pin),
+            anon: fold_optionals!(left.anon, right.anon),
+            file: fold_optionals!(left.file, right.file),
+            shmem: fold_optionals!(left.shmem, right.shmem),
+            pte: fold_optionals!(left.pte, right.pte),
+            swap: fold_optionals!(left.swap, right.swap),
+            huge_tlb: fold_optionals!(left.huge_tlb, right.huge_tlb),
         }
     }
 }
