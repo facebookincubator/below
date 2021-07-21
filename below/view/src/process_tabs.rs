@@ -18,6 +18,7 @@ use crate::stats_view::StateCommon;
 use model::SingleProcessModel;
 
 use cursive::utils::markup::StyledString;
+use itertools::Itertools;
 
 /// Renders corresponding Fields From ProcessModel.
 type ProcessViewItem = ViewItem<model::SingleProcessModelFieldId>;
@@ -92,6 +93,22 @@ impl ProcessTab {
                     spm.comm.as_ref().unwrap_or(&unknown).contains(f)
                 } else {
                     true
+                }
+            })
+            // Convert double ref to single ref
+            .map(|spm| *spm)
+            // Abuse batching() to conditionally fold iter
+            .batching(|it| {
+                if state.fold {
+                    if let Some(first) = it.next() {
+                        Some(it.fold(first.clone(), |acc, spm| {
+                            SingleProcessModel::fold(&acc, spm)
+                        }))
+                    } else {
+                        None
+                    }
+                } else {
+                    it.next().cloned()
                 }
             })
             .map(|spm| {

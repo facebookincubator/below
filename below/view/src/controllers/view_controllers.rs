@@ -334,6 +334,31 @@ make_event_controller!(
     }
 );
 
+// Fold processes in process view
+make_event_controller!(
+    FoldProcessView,
+    "fold",
+    "",
+    Event::Char('f'),
+    |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        let current_state = c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .main_view_state
+            .clone();
+
+        // NB: scope the borrowing to refresh() doesn't re-borrow and panic
+        if current_state == MainViewState::Process {
+            let process_view = crate::process_view::ProcessView::get_process_view(c);
+            process_view.state.borrow_mut().toggle_fold();
+        }
+
+        // Redraw screen now so we don't have to wait until next tick
+        refresh(c)
+    }
+);
+
 // utl function to parse page length
 fn parse_page_length(cmd_vec: &[&str]) -> Result<usize, String> {
     static DEFAULT_PAGE_LENGTH: usize = 15;

@@ -45,6 +45,7 @@ pub struct ProcessState {
     pub sort_order: Option<SingleProcessModelFieldId>,
     pub sort_tags: HashMap<String, &'static ProcessTab>,
     pub reverse: bool,
+    pub fold: bool,
     pub model: Rc<RefCell<ProcessModel>>,
 }
 
@@ -114,6 +115,7 @@ impl StateCommon for ProcessState {
             sort_order: None,
             sort_tags,
             reverse: false,
+            fold: false,
             model,
         }
     }
@@ -126,6 +128,10 @@ impl ProcessState {
 
     fn set_reverse(&mut self, reverse: bool) {
         self.reverse = reverse;
+    }
+
+    pub fn toggle_fold(&mut self) {
+        self.fold = !self.fold;
     }
 
     pub fn handle_state_for_entering_zoom(&mut self, current_selection: String) {

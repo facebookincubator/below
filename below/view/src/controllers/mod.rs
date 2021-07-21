@@ -118,6 +118,7 @@ make_controllers!(
     Cgroup: CgroupView,
     System: SystemView,
     Zoom: ZoomView,
+    Fold: FoldProcessView,
     NextPage: NextPageImpl,
     PrevPage: PrevPageImpl,
 );

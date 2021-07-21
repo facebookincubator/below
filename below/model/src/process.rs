@@ -53,7 +53,7 @@ impl ProcessModel {
     }
 }
 
-#[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
+#[derive(Default, Clone, Serialize, Deserialize, below_derive::Queriable)]
 pub struct SingleProcessModel {
     pub pid: Option<i32>,
     pub ppid: Option<i32>,
