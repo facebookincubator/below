@@ -49,6 +49,7 @@ enum CPMode {
 pub struct CommandPalette {
     content: String,
     filter: Option<String>,
+    fold: bool,
     mode: CPMode,
     cmd_view: RefCell<EditView>,
     cmd_controllers: Rc<RefCell<HashMap<&'static str, Controllers>>>,
@@ -58,10 +59,20 @@ pub struct CommandPalette {
 
 impl View for CommandPalette {
     fn draw(&self, printer: &Printer) {
+        // Right most X position that contains text
+        let mut max_x = printer.size.x;
+
         printer.print_hline((0, 0), printer.size.x, "─");
         if let Some(filter) = &self.filter {
             let filter = format!("| Filter: {:>10.10} |", filter);
-            printer.print((printer.size.x - filter.len(), 0), &filter);
+            max_x -= filter.len();
+            printer.print((max_x, 0), &filter);
+        }
+
+        if self.fold {
+            let text = "| Fold |";
+            max_x -= text.len();
+            printer.print((max_x, 0), text);
         }
 
         match self.mode {
@@ -116,6 +127,7 @@ impl CommandPalette {
         Self {
             content: content.into(),
             filter: None,
+            fold: false,
             mode: CPMode::Info,
             cmd_view: RefCell::new(
                 EditView::new()
@@ -247,6 +259,10 @@ impl CommandPalette {
 
     pub fn set_filter(&mut self, filter: Option<String>) {
         self.filter = filter;
+    }
+
+    pub fn toggle_fold(&mut self) {
+        self.fold = !self.fold;
     }
 
     fn print_info(&self, printer: &Printer, pos: Vec2, idx: usize) {

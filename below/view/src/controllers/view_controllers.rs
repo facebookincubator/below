@@ -350,7 +350,8 @@ make_event_controller!(
 
         // NB: scope the borrowing to refresh() doesn't re-borrow and panic
         if current_state == MainViewState::Process {
-            let process_view = crate::process_view::ProcessView::get_process_view(c);
+            let mut process_view = crate::process_view::ProcessView::get_process_view(c);
+            process_view.get_cmd_palette().toggle_fold();
             process_view.state.borrow_mut().toggle_fold();
         }
 
