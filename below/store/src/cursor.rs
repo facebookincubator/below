@@ -599,10 +599,12 @@ mod tests {
     fn read_compressed_cbor() {
         simple_put_read(true, Format::Cbor);
     }
+    #[cfg(fbcode_build)]
     #[test]
     fn read_thrift() {
         simple_put_read(false, Format::Thrift);
     }
+    #[cfg(fbcode_build)]
     #[test]
     fn read_compressed_thrift() {
         simple_put_read(true, Format::Thrift);
@@ -644,7 +646,7 @@ mod tests {
             let shard = timestamp - timestamp % SHARD_TIME;
             let open_options = OpenOptions::new().create(true).append(true).clone();
 
-            let data_bytes = serialize_frame(&DataFrame::default(), Format::Thrift)
+            let data_bytes = serialize_frame(&DataFrame::default(), Format::Cbor)
                 .context("Failed to serialize data frame")?;
             let data_crc = if corrupt_data { 0 } else { data_bytes.crc32() };
             let mut data_file = open_options
@@ -662,7 +664,7 @@ mod tests {
                 timestamp,
                 offset,
                 len: data_bytes.len() as u32,
-                flags: IndexEntryFlags::empty(),
+                flags: IndexEntryFlags::CBOR,
                 data_crc,
                 index_crc: 0,
             };
