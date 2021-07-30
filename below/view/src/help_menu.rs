@@ -83,6 +83,7 @@ fn get_description(controller: &Controllers) -> &'static str {
         Controllers::Fold => "Fold processes (post filter) and display aggregated values.",
         Controllers::NextPage => "scroll down 15 lines primary display.",
         Controllers::PrevPage => "scroll up 15 lines primary display.",
+        Controllers::Url => "Show Corresponding Below Web URL",
         _ => "Unknown",
     }
 }
@@ -134,7 +135,7 @@ fn fill_controllers(
 
     // Unwrap in this vec! must be sccuess, otherwise we may have lost controller(s) and should be detected
     // by unit test.
-    let controllers = vec![
+    let mut controllers = vec![
         cmd_map.get(&Controllers::Help).unwrap().to_string(),
         cmd_map.get(&Controllers::CmdPalette).unwrap().to_string(),
         cmd_map.get(&Controllers::Quit).unwrap().to_string(),
@@ -160,6 +161,10 @@ fn fill_controllers(
         cmd_map.get(&Controllers::NextPage).unwrap().to_string(),
         cmd_map.get(&Controllers::PrevPage).unwrap().to_string(),
     ];
+
+    if cfg!(fbcode_build) {
+        controllers.push(cmd_map.get(&Controllers::Url).unwrap().to_string());
+    }
 
     v.add_all_str(controllers);
 }

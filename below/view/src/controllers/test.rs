@@ -48,6 +48,7 @@ filter = 'u'
 clear_filter = 'v'
 next_page = 'x'
 prev_page = 'y'
+url = 'n'
 ";
     let cmdrc_val = std::str::from_utf8(cmdrc_str)
         .expect("Failed to parse [u8] to str")
@@ -146,6 +147,10 @@ prev_page = 'y'
     assert_eq!(
         event_controllers.get(&Event::Char('y')),
         Some(&Controllers::PrevPage)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('n')),
+        Some(&Controllers::Url)
     );
 }
 
