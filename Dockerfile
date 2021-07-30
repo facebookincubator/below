@@ -1,7 +1,5 @@
 FROM ubuntu:groovy AS build
 
-ARG RUN_TESTS
-
 RUN apt-get update
 RUN apt-get install -y \
   build-essential \
@@ -26,17 +24,7 @@ RUN bash /rustup.sh -y
 ADD . /below
 # Build below
 WORKDIR below
-RUN /root/.cargo/bin/cargo build --release --package below
-
-# Run tests if requested
-RUN if [[ -n "$RUN_TESTS" ]]; then     \
-    /root/.cargo/bin/cargo test --     \
-    --skip test_dump                   \
-    --skip advance_forward_and_reverse \
-    --skip disable_disk_stat           \
-    stdout                             \
-    --skip disable_io_stat;            \
-  fi
+RUN /root/.cargo/bin/cargo build --release --tests
 
 # Now create stage 2 image. We drop all the build dependencies and only install
 # runtime dependencies. This will create a smaller image suitable for

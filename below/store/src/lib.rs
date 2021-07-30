@@ -738,7 +738,6 @@ fn calculate_shard(timestamp: SystemTime) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use itertools::Itertools;
     use paste::paste;
     use slog::Drain;
     use std::time::Duration;
@@ -799,6 +798,8 @@ mod tests {
     #[cfg(fbcode_build)]
     #[test]
     fn writing_to_already_written_index_with_different_compression_format_works() {
+        use itertools::Itertools;
+
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
 

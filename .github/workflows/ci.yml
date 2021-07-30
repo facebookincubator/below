@@ -30,5 +30,22 @@ jobs:
       run: >
         docker build
         -t below
-        --build-arg RUN_TESTS=1
+        --target build
         .
+    - name: Run tests
+      # Skip tests that require host to have cgroup2
+      run: >
+        docker run below
+        /root/.cargo/bin/cargo test
+        --release
+        --
+        --skip test_dump
+        --skip advance_forward_and_reverse
+        --skip disable_disk_stat
+        --skip disable_io_stat
+        --skip record_replay_integration
+        --skip test_belowrc_to_event
+        --skip test_event_controller_override
+        --skip test_event_controller_override_failed
+        --skip test_viewrc_collapse_cgroups
+        --skip test_viewrc_default_view
