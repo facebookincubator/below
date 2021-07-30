@@ -738,7 +738,6 @@ fn calculate_shard(timestamp: SystemTime) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use itertools::Itertools;
     use paste::paste;
     use slog::Drain;
     use std::time::Duration;
