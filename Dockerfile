@@ -24,7 +24,7 @@ RUN bash /rustup.sh -y
 ADD . /below
 # Build below
 WORKDIR below
-RUN /root/.cargo/bin/cargo build --release --tests
+RUN /root/.cargo/bin/cargo build --release --all-targets
 
 # Now create stage 2 image. We drop all the build dependencies and only install
 # runtime dependencies. This will create a smaller image suitable for
