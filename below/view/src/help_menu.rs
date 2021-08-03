@@ -23,7 +23,7 @@ use std::rc::Rc;
 use crate::controllers::{event_to_string, Controllers};
 use crate::tab_view::TabView;
 
-struct ControllerHelper {
+pub struct ControllerHelper {
     event: Event,
     description: &'static str,
     cmd: &'static str,
@@ -162,9 +162,7 @@ fn fill_controllers(
         cmd_map.get(&Controllers::PrevPage).unwrap().to_string(),
     ];
 
-    if cfg!(fbcode_build) {
-        controllers.push(cmd_map.get(&Controllers::Url).unwrap().to_string());
-    }
+    controllers.extend(crate::get_extra_controller_str(&cmd_map));
 
     v.add_all_str(controllers);
 }

@@ -92,14 +92,9 @@ use controller_infra::*;
 use sample_controllers::*;
 use view_controllers::*;
 
-#[cfg(fbcode_build)]
-mod facebook;
-#[cfg(fbcode_build)]
-use facebook::*;
-#[cfg(not(fbcode_build))]
-mod open_source;
-#[cfg(not(fbcode_build))]
-use open_source::*;
+use common::open_source_shim;
+
+open_source_shim!();
 
 pub use controller_infra::{event_to_string, str_to_event};
 
