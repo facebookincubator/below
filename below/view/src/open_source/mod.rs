@@ -24,8 +24,6 @@ pub fn get_version_str() -> String {
     }
 }
 
-pub fn get_internal_controller_str(
-    _cmd_map: &HashMap<Controllers, ControllerHelper>,
-) -> Vec<String> {
+pub fn get_extra_controller_str(_cmd_map: &HashMap<Controllers, ControllerHelper>) -> Vec<String> {
     return vec![];
 }
