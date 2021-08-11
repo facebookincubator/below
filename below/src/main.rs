@@ -103,13 +103,11 @@ enum Command {
         /// You can expect up to ~4.5x smaller data files
         #[structopt(long)]
         compress: bool,
-        /// WARNING: This flag is ignored in open source. In open source, data
-        ///          is stored as CBOR. This flag is temporary and will be removed in
-        ///          the near future.
+        /// This flag is a no-op and will be removed in the immediate future.
         ///
-        /// Store data as CBOR. If unset, data is stored as Thrift.
-        #[structopt(long, hidden = true)]
-        use_cbor: bool,
+        /// TODO(T92471373): Remove --use-cbor flag
+        #[structopt(name = "use-cbor", long, hidden = true)]
+        _use_cbor: bool,
     },
     /// Replay historical data (interactive)
     Replay {
@@ -437,7 +435,7 @@ fn real_main(init: init::InitToken) {
             ref disable_disk_stat,
             ref disable_exitstats,
             ref compress,
-            ref use_cbor,
+            ref _use_cbor,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
             run(
@@ -459,7 +457,6 @@ fn real_main(init: init::InitToken) {
                         *disable_disk_stat,
                         *disable_exitstats,
                         *compress,
-                        *use_cbor,
                     )
                 },
             )
@@ -592,7 +589,6 @@ fn record(
     disable_disk_stat: bool,
     disable_exitstats: bool,
     compress: bool,
-    use_cbor: bool,
 ) -> Result<()> {
     debug!(logger, "Starting up!");
 
@@ -600,15 +596,8 @@ fn record(
         bump_memlock_rlimit()?;
     }
 
-    // TODO(T92471373): Remove --use-cbor flag and hardcode format as CBOR.
-    // This is already the case for open source.
-    let format = if !cfg!(fbcode_build) || use_cbor {
-        store::Format::Cbor
-    } else {
-        store::Format::Thrift
-    };
-
-    let mut store = store::StoreWriter::new(&below_config.store_dir, compress, format)?;
+    let mut store =
+        store::StoreWriter::new(&below_config.store_dir, compress, store::Format::Cbor)?;
     let mut stats = statistics::Statistics::new();
 
     let (exit_buffer, bpf_errs) = if disable_exitstats {
