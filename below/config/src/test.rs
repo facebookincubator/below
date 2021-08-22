@@ -26,6 +26,10 @@ fn test_config_default() {
         below_config.store_dir.to_string_lossy(),
         "/var/log/below/store"
     );
+    assert_eq!(
+        below_config.cgroup_root.to_string_lossy(),
+        cgroupfs::DEFAULT_CG_ROOT
+    );
     assert_eq!(below_config.cgroup_filter_out, String::new());
     assert_eq!(below_config.killswitch_store_cursor, false);
 }
@@ -67,6 +71,7 @@ fn test_config_load_success() {
     let config_str = r#"
         log_dir = '/var/log/below'
         store_dir = '/var/log/below'
+        cgroup_root = '/sys/fs/cgroup'
         cgroup_filter_out = 'user.slice'
         killswitch_store_cursor = true
         # I'm a comment
@@ -82,6 +87,7 @@ fn test_config_load_success() {
     };
     assert_eq!(below_config.log_dir.to_string_lossy(), "/var/log/below");
     assert_eq!(below_config.store_dir.to_string_lossy(), "/var/log/below");
+    assert_eq!(below_config.cgroup_root.to_string_lossy(), "/sys/fs/cgroup");
     assert_eq!(below_config.cgroup_filter_out, "user.slice");
     assert_eq!(below_config.killswitch_store_cursor, true);
 }
