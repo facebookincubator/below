@@ -556,24 +556,27 @@ impl ProcReader {
         let path = path.as_ref().join("cgroup");
         let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
         let buf_reader = BufReader::new(file);
-        let pid_line = buf_reader.lines().next().map_or_else(
-            || Err(Error::InvalidFileFormat(path.clone())),
-            |line| line.map_err(|e| Error::IoError(path.clone(), e)),
-        )?;
 
-        // cgroup V2
-        if pid_line.len() > 3 && pid_line.starts_with("0::") {
-            return Ok(pid_line[3..].to_string());
-        }
-
-        // legacy cgroup will have multiple lines with the first line of [0-9]+:pids:PATH
-        if let Some(pid_idx) = pid_line.find(":pids:") {
-            if pid_idx + 6 < pid_line.len() {
-                return Ok(pid_line[pid_idx + 6..].to_string());
+        let mut cgroup_path = None;
+        for line in buf_reader.lines() {
+            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
+            // Lines contain three colon separated fields:
+            //   hierarchy-ID:controller-list:cgroup-path
+            // A line starting with "0::" would be an entry for cgroup v2.
+            // Otherwise, the line containing "pids" controller is what we want
+            // for cgroup v1.
+            let parts: Vec<_> = line.split(':').collect();
+            if parts.len() == 3 {
+                if parts[0] == "0" && parts[1] == "" {
+                    cgroup_path = Some(parts[2].to_owned());
+                    // cgroup v2 takes precedence
+                    break;
+                } else if parts[1].split(',').any(|c| c == "pids") {
+                    cgroup_path = Some(parts[2].to_owned());
+                }
             }
         }
-
-        Err(Error::InvalidFileFormat(path))
+        cgroup_path.ok_or_else(|| Error::InvalidFileFormat(path))
     }
 
     pub fn read_pid_cgroup(&self, pid: u32) -> Result<String> {
