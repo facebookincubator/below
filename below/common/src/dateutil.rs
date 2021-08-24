@@ -38,7 +38,7 @@ pub struct HgTime {
     pub offset: i32,
 }
 
-const DEFAULT_FORMATS: [&str; 43] = [
+const DEFAULT_FORMATS: [&str; 44] = [
     // mercurial/util.py defaultdateformats
     "%Y-%m-%dT%H:%M:%S", // the 'real' ISO8601
     "%Y-%m-%dT%H:%M",    //   without seconds
@@ -75,6 +75,7 @@ const DEFAULT_FORMATS: [&str; 43] = [
     "%I:%M:%S%p",
     "%Y",
     "%Y-%m",
+    "%m/%d/%Y %I:%M:%S %P",
     "%m/%d/%Y %I:%M:%S%p",
     "%m/%d/%Y %H:%M:%S",
     "%m/%d/%Y %I:%M%p",
