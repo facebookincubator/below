@@ -17,16 +17,29 @@ use std::sync::{Arc, Mutex};
 use super::*;
 use regex::Regex;
 use slog::{self, error};
+use std::path::{Path, PathBuf};
 
 /// Collects data samples and maintains the latest data
 pub struct Collector {
+    cgroup_root: PathBuf,
     last: Option<(Sample, Instant)>,
     exit_data: Arc<Mutex<procfs::PidMap>>,
 }
 
 impl Collector {
     pub fn new(exit_data: Arc<Mutex<procfs::PidMap>>) -> Collector {
+        Collector::new_with_cgroup_root(
+            Path::new(cgroupfs::DEFAULT_CG_ROOT).to_path_buf(),
+            exit_data,
+        )
+    }
+
+    pub fn new_with_cgroup_root(
+        cgroup_root: PathBuf,
+        exit_data: Arc<Mutex<procfs::PidMap>>,
+    ) -> Collector {
         Collector {
+            cgroup_root,
             last: None,
             exit_data,
         }
@@ -35,7 +48,14 @@ impl Collector {
     /// Collect a new `Sample`, returning an updated Model
     pub fn update_model(&mut self, logger: &slog::Logger) -> Result<Model> {
         let now = Instant::now();
-        let sample = collect_sample(&self.exit_data, true, logger, false, &None)?;
+        let sample = collect_sample(
+            &self.cgroup_root,
+            &self.exit_data,
+            true,
+            logger,
+            false,
+            &None,
+        )?;
         let last = self.last.replace((sample, now));
         let model = Model::new(
             SystemTime::now(),
@@ -126,6 +146,7 @@ fn is_all_zero_disk_stats(disk_stats: &procfs::DiskStat) -> bool {
 }
 
 pub fn collect_sample(
+    cgroup_root: &PathBuf,
     exit_data: &Arc<Mutex<procfs::PidMap>>,
     collect_io_stat: bool,
     logger: &slog::Logger,
@@ -142,7 +163,7 @@ pub fn collect_sample(
 
     Ok(Sample {
         cgroup: collect_cgroup_sample(
-            &cgroupfs::CgroupReader::root()?,
+            &cgroupfs::CgroupReader::new(cgroup_root.to_owned())?,
             collect_io_stat,
             logger,
             &cgroup_re,

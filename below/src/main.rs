@@ -639,6 +639,7 @@ fn record(
         let collect_instant = Instant::now();
 
         let collected_sample = model::collect_sample(
+            &below_config.cgroup_root,
             &exit_buffer,
             collect_io_stat,
             &logger,
@@ -724,7 +725,8 @@ fn live_local(
     let (exit_buffer, bpf_errs) = start_exitstat(logger.clone(), debug);
     let mut bpf_err_warned = false;
 
-    let mut collector = model::Collector::new(exit_buffer);
+    let mut collector =
+        model::Collector::new_with_cgroup_root(below_config.cgroup_root.clone(), exit_buffer);
     logutil::set_current_log_target(logutil::TargetLog::File);
     // Prepare advance obj for pause mode
     let mut adv = new_advance_local(
