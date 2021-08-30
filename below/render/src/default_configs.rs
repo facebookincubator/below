@@ -455,9 +455,15 @@ impl HasRenderConfig for model::SingleCpuModel {
 impl HasRenderConfig for Vec<model::SingleCpuModel> {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         let mut rc = model::SingleCpuModel::get_render_config_builder(&field_id.subquery_id).get();
-        rc.title = rc
-            .title
-            .map(|title| format!("CPU {} {}", field_id.idx, title));
+        rc.title = rc.title.map(|title| {
+            format!(
+                "CPU {} {}",
+                field_id
+                    .idx
+                    .expect("VecFieldId without idx should not have render config"),
+                title
+            )
+        });
         rc.into()
     }
 }

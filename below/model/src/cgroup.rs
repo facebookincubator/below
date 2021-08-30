@@ -56,13 +56,14 @@ pub struct CgroupModel {
 ///     path:/system.slice/foo.service/.cpu.usage_pct
 /// The path parameter starts with `path:` and ends with `/.`. This works
 /// because SingleCgroupModelFieldId does not contain slash.
-/// The path is used to drill into the Cgroup Model tree. If it's empty, the
+/// The path is used to drill into the Cgroup Model tree. If Vec empty, the
 /// current CgroupModel is selected and queried with the subquery_id.
 /// The path is optional in parsing and converting to String.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CgroupModelFieldId {
-    /// To drill into children recursively. If empty, queries self.
-    pub path: Vec<String>,
+    /// To drill into children recursively. If Vec empty, queries self.
+    /// None is only for listing variants and otherwise invalid.
+    pub path: Option<Vec<String>>,
     pub subquery_id: SingleCgroupModelFieldId,
 }
 
@@ -70,7 +71,7 @@ pub struct CgroupModelFieldId {
 impl From<SingleCgroupModelFieldId> for CgroupModelFieldId {
     fn from(v: SingleCgroupModelFieldId) -> Self {
         Self {
-            path: vec![],
+            path: Some(vec![]),
             subquery_id: v,
         }
     }
@@ -80,18 +81,24 @@ impl FieldId for CgroupModelFieldId {
     type Queriable = CgroupModel;
 }
 
-impl EnumIter for CgroupModelFieldId {}
+impl EnumIter for CgroupModelFieldId {
+    fn all_variant_iter() -> Box<dyn Iterator<Item = Self>> {
+        Box::new(
+            SingleCgroupModelFieldId::all_variant_iter().map(|v| CgroupModelFieldId {
+                // Dynamic parameter is irrelevant to variant listing
+                path: None,
+                subquery_id: v,
+            }),
+        )
+    }
+}
 
 impl std::string::ToString for CgroupModelFieldId {
     fn to_string(&self) -> String {
-        if self.path.is_empty() {
-            self.subquery_id.to_string()
-        } else {
-            format!(
-                "path:/{}/.{}",
-                self.path.join("/"),
-                self.subquery_id.to_string()
-            )
+        match &self.path {
+            Some(path) if path.is_empty() => self.subquery_id.to_string(),
+            Some(path) => format!("path:/{}/.{}", path.join("/"), self.subquery_id.to_string()),
+            None => format!("[path:/<cgroup_path>/.]{}", self.subquery_id.to_string()),
         }
     }
 }
@@ -106,11 +113,13 @@ impl std::str::FromStr for CgroupModelFieldId {
         } else {
             ("", s)
         };
-        let path = path_str
-            .split('/')
-            .filter(|part| !part.is_empty())
-            .map(|part| part.to_owned())
-            .collect();
+        let path = Some(
+            path_str
+                .split('/')
+                .filter(|part| !part.is_empty())
+                .map(|part| part.to_owned())
+                .collect(),
+        );
         let subquery_id = SingleCgroupModelFieldId::from_str(subquery_id_str)?;
         Ok(Self { path, subquery_id })
     }
@@ -120,7 +129,7 @@ impl Queriable for CgroupModel {
     type FieldId = CgroupModelFieldId;
     fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
         let mut model = self;
-        for part in field_id.path.iter() {
+        for part in field_id.path.as_ref()?.iter() {
             model = model.children.get(part)?;
         }
         model.data.query(&field_id.subquery_id)

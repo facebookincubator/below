@@ -24,6 +24,8 @@ use serde::{Deserialize, Serialize};
 #[macro_use]
 pub mod collector;
 pub mod cgroup;
+#[cfg(test)]
+mod field_ids;
 pub mod network;
 pub mod process;
 pub mod sample;
@@ -240,7 +242,8 @@ pub trait Recursive {
 /// to query into a Vec. Uses `subquery_id` to query into the selected item.
 #[derive(Clone, Debug, PartialEq)]
 pub struct VecFieldId<F: FieldId> {
-    pub idx: usize,
+    /// None is only for listing variants and otherwise invalid.
+    pub idx: Option<usize>,
     pub subquery_id: F,
 }
 
@@ -251,11 +254,22 @@ where
     type Queriable = Vec<F::Queriable>;
 }
 
-impl<F: FieldId + 'static> EnumIter for VecFieldId<F> {}
+impl<F: FieldId + EnumIter> EnumIter for VecFieldId<F> {
+    fn all_variant_iter() -> Box<dyn Iterator<Item = Self>> {
+        Box::new(F::all_variant_iter().map(|v| VecFieldId {
+            // Dynamic parameter is irrelevant to variant listing
+            idx: None,
+            subquery_id: v,
+        }))
+    }
+}
 
 impl<F: FieldId + ToString> ToString for VecFieldId<F> {
     fn to_string(&self) -> String {
-        format!("{}.{}", self.idx, self.subquery_id.to_string())
+        match self.idx {
+            Some(idx) => format!("{}.{}", idx, self.subquery_id.to_string()),
+            None => format!("<idx>.{}", self.subquery_id.to_string()),
+        }
     }
 }
 
@@ -267,7 +281,7 @@ where
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         if let Some(dot_idx) = s.find('.') {
             Ok(Self {
-                idx: s[..dot_idx].parse()?,
+                idx: Some(s[..dot_idx].parse()?),
                 subquery_id: F::from_str(&s[dot_idx + 1..]).map_err(Into::into)?,
             })
         } else {
@@ -282,7 +296,7 @@ where
 impl<Q: Queriable> Queriable for Vec<Q> {
     type FieldId = VecFieldId<Q::FieldId>;
     fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
-        self.get(field_id.idx)
+        self.get(field_id.idx?)
             .and_then(|f| f.query(&field_id.subquery_id))
     }
 }
@@ -291,7 +305,8 @@ impl<Q: Queriable> Queriable for Vec<Q> {
 /// to query into a map. Uses `subquery_id` to query into the selected value.
 #[derive(Clone, Debug, PartialEq)]
 pub struct BTreeMapFieldId<K, F: FieldId> {
-    pub key: K,
+    /// None is only for listing variants and otherwise invalid.
+    pub key: Option<K>,
     pub subquery_id: F,
 }
 
@@ -302,11 +317,22 @@ where
     type Queriable = BTreeMap<K, F::Queriable>;
 }
 
-impl<K: Ord + 'static, F: FieldId + EnumIter> EnumIter for BTreeMapFieldId<K, F> {}
+impl<K: Ord + 'static, F: FieldId + EnumIter> EnumIter for BTreeMapFieldId<K, F> {
+    fn all_variant_iter() -> Box<dyn Iterator<Item = Self>> {
+        Box::new(F::all_variant_iter().map(|v| BTreeMapFieldId {
+            // Dynamic parameter is irrelevant to variant listing
+            key: None,
+            subquery_id: v,
+        }))
+    }
+}
 
 impl<K: ToString, F: FieldId + ToString> ToString for BTreeMapFieldId<K, F> {
     fn to_string(&self) -> String {
-        format!("{}.{}", self.key.to_string(), self.subquery_id.to_string())
+        match &self.key {
+            Some(key) => format!("{}.{}", key.to_string(), self.subquery_id.to_string()),
+            None => format!("<key>.{}", self.subquery_id.to_string()),
+        }
     }
 }
 
@@ -320,7 +346,7 @@ where
         // Only works with keys that don't contain dot
         if let Some(dot_idx) = s.find('.') {
             Ok(Self {
-                key: K::from_str(&s[..dot_idx]).map_err(Into::into)?,
+                key: Some(K::from_str(&s[..dot_idx]).map_err(Into::into)?),
                 subquery_id: F::from_str(&s[dot_idx + 1..]).map_err(Into::into)?,
             })
         } else {
@@ -335,7 +361,7 @@ where
 impl<K: Ord, Q: Queriable> Queriable for BTreeMap<K, Q> {
     type FieldId = BTreeMapFieldId<K, Q::FieldId>;
     fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
-        self.get(&field_id.key)
+        self.get(field_id.key.as_ref()?)
             .and_then(|f| f.query(&field_id.subquery_id))
     }
 }
@@ -391,6 +417,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_model_field_ids() {
+        // Ensure MODEL_FIELD_IDS is update to date.
+        let all_variants = ModelFieldId::all_variant_iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(all_variants, field_ids::MODEL_FIELD_IDS);
+    }
+
+    #[test]
     fn test_deserialize_sample_model_json() {
         get_sample_model();
     }
@@ -407,7 +442,7 @@ mod tests {
         assert_eq!(
             query,
             VecFieldId {
-                idx: 1,
+                idx: Some(1),
                 subquery_id: TestModelFieldId::Msg,
             }
         );
@@ -426,7 +461,7 @@ mod tests {
         ];
         assert_eq!(
             data.query(&VecFieldId {
-                idx: 1,
+                idx: Some(1),
                 subquery_id: TestModelFieldId::Msg,
             }),
             Some(Field::Str("world".to_owned()))
@@ -441,7 +476,7 @@ mod tests {
         assert_eq!(
             query,
             BTreeMapFieldId {
-                key: "hello".to_owned(),
+                key: Some("hello".to_owned()),
                 subquery_id: TestModelFieldId::Msg,
             }
         );
@@ -465,7 +500,7 @@ mod tests {
         );
         assert_eq!(
             data.query(&BTreeMapFieldId {
-                key: "hello".to_owned(),
+                key: Some("hello".to_owned()),
                 subquery_id: TestModelFieldId::Msg,
             }),
             Some(Field::Str("world".to_owned()))

@@ -35,7 +35,7 @@ fn test_dump_sys_content() {
     for subquery_id in model::SingleCpuModelFieldId::unit_variant_iter() {
         fields.push(DumpField::FieldId(model::SystemModelFieldId::Cpus(
             model::VecFieldId {
-                idx: 31,
+                idx: Some(31),
                 subquery_id,
             },
         )));
@@ -86,7 +86,7 @@ fn test_dump_sys_titles() {
         .chain(
             model::SingleCpuModelFieldId::unit_variant_iter().map(|subquery_id| {
                 DumpField::FieldId(model::SystemModelFieldId::Cpus(model::VecFieldId {
-                    idx: 31,
+                    idx: Some(31),
                     subquery_id,
                 }))
             }),
