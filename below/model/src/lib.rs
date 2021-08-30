@@ -340,13 +340,19 @@ impl<K: Ord, Q: Queriable> Queriable for BTreeMap<K, Q> {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, below_derive::Queriable)]
 pub struct Model {
+    #[queriable(ignore)]
     pub time_elapsed: Duration,
+    #[queriable(ignore)]
     pub timestamp: SystemTime,
+    #[queriable(subquery)]
     pub system: SystemModel,
+    #[queriable(subquery)]
     pub cgroup: CgroupModel,
+    #[queriable(subquery)]
     pub process: ProcessModel,
+    #[queriable(subquery)]
     pub network: NetworkModel,
 }
 
@@ -464,5 +470,37 @@ mod tests {
             }),
             Some(Field::Str("world".to_owned()))
         );
+    }
+
+    #[test]
+    fn test_query_models() {
+        let model = get_sample_model();
+        for (field_id, expected) in &[
+            (
+                "system.hostname",
+                Some(Field::Str("hostname.example.com".to_owned())),
+            ),
+            (
+                "cgroup.path:/init.scope/.cpu.usage_pct",
+                Some(Field::F64(0.01)),
+            ),
+            (
+                "network.interfaces.eth0.interface",
+                Some(Field::Str("eth0".to_owned())),
+            ),
+            (
+                "process.processes.1.comm",
+                Some(Field::Str("systemd".to_owned())),
+            ),
+        ] {
+            assert_eq!(
+                &model.query(
+                    &ModelFieldId::from_str(field_id)
+                        .map_err(|e| format!("Failed to parse field id {}: {:?}", field_id, e))
+                        .unwrap()
+                ),
+                expected
+            );
+        }
     }
 }
