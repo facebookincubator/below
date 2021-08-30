@@ -25,7 +25,7 @@ use toml::value::Value as TValue;
 
 use common::cliutil;
 use common::util::{get_belowrc_dump_section_key, get_belowrc_filename, timestamp_to_datetime};
-use model::{Field, FieldId, Queriable};
+use model::{EnumIter, Field, FieldId, Queriable};
 
 use store::advance::{new_advance_local, new_advance_remote};
 use store::Advance;

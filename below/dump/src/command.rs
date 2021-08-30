@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::{CommonField, DumpField};
+use model::EnumIter;
 use model::{
     CgroupModelFieldId, FieldId, NetworkModelFieldId, SingleDiskModelFieldId,
     SingleNetModelFieldId, SingleProcessModelFieldId, SystemModelFieldId,

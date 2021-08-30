@@ -20,6 +20,7 @@ use common::util::get_prefix;
 use model::system::{
     MemoryModelFieldId, SingleCpuModelFieldId, SingleDiskModelFieldId, VmModelFieldId,
 };
+use model::EnumIter;
 
 use cursive::utils::markup::StyledString;
 

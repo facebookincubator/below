@@ -161,15 +161,17 @@ pub fn enum_iter_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream> {
         .collect::<syn::Result<Vec<_>>>()?;
 
     Ok(quote! {
-        impl #enum_name {
-            pub fn unit_variant_iter() -> impl ::std::iter::Iterator<Item = Self> {
+        impl EnumIter for #enum_name {
+            fn unit_variant_iter() -> Box<dyn std::iter::Iterator<Item = Self>> {
                 const UNIT_VARIANTS: &[#enum_name] = &[#(#enum_name::#unit_variants),*];
-                UNIT_VARIANTS.iter().cloned()
+                Box::new(UNIT_VARIANTS.iter().cloned())
             }
 
-            pub fn all_variant_iter() -> impl ::std::iter::Iterator<Item = Self> {
-                ::std::iter::empty()
-                #(#all_variant_iter_chain)*
+            fn all_variant_iter() -> Box<dyn std::iter::Iterator<Item = Self>> {
+                Box::new(
+                    ::std::iter::empty()
+                    #(#all_variant_iter_chain)*
+                )
             }
         }
     })

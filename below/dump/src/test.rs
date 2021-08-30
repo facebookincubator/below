@@ -17,7 +17,7 @@ use serde_json::Value;
 use super::*;
 use command::{expand_fields, GeneralOpt, OutputFormat};
 use common::logutil::get_logger;
-use model::{Collector, Queriable};
+use model::{Collector, EnumIter, Queriable};
 use print::HasRenderConfigForDump;
 use tmain::Dumper;
 

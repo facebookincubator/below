@@ -213,6 +213,21 @@ pub fn sort_queriables<T: Queriable>(queriables: &mut [&T], field_id: &T::FieldI
     });
 }
 
+/// An enum that can iterate its variants. Ones without parameters are unit
+/// variants. Ones with exactly one parameter that is also IterEnum are nested
+/// variants. Can be auto derived with below_derive::EnumIter.
+/// Use this trait to programmatically list available variants in a FieldId.
+pub trait EnumIter: Sized + 'static {
+    /// Return iterator for unit variants only.
+    fn unit_variant_iter() -> Box<dyn Iterator<Item = Self>> {
+        Box::new(std::iter::empty())
+    }
+    /// Return iterator for unit variants as well as nested variants.
+    fn all_variant_iter() -> Box<dyn Iterator<Item = Self>> {
+        Box::new(std::iter::empty())
+    }
+}
+
 /// Models containing sub-Models with its own type, similar to a node in a tree.
 /// Such Model has a depth value for illustrating the tree hierarchy.
 pub trait Recursive {
@@ -234,15 +249,7 @@ where
     type Queriable = Vec<F::Queriable>;
 }
 
-/// Placeholder methods in case they are moved to a trait later.
-impl<F: FieldId> VecFieldId<F> {
-    pub fn unit_variant_iter() -> impl std::iter::Iterator<Item = Self> {
-        std::iter::empty()
-    }
-    pub fn all_variant_iter() -> impl std::iter::Iterator<Item = Self> {
-        std::iter::empty()
-    }
-}
+impl<F: FieldId + 'static> EnumIter for VecFieldId<F> {}
 
 impl<F: FieldId + std::string::ToString> std::string::ToString for VecFieldId<F> {
     fn to_string(&self) -> String {
