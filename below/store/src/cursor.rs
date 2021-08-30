@@ -90,6 +90,15 @@ pub trait KeyedCursor<Key: std::cmp::Ord>: Cursor {
         // Check if the last key satisfies the direction order
         Ok(curr_key.map_or(false, |k| k.cmp(key) != direction.get_skip_order()))
     }
+
+    /// Convenient function to jump to a key and get the closest valid item.
+    fn get_at_key(&mut self, key: &Key, direction: Direction) -> Result<Option<Self::Item>> {
+        self.jump_to_key(key, direction)?;
+        match self.get() {
+            Some(item) => Ok(Some(item)),
+            None => self.next(direction),
+        }
+    }
 }
 
 /// For read-only access to a store. Similar to an iterator, but support moving
