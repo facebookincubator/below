@@ -75,12 +75,11 @@ pub fn enum_iter_derive(input: TokenStream) -> TokenStream {
 ///     Ignore field when implementing Queriable trait.
 ///
 /// #[queriable(subquery)]
-/// #[queriable(subquery = MyCgroupCpuModelFieldId)]
 ///     Mark field for subquery processing, i.e. its value is a Queriable to
-///     which we delegate the subquery. The corresponding variant will have one
-///     unnamed field, e.g. Cpu(CgroupCpuModelFieldId) for field `cpu` where the
-///     field has type CgroupCpuModel (adding suffix `FieldId`). Optionally a
-///     subquery field_id type can be provided.
+///     which we delegate the subquery.
+///     For example, a `cpu` field with type CgroupCpuModel annotated with
+///     subquery will generate a corresponding variant in the created enum as
+///     Cpu(<CgroupCpuModel as Queriable>::FieldId).
 ///
 /// #[queriable(preferred_name = mem)]
 ///     Name used for generating enum variant instead of the original one. Must
@@ -93,7 +92,7 @@ pub fn enum_iter_derive(input: TokenStream) -> TokenStream {
 /// struct Foo {
 ///     a: u64,
 ///     b: Option<String>,
-///     #[queriable(subquery = MyBarFieldId)]
+///     #[queriable(subquery)]
 ///     c: Option<Bar>,
 ///     #[queriable(ignore)]
 ///     d: f64,
@@ -112,7 +111,7 @@ pub fn enum_iter_derive(input: TokenStream) -> TokenStream {
 /// enum MyFooFieldId {
 ///     A,
 ///     B,
-///     C(MyBarFieldId),
+///     C(<Bar as Queriable>::FieldId),
 /// }
 ///
 /// impl Queriable for Foo {

@@ -62,10 +62,7 @@ impl Spanned for StructMeta {
 
 pub enum FieldMeta {
     Ignore(kw::ignore),
-    Subquery {
-        kw: kw::subquery,
-        value: Option<syn::Type>,
-    },
+    Subquery(kw::subquery),
     PreferredName {
         kw: kw::preferred_name,
         value: Ident,
@@ -78,15 +75,7 @@ impl Parse for FieldMeta {
         if lookahead.peek(kw::ignore) {
             Ok(FieldMeta::Ignore(input.parse()?))
         } else if lookahead.peek(kw::subquery) {
-            let kw = input.parse()?;
-            // Optionally accept an Ident for subquery FieldId type.
-            if input.peek(Token![=]) {
-                let _: Token![=] = input.parse()?;
-                let value = Some(input.parse()?);
-                Ok(FieldMeta::Subquery { kw, value })
-            } else {
-                Ok(FieldMeta::Subquery { kw, value: None })
-            }
+            Ok(FieldMeta::Subquery(input.parse()?))
         } else if lookahead.peek(kw::preferred_name) {
             let kw = input.parse()?;
             let _: Token![=] = input.parse()?;
@@ -102,7 +91,7 @@ impl Spanned for FieldMeta {
     fn span(&self) -> Span {
         match self {
             FieldMeta::Ignore(kw) => kw.span,
-            FieldMeta::Subquery { kw, .. } => kw.span,
+            FieldMeta::Subquery(kw) => kw.span,
             FieldMeta::PreferredName { kw, .. } => kw.span,
         }
     }
@@ -163,32 +152,17 @@ fn get_queriable_field_props(field: &Field) -> syn::Result<QueriableFieldProps> 
                 ignore_kw = Some(kw);
                 ignore = true;
             }
-            FieldMeta::Subquery { value, kw } => {
+            FieldMeta::Subquery(kw) => {
                 if let Some(fst_kw) = subquery_kw {
                     return Err(occurrence_error(fst_kw, kw, "subquery"));
                 }
                 subquery_kw = Some(kw);
-                // If no type provided, infer from field type by adding `FieldId`
-                // suffix, which may be wrapped by Option.
-                subquery = value.or_else(|| {
-                    let base_type = option_type.as_ref().unwrap_or(&field.ty);
-                    match base_type {
-                        syn::Type::Path(ty_path) => {
-                            let mut ty_path = ty_path.clone();
-                            let last_ident = &ty_path.path.segments.last()?.ident;
-                            ty_path.path.segments.last_mut()?.ident =
-                                Ident::new(&format!("{}FieldId", last_ident), last_ident.span());
-                            Some(syn::Type::Path(ty_path))
-                        }
-                        _ => None,
-                    }
+                // Extract field if it's wrapped inside Option
+                let base_type = option_type.as_ref().unwrap_or(&field.ty);
+                // subquery field must implement Queriable
+                subquery = Some(syn::parse_quote! {
+                    <#base_type as Queriable>::FieldId
                 });
-                if subquery.is_none() {
-                    return Err(syn::Error::new(
-                        field.ty.span(),
-                        "Failed to infer subquery FieldId type",
-                    ));
-                }
             }
             FieldMeta::PreferredName { value, kw } => {
                 if let Some(fst_kw) = preferred_name_kw {
