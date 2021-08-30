@@ -19,12 +19,12 @@ use crate::cgroup_view::CgroupState;
 use crate::render::ViewItem;
 use crate::stats_view::StateCommon;
 
-use model::{sort_queriables, CgroupModel};
+use model::{sort_queriables, CgroupModel, SingleCgroupModel};
 
 use cursive::utils::markup::StyledString;
 
 /// Renders corresponding Fields From CgroupModel.
-type CgroupViewItem = ViewItem<model::CgroupModelFieldId>;
+type CgroupViewItem = ViewItem<model::SingleCgroupModelFieldId>;
 
 /// A collection of CgroupViewItem.
 #[derive(Clone)]
@@ -41,9 +41,10 @@ impl CgroupTab {
 
     fn get_line(
         &self,
-        model: &CgroupModel,
+        model: &SingleCgroupModel,
         collapsed: bool,
         offset: Option<usize>,
+        recreated: bool,
     ) -> StyledString {
         let mut line = if collapsed {
             &*default_tabs::CGROUP_NAME_ITEM_COLLAPSED
@@ -58,7 +59,7 @@ impl CgroupTab {
             line.append_plain(" ");
         }
 
-        if model.recreate_flag {
+        if recreated {
             line = StyledString::styled(
                 line.source(),
                 cursive::theme::Color::Light(cursive::theme::BaseColor::Green),
@@ -86,19 +87,22 @@ impl CgroupTab {
         let mut cgroup_stack = vec![cgroup];
         while let Some(cgroup) = cgroup_stack.pop() {
             if let Some(set) = &filter_out_set {
-                if set.contains(&cgroup.full_path) {
+                if set.contains(&cgroup.data.full_path) {
                     continue;
                 }
             }
 
-            let collapsed = state.collapsed_cgroups.borrow().contains(&cgroup.full_path);
-            let row = self.get_line(&cgroup, collapsed, offset);
+            let collapsed = state
+                .collapsed_cgroups
+                .borrow()
+                .contains(&cgroup.data.full_path);
+            let row = self.get_line(&cgroup.data, collapsed, offset, cgroup.recreate_flag);
             // Each row is (label, value), where label is visible and value is used
             // as identifier to correlate the row with its state in global data.
             if cgroup.recreate_flag {
-                output.push((row, format!("[RECREATED] {}", &cgroup.full_path)));
+                output.push((row, format!("[RECREATED] {}", &cgroup.data.full_path)));
             } else {
-                output.push((row, cgroup.full_path.clone()));
+                output.push((row, cgroup.data.full_path.clone()));
             }
 
             if collapsed {
@@ -107,7 +111,7 @@ impl CgroupTab {
 
             let mut children = Vec::from_iter(&cgroup.children);
             if let Some(sort_order) = state.sort_order.as_ref() {
-                sort_queriables(&mut children, sort_order, state.reverse);
+                sort_queriables(&mut children, &sort_order.to_owned().into(), state.reverse);
             }
 
             // Stop at next level (one below <root>)
@@ -116,7 +120,7 @@ impl CgroupTab {
                     state
                         .collapsed_cgroups
                         .borrow_mut()
-                        .insert(child_cgroup.full_path.clone());
+                        .insert(child_cgroup.data.full_path.clone());
                 }
             }
             // Push children in reverse order so the first one will be pop first
@@ -158,8 +162,8 @@ pub fn calculate_filter_out_set(cgroup: &CgroupModel, filter: &str) -> HashSet<S
     fn should_filter_out(cgroup: &CgroupModel, filter: &str, set: &mut HashSet<String>) -> bool {
         // No children
         if cgroup.count == 1 {
-            if !cgroup.full_path.contains(filter) {
-                set.insert(cgroup.full_path.clone());
+            if !cgroup.data.full_path.contains(filter) {
+                set.insert(cgroup.data.full_path.clone());
                 return true;
             }
             return false;
@@ -168,7 +172,7 @@ pub fn calculate_filter_out_set(cgroup: &CgroupModel, filter: &str) -> HashSet<S
         let mut filter_cgroup = true;
         for child in &cgroup.children {
             if should_filter_out(&child, &filter, set) {
-                set.insert(child.full_path.clone());
+                set.insert(child.data.full_path.clone());
             } else {
                 // We found a child that's not filtered out. That means
                 // we have to keep this (the parent cgroup) too.
@@ -177,7 +181,7 @@ pub fn calculate_filter_out_set(cgroup: &CgroupModel, filter: &str) -> HashSet<S
         }
 
         if filter_cgroup {
-            set.insert(cgroup.full_path.clone());
+            set.insert(cgroup.data.full_path.clone());
         }
 
         filter_cgroup
@@ -207,10 +211,10 @@ pub mod default_tabs {
         ThpCollapseAlloc, ThpFaultAlloc, Total, Unevictable, WorkingsetActivate,
         WorkingsetNodereclaim, WorkingsetRefault,
     };
-    use model::CgroupModelFieldId::{Cpu, Io, Mem, Name, Pressure};
     use model::CgroupPressureModelFieldId::{
         CpuSomePct, IoFullPct, IoSomePct, MemoryFullPct, MemorySomePct,
     };
+    use model::SingleCgroupModelFieldId::{Cpu, Io, Mem, Name, Pressure};
 
     use once_cell::sync::Lazy;
 

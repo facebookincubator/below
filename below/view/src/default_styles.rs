@@ -14,9 +14,9 @@
 
 use crate::render::{HasViewStyle, ViewStyle, CPU_HIGHLIGHT, MEM_HIGHLIGHT, PRESSURE_HIGHLIGHT};
 
-impl HasViewStyle for model::CgroupModel {
+impl HasViewStyle for model::SingleCgroupModel {
     fn get_view_style(field_id: &Self::FieldId) -> Option<ViewStyle> {
-        use model::CgroupModelFieldId::{Cpu, Pressure};
+        use model::SingleCgroupModelFieldId::{Cpu, Pressure};
         match field_id {
             Cpu(field_id) => model::CgroupCpuModel::get_view_style(field_id),
             Pressure(field_id) => model::CgroupPressureModel::get_view_style(field_id),

@@ -14,13 +14,13 @@
 
 use super::*;
 
-use model::CgroupModelFieldId;
+use model::SingleCgroupModelFieldId;
 use render::RenderConfig;
 
 use std::iter::FromIterator;
 
-impl HasRenderConfigForDump for model::CgroupModel {
-    fn get_render_config_for_dump(field_id: &CgroupModelFieldId) -> RenderConfig {
+impl HasRenderConfigForDump for model::SingleCgroupModel {
+    fn get_render_config_for_dump(field_id: &SingleCgroupModelFieldId) -> RenderConfig {
         use common::util::get_prefix;
         use model::CgroupCpuModelFieldId::ThrottledPct;
         use model::CgroupIoModelFieldId::{
@@ -32,11 +32,11 @@ impl HasRenderConfigForDump for model::CgroupModel {
             Pgrefill, Pgscan, Pgsteal, Shmem, Slab, Sock, Swap, ThpCollapseAlloc, ThpFaultAlloc,
             Total, WorkingsetActivate, WorkingsetNodereclaim, WorkingsetRefault,
         };
-        use model::CgroupModelFieldId::{Cpu, Io, Mem, Name, Pressure};
         use model::CgroupPressureModelFieldId::{MemoryFullPct, MemorySomePct};
+        use model::SingleCgroupModelFieldId::{Cpu, Io, Mem, Name, Pressure};
         use render::HasRenderConfig;
 
-        let rc = model::CgroupModel::get_render_config_builder(field_id);
+        let rc = model::SingleCgroupModel::get_render_config_builder(field_id);
         match field_id {
             Name => rc.indented_prefix(get_prefix(false)),
             Cpu(ThrottledPct) => rc.title("Throttled Pct"),
@@ -78,14 +78,14 @@ impl HasRenderConfigForDump for model::CgroupModel {
 
 pub struct Cgroup {
     opts: GeneralOpt,
-    select: Option<CgroupModelFieldId>,
+    select: Option<SingleCgroupModelFieldId>,
     fields: Vec<CgroupField>,
 }
 
 impl Cgroup {
     pub fn new(
         opts: &GeneralOpt,
-        select: Option<CgroupModelFieldId>,
+        select: Option<SingleCgroupModelFieldId>,
         fields: Vec<CgroupField>,
     ) -> Self {
         Self {
@@ -114,10 +114,11 @@ impl Dumper for Cgroup {
             json: bool,
             jval: &mut Value,
         ) -> Result<()> {
+            let cgroup = &model.data;
             //filter
             let should_print = match (handle.select.as_ref(), handle.opts.filter.as_ref()) {
                 (Some(field_id), Some(filter)) => filter.is_match(
-                    &model
+                    &cgroup
                         .query(&field_id)
                         .map_or("?".to_owned(), |v| v.to_string()),
                 ),
@@ -132,7 +133,7 @@ impl Dumper for Cgroup {
                         print::dump_raw_indented(
                             &handle.fields,
                             ctx,
-                            model,
+                            cgroup,
                             *round,
                             handle.opts.repeat_title,
                             handle.opts.disable_title,
@@ -145,7 +146,7 @@ impl Dumper for Cgroup {
                         print::dump_csv(
                             &handle.fields,
                             ctx,
-                            model,
+                            cgroup,
                             *round,
                             handle.opts.disable_title,
                             handle.opts.raw,
@@ -154,10 +155,10 @@ impl Dumper for Cgroup {
                     Some(OutputFormat::KeyVal) => write!(
                         output,
                         "{}",
-                        print::dump_kv(&handle.fields, ctx, model, handle.opts.raw)
+                        print::dump_kv(&handle.fields, ctx, cgroup, handle.opts.raw)
                     )?,
                     Some(OutputFormat::Json) => {
-                        *jval = print::dump_json(&handle.fields, ctx, model, handle.opts.raw);
+                        *jval = print::dump_json(&handle.fields, ctx, cgroup, handle.opts.raw);
                         jval["children"] = json!([]);
                     }
                 };
@@ -168,11 +169,11 @@ impl Dumper for Cgroup {
             //sort
             if let Some(field_id) = &handle.select {
                 if handle.opts.sort {
-                    model::sort_queriables(&mut children, &field_id, false);
+                    model::sort_queriables(&mut children, &field_id.to_owned().into(), false);
                 }
 
                 if handle.opts.rsort {
-                    model::sort_queriables(&mut children, &field_id, true);
+                    model::sort_queriables(&mut children, &field_id.to_owned().into(), true);
                 }
 
                 if (handle.opts.sort || handle.opts.rsort) && handle.opts.top != 0 {
@@ -186,7 +187,7 @@ impl Dumper for Cgroup {
                 if json && child["children"].is_array() {
                     // Parent does not match, but child does, we should also render parent.
                     if !jval["children"].is_array() {
-                        *jval = print::dump_json(&handle.fields, ctx, model, handle.opts.raw);
+                        *jval = print::dump_json(&handle.fields, ctx, cgroup, handle.opts.raw);
                         jval["children"] = json!([]);
                     }
                     jval["children"].as_array_mut().unwrap().push(child);

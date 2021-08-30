@@ -91,6 +91,7 @@ fn record_replay_integration() {
     // Validate some values in restored sample
     restored_sample
         .cgroup
+        .data
         .io_total
         .as_ref()
         .expect("missing io.stat")
@@ -222,8 +223,8 @@ fn default_cgroup_io_model() {
     let duration = Duration::from_secs(5);
 
     let model = Model::new(SystemTime::now(), &sample, Some((&last_sample, duration)));
-    assert!(model.cgroup.io_total.is_some());
-    let io_total = model.cgroup.io_total.unwrap();
+    assert!(model.cgroup.data.io_total.is_some());
+    let io_total = model.cgroup.data.io_total.unwrap();
     assert_eq!(io_total.rbytes_per_sec, Some(0.0));
     assert_eq!(io_total.wbytes_per_sec, Some(0.0));
     assert_eq!(io_total.rios_per_sec, Some(0.0));
@@ -247,7 +248,7 @@ fn no_cgroup_io_model() {
         let duration = Duration::from_secs(5);
 
         let model = Model::new(SystemTime::now(), &sample, Some((&last_sample, duration)));
-        assert!(model.cgroup.io_total.is_none());
+        assert!(model.cgroup.data.io_total.is_none());
     }
 }
 
@@ -343,7 +344,7 @@ fn calculate_pressure() {
     );
     // Use avg10 of current pressure metrics and ignore last one
     assert_eq!(
-        model.cgroup.pressure,
+        model.cgroup.data.pressure,
         Some(CgroupPressureModel {
             cpu_some_pct: Some(90.0),
             io_some_pct: Some(90.0),

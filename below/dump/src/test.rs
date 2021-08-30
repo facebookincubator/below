@@ -386,9 +386,9 @@ fn traverse_cgroup_tree(model: &model::CgroupModel, jval: &Value) {
         match dump_field {
             DumpField::Common(_) => continue,
             DumpField::FieldId(field_id) => {
-                let rc = model::CgroupModel::get_render_config_for_dump(&field_id);
+                let rc = model::SingleCgroupModel::get_render_config_for_dump(&field_id);
                 assert_eq!(
-                    rc.render(model.query(&field_id), false),
+                    rc.render(model.data.query(&field_id), false),
                     jval[rc.render_title(false)]
                         .as_str()
                         .unwrap_or_else(|| panic!(
@@ -444,7 +444,7 @@ fn test_dump_cgroup_titles() {
         .filter_map(|dump_field| match dump_field {
             DumpField::Common(_) => None,
             DumpField::FieldId(field_id) => {
-                let rc = model::CgroupModel::get_render_config_for_dump(&field_id);
+                let rc = model::SingleCgroupModel::get_render_config_for_dump(&field_id);
                 Some(rc.render_title(false))
             }
         })

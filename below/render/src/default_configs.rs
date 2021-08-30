@@ -16,9 +16,9 @@ use super::*;
 
 use RenderFormat::{MaxOrReadableSize, PageReadableSize, Precision, ReadableSize};
 
-impl HasRenderConfig for model::CgroupModel {
+impl HasRenderConfig for model::SingleCgroupModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
-        use model::CgroupModelFieldId::*;
+        use model::SingleCgroupModelFieldId::*;
         let rc = RenderConfigBuilder::new();
         match field_id {
             Name => rc.title("Name").width(50),

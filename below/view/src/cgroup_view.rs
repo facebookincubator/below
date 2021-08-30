@@ -31,7 +31,7 @@ use crate::stats_view::{StateCommon, StatsView, ViewBridge};
 use crate::ViewState;
 use model::{
     CgroupCpuModelFieldId, CgroupIoModelFieldId, CgroupMemoryModelFieldId, CgroupModel,
-    CgroupModelFieldId,
+    SingleCgroupModelFieldId,
 };
 
 pub type ViewType = StatsView<CgroupView>;
@@ -44,7 +44,7 @@ pub struct CgroupState {
     pub collapsed_cgroups: Rc<RefCell<HashSet<String>>>,
     pub current_selected_cgroup: String,
     pub filter: Option<String>,
-    pub sort_order: Option<CgroupModelFieldId>,
+    pub sort_order: Option<SingleCgroupModelFieldId>,
     pub sort_tags: HashMap<String, &'static CgroupTab>,
     pub reverse: bool,
     pub model: Rc<RefCell<CgroupModel>>,
@@ -53,7 +53,7 @@ pub struct CgroupState {
 
 impl StateCommon for CgroupState {
     type ModelType = CgroupModel;
-    type TagType = CgroupModelFieldId;
+    type TagType = SingleCgroupModelFieldId;
     fn get_filter(&mut self) -> &mut Option<String> {
         &mut self.filter
     }
@@ -124,7 +124,7 @@ impl StateCommon for CgroupState {
 }
 
 impl CgroupState {
-    fn set_sort_order(&mut self, tag: CgroupModelFieldId) {
+    fn set_sort_order(&mut self, tag: SingleCgroupModelFieldId) {
         self.sort_order = Some(tag);
     }
 
@@ -246,7 +246,9 @@ impl CgroupView {
             let mut view = Self::get_cgroup_view(c);
             view.state
                 .borrow_mut()
-                .set_sort_order(CgroupModelFieldId::Cpu(CgroupCpuModelFieldId::UsagePct));
+                .set_sort_order(SingleCgroupModelFieldId::Cpu(
+                    CgroupCpuModelFieldId::UsagePct,
+                ));
             view.state.borrow_mut().set_reverse(true);
             view.refresh(c)
         })
@@ -254,7 +256,9 @@ impl CgroupView {
             let mut view = Self::get_cgroup_view(c);
             view.state
                 .borrow_mut()
-                .set_sort_order(CgroupModelFieldId::Mem(CgroupMemoryModelFieldId::Total));
+                .set_sort_order(SingleCgroupModelFieldId::Mem(
+                    CgroupMemoryModelFieldId::Total,
+                ));
             view.state.borrow_mut().set_reverse(true);
             view.refresh(c)
         })
@@ -262,7 +266,9 @@ impl CgroupView {
             let mut view = Self::get_cgroup_view(c);
             view.state
                 .borrow_mut()
-                .set_sort_order(CgroupModelFieldId::Io(CgroupIoModelFieldId::RwbytesPerSec));
+                .set_sort_order(SingleCgroupModelFieldId::Io(
+                    CgroupIoModelFieldId::RwbytesPerSec,
+                ));
             view.state.borrow_mut().set_reverse(true);
             view.refresh(c)
         })

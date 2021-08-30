@@ -14,8 +14,10 @@
 
 use super::*;
 
+/// Collection of all data local to the cgroup, e.g. its memory/io/cpu usage.
+/// Nothing about child cgroups or siblings, and therefore "Single" in its name.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, below_derive::Queriable)]
-pub struct CgroupModel {
+pub struct SingleCgroupModel {
     pub name: String,
     pub full_path: String,
     pub inode_number: Option<u64>,
@@ -33,20 +35,108 @@ pub struct CgroupModel {
     pub io_total: Option<CgroupIoModel>,
     #[queriable(subquery)]
     pub pressure: Option<CgroupPressureModel>,
-    #[queriable(ignore)]
+}
+
+/// A model that represents a cgroup subtree. Each instance is a node that uses
+/// the "data" field to represent local data. Otherwise mixing hierarchy and
+/// data makes it hard to define a Field Id type that queries nested cgroups.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct CgroupModel {
+    pub data: SingleCgroupModel,
     pub children: BTreeSet<CgroupModel>,
-    #[queriable(ignore)]
+    /// Total number of cgroups under this subtree, including self
     pub count: u32,
-    // Indicate if such cgroup is created
-    #[queriable(ignore)]
+    /// Indicate if such cgroup is created
     pub recreate_flag: bool,
+}
+
+/// Queries a specific SingleCgroupModel inside a CgroupModel tree.
+/// Its String representation looks like this:
+///     path:/system.slice/foo.service/.cpu.usage_pct
+/// The path parameter starts with `path:` and ends with `/.`. This works
+/// because SingleCgroupModelFieldId does not contain slash.
+/// The path is used to drill into the Cgroup Model tree. If it's empty, the
+/// current CgroupModel is selected and queried with the subquery_id.
+/// The path is optional in parsing and converting to String.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CgroupModelFieldId {
+    /// To drill into children recursively. If empty, queries self.
+    pub path: Vec<String>,
+    pub subquery_id: SingleCgroupModelFieldId,
+}
+
+// For sorting CgroupModel with SingleCgroupModelFieldId
+impl From<SingleCgroupModelFieldId> for CgroupModelFieldId {
+    fn from(v: SingleCgroupModelFieldId) -> Self {
+        Self {
+            path: vec![],
+            subquery_id: v,
+        }
+    }
+}
+
+impl FieldId for CgroupModelFieldId {
+    type Queriable = CgroupModel;
+}
+
+impl EnumIter for CgroupModelFieldId {}
+
+impl std::string::ToString for CgroupModelFieldId {
+    fn to_string(&self) -> String {
+        if self.path.is_empty() {
+            self.subquery_id.to_string()
+        } else {
+            format!(
+                "path:/{}/.{}",
+                self.path.join("/"),
+                self.subquery_id.to_string()
+            )
+        }
+    }
+}
+
+impl std::str::FromStr for CgroupModelFieldId {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let (path_str, subquery_id_str) = if s.starts_with("path:") {
+            s["path:".len()..]
+                .rsplit_once("/.")
+                .ok_or_else(|| anyhow!("Path is not terminated by `/.`: {}", s))?
+        } else {
+            ("", s)
+        };
+        let path = path_str
+            .split('/')
+            .filter(|part| !part.is_empty())
+            .map(|part| part.to_owned())
+            .collect();
+        let subquery_id = SingleCgroupModelFieldId::from_str(subquery_id_str)?;
+        Ok(Self { path, subquery_id })
+    }
+}
+
+impl Queriable for CgroupModel {
+    type FieldId = CgroupModelFieldId;
+    fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
+        let mut model = self;
+        for part in field_id.path.iter() {
+            model = model.children.get(part)?;
+        }
+        model.data.query(&field_id.subquery_id)
+    }
+}
+
+impl core::borrow::Borrow<String> for CgroupModel {
+    fn borrow(&self) -> &String {
+        &self.data.name
+    }
 }
 
 // We implement equality and ordering based on the cgroup name only so
 // CgroupModel can be stored in a BTreeSet
 impl Ord for CgroupModel {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.name.cmp(&other.name)
+        self.data.name.cmp(&other.data.name)
     }
 }
 
@@ -58,7 +148,7 @@ impl PartialOrd for CgroupModel {
 
 impl PartialEq for CgroupModel {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
+        self.data.name == other.data.name
     }
 }
 
@@ -147,30 +237,32 @@ impl CgroupModel {
             .collect::<BTreeSet<CgroupModel>>();
         let nr_descendants: u32 = children.iter().fold(0, |acc, c| acc + c.count);
         CgroupModel {
-            name,
-            full_path,
-            inode_number: sample.inode_number.map(|ino| ino as u64),
-            cpu,
-            memory,
-            io,
-            io_total,
-            pressure,
+            data: SingleCgroupModel {
+                name,
+                full_path,
+                inode_number: sample.inode_number.map(|ino| ino as u64),
+                cpu,
+                memory,
+                io,
+                io_total,
+                pressure,
+                depth,
+            },
             children,
             count: nr_descendants + 1,
-            depth,
             recreate_flag,
         }
     }
 
     pub fn aggr_top_level_val(mut self) -> Self {
-        self.memory = self.children.iter().fold(Default::default(), |acc, model| {
-            opt_add(acc, model.memory.clone())
+        self.data.memory = self.children.iter().fold(Default::default(), |acc, model| {
+            opt_add(acc, model.data.memory.clone())
         });
         self
     }
 }
 
-impl Recursive for CgroupModel {
+impl Recursive for SingleCgroupModel {
     fn get_depth(&self) -> usize {
         self.depth as usize
     }
@@ -499,6 +591,71 @@ impl CgroupPressureModel {
             io_full_pct: pressure.io.full.avg10,
             memory_some_pct: pressure.memory.some.avg10,
             memory_full_pct: pressure.memory.full.avg10,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn query_nested_cgroup() {
+        let model_json = r#"
+        {
+            "data": { "name": "<root>", "full_path": "", "depth": 0 },
+            "count": 4,
+            "recreate_flag": false,
+            "children": [
+                {
+                    "data": { "name": "system.slice", "full_path": "/system.slice", "depth": 1 },
+                    "count": 2,
+                    "recreate_flag": false,
+                    "children": [
+                        {
+                            "data": { "name": "foo.service", "full_path": "/system.slice/foo.service", "depth": 2 },
+                            "count": 1,
+                            "recreate_flag": false,
+                            "children": []
+                        }
+                    ]
+                },
+                {
+                    "data": { "name": ".hidden.slice", "full_path": "/.hidden.slice", "depth": 1 },
+                    "count": 1,
+                    "recreate_flag": false,
+                    "children": []
+                }
+            ]
+        }
+        "#;
+        let model: CgroupModel =
+            serde_json::from_str(model_json).expect("Failed to deserialize cgroup model JSON");
+        for (field_id, expected) in &[
+            // "path:" omitted falls back to querying self (root)
+            ("full_path", Some("")),
+            // Ignore consecutive slashes
+            ("path:///////.name", Some("<root>")),
+            ("path:/system.slice/.full_path", Some("/system.slice")),
+            (
+                "path:/system.slice/foo.service/.full_path",
+                Some("/system.slice/foo.service"),
+            ),
+            // Allow path param to contain "/."
+            ("path:/.hidden.slice/.full_path", Some("/.hidden.slice")),
+            // Non-existent cgroups
+            ("path:/no_such.slice/.full_path", None),
+            ("path:/system.slice/no_such.service/.full_path", None),
+        ] {
+            assert_eq!(
+                model.query(
+                    &CgroupModelFieldId::from_str(field_id)
+                        .map_err(|e| format!("Failed to parse field id {}: {:?}", field_id, e))
+                        .unwrap()
+                ),
+                expected.map(|s| Field::Str(s.to_string()))
+            );
         }
     }
 }

@@ -89,7 +89,7 @@ pub enum DumpField<F: FieldId> {
     FieldId(F),
 }
 
-pub type CgroupField = DumpField<model::CgroupModelFieldId>;
+pub type CgroupField = DumpField<model::SingleCgroupModelFieldId>;
 pub type ProcessField = DumpField<model::SingleProcessModelFieldId>;
 pub type SystemField = DumpField<model::SystemModelFieldId>;
 pub type DiskField = DumpField<model::SingleDiskModelFieldId>;

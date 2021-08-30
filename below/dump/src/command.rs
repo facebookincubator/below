@@ -15,7 +15,7 @@
 use crate::{CommonField, DumpField};
 use model::EnumIter;
 use model::{
-    CgroupModelFieldId, FieldId, NetworkModelFieldId, SingleDiskModelFieldId,
+    FieldId, NetworkModelFieldId, SingleCgroupModelFieldId, SingleDiskModelFieldId,
     SingleNetModelFieldId, SingleProcessModelFieldId, SystemModelFieldId,
 };
 
@@ -478,7 +478,7 @@ $ below dump process -b "08:30:00" -e "08:30:30" -s cpu.usage_pct --rsort --top 
     )
 });
 
-/// Represents the four sub-model of CgroupModel.
+/// Represents the four sub-model of SingleCgroupModel.
 #[derive(
     Clone,
     Debug,
@@ -493,13 +493,13 @@ pub enum CgroupAggField {
     Pressure,
 }
 
-impl AggField<CgroupModelFieldId> for CgroupAggField {
-    fn expand(&self, detail: bool) -> Vec<CgroupModelFieldId> {
+impl AggField<SingleCgroupModelFieldId> for CgroupAggField {
+    fn expand(&self, detail: bool) -> Vec<SingleCgroupModelFieldId> {
         use model::CgroupCpuModelFieldId as Cpu;
         use model::CgroupIoModelFieldId as Io;
         use model::CgroupMemoryModelFieldId as Mem;
-        use model::CgroupModelFieldId as FieldId;
         use model::CgroupPressureModelFieldId as Pressure;
+        use model::SingleCgroupModelFieldId as FieldId;
 
         if detail {
             match self {
@@ -526,11 +526,11 @@ impl AggField<CgroupModelFieldId> for CgroupAggField {
     }
 }
 
-pub type CgroupOptionField = DumpOptionField<CgroupModelFieldId, CgroupAggField>;
+pub type CgroupOptionField = DumpOptionField<SingleCgroupModelFieldId, CgroupAggField>;
 
 pub static DEFAULT_CGROUP_FIELDS: &[CgroupOptionField] = &[
-    DumpOptionField::Unit(DumpField::FieldId(CgroupModelFieldId::Name)),
-    DumpOptionField::Unit(DumpField::FieldId(CgroupModelFieldId::InodeNumber)),
+    DumpOptionField::Unit(DumpField::FieldId(SingleCgroupModelFieldId::Name)),
+    DumpOptionField::Unit(DumpField::FieldId(SingleCgroupModelFieldId::InodeNumber)),
     DumpOptionField::Unit(DumpField::Common(CommonField::Datetime)),
     DumpOptionField::Agg(CgroupAggField::Cpu),
     DumpOptionField::Agg(CgroupAggField::Mem),
@@ -593,7 +593,7 @@ $ below dump cgroup -b "08:30:00" -e "08:30:30" -s cpu.usage_pct --rsort --top 5
 "#,
         about = CGROUP_ABOUT,
         common_fields = join(CommonField::unit_variant_iter()),
-        cgroup_fields = join(CgroupModelFieldId::unit_variant_iter()),
+        cgroup_fields = join(SingleCgroupModelFieldId::unit_variant_iter()),
         all_cpu_fields = join(CgroupAggField::Cpu.expand(true)),
         all_memory_fields = join(CgroupAggField::Mem.expand(true)),
         all_io_fields = join(CgroupAggField::Io.expand(true)),
@@ -1001,7 +1001,7 @@ pub enum DumpCommand {
         opts: GeneralOpt,
         /// Select field for operation, use with --sort, --rsort, --filter, --top
         #[structopt(long, short)]
-        select: Option<CgroupModelFieldId>,
+        select: Option<SingleCgroupModelFieldId>,
         /// Saved pattern in the dumprc file under [cgroup] section.
         #[structopt(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
