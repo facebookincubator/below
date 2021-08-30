@@ -16,7 +16,7 @@ use super::*;
 
 #[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
 pub struct NetworkModel {
-    #[queriable(ignore)]
+    #[queriable(subquery)]
     pub interfaces: BTreeMap<String, SingleNetModel>,
     #[queriable(subquery)]
     pub tcp: TcpModel,
@@ -447,5 +447,37 @@ impl SingleNetModel {
             tx_packets: sample.tx_packets.map(|s| s as u64),
             tx_window_errors: sample.tx_window_errors.map(|s| s as u64),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn query_model() {
+        let model_json = r#"
+        {
+            "interfaces": {
+                "eth0": {
+                    "interface": "eth0",
+                    "rx_bytes_per_sec": 42
+                }
+            },
+            "tcp": {},
+            "ip": {},
+            "ip6": {},
+            "icmp": {},
+            "icmp6": {},
+            "udp": {},
+            "udp6": {}
+        }
+        "#;
+        let model: NetworkModel = serde_json::from_str(model_json).unwrap();
+        assert_eq!(
+            model
+                .query(&NetworkModelFieldId::from_str("interfaces.eth0.rx_bytes_per_sec").unwrap()),
+            Some(Field::F64(42.0))
+        );
     }
 }

@@ -26,6 +26,9 @@ impl HasRenderConfig for model::SingleCgroupModel {
             InodeNumber => rc.title("Inode Number"),
             Cpu(field_id) => model::CgroupCpuModel::get_render_config_builder(field_id),
             Io(field_id) => model::CgroupIoModel::get_render_config_builder(field_id),
+            IoDetails(field_id) => {
+                model::CgroupIoModel::get_render_config_builder(&field_id.subquery_id)
+            }
             Mem(field_id) => model::CgroupMemoryModel::get_render_config_builder(field_id),
             Pressure(field_id) => model::CgroupPressureModel::get_render_config_builder(field_id),
         }
@@ -135,6 +138,9 @@ impl HasRenderConfig for model::NetworkModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         use model::NetworkModelFieldId::*;
         match field_id {
+            Interfaces(field_id) => {
+                model::SingleNetModel::get_render_config_builder(&field_id.subquery_id)
+            }
             Tcp(field_id) => model::TcpModel::get_render_config_builder(field_id),
             Ip(field_id) => model::IpModel::get_render_config_builder(field_id),
             Ip6(field_id) => model::Ip6Model::get_render_config_builder(field_id),
@@ -403,6 +409,9 @@ impl HasRenderConfig for model::SystemModel {
             Cpus(field_id) => Vec::<model::SingleCpuModel>::get_render_config_builder(field_id),
             Mem(field_id) => model::MemoryModel::get_render_config_builder(field_id),
             Vm(field_id) => model::VmModel::get_render_config_builder(field_id),
+            Disks(field_id) => {
+                model::SingleDiskModel::get_render_config_builder(&field_id.subquery_id)
+            }
         }
     }
 }

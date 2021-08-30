@@ -28,7 +28,8 @@ pub struct SingleCgroupModel {
     #[queriable(subquery)]
     #[queriable(preferred_name = mem)]
     pub memory: Option<CgroupMemoryModel>,
-    #[queriable(ignore)]
+    #[queriable(subquery)]
+    #[queriable(preferred_name = io_details)]
     pub io: Option<BTreeMap<String, CgroupIoModel>>,
     #[queriable(subquery)]
     #[queriable(preferred_name = io)]
@@ -657,5 +658,28 @@ mod tests {
                 expected.map(|s| Field::Str(s.to_string()))
             );
         }
+    }
+
+    #[test]
+    fn query_model() {
+        let model_json = r#"
+        {
+            "name": "foo.service",
+            "full_path": "/system.slice/foo.service",
+            "depth": 1,
+            "io": {
+                "sda": {
+                    "rbytes_per_sec": 42
+                }
+            }
+        }
+        "#;
+        let model: SingleCgroupModel = serde_json::from_str(model_json).unwrap();
+        assert_eq!(
+            model.query(
+                &SingleCgroupModelFieldId::from_str("io_details.sda.rbytes_per_sec").unwrap()
+            ),
+            Some(Field::F64(42.0))
+        );
     }
 }

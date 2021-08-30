@@ -38,7 +38,7 @@ pub struct SystemModel {
     pub mem: MemoryModel,
     #[queriable(subquery)]
     pub vm: VmModel,
-    #[queriable(ignore)]
+    #[queriable(subquery)]
     pub disks: BTreeMap<String, SingleDiskModel>,
 }
 
@@ -426,5 +426,37 @@ impl SingleDiskModel {
             major: end.major.map(|v| v as u64),
             minor: end.minor.map(|v| v as u64),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn query_model() {
+        let model_json = r#"
+        {
+            "hostname": "example.com",
+            "stat": {},
+            "total_cpu": {
+                "idx": -1
+            },
+            "cpus": [],
+            "mem": {},
+            "vm": {},
+            "disks": {
+                "sda": {
+                    "name": "sda",
+                    "read_bytes_per_sec": 42
+                }
+            }
+        }
+        "#;
+        let model: SystemModel = serde_json::from_str(model_json).unwrap();
+        assert_eq!(
+            model.query(&SystemModelFieldId::from_str("disks.sda.read_bytes_per_sec").unwrap()),
+            Some(Field::F64(42.0))
+        );
     }
 }

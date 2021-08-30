@@ -30,8 +30,9 @@ macro_rules! fold_optionals {
     };
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
 pub struct ProcessModel {
+    #[queriable(subquery)]
     pub processes: BTreeMap<i32, SingleProcessModel>,
 }
 
@@ -234,5 +235,29 @@ impl ProcessMemoryModel {
             swap: fold_optionals!(left.swap, right.swap),
             huge_tlb: fold_optionals!(left.huge_tlb, right.huge_tlb),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn query_model() {
+        let model_json = r#"
+        {
+            "processes": {
+                "1": {
+                    "pid": 1,
+                    "comm": "systemd"
+                }
+            }
+        }
+        "#;
+        let model: ProcessModel = serde_json::from_str(model_json).unwrap();
+        assert_eq!(
+            model.query(&ProcessModelFieldId::from_str("processes.1.comm").unwrap()),
+            Some(Field::Str("systemd".to_owned()))
+        );
     }
 }
