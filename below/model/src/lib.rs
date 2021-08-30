@@ -219,18 +219,23 @@ pub trait Recursive {
     fn get_depth(&self) -> usize;
 }
 
+/// Type that makes Vec Queriable if Vec's inner type is Queriable. Uses `idx`
+/// to query into a Vec. Uses `subquery_id` to query into the selected item.
 #[derive(Clone, Debug, PartialEq)]
-pub struct VecFieldId<Q: Queriable> {
+pub struct VecFieldId<F: FieldId> {
     pub idx: usize,
-    pub subquery_id: Q::FieldId,
+    pub subquery_id: F,
 }
 
-impl<Q: Queriable + Sized> FieldId for VecFieldId<Q> {
-    type Queriable = Vec<Q>;
+impl<F: FieldId> FieldId for VecFieldId<F>
+where
+    <F as FieldId>::Queriable: Sized,
+{
+    type Queriable = Vec<F::Queriable>;
 }
 
 /// Placeholder methods in case they are moved to a trait later.
-impl<Q: Queriable> VecFieldId<Q> {
+impl<F: FieldId> VecFieldId<F> {
     pub fn unit_variant_iter() -> impl std::iter::Iterator<Item = Self> {
         std::iter::empty()
     }
@@ -239,26 +244,22 @@ impl<Q: Queriable> VecFieldId<Q> {
     }
 }
 
-impl<Q: Queriable> std::string::ToString for VecFieldId<Q>
-where
-    <Q as Queriable>::FieldId: std::string::ToString,
-{
+impl<F: FieldId + std::string::ToString> std::string::ToString for VecFieldId<F> {
     fn to_string(&self) -> String {
         format!("{}.{}", self.idx, self.subquery_id.to_string())
     }
 }
 
-impl<Q: Queriable> std::str::FromStr for VecFieldId<Q>
+impl<F: FieldId + std::str::FromStr> std::str::FromStr for VecFieldId<F>
 where
-    <Q as Queriable>::FieldId: std::str::FromStr,
-    <<Q as Queriable>::FieldId as std::str::FromStr>::Err: Into<anyhow::Error>,
+    <F as std::str::FromStr>::Err: Into<anyhow::Error>,
 {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         if let Some(dot_idx) = s.find('.') {
             Ok(Self {
                 idx: s[..dot_idx].parse()?,
-                subquery_id: Q::FieldId::from_str(&s[dot_idx + 1..]).map_err(Into::into)?,
+                subquery_id: F::from_str(&s[dot_idx + 1..]).map_err(Into::into)?,
             })
         } else {
             Err(anyhow!(
@@ -269,8 +270,8 @@ where
     }
 }
 
-impl<T: Queriable> Queriable for Vec<T> {
-    type FieldId = VecFieldId<T>;
+impl<Q: Queriable> Queriable for Vec<Q> {
+    type FieldId = VecFieldId<Q::FieldId>;
     fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
         self.get(field_id.idx)
             .and_then(|f| f.query(&field_id.subquery_id))
