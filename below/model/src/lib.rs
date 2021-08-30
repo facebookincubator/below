@@ -14,6 +14,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use std::str::FromStr;
+use std::string::ToString;
 use std::time::{Duration, Instant, SystemTime};
 
 use anyhow::{anyhow, Context, Result};
@@ -251,15 +253,15 @@ where
 
 impl<F: FieldId + 'static> EnumIter for VecFieldId<F> {}
 
-impl<F: FieldId + std::string::ToString> std::string::ToString for VecFieldId<F> {
+impl<F: FieldId + ToString> ToString for VecFieldId<F> {
     fn to_string(&self) -> String {
         format!("{}.{}", self.idx, self.subquery_id.to_string())
     }
 }
 
-impl<F: FieldId + std::str::FromStr> std::str::FromStr for VecFieldId<F>
+impl<F: FieldId + FromStr> FromStr for VecFieldId<F>
 where
-    <F as std::str::FromStr>::Err: Into<anyhow::Error>,
+    <F as FromStr>::Err: Into<anyhow::Error>,
 {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
@@ -281,6 +283,59 @@ impl<Q: Queriable> Queriable for Vec<Q> {
     type FieldId = VecFieldId<Q::FieldId>;
     fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
         self.get(field_id.idx)
+            .and_then(|f| f.query(&field_id.subquery_id))
+    }
+}
+
+/// Type that makes BTreeMap Queriable if its value is Queriable. Uses `key`
+/// to query into a map. Uses `subquery_id` to query into the selected value.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BTreeMapFieldId<K, F: FieldId> {
+    pub key: K,
+    pub subquery_id: F,
+}
+
+impl<K: Ord, F: FieldId> FieldId for BTreeMapFieldId<K, F>
+where
+    <F as FieldId>::Queriable: Sized,
+{
+    type Queriable = BTreeMap<K, F::Queriable>;
+}
+
+impl<K: Ord + 'static, F: FieldId + EnumIter> EnumIter for BTreeMapFieldId<K, F> {}
+
+impl<K: ToString, F: FieldId + ToString> ToString for BTreeMapFieldId<K, F> {
+    fn to_string(&self) -> String {
+        format!("{}.{}", self.key.to_string(), self.subquery_id.to_string())
+    }
+}
+
+impl<K: FromStr, F: FieldId + FromStr> FromStr for BTreeMapFieldId<K, F>
+where
+    <K as FromStr>::Err: Into<anyhow::Error>,
+    <F as FromStr>::Err: Into<anyhow::Error>,
+{
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        // Only works with keys that don't contain dot
+        if let Some(dot_idx) = s.find('.') {
+            Ok(Self {
+                key: K::from_str(&s[..dot_idx]).map_err(Into::into)?,
+                subquery_id: F::from_str(&s[dot_idx + 1..]).map_err(Into::into)?,
+            })
+        } else {
+            Err(anyhow!(
+                "Unable to find a variant of the given enum matching string `{}`.",
+                s,
+            ))
+        }
+    }
+}
+
+impl<K: Ord, Q: Queriable> Queriable for BTreeMap<K, Q> {
+    type FieldId = BTreeMapFieldId<K, Q::FieldId>;
+    fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
+        self.get(&field_id.key)
             .and_then(|f| f.query(&field_id.subquery_id))
     }
 }
@@ -332,5 +387,82 @@ mod tests {
     #[test]
     fn test_deserialize_sample_model_json() {
         get_sample_model();
+    }
+
+    #[derive(Clone, Default, Debug, below_derive::Queriable)]
+    pub struct TestModel {
+        pub msg: String,
+    }
+
+    #[test]
+    fn test_vec_field_id() {
+        let query_str = "1.msg";
+        let query = <VecFieldId<TestModelFieldId>>::from_str(query_str).expect("bad query str");
+        assert_eq!(
+            query,
+            VecFieldId {
+                idx: 1,
+                subquery_id: TestModelFieldId::Msg,
+            }
+        );
+        assert_eq!(query.to_string(), query_str);
+    }
+
+    #[test]
+    fn test_query_vec() {
+        let data = vec![
+            TestModel {
+                msg: "hello".to_owned(),
+            },
+            TestModel {
+                msg: "world".to_owned(),
+            },
+        ];
+        assert_eq!(
+            data.query(&VecFieldId {
+                idx: 1,
+                subquery_id: TestModelFieldId::Msg,
+            }),
+            Some(Field::Str("world".to_owned()))
+        );
+    }
+
+    #[test]
+    fn test_btreemap_field_id() {
+        let query_str = "hello.msg";
+        let query = <BTreeMapFieldId<String, TestModelFieldId>>::from_str(query_str)
+            .expect("bad query str");
+        assert_eq!(
+            query,
+            BTreeMapFieldId {
+                key: "hello".to_owned(),
+                subquery_id: TestModelFieldId::Msg,
+            }
+        );
+        assert_eq!(query.to_string(), query_str);
+    }
+
+    #[test]
+    fn test_query_btreemap() {
+        let mut data = <BTreeMap<String, TestModel>>::new();
+        data.insert(
+            "hello".to_owned(),
+            TestModel {
+                msg: "world".to_owned(),
+            },
+        );
+        data.insert(
+            "foo".to_owned(),
+            TestModel {
+                msg: "bar".to_owned(),
+            },
+        );
+        assert_eq!(
+            data.query(&BTreeMapFieldId {
+                key: "hello".to_owned(),
+                subquery_id: TestModelFieldId::Msg,
+            }),
+            Some(Field::Str("world".to_owned()))
+        );
     }
 }
