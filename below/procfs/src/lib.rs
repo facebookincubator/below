@@ -565,7 +565,7 @@ impl ProcReader {
             // A line starting with "0::" would be an entry for cgroup v2.
             // Otherwise, the line containing "pids" controller is what we want
             // for cgroup v1.
-            let parts: Vec<_> = line.split(':').collect();
+            let parts: Vec<_> = line.splitn(3, ':').collect();
             if parts.len() == 3 {
                 if parts[0] == "0" && parts[1] == "" {
                     cgroup_path = Some(parts[2].to_owned());
