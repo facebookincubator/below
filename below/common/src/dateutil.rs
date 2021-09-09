@@ -101,6 +101,7 @@ impl HgTime {
     ///
     /// This function matches `mercurial.util.parsedate`, and can parse
     /// some additional forms like `2 days ago`.
+    /// It can also handle future forms like "ten hours from now" and "+10h"
     pub fn parse(date: &str) -> Option<Self> {
         match date {
             "now" => Some(Self::now()),
@@ -109,11 +110,19 @@ impl HgTime {
                 Self::from(Local::today().and_hms(0, 0, 0) - Duration::days(1))
                     .use_default_offset(),
             ),
+            "tomorrow" => Some(
+                Self::from(Local::today().and_hms(0, 0, 0) + Duration::days(1))
+                    .use_default_offset(),
+            ),
+            "day after tomorrow" | "the day after tomorrow" | "overmorrow" => Some(
+                Self::from(Local::today().and_hms(0, 0, 0) + Duration::days(2))
+                    .use_default_offset(),
+            ),
             // Match all string ends with [dhms] or ago but not ends with pm and am. Case insensitive.
             // We have to use two regex here is because regex crate doesn't support negative lookbehind
             // expression.
             date if match (
-                Regex::new(r"(?i)([dhms]|ago)$"),
+                Regex::new(r"(?i)\+?.*([dhms]|ago|from now)$"),
                 Regex::new(r"(?i)(pm|am)$"),
             ) {
                 (Ok(relative_re), Ok(ampm_re)) => {
@@ -123,16 +132,33 @@ impl HgTime {
             } =>
             {
                 let date = date.to_ascii_lowercase();
-                let duration_str = if date.ends_with("ago") {
-                    &date[..date.len() - 4]
+                let plus = date.starts_with("+") && !date.ends_with("ago");
+                let from_now = date.ends_with("from now");
+                // Trim past/future markers down to just date
+                let mut duration_str = if plus { &date[1..] } else { &date };
+                duration_str = if date.ends_with("ago") {
+                    &duration_str[..duration_str.len() - 4]
                 } else {
-                    &date
+                    duration_str
+                };
+                duration_str = if from_now {
+                    &duration_str[..duration_str.len() - 9]
+                } else {
+                    duration_str
                 };
 
-                duration_str
-                    .parse::<humantime::Duration>()
-                    .ok()
-                    .map(|duration| Self::now() - duration.as_secs())
+
+                if plus || from_now {
+                    duration_str
+                        .parse::<humantime::Duration>()
+                        .ok()
+                        .map(|duration| Self::now() + duration.as_secs())
+                } else {
+                    duration_str
+                        .parse::<humantime::Duration>()
+                        .ok()
+                        .map(|duration| Self::now() - duration.as_secs())
+                }
             }
             date if match Regex::new(r"^\d{10}$") {
                 Ok(systime_re) => systime_re.is_match(&date),
@@ -176,6 +202,18 @@ impl HgTime {
             }
             "yesterday" => {
                 let date = Local::today() - Duration::days(1);
+                let start = Self::from(date.and_hms(0, 0, 0)).use_default_offset();
+                let end = Self::from(date.and_hms(23, 59, 59)).use_default_offset() + 1;
+                Some(start..end)
+            }
+            "tomorrow" => {
+                let date = Local::today() + Duration::days(1);
+                let start = Self::from(date.and_hms(0, 0, 0)).use_default_offset();
+                let end = Self::from(date.and_hms(23, 59, 59)).use_default_offset() + 1;
+                Some(start..end)
+            }
+            "day after tomorrow" | "the day after tomorrow" | "overmorrow" => {
+                let date = Local::today() + Duration::days(2);
                 let start = Self::from(date.and_hms(0, 0, 0)).use_default_offset();
                 let end = Self::from(date.and_hms(23, 59, 59)).use_default_offset() + 1;
                 Some(start..end)
@@ -478,6 +516,9 @@ mod tests {
         assert_eq!(d("02/01", Duration::weeks(52)), "0");
         assert_eq!(d("today", Duration::days(1)), "0");
         assert_eq!(d("yesterday", Duration::days(2)), "0");
+        assert_eq!(d("tomorrow", Duration::days(1)), "0");
+        assert_eq!(d("day after tomorrow", Duration::days(2)), "0");
+        assert_eq!(d("overmorrow", Duration::days(2)), "0");
 
         // ISO8601
         assert_eq!(t("2016-07-27T12:10:21"), "1469628621 7200");
@@ -531,12 +572,28 @@ mod tests {
     #[test]
     fn test_parse_ago() {
         set_default_offset(7200);
+        // I believe the comparisons are rounded up to the next largest duration size
+        // to absorb differences in execution time between test runs, otherwise this
+        // doesn't really make sense.
         assert_eq!(d("10m ago", Duration::hours(1)), "0");
         assert_eq!(d("10 min ago", Duration::hours(1)), "0");
         assert_eq!(d("10 minutes ago", Duration::hours(1)), "0");
         assert_eq!(d("10 hours ago", Duration::days(1)), "0");
         assert_eq!(d("10 h ago", Duration::days(1)), "0");
         assert_eq!(t("9999999 years ago"), "0 7200");
+    }
+
+    #[test]
+    fn test_parse_from_now() {
+        set_default_offset(7200);
+        // We'll keep the same duration comparisons for this set of tests for
+        // consistency.  Maybe we should instead round to the next minute to
+        // decrease the accepted timeframe and increase test accuracy?
+        assert_eq!(d("10m from now", Duration::hours(1)), "0");
+        assert_eq!(d("10 min from now", Duration::hours(1)), "0");
+        assert_eq!(d("10 minutes from now", Duration::hours(1)), "0");
+        assert_eq!(d("10 hours from now", Duration::days(1)), "0");
+        assert_eq!(d("10 h from now", Duration::days(1)), "0");
     }
 
     #[test]
@@ -555,9 +612,30 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_from_now_short() {
+        set_default_offset(7200);
+        assert!(future_diff_from_now("+10m", Duration::minutes(10)) < 2);
+        assert!(future_diff_from_now("+2d", Duration::days(2)) < 2);
+        assert!(future_diff_from_now("+10s", Duration::seconds(10)) < 2);
+        assert!(future_diff_from_now("+10h", Duration::hours(10)) < 2);
+        assert!(future_diff_from_now("+10h10m5s", Duration::seconds(36_605)) < 2);
+        assert!(future_diff_from_now("+10h5s10m", Duration::seconds(36_605)) < 2);
+        assert!(future_diff_from_now("+10H5s10M", Duration::seconds(36_605)) < 2);
+        // wrong format
+        assert_eq!(future_diff_from_now("+10AM", Duration::minutes(10)), -1);
+        assert_eq!(future_diff_from_now("+10hm", Duration::minutes(10)), -1);
+    }
+
+    #[test]
     fn test_parse_range() {
         set_default_offset(7200);
 
+        assert_eq!(c("today", "tomorrow"), "does not contain");
+        assert_eq!(c("tomorrow", "overmorrow"), "does not contain");
+        assert_eq!(c("the day after tomorrow", "overmorrow"), "contains");
+        assert_eq!(c("overmorrow", "1 days from now"), "does not contain");
+        assert_eq!(c("overmorrow", "2 days from now"), "contains");
+        assert_eq!(c("overmorrow", "3 days from now"), "does not contain");
         assert_eq!(c("since 1 month ago", "now"), "contains");
         assert_eq!(c("since 1 month ago", "2 months ago"), "does not contain");
         assert_eq!(c("> 1 month ago", "2 months ago"), "does not contain");
@@ -612,7 +690,7 @@ mod tests {
         }
     }
 
-    /// Compareing the date from now.
+    /// Comparing the date before now.
     /// Return diff |now - date - expected|
     /// Return negative value for parse error.
     fn diff_from_now(date: &str, expected: Duration) -> i64 {
@@ -622,6 +700,21 @@ mod tests {
                 let before = time.unixtime as i64;
                 let expected_diff = expected.num_seconds();
                 (now - before - expected_diff).abs()
+            }
+            None => -1,
+        }
+    }
+
+    /// Comparing the date from now.
+    /// Return diff |future - now - expected|
+    /// Return negative value for parse error.
+    fn future_diff_from_now(date: &str, expected: Duration) -> i64 {
+        match HgTime::parse(date) {
+            Some(time) => {
+                let now = HgTime::now().unixtime as i64;
+                let future = time.unixtime as i64;
+                let expected_diff = expected.num_seconds();
+                (future - now - expected_diff).abs()
             }
             None => -1,
         }
