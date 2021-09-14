@@ -1,6 +1,6 @@
 # below
 
-[![CI](https://github.com/facebookincubator/below/workflows/CI/badge.svg)](https://github.com/facebookincubator/below/actions?query=workflow%3ACI+branch%3Amaster+)
+[![CI](https://github.com/facebookincubator/below/workflows/CI/badge.svg)](https://github.com/facebookincubator/below/actions?query=workflow%3ACI+branch%3Amain+)
 [![Matrix chat](https://img.shields.io/matrix/below:matrix.org)](https://matrix.to/#/!SrWxtbLuRUMrDbftgA:matrix.org?via=matrix.org)
 
 `below` is an interactive tool to view and record historical system data. It
