@@ -306,10 +306,29 @@ impl View {
         self.inner.set_theme(theme);
 
         self.inner
-            .add_global_callback(Event::CtrlChar('z'), |_| unsafe {
+            .add_global_callback(Event::CtrlChar('z'), |c| unsafe {
+                use crossterm::cursor::{Hide, Show};
+                use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
+
+                // The following logic is necessary on crossterm as it does not
+                // disable/re-enable tty on SIGTSTP, while ncurses does.
+
+                // Reset tty to original mode
+                execute!(std::io::stdout(), LeaveAlternateScreen, Show)
+                    .expect("Failed to reset tty");
+                crossterm::terminal::disable_raw_mode().expect("Failed to disable tty");
+
+                // Send signal to put process to background
                 if libc::raise(libc::SIGTSTP) != 0 {
                     panic!("failed to SIGTSTP self");
                 }
+
+                // Re-enable tty
+                crossterm::terminal::enable_raw_mode().expect("Failed to enable tty");
+                execute!(std::io::stdout(), EnterAlternateScreen, Hide)
+                    .expect("Failed to setup tty");
+                // Use WindowResize event to force redraw everything.
+                c.on_event(Event::WindowResize);
             });
         self.inner.add_global_callback(Event::Refresh, |c| {
             refresh(c);
