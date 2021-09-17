@@ -80,8 +80,24 @@ enum Command {
     Record {
         #[structopt(short, long, default_value = "5")]
         interval_s: u64,
+        /// Store retention in seconds. Data is stored in 24 hour shards.
+        /// Whever an entire shard of data is outside the retention period it
+        /// is discarded. That is, any data older than retention + 24 hours
+        /// is guaranteed to be discarded.
+        ///
+        /// N.B. If --store-size-limit is set, data may be discarded earlier
+        ///      than the specified retention.
         #[structopt(long)]
         retain_for_s: Option<u64>,
+        /// Store size limit in bytes. Data is stored in 24 hour shards.
+        /// Shards before the active shard are deleted, oldest first,
+        /// according to the size limit. Enforcement is only triggered on new
+        /// shard creation.
+        ///
+        /// N.B. Since the active shard cannot be deleted, the size limit may
+        ///      be exceeded by a single active shard.
+        #[structopt(long)]
+        store_size_limit: Option<u64>,
         /// Whether or not to collect io.stat for cgroups which could
         /// be expensive
         #[structopt(long)]
@@ -268,6 +284,33 @@ fn check_for_exitstat_errors(logger: &slog::Logger, receiver: &Receiver<Error>) 
     false
 }
 
+/// Discard old data shards in store according to store size limit and retention
+fn cleanup_store(
+    store: &store::StoreWriter,
+    logger: &slog::Logger,
+    store_size_limit: Option<u64>,
+    retention: Option<Duration>,
+) -> Result<()> {
+    if let Some(limit) = store_size_limit {
+        if !store
+            .try_discard_until_size(limit, logger.clone())
+            .context("Failed to discard earlier data")?
+        {
+            warn!(
+                logger,
+                "Failed to limit store size since the current shard is \
+                greater than the limit"
+            );
+        }
+    }
+    if let Some(retention) = retention {
+        store
+            .discard_earlier(SystemTime::now() - retention, logger.clone())
+            .context("Failed to discard earlier data")?;
+    }
+    Ok(())
+}
+
 /// Special Error that indicates the program should stop now. It represents an
 /// actual signal, e.g. SIGINT, SIGTERM, that is handled by below and thus below
 /// can shutdown gracefully.
@@ -429,6 +472,7 @@ fn real_main(init: init::InitToken) {
         Command::Record {
             ref interval_s,
             ref retain_for_s,
+            ref store_size_limit,
             ref collect_io_stat,
             ref port,
             ref skew_detection_threshold_ms,
@@ -451,6 +495,7 @@ fn real_main(init: init::InitToken) {
                         Duration::from_secs(*interval_s as u64),
                         below_config,
                         retain_for_s.map(|r| Duration::from_secs(r as u64)),
+                        *store_size_limit,
                         *collect_io_stat,
                         Duration::from_millis(*skew_detection_threshold_ms),
                         debug,
@@ -582,7 +627,8 @@ fn record(
     errs: Receiver<Error>,
     interval: Duration,
     below_config: &BelowConfig,
-    retain: Option<Duration>,
+    retention: Option<Duration>,
+    store_size_limit: Option<u64>,
     collect_io_stat: bool,
     skew_detection_threshold: Duration,
     debug: bool,
@@ -663,12 +709,16 @@ fn record(
 
         match collected_sample {
             Ok(s) => {
-                if let Err(e) = store.put(
+                match store.put(
                     post_collect_sys_time,
                     &DataFrame { sample: s },
                     logger.clone(),
                 ) {
-                    error!(logger, "{:#}", e);
+                    Ok(/* new shard */ true) => {
+                        cleanup_store(&store, &logger, store_size_limit, /* retention */ None)?
+                    }
+                    Ok(/* new shard */ false) => {}
+                    Err(e) => error!(logger, "{:#}", e),
                 }
             }
             Err(e) => {
@@ -683,11 +733,9 @@ fn record(
             }
         };
 
-        if let Some(retention) = retain {
-            store
-                .discard_earlier(SystemTime::now() - retention, logger.clone())
-                .context("Failed to discard earlier data")?;
-        }
+        // Only check against retention and not size limit. Size limit is only
+        // checked on creation of successful write to a new shard.
+        cleanup_store(&store, &logger, /* store_size_limit */ None, retention)?;
 
         stats.report_store_size(below_config.store_dir.as_path());
 

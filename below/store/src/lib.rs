@@ -398,7 +398,7 @@ impl StoreWriter {
     /// Discard shards from the oldest first until f(shard_timestamp) is true
     /// or we've reached the current shard. Returns true if f(shard_timestamp)
     /// is true for the last shard visited or false otherwise.
-    fn discard_until<F>(&mut self, f: F, logger: slog::Logger) -> Result<bool>
+    fn discard_until<F>(&self, f: F, logger: slog::Logger) -> Result<bool>
     where
         F: Fn(u64) -> bool,
     {
@@ -462,7 +462,7 @@ impl StoreWriter {
     ///
     /// We do not modify index and data files. We just look for files
     /// which can only contain earlier data and remove them.
-    pub fn discard_earlier(&mut self, timestamp: SystemTime, logger: slog::Logger) -> Result<()> {
+    pub fn discard_earlier(&self, timestamp: SystemTime, logger: slog::Logger) -> Result<()> {
         let shard = calculate_shard(timestamp);
         self.discard_until(|shard_timestamp| shard_timestamp >= shard, logger.clone())?;
         Ok(())
@@ -472,7 +472,7 @@ impl StoreWriter {
     /// shard left. Oldest shards are discarded first. Returns true on success
     /// or false if the current shard size is greater than the limit.
     pub fn try_discard_until_size(
-        &mut self,
+        &self,
         store_size_limit: u64,
         logger: slog::Logger,
     ) -> Result<bool> {
