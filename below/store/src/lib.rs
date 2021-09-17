@@ -28,6 +28,7 @@ use zstd::stream::decode_all;
 
 use crate::cursor::{Cursor, KeyedCursor};
 
+use common::fileutil::get_dir_size;
 use common::open_source_shim;
 use common::util::get_unix_timestamp;
 
@@ -369,14 +370,16 @@ impl StoreWriter {
         Ok(())
     }
 
-    /// Discard all data earlier than timestamp
-    ///
-    /// We do not modify index and data files. We just look for files
-    /// which can only contain earlier data and remove them.
-    pub fn discard_earlier(&mut self, timestamp: SystemTime, logger: slog::Logger) -> Result<()> {
-        let shard = calculate_shard(timestamp);
+    /// Discard shards from the oldest first until f(shard_timestamp) is true
+    /// or we've reached the current shard. Returns true if f(shard_timestamp)
+    /// is true for the last shard visited or false otherwise.
+    fn discard_until<F>(&mut self, f: F, logger: slog::Logger) -> Result<bool>
+    where
+        F: Fn(u64) -> bool,
+    {
         let entries = get_index_files(self.dir.as_path())?;
 
+        // Entries are sorted with increasing timestamp
         for entry in entries {
             let v: Vec<&str> = entry.split('_').collect();
             if v.len() != 2 {
@@ -392,8 +395,11 @@ impl StoreWriter {
                 }
             };
 
-            if entry_shard >= shard {
-                break;
+            if f(entry_shard) {
+                return Ok(true);
+            }
+            if entry_shard >= self.shard {
+                return Ok(false);
             }
 
             // Removal order doesn't matter at all, it's the
@@ -424,7 +430,35 @@ impl StoreWriter {
                 _ => {}
             };
         }
+        Ok(false)
+    }
+
+    /// Discard all data earlier than timestamp
+    ///
+    /// We do not modify index and data files. We just look for files
+    /// which can only contain earlier data and remove them.
+    pub fn discard_earlier(&mut self, timestamp: SystemTime, logger: slog::Logger) -> Result<()> {
+        let shard = calculate_shard(timestamp);
+        self.discard_until(|shard_timestamp| shard_timestamp >= shard, logger.clone())?;
         Ok(())
+    }
+
+    /// Discard data until store size is less than limit, or there is only one
+    /// shard left. Oldest shards are discarded first. Returns true on success
+    /// or false if the current shard size is greater than the limit.
+    pub fn try_discard_until_size(
+        &mut self,
+        store_size_limit: u64,
+        logger: slog::Logger,
+    ) -> Result<bool> {
+        let dir = self.dir.clone();
+        self.discard_until(
+            |_| {
+                let size = get_dir_size(dir.clone());
+                size <= store_size_limit
+            },
+            logger.clone(),
+        )
     }
 }
 
@@ -1071,8 +1105,8 @@ mod tests {
         assert_eq!(frame.1.sample.cgroup.memory_current, Some(333));
     }
 
-    store_test!(discard, _discard);
-    fn _discard(compress: bool, format: Format) {
+    store_test!(discard_earlier, _discard_earlier);
+    fn _discard_earlier(compress: bool, format: Format) {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
         {
@@ -1114,6 +1148,125 @@ mod tests {
             .expect("Did not find stored sample");
         assert_ts!(frame.0, ts + Duration::from_secs(SHARD_TIME));
         assert_eq!(frame.1.sample.cgroup.memory_current, Some(777));
+    }
+
+    store_test!(try_discard_until_size, _try_discard_until_size);
+    fn _try_discard_until_size(compress: bool, format: Format) {
+        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir_path_buf = dir.path().to_path_buf();
+        let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
+        let mut shard_sizes = Vec::new();
+        let mut writer = StoreWriter::new(&dir, compress, format).expect("Failed to create store");
+
+        // Write n samples from timestamp 1 seconds apart, returning size
+        // increase of the store directory.
+        let mut write = |timestamp: SystemTime, n: u64| -> u64 {
+            let dir_size = get_dir_size(dir_path_buf.clone());
+            let mut frame = DataFrame::default();
+            for i in 0..n {
+                frame.sample.cgroup.memory_current = Some(n as i64 + i as i64);
+                writer
+                    .put(
+                        timestamp + Duration::from_secs(i as u64),
+                        &frame,
+                        get_logger(),
+                    )
+                    .expect("Failed to store data");
+            }
+            let dir_size_after = get_dir_size(dir_path_buf.clone());
+            assert!(
+                dir_size_after > dir_size,
+                "Directory size did not increase. before: {} after: {}: n_samples {}",
+                dir_size,
+                dir_size_after,
+                n,
+            );
+            return dir_size_after - dir_size;
+        };
+
+        let num_shards = 7;
+        for i in 0..num_shards {
+            shard_sizes.push(write(ts + Duration::from_secs(SHARD_TIME * i), i + 1));
+        }
+        let total_size = shard_sizes.iter().sum::<u64>();
+
+        {
+            // Nothing is discarded
+            let target_size = total_size;
+            assert!(
+                writer
+                    .try_discard_until_size(target_size, get_logger())
+                    .expect("Failed to discard data")
+            );
+            let frame = read_next_sample(&dir, ts, Direction::Forward, get_logger())
+                .expect("Failed to read sample")
+                .expect("Did not find stored sample");
+            assert_ts!(frame.0, ts);
+            assert_eq!(frame.1.sample.cgroup.memory_current, Some(1));
+        }
+
+        {
+            // Delete first shard
+            let target_size = total_size - 1;
+            assert!(
+                writer
+                    .try_discard_until_size(target_size, get_logger())
+                    .expect("Failed to discard data")
+            );
+            let frame = read_next_sample(&dir, ts, Direction::Forward, get_logger())
+                .expect("Failed to read sample")
+                .expect("Did not find stored sample");
+            assert_ts!(frame.0, ts + Duration::from_secs(SHARD_TIME));
+            assert_eq!(frame.1.sample.cgroup.memory_current, Some(2));
+        }
+
+        {
+            // Delete second and third shards
+            let target_size = total_size - (shard_sizes[0] + shard_sizes[1] + shard_sizes[2]);
+            assert!(
+                writer
+                    .try_discard_until_size(target_size, get_logger())
+                    .expect("Failed to discard data")
+            );
+            let frame = read_next_sample(&dir, ts, Direction::Forward, get_logger())
+                .expect("Failed to read sample")
+                .expect("Did not find stored sample");
+            assert_ts!(frame.0, ts + Duration::from_secs(SHARD_TIME * 3));
+            assert_eq!(frame.1.sample.cgroup.memory_current, Some(4));
+        }
+
+        {
+            // Delete fourth and fifth shards, with a target directory size
+            // slightly greater than the resulting size directory size
+            let target_size = total_size - (shard_sizes[0] + shard_sizes[1] + shard_sizes[2] +
+                shard_sizes[3] + shard_sizes[4])
+            + /* smaller than a shard */ 1;
+            assert!(
+                writer
+                    .try_discard_until_size(target_size, get_logger())
+                    .expect("Failed to discard data")
+            );
+            let frame = read_next_sample(&dir, ts, Direction::Forward, get_logger())
+                .expect("Failed to read sample")
+                .expect("Did not find stored sample");
+            assert_ts!(frame.0, ts + Duration::from_secs(SHARD_TIME * 5));
+            assert_eq!(frame.1.sample.cgroup.memory_current, Some(6));
+        }
+
+        {
+            // Delete until size is 1. Verify that the current shard remains
+            // (i.e. size > 1).
+            assert!(
+                !writer
+                    .try_discard_until_size(1, get_logger())
+                    .expect("Failed to discard data"),
+            );
+            let frame = read_next_sample(&dir, ts, Direction::Forward, get_logger())
+                .expect("Failed to read sample")
+                .expect("Did not find stored sample");
+            assert_ts!(frame.0, ts + Duration::from_secs(SHARD_TIME) * 6);
+            assert_eq!(frame.1.sample.cgroup.memory_current, Some(7));
+        }
     }
 
     store_test!(flock_protects, _flock_protects);
