@@ -14,6 +14,7 @@
 
 pub mod cliutil;
 pub mod dateutil;
+pub mod fileutil;
 pub mod logutil;
 pub mod util;
 
