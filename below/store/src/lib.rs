@@ -278,9 +278,10 @@ impl StoreWriter {
         })
     }
 
-    /// Store data with corresponding timestamp. Errors may be
-    /// returned if file operations fail.
-    pub fn put(
+    /// Store data with corresponding timestamp in current shard. Fails if data
+    /// does not belong to current shard. Errors may be returned if file
+    /// operations fail,
+    fn put_in_current_shard(
         &mut self,
         timestamp: SystemTime,
         data: &DataFrame,
@@ -288,10 +289,8 @@ impl StoreWriter {
     ) -> Result<()> {
         let shard = calculate_shard(timestamp);
         if shard != self.shard {
-            // We just recreate the StoreWriter since this is a new shard
-            *self = Self::new_with_shard(self.dir.as_path(), shard, self.compress, self.format)?;
+            panic!("Can't write data to shard as it belongs to different shard")
         }
-
         // It doesn't really matter which order we write the data in,
         // most filesystems do not provide ordering guarantees for
         // appends to different files anyways. We just need to handle
@@ -368,6 +367,32 @@ impl StoreWriter {
                 .context("Failed to write entry to index file")?;
         }
         Ok(())
+    }
+
+    /// Store data with corresponding timestamp. Returns true if a new shard
+    /// is created and data is written successfully. Errors may be returned if
+    /// file operations fail.
+    pub fn put(
+        &mut self,
+        timestamp: SystemTime,
+        data: &DataFrame,
+        logger: slog::Logger,
+    ) -> Result<bool> {
+        let shard = calculate_shard(timestamp);
+        if shard != self.shard {
+            // We just recreate the StoreWriter since this is a new shard
+            let mut writer =
+                Self::new_with_shard(self.dir.as_path(), shard, self.compress, self.format)?;
+            // Set self to new shard only if we succeed in writing the first
+            // frame. If we don't do this, we may "forget" returning a true
+            // for a new shard where the first write fails.
+            writer.put_in_current_shard(timestamp, data, logger)?;
+            *self = writer;
+            Ok(true)
+        } else {
+            self.put_in_current_shard(timestamp, data, logger)?;
+            Ok(false)
+        }
     }
 
     /// Discard shards from the oldest first until f(shard_timestamp) is true
@@ -903,6 +928,112 @@ mod tests {
             .expect("Did not find stored sample");
         assert_ts!(frame.0, ts);
         assert_eq!(frame.1.sample.cgroup.memory_current, Some(333));
+    }
+
+    store_test!(put_new_shard, _put_new_shard);
+    fn _put_new_shard(compress: bool, format: Format) {
+        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let now = SystemTime::now();
+        // Ensure that the follow writes (within 60s) are to the same shard
+        let ts = if calculate_shard(now) == calculate_shard(now + Duration::from_secs(60)) {
+            now
+        } else {
+            now + Duration::from_secs(60)
+        };
+
+        {
+            let mut writer = StoreWriter::new_with_timestamp(&dir, ts, compress, format)
+                .expect("Failed to create store");
+            let mut frame = DataFrame::default();
+            frame.sample.cgroup.memory_current = Some(111);
+
+            // New StoreWriter, but we're not switching to new shard
+            assert!(
+                !writer
+                    .put(ts, &frame, get_logger())
+                    .expect("Failed to store data")
+            );
+
+            frame.sample.cgroup.memory_current = Some(222);
+
+            // No new shard
+            assert!(
+                !writer
+                    .put(ts + Duration::from_secs(1), &frame, get_logger())
+                    .expect("Failed to store data")
+            );
+
+            frame.sample.cgroup.memory_current = Some(333);
+
+            // New shard
+            assert!(
+                writer
+                    .put(ts + Duration::from_secs(SHARD_TIME), &frame, get_logger())
+                    .expect("Failed to store data")
+            );
+        }
+
+        {
+            let mut writer = StoreWriter::new_with_timestamp(
+                &dir,
+                ts + Duration::from_secs(SHARD_TIME + 1),
+                compress,
+                format,
+            )
+            .expect("Failed to create store");
+            let mut frame = DataFrame::default();
+            frame.sample.cgroup.memory_current = Some(444);
+
+            // New StoreWriter but writing to existing shard
+            assert!(
+                !writer
+                    .put(
+                        ts + Duration::from_secs(SHARD_TIME + 1),
+                        &frame,
+                        get_logger()
+                    )
+                    .expect("Failed to store data")
+            );
+        }
+
+        let frame = read_next_sample(&dir, ts, Direction::Forward, get_logger())
+            .expect("Failed to read sample")
+            .expect("Did not find stored sample");
+        assert_ts!(frame.0, ts);
+        assert_eq!(frame.1.sample.cgroup.memory_current, Some(111));
+
+        let frame = read_next_sample(
+            &dir,
+            ts + Duration::from_secs(1),
+            Direction::Forward,
+            get_logger(),
+        )
+        .expect("Failed to read sample")
+        .expect("Did not find stored sample");
+        assert_ts!(frame.0, ts + Duration::from_secs(1));
+        assert_eq!(frame.1.sample.cgroup.memory_current, Some(222));
+
+        let frame = read_next_sample(
+            &dir,
+            ts + Duration::from_secs(SHARD_TIME),
+            Direction::Forward,
+            get_logger(),
+        )
+        .expect("Failed to read sample")
+        .expect("Did not find stored sample");
+        assert_ts!(frame.0, ts + Duration::from_secs(SHARD_TIME));
+        assert_eq!(frame.1.sample.cgroup.memory_current, Some(333));
+
+        let frame = read_next_sample(
+            &dir,
+            ts + Duration::from_secs(SHARD_TIME + 1),
+            Direction::Forward,
+            get_logger(),
+        )
+        .expect("Failed to read sample")
+        .expect("Did not find stored sample");
+        assert_ts!(frame.0, ts + Duration::from_secs(SHARD_TIME + 1));
+        assert_eq!(frame.1.sample.cgroup.memory_current, Some(444));
     }
 
     store_test!(put_read_corrupt_data, _put_read_corrupt_data);
