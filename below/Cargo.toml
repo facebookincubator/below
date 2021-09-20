@@ -33,7 +33,6 @@ store = { package = "below-store", version = "0.3.0", path = "store" }
 structopt = "0.3.21"
 users = "0.11"
 view = { package = "below-view", version = "0.3.0", path = "view" }
-walkdir = "2.2.9"
 
 [dev-dependencies]
 maplit = "1.0"
