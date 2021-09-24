@@ -119,11 +119,6 @@ enum Command {
         /// You can expect up to ~4.5x smaller data files
         #[structopt(long)]
         compress: bool,
-        /// This flag is a no-op and will be removed in the immediate future.
-        ///
-        /// TODO(T92471373): Remove --use-cbor flag
-        #[structopt(name = "use-cbor", long, hidden = true)]
-        _use_cbor: bool,
     },
     /// Replay historical data (interactive)
     Replay {
@@ -479,7 +474,6 @@ fn real_main(init: init::InitToken) {
             ref disable_disk_stat,
             ref disable_exitstats,
             ref compress,
-            ref _use_cbor,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
             run(
