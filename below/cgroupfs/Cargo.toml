@@ -11,10 +11,10 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
-nix = "0.20"
-openat = "0.1.20"
+nix = "0.22"
+openat = "0.1.21"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 thiserror = "1.0.29"
 
 [dev-dependencies]
-tempfile = "3.1"
+tempfile = "3.2"
