@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
   libncursesw5-dev \
   libssl-dev \
   m4 \
+  pkg-config \
   python3 \
   zlib1g-dev
 
