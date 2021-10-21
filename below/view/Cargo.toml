@@ -4,7 +4,7 @@
 name = "below-view"
 version = "0.3.0"
 authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
-edition = "2018"
+edition = "2021"
 description = "View crate for below"
 repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
