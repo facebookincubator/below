@@ -605,11 +605,11 @@ mod tests {
         }
 
         // case 1: timestamp at the available sample
-        for direction in [Direction::Forward, Direction::Reverse].iter() {
+        for direction in [Direction::Forward, Direction::Reverse] {
             // [3, 10, 20, 50]
             check_sample!(
                 10, /*query*/
-                *direction,
+                direction,
                 "3_10_10_7" /*old_new_timestamp_duraion*/
             );
         }
@@ -708,11 +708,11 @@ mod tests {
         // Samples: [3, 10, 20, 50]
         let mut advance = get_advance_with_fake_store(3);
         advance.initialize();
-        for (old, new) in [(3, 10), (10, 20), (20, 50)].iter() {
+        for (old, new) in [(3, 10), (10, 20), (20, 50)] {
             advance!(
                 advance,
                 Direction::Forward,
-                *new, /*expected_cache*/
+                new, /*expected_cache*/
                 Some(format!("{}_{}_{}_{}", old, new, new, new - old))
             );
         }
@@ -728,11 +728,11 @@ mod tests {
         }
 
         // Reverse
-        for (old, new) in [(10, 20), (3, 10)].iter() {
+        for (old, new) in [(10, 20), (3, 10)] {
             advance!(
                 advance,
                 Direction::Reverse,
-                *old, /*expected_cache*/
+                old, /*expected_cache*/
                 Some(format!("{}_{}_{}_{}", old, new, new, new - old))
             );
         }
