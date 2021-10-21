@@ -21,7 +21,7 @@ serde_json = { version = "1.0", features = ["float_roundtrip", "unbounded_depth"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 store = { package = "below-store", version = "0.3.0", path = "../store" }
 structopt = "0.3.23"
-toml = "=0.5.7"
+toml = "=0.5.8"
 
 [dev-dependencies]
 tempdir = "0.3"
