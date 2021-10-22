@@ -49,6 +49,13 @@ def main(args):
         print("Please run `cargo login` first and then retry")
         return 1
 
+    print(
+        """The script is a little hacky and not yet idempotent. So if any
+crate upload fails you may need to delete already-uploaded packages
+from `PACKAGES` and restart the script
+"""
+    )
+
     repo_root = get_repository_root()
     for package in PACKAGES:
         crate_root = f"{repo_root}/{package}"
@@ -57,7 +64,7 @@ def main(args):
 
         # HACK: wait for crates.io to stabilize previously uploaded deps
         print("++ Waiting for crates.io to stabilize")
-        time.sleep(5)
+        time.sleep(30)
 
     return 0
 
