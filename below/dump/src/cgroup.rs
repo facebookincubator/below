@@ -17,8 +17,6 @@ use super::*;
 use model::SingleCgroupModelFieldId;
 use render::RenderConfig;
 
-use std::iter::FromIterator;
-
 impl HasRenderConfigForDump for model::SingleCgroupModel {
     fn get_render_config_for_dump(field_id: &SingleCgroupModelFieldId) -> RenderConfig {
         use common::util::get_prefix;

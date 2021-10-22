@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use std::collections::HashSet;
-use std::iter::FromIterator;
 
 use crate::cgroup_view::CgroupState;
 use crate::render::ViewItem;

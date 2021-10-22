@@ -23,7 +23,6 @@ use anyhow::{bail, Error, Result};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::str::FromStr;
-use std::string::ToString;
 use structopt::StructOpt;
 
 /// Field that represents a group of related FieldIds of a Queriable.
