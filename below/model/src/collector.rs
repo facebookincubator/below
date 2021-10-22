@@ -371,6 +371,6 @@ macro_rules! get_option_rate {
                 count_per_sec!(l.$key.map(|s| s as u64), $sample.$key.map(|s| s as u64), d)
             })
             .unwrap_or_default()
-            .map(|s| s as u64);
+            .map(|s| s as u64)
     };
 }
