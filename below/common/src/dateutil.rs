@@ -29,6 +29,9 @@ use regex::Regex;
 use std::ops::{Add, Range, Sub};
 use std::sync::atomic::{AtomicI32, Ordering};
 
+use chrono::{Local, NaiveDateTime, NaiveTime, TimeZone};
+use std::time::SystemTime;
+
 /// A simple time structure that matches hg's time representation.
 ///
 /// Internally it's unixtime (in GMT), and offset (GMT -1 = +3600).
@@ -84,6 +87,15 @@ const DEFAULT_FORMATS: [&str; 44] = [
     "%m/%d %H:%M:%S",
     "%m/%d %I:%M%p",
     "%m/%d %H:%M",
+];
+
+const TIME_OF_DAY_FORMATS: [&str; 6] = [
+    "%I:%M%p",
+    "%I:%M%P",
+    "%I:%M:%S%p",
+    "%I:%M:%S%P",
+    "%H:%M",
+    "%H:%M:%S",
 ];
 
 const INVALID_OFFSET: i32 = i32::max_value();
@@ -342,6 +354,51 @@ impl HgTime {
             let format = format!("{}{}", naive_format, default_format);
             if let Ok(parsed) = NaiveDateTime::parse_from_str(&date_with_defaults, &format) {
                 return Some(parsed.into());
+            }
+        }
+
+        None
+    }
+
+    pub fn parse_time_of_day(date: &str) -> Option<NaiveTime> {
+        for naive_format in TIME_OF_DAY_FORMATS.iter() {
+            let format = naive_format.to_string();
+            if let Ok(parsed) = NaiveTime::parse_from_str(date, &format) {
+                return Some(parsed);
+            }
+        }
+
+        None
+    }
+
+    fn extract_local_date_from_system_time(system_time: SystemTime) -> Option<NaiveDate> {
+        if let Ok(system_time_as_duration) = system_time.duration_since(SystemTime::UNIX_EPOCH) {
+            return Some(
+                Local
+                    .timestamp(system_time_as_duration.as_secs() as i64, 0)
+                    .date()
+                    .naive_local(),
+            );
+        }
+
+        None
+    }
+
+    pub fn time_of_day_relative_to_system_time(
+        system_time: SystemTime,
+        time_of_day: NaiveTime,
+    ) -> Option<SystemTime> {
+        if let Some(date_from_system_time) = Self::extract_local_date_from_system_time(system_time)
+        {
+            let naive_date_with_time_of_day =
+                NaiveDateTime::new(date_from_system_time, time_of_day);
+            if let Some(local_time) = Local
+                .from_local_datetime(&naive_date_with_time_of_day)
+                .single()
+            {
+                let local_system_time = SystemTime::UNIX_EPOCH
+                    + std::time::Duration::from_secs(local_time.timestamp() as u64);
+                return Some(local_system_time);
             }
         }
 

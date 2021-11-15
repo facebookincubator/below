@@ -59,23 +59,50 @@ pub fn advance_helper(
             // silently doing nothing.
             None => {}
         },
-        _ => match dateutil::HgTime::parse(input) {
-            // Jump for absolute time
-            Some(pt) => {
-                // For forward jumping: we will find the next available sample of the input time forward
-                // For backward jumping: we will find the next available sample of the input time backward
-                let timestamp = std::time::UNIX_EPOCH + std::time::Duration::from_secs(pt.unixtime);
-                match adv.borrow_mut().jump_sample_to(timestamp) {
-                    Some(data) => c
-                        .user_data::<ViewState>()
-                        .expect("No user data set")
-                        .update(data),
-                    None => view_warn!(c, "Cannot find available data sample"),
+        _ => match dateutil::HgTime::parse_time_of_day(input) {
+            Some(time_of_day) => {
+                // If an absolute time without date is provided, the viewing date will be used
+                let view_time = c
+                    .user_data::<ViewState>()
+                    .expect("user data not set")
+                    .timestamp;
+
+                match dateutil::HgTime::time_of_day_relative_to_system_time(view_time, time_of_day)
+                {
+                    Some(timestamp) => match adv.borrow_mut().jump_sample_to(timestamp) {
+                        Some(data) => c
+                            .user_data::<ViewState>()
+                            .expect("No user data set")
+                            .update(data),
+                        None => view_warn!(c, "Cannot find available data sample"),
+                    },
+                    None => {
+                        view_warn!(c, "Failed to parse time of day value: {}", input);
+                        return;
+                    }
                 }
             }
             None => {
-                view_warn!(c, "Failed to parse time value: {}", input);
-                return ();
+                match dateutil::HgTime::parse(input) {
+                    // Jump for absolute time
+                    Some(pt) => {
+                        // For forward jumping: we will find the next available sample of the input time forward
+                        // For backward jumping: we will find the next available sample of the input time backward
+                        let timestamp =
+                            std::time::UNIX_EPOCH + std::time::Duration::from_secs(pt.unixtime);
+                        match adv.borrow_mut().jump_sample_to(timestamp) {
+                            Some(data) => c
+                                .user_data::<ViewState>()
+                                .expect("No user data set")
+                                .update(data),
+                            None => view_warn!(c, "Cannot find available data sample"),
+                        }
+                    }
+                    None => {
+                        view_warn!(c, "Failed to parse time value: {}", input);
+                        return;
+                    }
+                }
             }
         },
     };
@@ -104,7 +131,8 @@ pub fn new(adv: Rc<RefCell<Advance>>, direction: Direction) -> impl View {
                     )
                     .child(TextView::new("e.g:"))
                     .child(TextView::new("  Relative Time: 10s or 3h5m or 2d"))
-                    .child(TextView::new("  Absolute time: 10:00am")),
+                    .child(TextView::new("  Absolute time: 01/01/1970 11:59PM"))
+                    .child(TextView::new("  Time Of Day: 10:00am")),
             )
             .dismiss_button("Close"),
     )
