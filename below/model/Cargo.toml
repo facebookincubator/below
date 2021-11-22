@@ -10,7 +10,7 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.47"
+anyhow = "1.0.48"
 below_derive = { version = "0.4.1", path = "../below_derive" }
 cgroupfs = { version = "0.4.1", path = "../cgroupfs" }
 hostname = "0.3"
