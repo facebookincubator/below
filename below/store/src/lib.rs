@@ -23,7 +23,6 @@ use bitflags::bitflags;
 use serde::{Deserialize, Serialize};
 use slog::warn;
 use static_assertions::const_assert;
-use zstd::stream::decode_all;
 
 use crate::cursor::{Cursor, KeyedCursor};
 
