@@ -21,7 +21,7 @@ use slog::{self, error};
 use common::util;
 use model::{self, Model};
 
-use crate::{DataFrame, Direction};
+use crate::{DataFrame, Direction, LocalStore, RemoteStore, Store};
 
 /// A SamplePackage consists of enough information to construct a Model.
 // A SamplePackage consists of the sample(newer_sample) at target timestamp
@@ -71,36 +71,13 @@ impl SamplePackage<DataFrame> {
     }
 }
 
-/// The store trait defines how should we get a sample from the concrete impl store.
-trait Store {
-    // We intentionally make this trait generic which not tied to the DataFrame and Model
-    // type for ease of testing.
-    // For LocalStore and RemoteStore, SampleType will be DataFrame
-    // For FakeStore, SampleType will be u64
-    type SampleType;
+/// The store trait defines how should we get a sample from a Store
+trait ModelStore: Store {
     // For LocalStore and RemoteStore, ModelType will be Model
     // For FakeStore, ModelType will be string
     type ModelType;
 
-    /// Return the sample time and data frame. Needs to be implemented by
-    /// all stores.
-    // This function should return the data sample at the provided timestamp.
-    // If no sample available at the given timestamp, it will return the
-    // first sample after the timestamp if the direction is forward. Otherwise
-    // it will return the last sample before the timestamp. This function should
-    // return None in the following situation:
-    // * reverse search a target that has timestamp earlier than the first recorded
-    //   sample
-    // * forward search a target that has timestamp later than the last recorded
-    //   sample
-    fn get_sample_at_timestamp(
-        &mut self,
-        timestamp: SystemTime,
-        direction: Direction,
-        logger: slog::Logger,
-    ) -> Result<Option<(SystemTime, Self::SampleType)>>;
-
-    /// Defines how should we generate a ModelType to a SamplePackage.
+    /// Defines how should we generate a ModelType from a SamplePackage.
     fn to_model(&self, sample_package: &SamplePackage<Self::SampleType>)
         -> Option<Self::ModelType>;
 
@@ -158,45 +135,16 @@ trait Store {
     }
 }
 
-struct LocalStore {
-    dir: PathBuf,
-}
-
-struct RemoteStore {
-    store: crate::remote_store::RemoteStore,
-}
-
-impl Store for LocalStore {
-    type SampleType = DataFrame;
+impl ModelStore for LocalStore {
     type ModelType = Model;
-
-    fn get_sample_at_timestamp(
-        &mut self,
-        timestamp: SystemTime,
-        direction: Direction,
-        logger: slog::Logger,
-    ) -> Result<Option<(SystemTime, Self::SampleType)>> {
-        crate::read_next_sample(&self.dir, timestamp, direction, logger)
-    }
 
     fn to_model(&self, sample_package: &SamplePackage<DataFrame>) -> Option<Model> {
         Some(sample_package.to_model())
     }
 }
 
-impl Store for RemoteStore {
-    type SampleType = DataFrame;
+impl ModelStore for RemoteStore {
     type ModelType = Model;
-
-    fn get_sample_at_timestamp(
-        &mut self,
-        timestamp: SystemTime,
-        direction: Direction,
-        _logger: slog::Logger,
-    ) -> Result<Option<(SystemTime, Self::SampleType)>> {
-        self.store
-            .get_frame(util::get_unix_timestamp(timestamp), direction)
-    }
 
     fn to_model(&self, sample_package: &SamplePackage<DataFrame>) -> Option<Model> {
         Some(sample_package.to_model())
@@ -207,7 +155,7 @@ impl Store for RemoteStore {
 /// bridge between controller and store.
 pub struct Advance<FrameType, MType> {
     logger: slog::Logger,
-    store: Box<dyn Store<SampleType = FrameType, ModelType = MType>>,
+    store: Box<dyn ModelStore<SampleType = FrameType, ModelType = MType>>,
     // below needs two adajcent sample to calculate a model. So we will
     // need to cache one of them while are moving forward or backward
     // continuously to avoid double query.
@@ -462,26 +410,6 @@ mod tests {
 
     impl Store for FakeStore {
         type SampleType = u64;
-        type ModelType = String;
-
-        fn to_model(&self, sample_package: &SamplePackage<u64>) -> Option<String> {
-            // When duration is 0, we don't provide older_sample to the model
-            if let Some(older_sample) = sample_package.older_sample.as_ref() {
-                Some(format!(
-                    "{}_{}_{}_{}",
-                    older_sample,
-                    sample_package.newer_sample,
-                    util::get_unix_timestamp(sample_package.timestamp),
-                    sample_package.duration.as_secs()
-                ))
-            } else {
-                Some(format!(
-                    "{}_{}",
-                    sample_package.newer_sample,
-                    util::get_unix_timestamp(sample_package.timestamp)
-                ))
-            }
-        }
 
         fn get_sample_at_timestamp(
             &mut self,
@@ -514,6 +442,29 @@ mod tests {
                         self.sample[idx],
                     ))),
                 },
+            }
+        }
+    }
+
+    impl ModelStore for FakeStore {
+        type ModelType = String;
+
+        fn to_model(&self, sample_package: &SamplePackage<u64>) -> Option<String> {
+            // When duration is 0, we don't provide older_sample to the model
+            if let Some(older_sample) = sample_package.older_sample.as_ref() {
+                Some(format!(
+                    "{}_{}_{}_{}",
+                    older_sample,
+                    sample_package.newer_sample,
+                    util::get_unix_timestamp(sample_package.timestamp),
+                    sample_package.duration.as_secs()
+                ))
+            } else {
+                Some(format!(
+                    "{}_{}",
+                    sample_package.newer_sample,
+                    util::get_unix_timestamp(sample_package.timestamp)
+                ))
             }
         }
     }

@@ -30,12 +30,14 @@ use common::fileutil::get_dir_size;
 use common::open_source_shim;
 use common::util::get_unix_timestamp;
 
+use model::{self, Model};
+
 pub mod advance;
 pub mod cursor;
 #[cfg(test)]
 mod test;
 
-pub type Advance = advance::Advance<DataFrame, model::Model>;
+pub type Advance = advance::Advance<DataFrame, Model>;
 
 open_source_shim!();
 
@@ -523,6 +525,81 @@ pub fn read_next_sample<P: AsRef<Path>>(
         }
     } else {
         Ok(None)
+    }
+}
+
+pub trait Store {
+    // We intentionally make this trait generic which not tied to the DataFrame and Model
+    // type for ease of testing.
+    // For LocalStore and RemoteStore, SampleType will be DataFrame
+    // For FakeStore, SampleType will be u64
+    type SampleType;
+
+    /// Return the sample time and data frame. Needs to be implemented by
+    /// all stores.
+    // This function should return the data sample at the provided timestamp.
+    // If no sample available at the given timestamp, it will return the
+    // first sample after the timestamp if the direction is forward. Otherwise
+    // it will return the last sample before the timestamp. This function should
+    // return None in the following situation:
+    // * reverse search a target that has timestamp earlier than the first recorded
+    //   sample
+    // * forward search a target that has timestamp later than the last recorded
+    //   sample
+    fn get_sample_at_timestamp(
+        &mut self,
+        timestamp: SystemTime,
+        direction: Direction,
+        logger: slog::Logger,
+    ) -> Result<Option<(SystemTime, Self::SampleType)>>;
+}
+
+pub struct LocalStore {
+    dir: PathBuf,
+}
+
+pub struct RemoteStore {
+    store: crate::remote_store::RemoteStore,
+}
+
+impl LocalStore {
+    pub fn new(dir: PathBuf) -> Self {
+        Self { dir }
+    }
+}
+
+impl RemoteStore {
+    pub fn new(host: String, port: Option<u16>) -> Result<Self> {
+        Ok(Self {
+            store: crate::remote_store::RemoteStore::new(host, port)?,
+        })
+    }
+}
+
+impl Store for LocalStore {
+    type SampleType = DataFrame;
+
+    fn get_sample_at_timestamp(
+        &mut self,
+        timestamp: SystemTime,
+        direction: Direction,
+        logger: slog::Logger,
+    ) -> Result<Option<(SystemTime, Self::SampleType)>> {
+        crate::read_next_sample(&self.dir, timestamp, direction, logger)
+    }
+}
+
+impl Store for RemoteStore {
+    type SampleType = DataFrame;
+
+    fn get_sample_at_timestamp(
+        &mut self,
+        timestamp: SystemTime,
+        direction: Direction,
+        _logger: slog::Logger,
+    ) -> Result<Option<(SystemTime, Self::SampleType)>> {
+        self.store
+            .get_frame(get_unix_timestamp(timestamp), direction)
     }
 }
 
