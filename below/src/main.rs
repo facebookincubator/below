@@ -28,6 +28,7 @@ use std::time::{Duration, Instant, SystemTime};
 
 use anyhow::{anyhow, bail, Context, Error, Result};
 use cursive::Cursive;
+use indicatif::ProgressBar;
 use regex::Regex;
 use signal_hook::iterator::Signals;
 use slog::{self, debug, error, warn};
@@ -43,7 +44,7 @@ use config::BelowConfig;
 use dump::DumpCommand;
 use model;
 use store::advance::{new_advance_local, new_advance_remote};
-use store::{self, DataFrame};
+use store::{self, DataFrame, Store};
 use view::ViewState;
 
 open_source_shim!();
@@ -172,6 +173,24 @@ enum DebugCommand {
         /// Pretty print in JSON
         #[structopt(short, long)]
         json: bool,
+    },
+    /// Convert frames from an existing store and write them to a new store.
+    /// This can be used to test compression/serialization formats.
+    ConvertStore {
+        #[structopt(short, long, verbatim_doc_comment)]
+        start_time: String,
+        #[structopt(short, long, verbatim_doc_comment)]
+        end_time: String,
+        #[structopt(long)]
+        from_store_dir: Option<PathBuf>,
+        #[structopt(long)]
+        to_store_dir: PathBuf,
+        #[structopt(long)]
+        host: Option<String>,
+        #[structopt(long)]
+        port: Option<u16>,
+        #[structopt(long)]
+        compress: bool,
     },
 }
 
@@ -532,6 +551,42 @@ fn real_main(init: init::InitToken) {
                     Service::Off,
                     RedirectLogOnFail::Off,
                     |_, below_config, logger, _errs| dump_store(logger, time, below_config, json),
+                )
+            }
+            DebugCommand::ConvertStore {
+                ref start_time,
+                ref end_time,
+                ref from_store_dir,
+                ref to_store_dir,
+                ref host,
+                ref port,
+                ref compress,
+            } => {
+                let start_time = start_time.clone();
+                let end_time = end_time.clone();
+                let from_store_dir = from_store_dir.clone();
+                let to_store_dir = to_store_dir.clone();
+                let host = host.clone();
+                let port = port.clone();
+                run(
+                    init,
+                    debug,
+                    below_config,
+                    Service::Off,
+                    RedirectLogOnFail::Off,
+                    |_, below_config, logger, _errs| {
+                        convert_store(
+                            logger,
+                            below_config,
+                            start_time,
+                            end_time,
+                            from_store_dir,
+                            to_store_dir,
+                            host,
+                            port,
+                            *compress,
+                        )
+                    },
                 )
             }
         },
@@ -945,6 +1000,78 @@ fn dump_store(
         println!("{:#?}", df);
     }
 
+    Ok(())
+}
+
+fn convert_store(
+    logger: slog::Logger,
+    below_config: &BelowConfig,
+    start_time: String,
+    end_time: String,
+    from_store_dir: Option<PathBuf>,
+    to_store_dir: PathBuf,
+    host: Option<String>,
+    port: Option<u16>,
+    compress: bool,
+) -> Result<()> {
+    let (time_begin, time_end) = cliutil::system_time_range_from_date_and_adjuster(
+        start_time.as_str(),
+        Some(end_time.as_str()),
+        /* days_adjuster */ None,
+    )?;
+    let (timestamp_begin, timestamp_end) = (
+        common::util::get_unix_timestamp(time_begin),
+        common::util::get_unix_timestamp(time_end),
+    );
+    let pb = ProgressBar::new(timestamp_end - timestamp_begin);
+
+    let mut store: Box<dyn Store<SampleType = DataFrame>> = match (from_store_dir, host) {
+        (Some(_from_store_dir), Some(_host)) => {
+            bail!("Only one of --from-store-dir and --host should be specified");
+        }
+        (Some(from_store_dir), None) => {
+            pb.set_message(&format!("Using local store at {:?}", from_store_dir));
+            Box::new(store::LocalStore::new(from_store_dir))
+        }
+        (None, Some(host)) => {
+            pb.set_message(&format!("Using remote store for {}", host));
+            Box::new(store::RemoteStore::new(host, port)?)
+        }
+        (None, None) => {
+            pb.set_message(&format!(
+                "Using local store at {:?}",
+                &below_config.store_dir
+            ));
+            Box::new(store::LocalStore::new(below_config.store_dir.clone()))
+        }
+    };
+
+    let mut dest_store = store::StoreWriter::new(&to_store_dir, compress, store::Format::Cbor)?;
+
+    pb.set_message(&format!("Writing to local store at {:?}", to_store_dir));
+
+    let mut nr_samples = 0;
+    let mut cur_time = time_begin;
+    while cur_time < time_end {
+        match store.get_sample_at_timestamp(cur_time, store::Direction::Forward, logger.clone())? {
+            Some((frame_time, frame)) => {
+                cur_time = frame_time;
+                pb.set_message(&format!("Storing frame at t = {:?}", frame_time));
+                dest_store.put(frame_time, &frame, logger.clone())?;
+                nr_samples += 1;
+            }
+            None => {
+                pb.set_message(&format!(
+                    "Error: Breaking early. Couldn't find any frames after t = {:?}",
+                    cur_time
+                ));
+                break;
+            }
+        }
+        pb.set_position(common::util::get_unix_timestamp(cur_time) - timestamp_begin);
+        cur_time += Duration::from_secs(1); // To actually move forward
+    }
+    pb.set_message(&format!("Done. Logged {} samples.", nr_samples));
     Ok(())
 }
 
