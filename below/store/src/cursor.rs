@@ -220,11 +220,12 @@ impl StoreCursor {
         Ok(true)
     }
 
-    /// Move the cursor to a neighbor valid shard. Return if the cursor is
-    /// updated. Returning false means there is no more shard in the given
-    /// direction. Retrying may succeed as the store directory is scanned on
-    /// every call.
-    fn advance_shard(&mut self, direction: Direction) -> Result<bool> {
+    /// Update current shard or move the cursor to a neighbor valid shard.
+    /// Return if the cursor is updated (current shard is updated with new mmap
+    /// or cursor has moved to next shard). Returning false means there is no
+    /// more shard in the given direction. Retrying may succeed as the store
+    /// directory is scanned on every call.
+    fn update_or_advance_shard(&mut self, direction: Direction) -> Result<bool> {
         let entries = get_index_files(&self.path)?;
 
         let entries_iter: Box<dyn Iterator<Item = &String>> = match direction {
@@ -381,7 +382,7 @@ impl Cursor for StoreCursor {
     /// current position is valid, but underlying sample may still be invalid.
     fn advance(&mut self, direction: Direction) -> Result<bool> {
         while !self.advance_index(direction) {
-            if !self.advance_shard(direction)? {
+            if !self.update_or_advance_shard(direction)? {
                 // No more shard available
                 return Ok(false);
             }
