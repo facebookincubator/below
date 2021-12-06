@@ -91,12 +91,40 @@ pub trait KeyedCursor<Key: std::cmp::Ord>: Cursor {
         Ok(curr_key.map_or(false, |k| k.cmp(key) != direction.get_skip_order()))
     }
 
-    /// Convenient function to jump to a key and get the closest valid item.
-    fn get_at_key(&mut self, key: &Key, direction: Direction) -> Result<Option<Self::Item>> {
-        self.jump_to_key(key, direction)?;
+    /// Convenient function to jump to a key and get the closest valid item to
+    /// the key. Preference is given to the specified direction. Returns None
+    /// only if there are no keys at all.
+    ///
+    /// For example, for a list of int keys: [3, 7, 8, 12, 19],
+    /// `cursor.get_near(0, Direction::Reverse)` will jump
+    /// cursor to 3 and return 3.
+    fn get_near(
+        &mut self,
+        key: &Key,
+        preferred_direction: Direction,
+    ) -> Result<Option<Self::Item>> {
+        self.jump_to_key(key, preferred_direction)?;
         match self.get() {
             Some(item) => Ok(Some(item)),
-            None => self.next(direction),
+            None => self.next(preferred_direction),
+        }
+    }
+
+    /// Convenient function to jump to a key and get the closest valid item
+    /// that is at key or in the given direction of key. Returns None if
+    /// no such key exists.
+    ///
+    /// For example, for a list of int keys: [3, 7, 8, 12, 19],
+    /// `cursor.get_near(0, Direction::Reverse)` will return
+    /// `Ok(None)`.
+    fn get_next(&mut self, key: &Key, direction: Direction) -> Result<Option<Self::Item>> {
+        if self.jump_to_key(key, direction)? {
+            match self.get() {
+                Some(item) => Ok(Some(item)),
+                None => self.next(direction),
+            }
+        } else {
+            Ok(None)
         }
     }
 }
@@ -574,6 +602,42 @@ mod tests {
         assert_eq!(cursor.get_key(), Some(9));
         assert!(!cursor.jump_to_key(&0, Reverse).unwrap());
         assert_eq!(cursor.get_key(), None);
+    }
+
+    /// Test default implementation of get_near().
+    #[test]
+    fn default_get_near() {
+        let data = vec![Some(3), Some(5), None, None, Some(9)];
+        let mut cursor = TestCursor {
+            data: &data,
+            offset: None,
+        };
+        // Exact key
+        assert_eq!(cursor.get_near(&5, Forward).unwrap(), Some(5));
+        // Key in direction
+        assert_eq!(cursor.get_near(&4, Forward).unwrap(), Some(5));
+        assert_eq!(cursor.get_near(&4, Reverse).unwrap(), Some(3));
+        // Key in direction but no key there
+        assert_eq!(cursor.get_near(&2, Reverse).unwrap(), Some(3));
+        assert_eq!(cursor.get_near(&10, Forward).unwrap(), Some(9));
+    }
+
+    /// Test default implementation of get_next().
+    #[test]
+    fn default_get_next() {
+        let data = vec![Some(3), Some(5), None, None, Some(9)];
+        let mut cursor = TestCursor {
+            data: &data,
+            offset: None,
+        };
+        // Exact key
+        assert_eq!(cursor.get_next(&5, Forward).unwrap(), Some(5));
+        // Key in direction
+        assert_eq!(cursor.get_next(&4, Forward).unwrap(), Some(5));
+        assert_eq!(cursor.get_next(&4, Reverse).unwrap(), Some(3));
+        // Key in direction but no key there
+        assert_eq!(cursor.get_next(&2, Reverse).unwrap(), None);
+        assert_eq!(cursor.get_next(&10, Forward).unwrap(), None);
     }
 
     fn get_logger() -> Logger {

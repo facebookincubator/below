@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use slog::warn;
 use static_assertions::const_assert;
 
-use crate::cursor::{Cursor, KeyedCursor};
+use crate::cursor::KeyedCursor;
 
 use common::fileutil::get_dir_size;
 use common::open_source_shim;
@@ -517,15 +517,7 @@ pub fn read_next_sample<P: AsRef<Path>>(
     logger: slog::Logger,
 ) -> Result<Option<(SystemTime, DataFrame)>> {
     let mut cursor = cursor::StoreCursor::new(logger, path.as_ref().to_path_buf());
-    if cursor.jump_to_key(&get_unix_timestamp(timestamp), direction)? {
-        if let Some(item) = cursor.get() {
-            Ok(Some(item))
-        } else {
-            cursor.next(direction)
-        }
-    } else {
-        Ok(None)
-    }
+    cursor.get_next(&get_unix_timestamp(timestamp), direction)
 }
 
 pub trait Store {
