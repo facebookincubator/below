@@ -115,7 +115,7 @@ pub trait KeyedCursor<Key: std::cmp::Ord>: Cursor {
     /// no such key exists.
     ///
     /// For example, for a list of int keys: [3, 7, 8, 12, 19],
-    /// `cursor.get_near(0, Direction::Reverse)` will return
+    /// `cursor.get_next(0, Direction::Reverse)` will return
     /// `Ok(None)`.
     fn get_next(&mut self, key: &Key, direction: Direction) -> Result<Option<Self::Item>> {
         if self.jump_to_key(key, direction)? {
