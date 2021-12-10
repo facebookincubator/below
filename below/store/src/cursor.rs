@@ -17,7 +17,7 @@ use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use memmap::{Mmap, MmapOptions};
 use slog::{warn, Logger};
 use zstd::stream::decode_all;
@@ -319,11 +319,9 @@ impl StoreCursor {
         false
     }
 
-    /// Get the index entry the cursor currently pointing at.
-    fn get_index_entry(&self) -> Option<&IndexEntry> {
+    /// Get index entry at offset
+    fn get_index_entry_at(&self, index_offset: usize) -> Option<&IndexEntry> {
         let index_mmap = self.index_mmap.as_ref()?;
-        let index_offset = self.index_offset?;
-
         let index_entry_slice =
             index_mmap.get(index_offset..(index_offset.checked_add(INDEX_ENTRY_SIZE)?))?;
         // Safe because IndexEntry is always initialized and validated with crc.
@@ -350,6 +348,54 @@ impl StoreCursor {
         } else {
             Some(index_entry)
         }
+    }
+
+    /// Get the index entry the cursor currently pointing at.
+    fn get_index_entry(&self) -> Option<&IndexEntry> {
+        self.get_index_entry_at(self.index_offset?)
+    }
+
+    /// Get the index entry and uncompressed serialized data at an
+    /// index offset in the current shard.
+    fn get_index_and_serialized_frame_at(
+        &self,
+        index_offset: usize,
+    ) -> Result<(&IndexEntry, SerializedFrame)> {
+        let index_entry = self
+            .get_index_entry_at(index_offset)
+            .ok_or_else(|| anyhow!("Failed to get index entry at offset {}", index_offset))?;
+        let data_mmap = self
+            .data_mmap
+            .as_ref()
+            .ok_or_else(|| anyhow!("Failed to get mmap"))?;
+        let data_offset = index_entry.offset as usize;
+        let data_len = index_entry.len as usize;
+        let data_slice = data_mmap
+            .get(
+                data_offset
+                    ..
+                    (data_offset
+                        .checked_add(data_len)
+                        .ok_or_else(|| anyhow!("overflow"))?),
+            )
+            .ok_or_else(|| anyhow!("Failed to get data slice from mmap"))?;
+
+        if data_slice.crc32() != index_entry.data_crc {
+            return Err(anyhow!(
+                "Corrupted data entry found: ts={} offset={:#x}",
+                index_entry.timestamp,
+                index_entry.offset,
+            ));
+        };
+
+        let uncompressed_frame = if index_entry.flags.contains(IndexEntryFlags::COMPRESSED) {
+            SerializedFrame::Copy(
+                decode_all(data_slice).context("Failed to decompress data frame")?,
+            )
+        } else {
+            SerializedFrame::Slice(data_slice)
+        };
+        Ok((index_entry, uncompressed_frame))
     }
 }
 
@@ -423,44 +469,23 @@ impl Cursor for StoreCursor {
     /// This does not mean samples are depleted. More could be retrieved by
     /// advancing further to skip the holes.
     fn get(&self) -> Option<(SystemTime, DataFrame)> {
-        let data_mmap = self.data_mmap.as_ref()?;
-        let index_entry = self.get_index_entry()?;
-
-        let data_offset = index_entry.offset as usize;
-        let data_len = index_entry.len as usize;
-        let data_slice = data_mmap.get(data_offset..(data_offset.checked_add(data_len)?))?;
-
-        if data_slice.crc32() != index_entry.data_crc {
-            warn!(
-                self.logger,
-                "Corrupted data entry found: ts={} offset={:#x}",
-                index_entry.timestamp,
-                index_entry.offset,
-            );
-            return None;
-        }
-
-        let data_decompressed = if index_entry.flags.contains(IndexEntryFlags::COMPRESSED) {
-            SerializedFrame::Copy(match decode_all(data_slice) {
-                Ok(decoded) => decoded,
-                Err(e) => {
-                    warn!(self.logger, "Failed to decompress data frame: {}", e);
-                    return None;
+        match self.get_index_and_serialized_frame_at(self.index_offset?) {
+            Ok((index_entry, data_decompressed)) => {
+                let format = if index_entry.flags.contains(IndexEntryFlags::CBOR) {
+                    Format::Cbor
+                } else {
+                    Format::Thrift
+                };
+                let ts =
+                    std::time::UNIX_EPOCH + std::time::Duration::from_secs(index_entry.timestamp);
+                match deserialize_frame(data_decompressed.data(), format) {
+                    Ok(df) => Some((ts, df)),
+                    Err(e) => {
+                        warn!(self.logger, "Failed to deserialize data frame: {}", e);
+                        None
+                    }
                 }
-            })
-        } else {
-            SerializedFrame::Slice(data_slice)
-        };
-
-        let format = if index_entry.flags.contains(IndexEntryFlags::CBOR) {
-            Format::Cbor
-        } else {
-            Format::Thrift
-        };
-
-        let ts = std::time::UNIX_EPOCH + std::time::Duration::from_secs(index_entry.timestamp);
-        match deserialize_frame(data_decompressed.data(), format) {
-            Ok(df) => Some((ts, df)),
+            }
             Err(e) => {
                 warn!(self.logger, "Failed to deserialize data frame: {}", e);
                 None
