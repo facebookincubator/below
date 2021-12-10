@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use slog::warn;
 use static_assertions::const_assert;
 
-use crate::cursor::KeyedCursor;
+use crate::cursor::{KeyedCursor, StoreCursor};
 
 use common::fileutil::get_dir_size;
 use common::open_source_shim;
@@ -510,6 +510,9 @@ impl Direction {
     }
 }
 
+/// Convenient function to read the first sample at timestamp or after
+/// timestamp in direction. Prefer directly using StoreCursor for sequential
+/// reads
 pub fn read_next_sample<P: AsRef<Path>>(
     path: P,
     timestamp: SystemTime,
@@ -542,12 +545,11 @@ pub trait Store {
         &mut self,
         timestamp: SystemTime,
         direction: Direction,
-        logger: slog::Logger,
     ) -> Result<Option<(SystemTime, Self::SampleType)>>;
 }
 
 pub struct LocalStore {
-    dir: PathBuf,
+    store_cursor: StoreCursor,
 }
 
 pub struct RemoteStore {
@@ -555,8 +557,10 @@ pub struct RemoteStore {
 }
 
 impl LocalStore {
-    pub fn new(dir: PathBuf) -> Self {
-        Self { dir }
+    pub fn new(logger: slog::Logger, dir: PathBuf) -> Self {
+        Self {
+            store_cursor: StoreCursor::new(logger, dir),
+        }
     }
 }
 
@@ -575,9 +579,9 @@ impl Store for LocalStore {
         &mut self,
         timestamp: SystemTime,
         direction: Direction,
-        logger: slog::Logger,
     ) -> Result<Option<(SystemTime, Self::SampleType)>> {
-        crate::read_next_sample(&self.dir, timestamp, direction, logger)
+        self.store_cursor
+            .get_next(&get_unix_timestamp(timestamp), direction)
     }
 }
 
@@ -588,7 +592,6 @@ impl Store for RemoteStore {
         &mut self,
         timestamp: SystemTime,
         direction: Direction,
-        _logger: slog::Logger,
     ) -> Result<Option<(SystemTime, Self::SampleType)>> {
         self.store
             .get_frame(get_unix_timestamp(timestamp), direction)

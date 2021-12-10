@@ -1031,7 +1031,7 @@ fn convert_store(
         }
         (Some(from_store_dir), None) => {
             pb.set_message(&format!("Using local store at {:?}", from_store_dir));
-            Box::new(store::LocalStore::new(from_store_dir))
+            Box::new(store::LocalStore::new(logger.clone(), from_store_dir))
         }
         (None, Some(host)) => {
             pb.set_message(&format!("Using remote store for {}", host));
@@ -1042,7 +1042,10 @@ fn convert_store(
                 "Using local store at {:?}",
                 &below_config.store_dir
             ));
-            Box::new(store::LocalStore::new(below_config.store_dir.clone()))
+            Box::new(store::LocalStore::new(
+                logger.clone(),
+                below_config.store_dir.clone(),
+            ))
         }
     };
 
@@ -1053,7 +1056,7 @@ fn convert_store(
     let mut nr_samples = 0;
     let mut cur_time = time_begin;
     while cur_time < time_end {
-        match store.get_sample_at_timestamp(cur_time, store::Direction::Forward, logger.clone())? {
+        match store.get_sample_at_timestamp(cur_time, store::Direction::Forward)? {
             Some((frame_time, frame)) => {
                 cur_time = frame_time;
                 pb.set_message(&format!("Storing frame at t = {:?}", frame_time));

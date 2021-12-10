@@ -88,7 +88,7 @@ trait ModelStore: Store {
         direction: Direction,
         logger: &slog::Logger,
     ) -> Option<(SystemTime, Self::SampleType)> {
-        match self.get_sample_at_timestamp(timestamp, direction, logger.clone()) {
+        match self.get_sample_at_timestamp(timestamp, direction) {
             Ok(None) => None,
             Ok(val) => val,
             Err(e) => {
@@ -349,7 +349,7 @@ pub fn new_advance_local(
     store_dir: PathBuf,
     timestamp: SystemTime,
 ) -> Advance<DataFrame, Model> {
-    let store = Box::new(LocalStore { dir: store_dir });
+    let store = Box::new(LocalStore::new(logger.clone(), store_dir));
     Advance {
         logger,
         store,
@@ -415,7 +415,6 @@ mod tests {
             &mut self,
             timestamp: SystemTime,
             direction: Direction,
-            _logger: slog::Logger,
         ) -> Result<Option<(SystemTime, Self::SampleType)>> {
             if self.raise_error {
                 bail!("error");
@@ -488,7 +487,7 @@ mod tests {
         macro_rules! check_sample {
             ($query:tt, $expected:tt, $direction:expr) => {
                 let timestamp = util::get_system_time($query);
-                let res = store.get_sample_at_timestamp(timestamp, $direction, get_logger());
+                let res = store.get_sample_at_timestamp(timestamp, $direction);
                 assert_eq!(
                     res.expect("Fail to get sample."),
                     Some((util::get_system_time($expected), $expected))
@@ -496,7 +495,7 @@ mod tests {
             };
             ($query:tt, $direction:expr) => {
                 let timestamp = util::get_system_time($query);
-                let res = store.get_sample_at_timestamp(timestamp, $direction, get_logger());
+                let res = store.get_sample_at_timestamp(timestamp, $direction);
                 assert_eq!(res.expect("Fail to get sample."), None);
             };
         }
@@ -522,11 +521,7 @@ mod tests {
         check_sample!(30 /*query*/, 20 /*expected*/, Direction::Reverse);
 
         store.raise_error();
-        let res = store.get_sample_at_timestamp(
-            util::get_system_time(0),
-            Direction::Forward,
-            get_logger(),
-        );
+        let res = store.get_sample_at_timestamp(util::get_system_time(0), Direction::Forward);
         assert!(res.is_err());
     }
 
