@@ -14,7 +14,9 @@
 
 use super::*;
 
-use RenderFormat::{MaxOrReadableSize, PageReadableSize, Precision, ReadableSize};
+use RenderFormat::{
+    MaxOrReadableSize, PageReadableSize, Precision, ReadableSize, SectorReadableSize,
+};
 
 impl HasRenderConfig for model::SingleCgroupModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
@@ -519,8 +521,8 @@ impl HasRenderConfig for model::VmModel {
         use model::VmModelFieldId::*;
         let rc = RenderConfigBuilder::new();
         match field_id {
-            PgpginPerSec => rc.title("Page In").format(PageReadableSize).suffix("/s"),
-            PgpgoutPerSec => rc.title("Page Out").format(PageReadableSize).suffix("/s"),
+            PgpginPerSec => rc.title("Page In").format(SectorReadableSize).suffix("/s"),
+            PgpgoutPerSec => rc.title("Page Out").format(SectorReadableSize).suffix("/s"),
             PswpinPerSec => rc.title("Swap In").format(PageReadableSize).suffix("/s"),
             PswpoutPerSec => rc.title("Swap Out").format(PageReadableSize).suffix("/s"),
             PgstealKswapd => rc.title("Pgsteal Kswapd").suffix(" pages/s"),
