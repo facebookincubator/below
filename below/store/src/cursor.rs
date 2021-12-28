@@ -224,7 +224,8 @@ impl StoreCursor {
     /// the current shard and the index file does not grow. Index offset is also
     /// reset to None if moved to a different shard.
     fn update_shard(&mut self, shard: u64) -> Result<bool> {
-        // This mmap is always aligned to INDEX_ENTRY_SIZE
+        // This mmap is always aligned to INDEX_ENTRY_SIZE because
+        // it is page aligned.
         let new_index_mmap = match self.get_mmap(StoreFile::Index, shard)? {
             Some(index_mmap) => index_mmap,
             None => return Ok(false),
@@ -324,17 +325,22 @@ impl StoreCursor {
         let index_mmap = self.index_mmap.as_ref()?;
         let index_entry_slice =
             index_mmap.get(index_offset..(index_offset.checked_add(INDEX_ENTRY_SIZE)?))?;
-        // Safe because IndexEntry is always initialized and validated with crc.
+        // index_entry_slice is guaranteed to be INDEX_ENTRY_SIZE
+        // bytes. The mmap should also be page aligned, and
+        // index_offset is a multiple of INDEX_ENTRY_SIZE. Thus the
+        // following should always result in empty prefix/suffix
+        // unless there is a bug.
+        //
+        // Treating the slice as an IndexEntry is safe as it's always
+        // validated with crc.
         let (_, body, _) = unsafe { index_entry_slice.align_to::<IndexEntry>() };
-        if body.len() != 1 {
-            warn!(
-                self.logger,
-                "Mis-aligned index entry found: shard={} offset={}",
-                self.shard.unwrap(),
-                index_offset,
-            );
-            return None;
-        }
+        assert_eq!(
+            body.len(),
+            1,
+            "bug: Mis-aligned index entry found: shard={} offset={}",
+            self.shard.unwrap(),
+            index_offset,
+        );
         let index_entry = &body[0];
 
         if index_entry.crc32() != index_entry.index_crc {
