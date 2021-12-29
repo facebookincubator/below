@@ -17,6 +17,7 @@
 
 use std::cell::RefCell;
 use std::fs;
+use std::io;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::exit;
@@ -32,7 +33,10 @@ use indicatif::ProgressBar;
 use regex::Regex;
 use signal_hook::iterator::Signals;
 use slog::{self, debug, error, warn};
-use structopt::StructOpt;
+use structopt::{
+    clap::{AppSettings, Shell},
+    StructOpt,
+};
 use users::{get_current_uid, get_user_by_uid};
 
 mod exitstat;
@@ -161,6 +165,16 @@ enum Command {
         port: Option<u16>,
         #[structopt(subcommand)]
         cmd: DumpCommand,
+    },
+    /// Generate a shell completions file
+    #[structopt(setting = AppSettings::Hidden)]
+    GenerateCompletions {
+        /// The shell type
+        #[structopt(short, long, default_value = "bash")]
+        shell: Shell,
+        /// Output file, stdout if not present
+        #[structopt(short, long, parse(from_os_str))]
+        output: Option<PathBuf>,
     },
 }
 
@@ -610,6 +624,14 @@ fn real_main(init: init::InitToken) {
                 },
             )
         }
+        Command::GenerateCompletions {
+            ref shell,
+            ref output,
+        } => {
+            generate_completions(shell.clone(), output.clone())
+                .unwrap_or_else(|_| panic!("Failed to generate completions for {:?}", shell));
+            0
+        }
     };
     exit(rc);
 }
@@ -1000,6 +1022,15 @@ fn dump_store(
         println!("{:#?}", df);
     }
 
+    Ok(())
+}
+
+fn generate_completions(shell: Shell, output: Option<PathBuf>) -> Result<()> {
+    let mut file: Box<dyn io::Write> = match output {
+        Some(path) => Box::new(fs::File::create(path)?),
+        None => Box::new(io::stdout()),
+    };
+    Opt::clap().gen_completions_to("below", shell, &mut file);
     Ok(())
 }
 
