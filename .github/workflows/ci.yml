@@ -24,7 +24,7 @@ jobs:
       run: git diff --exit-code
 
   build_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
     - name: Build docker image
