@@ -321,7 +321,7 @@ fn cleanup_store(
 ) -> Result<()> {
     if let Some(limit) = store_size_limit {
         if !store
-            .try_discard_until_size(limit, logger.clone())
+            .try_discard_until_size(limit)
             .context("Failed to discard earlier data")?
         {
             warn!(
@@ -333,7 +333,7 @@ fn cleanup_store(
     }
     if let Some(retention) = retention {
         store
-            .discard_earlier(SystemTime::now() - retention, logger.clone())
+            .discard_earlier(SystemTime::now() - retention)
             .context("Failed to discard earlier data")?;
     }
     Ok(())
@@ -713,8 +713,12 @@ fn record(
         bump_memlock_rlimit()?;
     }
 
-    let mut store =
-        store::StoreWriter::new(&below_config.store_dir, compress, store::Format::Cbor)?;
+    let mut store = store::StoreWriter::new(
+        logger.clone(),
+        &below_config.store_dir,
+        compress,
+        store::Format::Cbor,
+    )?;
     let mut stats = statistics::Statistics::new();
 
     let (exit_buffer, bpf_errs) = if disable_exitstats {
@@ -780,11 +784,7 @@ fn record(
 
         match collected_sample {
             Ok(s) => {
-                match store.put(
-                    post_collect_sys_time,
-                    &DataFrame { sample: s },
-                    logger.clone(),
-                ) {
+                match store.put(post_collect_sys_time, &DataFrame { sample: s }) {
                     Ok(/* new shard */ true) => {
                         cleanup_store(&store, &logger, store_size_limit, /* retention */ None)?
                     }
@@ -1080,7 +1080,8 @@ fn convert_store(
         }
     };
 
-    let mut dest_store = store::StoreWriter::new(&to_store_dir, compress, store::Format::Cbor)?;
+    let mut dest_store =
+        store::StoreWriter::new(logger.clone(), &to_store_dir, compress, store::Format::Cbor)?;
 
     pb.set_message(&format!("Writing to local store at {:?}", to_store_dir));
 
@@ -1091,7 +1092,7 @@ fn convert_store(
             Some((frame_time, frame)) => {
                 cur_time = frame_time;
                 pb.set_message(&format!("Storing frame at t = {:?}", frame_time));
-                dest_store.put(frame_time, &frame, logger.clone())?;
+                dest_store.put(frame_time, &frame)?;
                 nr_samples += 1;
             }
             None => {

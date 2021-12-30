@@ -681,12 +681,11 @@ mod tests {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = get_unix_timestamp(SystemTime::now());
         let now = std::time::UNIX_EPOCH + std::time::Duration::from_secs(ts);
-        let mut writer = StoreWriter::new(&dir, compress, format).expect("Failed to create store");
+        let mut writer =
+            StoreWriter::new(get_logger(), &dir, compress, format).expect("Failed to create store");
         let mut frame = DataFrame::default();
         frame.sample.cgroup.memory_current = Some(42);
-        writer
-            .put(now, &frame, get_logger())
-            .expect("Failed to store data");
+        writer.put(now, &frame).expect("Failed to store data");
 
         let mut cursor = StoreCursor::new(get_logger(), dir.path().to_path_buf());
         let sample = cursor
