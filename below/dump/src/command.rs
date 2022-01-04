@@ -265,6 +265,7 @@ pub enum DiskAggField {
     Read,
     Write,
     Discard,
+    FsInfo,
 }
 
 impl AggField<SingleDiskModelFieldId> for DiskAggField {
@@ -293,6 +294,7 @@ impl AggField<SingleDiskModelFieldId> for DiskAggField {
                 DiscardSectors,
                 TimeSpendDiscardMs,
             ],
+            Self::FsInfo => vec![DiskUsage, PartitionSize, FilesystemType],
         }
     }
 }
@@ -310,6 +312,7 @@ pub static DEFAULT_DISK_FIELDS: &[DiskOptionField] = &[
     DumpOptionField::Agg(DiskAggField::Read),
     DumpOptionField::Agg(DiskAggField::Write),
     DumpOptionField::Agg(DiskAggField::Discard),
+    DumpOptionField::Agg(DiskAggField::FsInfo),
     DumpOptionField::Unit(DumpField::Common(CommonField::Timestamp)),
 ];
 
@@ -331,6 +334,8 @@ static DISK_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 * write: includes [{agg_write_fields}].
 
 * discard: includes [{agg_discard_fields}].
+
+* fs_info: includes [{agg_fsinfo_fields}].
 
 * --detail: no effect.
 
@@ -358,6 +363,7 @@ $ below dump disk -b "08:30:00" -e "08:30:30" -s read_bytes_per_sec --rsort --to
         agg_read_fields = join(DiskAggField::Read.expand(false)),
         agg_write_fields = join(DiskAggField::Write.expand(false)),
         agg_discard_fields = join(DiskAggField::Discard.expand(false)),
+        agg_fsinfo_fields = join(DiskAggField::FsInfo.expand(false)),
         default_fields = join(DEFAULT_DISK_FIELDS.to_owned()),
     )
 });

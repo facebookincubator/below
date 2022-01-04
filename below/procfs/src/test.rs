@@ -612,7 +612,7 @@ fn test_disk_stat() {
     procfs.create_file_with_content("diskstats", diskstats);
     let reader = procfs.get_reader();
     let diskmap = reader
-        .read_disk_stats()
+        .read_disk_stats_and_fsinfo()
         .expect("Failed to read diskstats file");
     let vda_stat = diskmap.get("vda").expect("Fail to get vda");
     assert_eq!(vda_stat.name, Some("vda".into()));
@@ -1378,4 +1378,165 @@ fn test_read_pid_exec() {
         .expect("Failed to read pid exe file");
 
     assert_eq!(exe_path, res);
+}
+
+#[test]
+fn test_read_mountinfo() {
+    let mountinfo = b"
+    56 1 0:26 / / rw,relatime shared:1 - btrfs /dev/vda3 rw,compress-force=zstd:3,discard,space_cache,subvolid=5,subvol=/
+    31 20 0:7 / /sys/kernel/debug rw,relatime shared:15 - debugfs debugfs rw,mode=755
+    36 56 253:1 / /boot rw,relatime shared:20 - ext4 /dev/vda1 rw";
+
+    let procfs = TestProcfs::new();
+    procfs.create_dir("self");
+    procfs.create_file_with_content("self/mountinfo", mountinfo);
+
+    let reader = procfs.get_reader();
+    let mount_info_map = reader
+        .read_mount_info_map()
+        .expect("Failed to read mount info file");
+
+    let mount_info_vda3 = mount_info_map
+        .get("/dev/vda3")
+        .expect("Mount Info Map does not contain vda3");
+    assert_eq!(mount_info_vda3.mnt_id, Some(56));
+    assert_eq!(mount_info_vda3.parent_mnt_id, Some(1));
+    assert_eq!(
+        mount_info_vda3
+            .majmin
+            .as_ref()
+            .expect("Unable to obtain majmin"),
+        "0:26"
+    );
+    assert_eq!(
+        mount_info_vda3
+            .root
+            .as_ref()
+            .expect("Unable to obtain root"),
+        "/"
+    );
+    assert_eq!(
+        mount_info_vda3
+            .mount_point
+            .as_ref()
+            .expect("Unable to obtain mount_point"),
+        "/"
+    );
+    assert_eq!(
+        mount_info_vda3
+            .mount_options
+            .as_ref()
+            .expect("Unable to obtain mount_options"),
+        "rw,relatime"
+    );
+    assert_eq!(
+        mount_info_vda3
+            .fs_type
+            .as_ref()
+            .expect("Unable to obtain fs_type"),
+        "btrfs"
+    );
+    assert_eq!(
+        mount_info_vda3
+            .mount_source
+            .as_ref()
+            .expect("Unable to obtain mount_source"),
+        "/dev/vda3"
+    );
+
+    let mount_info_debugfs = mount_info_map
+        .get("debugfs")
+        .expect("Mount Info Map does not contain debugfs");
+    assert_eq!(mount_info_debugfs.mnt_id, Some(31));
+    assert_eq!(mount_info_debugfs.parent_mnt_id, Some(20));
+    assert_eq!(
+        mount_info_debugfs
+            .majmin
+            .as_ref()
+            .expect("Unable to obtain majmin"),
+        "0:7"
+    );
+    assert_eq!(
+        mount_info_debugfs
+            .root
+            .as_ref()
+            .expect("Unable to obtain root"),
+        "/"
+    );
+    assert_eq!(
+        mount_info_debugfs
+            .mount_point
+            .as_ref()
+            .expect("Unable to obtain mount_point"),
+        "/sys/kernel/debug"
+    );
+    assert_eq!(
+        mount_info_debugfs
+            .mount_options
+            .as_ref()
+            .expect("Unable to obtain mount_options"),
+        "rw,relatime"
+    );
+    assert_eq!(
+        mount_info_debugfs
+            .fs_type
+            .as_ref()
+            .expect("Unable to obtain fs_type"),
+        "debugfs"
+    );
+    assert_eq!(
+        mount_info_debugfs
+            .mount_source
+            .as_ref()
+            .expect("Unable to obtain mount_source"),
+        "debugfs"
+    );
+
+    let mount_info_vda1 = mount_info_map
+        .get("/dev/vda1")
+        .expect("Mount Info Map does not contain vda1");
+    assert_eq!(mount_info_vda1.mnt_id, Some(36));
+    assert_eq!(mount_info_vda1.parent_mnt_id, Some(56));
+    assert_eq!(
+        mount_info_vda1
+            .majmin
+            .as_ref()
+            .expect("Unable to obtain majmin"),
+        "253:1"
+    );
+    assert_eq!(
+        mount_info_vda1
+            .root
+            .as_ref()
+            .expect("Unable to obtain root"),
+        "/"
+    );
+    assert_eq!(
+        mount_info_vda1
+            .mount_point
+            .as_ref()
+            .expect("Unable to obtain mount_point"),
+        "/boot"
+    );
+    assert_eq!(
+        mount_info_vda1
+            .mount_options
+            .as_ref()
+            .expect("Unable to obtain mount_options"),
+        "rw,relatime"
+    );
+    assert_eq!(
+        mount_info_vda1
+            .fs_type
+            .as_ref()
+            .expect("Unable to obtain fs_type"),
+        "ext4"
+    );
+    assert_eq!(
+        mount_info_vda1
+            .mount_source
+            .as_ref()
+            .expect("Unable to obtain mount_source"),
+        "/dev/vda1"
+    );
 }

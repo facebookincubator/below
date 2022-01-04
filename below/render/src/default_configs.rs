@@ -558,6 +558,9 @@ impl HasRenderConfig for model::SingleDiskModel {
             TimeSpendDiscardMs => rc.title("Time Spend Discard").suffix(" ms"),
             Major => rc.title("Major").width(7),
             Minor => rc.title("Minor").width(7),
+            DiskUsage => rc.title("Disk Usage").suffix("%").format(Precision(2)),
+            PartitionSize => rc.title("Partition Size").format(ReadableSize),
+            FilesystemType => rc.title("Filesystem Type"),
         }
     }
 }

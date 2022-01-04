@@ -926,6 +926,9 @@ fn test_dump_disk_titles() {
         "Discard Merged",
         "Discard Sectors",
         "Time Spend Discard",
+        "Disk Usage",
+        "Partition Size",
+        "Filesystem Type",
     ];
     assert_eq!(titles, expected_titles);
 }

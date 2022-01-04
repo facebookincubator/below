@@ -51,6 +51,7 @@ pub enum Field {
     U64(u64),
     I32(i32),
     I64(i64),
+    F32(f32),
     F64(f64),
     Str(String),
     PidState(procfs::PidState),
@@ -66,6 +67,13 @@ impl From<Field> for i64 {
     }
 }
 
+impl From<Field> for f32 {
+    fn from(field: Field) -> f32 {
+        let result: f64 = field.into();
+        result as f32
+    }
+}
+
 impl From<Field> for f64 {
     fn from(field: Field) -> f64 {
         match field {
@@ -73,6 +81,7 @@ impl From<Field> for f64 {
             Field::U64(v) => v as f64,
             Field::I32(v) => v as f64,
             Field::I64(v) => v as f64,
+            Field::F32(v) => v as f64,
             Field::F64(v) => v,
             _ => panic!("Operation for unsupported types"),
         }
@@ -112,6 +121,12 @@ impl From<i64> for Field {
     }
 }
 
+impl From<f32> for Field {
+    fn from(v: f32) -> Self {
+        Field::F32(v)
+    }
+}
+
 impl From<f64> for Field {
     fn from(v: f64) -> Self {
         Field::F64(v)
@@ -144,6 +159,7 @@ impl std::ops::Add for Field {
             (Field::U64(s), Field::U64(o)) => (s + o).into(),
             (Field::I32(s), Field::I32(o)) => (s + o).into(),
             (Field::I64(s), Field::I64(o)) => (s + o).into(),
+            (Field::F32(s), Field::F32(o)) => (s + o).into(),
             (Field::F64(s), Field::F64(o)) => (s + o).into(),
             (Field::Str(s), Field::Str(o)) => (s + &o).into(),
             _ => panic!("Operation for unsupported types"),
@@ -157,6 +173,7 @@ impl PartialEq for Field {
             (Field::U64(s), Field::U64(o)) => s == o,
             (Field::I32(s), Field::I32(o)) => s == o,
             (Field::I64(s), Field::I64(o)) => s == o,
+            (Field::F32(s), Field::F32(o)) => s == o,
             (Field::F64(s), Field::F64(o)) => s == o,
             (Field::Str(s), Field::Str(o)) => s == o,
             (Field::PidState(s), Field::PidState(o)) => s == o,
@@ -171,6 +188,7 @@ impl PartialOrd for Field {
             (Field::U64(s), Field::U64(o)) => s.partial_cmp(o),
             (Field::I32(s), Field::I32(o)) => s.partial_cmp(o),
             (Field::I64(s), Field::I64(o)) => s.partial_cmp(o),
+            (Field::F32(s), Field::F32(o)) => s.partial_cmp(o),
             (Field::F64(s), Field::F64(o)) => s.partial_cmp(o),
             (Field::Str(s), Field::Str(o)) => s.partial_cmp(o),
             (Field::PidState(s), Field::PidState(o)) => s.partial_cmp(o),
@@ -186,6 +204,7 @@ impl fmt::Display for Field {
             Field::U64(v) => v.fmt(f),
             Field::I32(v) => v.fmt(f),
             Field::I64(v) => v.fmt(f),
+            Field::F32(v) => v.fmt(f),
             Field::F64(v) => v.fmt(f),
             Field::Str(v) => v.fmt(f),
             Field::PidState(v) => v.fmt(f),

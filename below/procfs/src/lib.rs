@@ -13,8 +13,10 @@
 // limitations under the License.
 
 #![deny(clippy::all)]
+use nix::sys;
 use openat::Dir;
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, ErrorKind, Read};
 use std::path::{Path, PathBuf};
@@ -100,10 +102,10 @@ macro_rules! parse_item {
         if let Some(s) = $rhs {
             s.parse::<$t>()
                 .map_err(|_| Error::ParseError {
-                    line: $line.clone(),
+                    line: $line.to_string(),
                     item: s.to_string(),
                     type_name: stringify!($t).to_string(),
-                    path: $path.clone(),
+                    path: $path.to_path_buf(),
                 })
                 .map(|v| Some(v))
         } else {
@@ -383,11 +385,72 @@ impl ProcReader {
         }
     }
 
-    pub fn read_disk_stats(&self) -> Result<DiskMap> {
+    fn read_disk_fsinfo(&self, mount_info: &MountInfo) -> Option<(f32, u64)> {
+        if let Some(mount_point) = &mount_info.mount_point {
+            if let Ok(stat) = sys::statvfs::statvfs(Path::new(&mount_point)) {
+                let disk_usage = ((stat.blocks() - stat.blocks_available()) as f32 * 100.0)
+                    / stat.blocks() as f32;
+                let partition_size = stat.blocks() * stat.block_size() as u64;
+                return Some((disk_usage, partition_size));
+            }
+        }
+        None
+    }
+
+    fn read_mount_info_map(&self) -> Result<HashMap<String, MountInfo>> {
+        // Map contains a MountInfo object corresponding to the first
+        // mount of each mount source. The first mount is what shows in
+        // the 'df' command and reflects the usage of the device.
+        let path = self.path.join("self/mountinfo");
+        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
+        let buf_reader = BufReader::new(file);
+        let mut mount_info_map: HashMap<String, MountInfo> = HashMap::new();
+
+        for line in buf_reader.lines() {
+            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
+            if let Ok(mount_info) = self.process_mount_info(&path, &line) {
+                if let Some(mount_source) = mount_info.mount_source.clone() {
+                    mount_info_map.entry(mount_source).or_insert(mount_info);
+                }
+            }
+        }
+
+        if mount_info_map.is_empty() {
+            Err(Error::InvalidFileFormat(path))
+        } else {
+            Ok(mount_info_map)
+        }
+    }
+
+    fn process_mount_info(&self, path: &Path, line: &str) -> Result<MountInfo> {
+        let mut items = line.split_whitespace();
+        let mut mount_info = MountInfo {
+            mnt_id: parse_item!(path, items.next(), i32, line)?,
+            parent_mnt_id: parse_item!(path, items.next(), i32, line)?,
+            majmin: parse_item!(path, items.next(), String, line)?,
+            root: parse_item!(path, items.next(), String, line)?,
+            mount_point: parse_item!(path, items.next(), String, line)?,
+            mount_options: parse_item!(path, items.next(), String, line)?,
+            ..Default::default()
+        };
+
+        let mut items = items.skip(2);
+        mount_info.fs_type = parse_item!(path, items.next(), String, line)?;
+        mount_info.mount_source = parse_item!(path, items.next(), String, line)?;
+
+        if mount_info == Default::default() {
+            Err(Error::InvalidFileFormat(path.to_path_buf()))
+        } else {
+            Ok(mount_info)
+        }
+    }
+
+    pub fn read_disk_stats_and_fsinfo(&self) -> Result<DiskMap> {
         let path = self.path.join("diskstats");
         let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
         let buf_reader = BufReader::new(file);
         let mut disk_map: DiskMap = Default::default();
+        let mount_info_map = self.read_mount_info_map().unwrap_or_default();
 
         for line in buf_reader.lines() {
             let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
@@ -420,6 +483,15 @@ impl ProcReader {
             disk_stat.discard_merged = parse_item!(path, stats_iter.next(), u64, line)?;
             disk_stat.discard_sectors = parse_item!(path, stats_iter.next(), u64, line)?;
             disk_stat.time_spend_discard_ms = parse_item!(path, stats_iter.next(), u64, line)?;
+
+            let device_path = format!("/dev/{}", disk_name);
+            if let Some(mount_info) = mount_info_map.get(&device_path) {
+                if let Some((disk_usage, partition_size)) = self.read_disk_fsinfo(mount_info) {
+                    disk_stat.disk_usage = Some(disk_usage);
+                    disk_stat.partition_size = Some(partition_size);
+                }
+                disk_stat.filesystem_type = mount_info.fs_type.clone();
+            }
 
             disk_map.insert(disk_name, disk_stat);
         }

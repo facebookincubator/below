@@ -271,6 +271,18 @@ pub struct VmStat {
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct MountInfo {
+    pub mnt_id: Option<i32>,
+    pub parent_mnt_id: Option<i32>,
+    pub majmin: Option<String>,
+    pub root: Option<String>,
+    pub mount_point: Option<String>,
+    pub mount_options: Option<String>,
+    pub fs_type: Option<String>,
+    pub mount_source: Option<String>,
+}
+
+#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct DiskStat {
     pub major: Option<u64>,
     pub minor: Option<u64>,
@@ -287,6 +299,9 @@ pub struct DiskStat {
     pub discard_merged: Option<u64>,
     pub discard_sectors: Option<u64>,
     pub time_spend_discard_ms: Option<u64>,
+    pub disk_usage: Option<f32>,
+    pub partition_size: Option<u64>,
+    pub filesystem_type: Option<String>,
 }
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]

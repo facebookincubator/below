@@ -202,7 +202,7 @@ pub fn collect_sample(
                     None
                 }
             },
-            disks: match (disable_disk_stat, reader.read_disk_stats()) {
+            disks: match (disable_disk_stat, reader.read_disk_stats_and_fsinfo()) {
                 (false, Ok(disks)) => disks
                     .into_iter()
                     .map(|(disk_name, disk_stat)| (disk_name, disk_stat.into()))

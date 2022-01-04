@@ -364,6 +364,9 @@ impl VmModel {
 )]
 pub struct SingleDiskModel {
     pub name: Option<String>,
+    pub disk_usage: Option<f32>,
+    pub partition_size: Option<u64>,
+    pub filesystem_type: Option<String>,
     pub read_bytes_per_sec: Option<f64>,
     pub write_bytes_per_sec: Option<f64>,
     pub discard_bytes_per_sec: Option<f64>,
@@ -402,6 +405,9 @@ impl SingleDiskModel {
             count_per_sec!(begin.write_sectors, end.write_sectors, duration).map(|val| val * 512.0);
         SingleDiskModel {
             name: end.name.clone(),
+            disk_usage: end.disk_usage.map(|v| v as f32),
+            partition_size: end.partition_size.map(|v| v as u64),
+            filesystem_type: end.filesystem_type.clone(),
             read_bytes_per_sec,
             write_bytes_per_sec,
             discard_bytes_per_sec: count_per_sec!(
