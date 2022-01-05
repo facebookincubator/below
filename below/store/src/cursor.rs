@@ -17,7 +17,7 @@ use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use memmap::{Mmap, MmapOptions};
 use slog::{warn, Logger};
 use zstd::stream::decode_all;
@@ -387,11 +387,11 @@ impl StoreCursor {
             .ok_or_else(|| anyhow!("Failed to get data slice from mmap"))?;
 
         if data_slice.crc32() != index_entry.data_crc {
-            return Err(anyhow!(
+            bail!(
                 "Corrupted data entry found: ts={} offset={:#x}",
                 index_entry.timestamp,
                 index_entry.offset,
-            ));
+            );
         };
 
         let uncompressed_frame = if index_entry.flags.contains(IndexEntryFlags::COMPRESSED) {
@@ -538,7 +538,7 @@ impl KeyedCursor<u64> for StoreCursor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{serialize_frame, StoreWriter};
+    use crate::{serialize_frame, CompressionMode, StoreWriter};
     use common::util::get_unix_timestamp;
     use slog::Drain;
     use std::fs::OpenOptions;
@@ -677,12 +677,12 @@ mod tests {
     }
 
     /// Write a single sample in different ways and read it back.
-    fn simple_put_read(compress: bool, format: Format) {
+    fn simple_put_read(compression_mode: CompressionMode, format: Format) {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
         let ts = get_unix_timestamp(SystemTime::now());
         let now = std::time::UNIX_EPOCH + std::time::Duration::from_secs(ts);
-        let mut writer =
-            StoreWriter::new(get_logger(), &dir, compress, format).expect("Failed to create store");
+        let mut writer = StoreWriter::new(get_logger(), &dir, compression_mode, format)
+            .expect("Failed to create store");
         let mut frame = DataFrame::default();
         frame.sample.cgroup.memory_current = Some(42);
         writer.put(now, &frame).expect("Failed to store data");
@@ -697,21 +697,21 @@ mod tests {
 
     #[test]
     fn read_cbor() {
-        simple_put_read(false, Format::Cbor);
+        simple_put_read(CompressionMode::None, Format::Cbor);
     }
     #[test]
     fn read_compressed_cbor() {
-        simple_put_read(true, Format::Cbor);
+        simple_put_read(CompressionMode::Zstd, Format::Cbor);
     }
     #[cfg(fbcode_build)]
     #[test]
     fn read_thrift() {
-        simple_put_read(false, Format::Thrift);
+        simple_put_read(CompressionMode::None, Format::Thrift);
     }
     #[cfg(fbcode_build)]
     #[test]
     fn read_compressed_thrift() {
-        simple_put_read(true, Format::Thrift);
+        simple_put_read(CompressionMode::Zstd, Format::Thrift);
     }
 
     /// For writing samples readable by the cursor and injecting corruptions.

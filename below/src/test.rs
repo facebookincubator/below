@@ -27,8 +27,13 @@ use common::util::fold_string;
 fn record_replay_integration() {
     let logger = get_logger();
     let dir = TempDir::new("below_record_replay_test").expect("tempdir failed");
-    let mut store = store::StoreWriter::new(logger.clone(), &dir, false, store::Format::Cbor)
-        .expect("Failed to create store");
+    let mut store = store::StoreWriter::new(
+        logger.clone(),
+        &dir,
+        store::CompressionMode::None,
+        store::Format::Cbor,
+    )
+    .expect("Failed to create store");
 
     let cgroup_root = Path::new(cgroupfs::DEFAULT_CG_ROOT).to_path_buf();
 
@@ -117,8 +122,13 @@ fn record_replay_integration() {
 fn advance_forward_and_reverse() {
     let logger = get_logger();
     let dir = TempDir::new("below_record_replay_test").expect("tempdir failed");
-    let mut store = store::StoreWriter::new(logger.clone(), &dir, false, store::Format::Cbor)
-        .expect("Failed to create store");
+    let mut store = store::StoreWriter::new(
+        logger.clone(),
+        &dir,
+        store::CompressionMode::None,
+        store::Format::Cbor,
+    )
+    .expect("Failed to create store");
 
     let cgroup_root = Path::new(cgroupfs::DEFAULT_CG_ROOT).to_path_buf();
 

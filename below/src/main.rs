@@ -713,10 +713,15 @@ fn record(
         bump_memlock_rlimit()?;
     }
 
+    let compression_mode = match compress {
+        false => store::CompressionMode::None,
+        true => store::CompressionMode::Zstd,
+    };
+
     let mut store = store::StoreWriter::new(
         logger.clone(),
         &below_config.store_dir,
-        compress,
+        compression_mode,
         store::Format::Cbor,
     )?;
     let mut stats = statistics::Statistics::new();
@@ -1080,8 +1085,17 @@ fn convert_store(
         }
     };
 
-    let mut dest_store =
-        store::StoreWriter::new(logger.clone(), &to_store_dir, compress, store::Format::Cbor)?;
+    let compression_mode = match compress {
+        false => store::CompressionMode::None,
+        true => store::CompressionMode::Zstd,
+    };
+
+    let mut dest_store = store::StoreWriter::new(
+        logger.clone(),
+        &to_store_dir,
+        compression_mode,
+        store::Format::Cbor,
+    )?;
 
     pb.set_message(&format!("Writing to local store at {:?}", to_store_dir));
 
