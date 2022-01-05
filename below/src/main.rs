@@ -48,7 +48,7 @@ use config::BelowConfig;
 use dump::DumpCommand;
 use model;
 use store::advance::{new_advance_local, new_advance_remote};
-use store::{self, DataFrame, Store};
+use store::{self, ChunkSizePo2, CompressionMode, DataFrame, Store};
 use view::ViewState;
 
 open_source_shim!();
@@ -64,6 +64,66 @@ struct Opt {
     debug: bool,
     #[structopt(subcommand)]
     cmd: Option<Command>,
+}
+
+#[derive(Debug, StructOpt)]
+struct CompressOpts {
+    /// Enable zstd data file compression
+    ///
+    /// Depending on typical data, you can expect around 10x
+    /// smaller data files, and an even higher compression ratio if
+    /// used with --dict-compress-chunk-size.
+    #[structopt(long)]
+    compress: bool,
+    /// Only valid when used with --compress. Must be at least 2, a
+    /// power of 2, and at most 32768.
+    ///
+    /// If specified, zstd dictionary compression is used in aligned
+    /// chunks of size --dict-compress-chunk-size. The first frame of
+    /// each is used as a zstd dictionary for the frames in the rest
+    /// of the chunk.
+    ///
+    /// With --dict-compress-chunk-size 16, you can expect around
+    /// 20-30x smaller data files.
+    #[structopt(long, requires("compress"), parse(try_from_str = parse_chunk_size))]
+    dict_compress_chunk_size: Option<u32>,
+}
+
+impl CompressOpts {
+    fn to_compression_mode(&self) -> Result<CompressionMode> {
+        Ok(match (self.compress, self.dict_compress_chunk_size) {
+            (true, Some(chunk_size)) => {
+                assert_eq!(chunk_size.count_ones(), 1, "chunk size not a power of 2");
+                let chunk_size_po2 = chunk_size.trailing_zeros();
+                CompressionMode::ZstdDictionary(ChunkSizePo2(chunk_size_po2))
+            }
+            (true, None) => CompressionMode::Zstd,
+            (false, Some(_)) => {
+                bail!("bug: --dict-compress-chunk-size can only be used with --compress");
+            }
+            (false, None) => CompressionMode::None,
+        })
+    }
+}
+
+fn parse_chunk_size(s: &str) -> Result<u32> {
+    let x = s
+        .parse::<u32>()
+        .with_context(|| format!("{} cannot be parsed as a u32", s))?;
+    if x <= 1 {
+        bail!("{} is less than the minimum chunk size of 2", x);
+    }
+    if x.count_ones() != 1 {
+        bail!("{} is not a power of two", x);
+    }
+    if x > store::MAX_CHUNK_COMPRESS_SIZE {
+        bail!(
+            "{} is greater than the maximimum supported chunk size of {}",
+            x,
+            store::MAX_CHUNK_COMPRESS_SIZE
+        );
+    }
+    Ok(x)
 }
 
 #[derive(Debug, StructOpt)]
@@ -119,11 +179,9 @@ enum Command {
         /// Flag to disable eBPF-based exitstats
         #[structopt(long)]
         disable_exitstats: bool,
-        /// Enable data file compression
-        ///
-        /// You can expect up to ~4.5x smaller data files
-        #[structopt(long)]
-        compress: bool,
+        /// Options for compression
+        #[structopt(flatten)]
+        compress_opts: CompressOpts,
     },
     /// Replay historical data (interactive)
     Replay {
@@ -203,8 +261,9 @@ enum DebugCommand {
         host: Option<String>,
         #[structopt(long)]
         port: Option<u16>,
-        #[structopt(long)]
-        compress: bool,
+        /// Options for compression
+        #[structopt(flatten)]
+        compress_opts: CompressOpts,
     },
 }
 
@@ -506,7 +565,7 @@ fn real_main(init: init::InitToken) {
             ref skew_detection_threshold_ms,
             ref disable_disk_stat,
             ref disable_exitstats,
-            ref compress,
+            ref compress_opts,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
             run(
@@ -528,7 +587,7 @@ fn real_main(init: init::InitToken) {
                         debug,
                         *disable_disk_stat,
                         *disable_exitstats,
-                        *compress,
+                        compress_opts,
                     )
                 },
             )
@@ -574,7 +633,7 @@ fn real_main(init: init::InitToken) {
                 ref to_store_dir,
                 ref host,
                 ref port,
-                ref compress,
+                ref compress_opts,
             } => {
                 let start_time = start_time.clone();
                 let end_time = end_time.clone();
@@ -598,7 +657,7 @@ fn real_main(init: init::InitToken) {
                             to_store_dir,
                             host,
                             port,
-                            *compress,
+                            compress_opts,
                         )
                     },
                 )
@@ -705,7 +764,7 @@ fn record(
     debug: bool,
     disable_disk_stat: bool,
     disable_exitstats: bool,
-    compress: bool,
+    compress_opts: &CompressOpts,
 ) -> Result<()> {
     debug!(logger, "Starting up!");
 
@@ -713,15 +772,10 @@ fn record(
         bump_memlock_rlimit()?;
     }
 
-    let compression_mode = match compress {
-        false => store::CompressionMode::None,
-        true => store::CompressionMode::Zstd,
-    };
-
     let mut store = store::StoreWriter::new(
         logger.clone(),
         &below_config.store_dir,
-        compression_mode,
+        compress_opts.to_compression_mode()?,
         store::Format::Cbor,
     )?;
     let mut stats = statistics::Statistics::new();
@@ -1048,7 +1102,7 @@ fn convert_store(
     to_store_dir: PathBuf,
     host: Option<String>,
     port: Option<u16>,
-    compress: bool,
+    compress_opts: &CompressOpts,
 ) -> Result<()> {
     let (time_begin, time_end) = cliutil::system_time_range_from_date_and_adjuster(
         start_time.as_str(),
@@ -1085,15 +1139,10 @@ fn convert_store(
         }
     };
 
-    let compression_mode = match compress {
-        false => store::CompressionMode::None,
-        true => store::CompressionMode::Zstd,
-    };
-
     let mut dest_store = store::StoreWriter::new(
         logger.clone(),
         &to_store_dir,
-        compression_mode,
+        compress_opts.to_compression_mode()?,
         store::Format::Cbor,
     )?;
 
