@@ -823,17 +823,20 @@ mod tests {
             Format::Cbor,
         );
     }
+
     #[cfg(fbcode_build)]
     #[test]
     fn read_thrift() {
         simple_put_read(CompressionMode::None, Format::Thrift);
     }
+
     #[cfg(fbcode_build)]
     #[test]
     fn read_compressed_thrift() {
         simple_put_read(CompressionMode::Zstd, Format::Thrift);
     }
 
+    #[cfg(fbcode_build)]
     #[test]
     fn read_dict_compressed_thrift() {
         simple_put_read(
