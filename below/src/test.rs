@@ -19,7 +19,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tempdir::TempDir;
 
 use crate::model::{collect_sample, CgroupPressureModel, Model, Sample};
-use crate::store::{self, advance::new_advance_local, DataFrame};
+use crate::store::{self, advance::new_advance_local, ChunkSizePo2, CompressionMode, DataFrame};
 use common::logutil::get_logger;
 use common::util::fold_string;
 
@@ -30,7 +30,7 @@ fn record_replay_integration() {
     let mut store = store::StoreWriter::new(
         logger.clone(),
         &dir,
-        store::CompressionMode::None,
+        CompressionMode::ZstdDictionary(ChunkSizePo2(2)),
         store::Format::Cbor,
     )
     .expect("Failed to create store");
@@ -125,7 +125,7 @@ fn advance_forward_and_reverse() {
     let mut store = store::StoreWriter::new(
         logger.clone(),
         &dir,
-        store::CompressionMode::None,
+        CompressionMode::ZstdDictionary(ChunkSizePo2(2)),
         store::Format::Cbor,
     )
     .expect("Failed to create store");

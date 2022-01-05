@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cell::RefCell;
 use std::fs::File;
+use std::io;
 use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::time::SystemTime;
@@ -20,7 +22,6 @@ use std::time::SystemTime;
 use anyhow::{anyhow, bail, Context, Result};
 use memmap::{Mmap, MmapOptions};
 use slog::{warn, Logger};
-use zstd::stream::decode_all;
 
 use crate::{
     deserialize_frame, get_index_files, Crc32, DataFrame, Direction, Format, IndexEntry,
@@ -145,6 +146,9 @@ pub struct StoreCursor {
     // locates the exact sample of this store. Offset could be None if shard
     // does not exist or just moved to a newly initialized shard.
     index_offset: Option<usize>,
+    // Cache of the most recently used dict key frame. This is represented by
+    // a tuple (shard, dict_index_offset, uncompressed_dict).
+    recent_dict_key_frame: RefCell<Option<(u64, usize, bytes::Bytes)>>,
 }
 
 enum StoreFile {
@@ -162,6 +166,7 @@ impl StoreCursor {
             index_mmap: None,
             data_mmap: None,
             index_offset: None,
+            recent_dict_key_frame: RefCell::new(None),
         }
     }
 
@@ -320,7 +325,8 @@ impl StoreCursor {
         false
     }
 
-    /// Get index entry at offset
+    /// Get index entry at offset. Return None if offset points to
+    /// zero padding, or if the index entry is corrupt.
     fn get_index_entry_at(&self, index_offset: usize) -> Option<&IndexEntry> {
         let index_mmap = self.index_mmap.as_ref()?;
         let index_entry_slice =
@@ -341,8 +347,12 @@ impl StoreCursor {
             self.shard.unwrap(),
             index_offset,
         );
+        // Ignore zero padding which can happen in dictionary chunk
+        // compression mode, since chunks need to be aligned.
+        if index_entry_slice == [0; INDEX_ENTRY_SIZE] {
+            return None;
+        }
         let index_entry = &body[0];
-
         if index_entry.crc32() != index_entry.index_crc {
             warn!(
                 self.logger,
@@ -361,12 +371,95 @@ impl StoreCursor {
         self.get_index_entry_at(self.index_offset?)
     }
 
-    /// Get the index entry and uncompressed serialized data at an
-    /// index offset in the current shard.
-    fn get_index_and_serialized_frame_at(
+    /// Get serialized frame from data_slice, decompressing it as
+    /// necessary.
+    fn get_serialized_single_frame<'a>(
+        data_slice: &'a [u8],
+        compressed: bool,
+    ) -> Result<SerializedFrame<'a>> {
+        let serialized_frame = if compressed {
+            SerializedFrame::Copy(
+                zstd::stream::decode_all(data_slice).context("Failed to decompress data frame")?,
+            )
+        } else {
+            SerializedFrame::Slice(data_slice)
+        };
+        Ok(serialized_frame)
+    }
+
+    /// Get the serialized, uncompressed frame that is part of a
+    /// chunk. That is, it is either the first frame of the chunk (a
+    /// dictionary key frame) or some other frame in the chunk
+    /// (compressed by dictionary key frame).
+    ///
+    /// Because chunks are aligned, whether the frame is the first
+    /// in a chunk can be determined by `index_offset` and
+    /// `chunk_compress_size`.
+    fn get_serialized_chunk_frame(
         &self,
+        data_slice: &[u8],
         index_offset: usize,
-    ) -> Result<(&IndexEntry, SerializedFrame)> {
+        chunk_compress_size_po2: u32,
+    ) -> Result<SerializedFrame> {
+        // Calculate offset into the chunk. If this is 0, then this
+        // is the first frame and hence key frame of the chunk.
+        let chunk_mask = (INDEX_ENTRY_SIZE << chunk_compress_size_po2) - 1;
+        let dict_index_offset = index_offset & !chunk_mask;
+
+        // A single element cache avoids reading and potentially decompressing
+        // the dictionary frame up to N-1 times during sequential reads
+        let mut cache = self.recent_dict_key_frame.borrow_mut();
+        let shard = self.shard.expect("shard should be set");
+
+        // In both forward and reverse sequential reads, ensuring the
+        // dictionary cache points to the dictionary of the current
+        // chunk before checking if the requested frame is optimal.
+        // In the reverse case, on encountering the first frame, the
+        // cache will have already been populated on a prior read.
+        let dict_key_frame = match cache.as_ref() {
+            Some((cache_shard, cache_index_offset, cache_dict_key_frame))
+                if *cache_shard == shard && *cache_index_offset == dict_index_offset =>
+            {
+                SerializedFrame::Bytes(cache_dict_key_frame.clone())
+            }
+            _ => {
+                let (index_entry, data_slice) = self.get_index_and_data_at(dict_index_offset)?;
+                // Use bytes::Bytes to avoid unnecessary copy
+                let dict_key_frame: bytes::Bytes = match Self::get_serialized_single_frame(
+                    data_slice,
+                    index_entry.flags.contains(IndexEntryFlags::COMPRESSED),
+                )
+                .context("Failed to get serialized dict key frame")?
+                {
+                    SerializedFrame::Bytes(_) => {
+                        panic!("bug: get_serialized_single_frame cannot return Bytes")
+                    }
+                    SerializedFrame::Copy(v) => v.into(), // no copy
+                    SerializedFrame::Slice(s) => bytes::Bytes::copy_from_slice(s),
+                };
+                *cache = Some((shard, dict_index_offset, dict_key_frame.clone()));
+                SerializedFrame::Bytes(dict_key_frame)
+            }
+        };
+
+        // First frame in chunk is the dict key frame. Other frames
+        // in the chunk are decompressed using the dict key frame.
+        if index_offset == dict_index_offset {
+            Ok(dict_key_frame)
+        } else {
+            let mut result = Vec::new();
+            let mut decoder =
+                zstd::stream::read::Decoder::with_dictionary(data_slice, dict_key_frame.data())
+                    .context("Failed to create zstd decoder with dictionary")?;
+
+            io::copy(&mut decoder, &mut result)
+                .context("Failed to decompress data frame with dictionary")?;
+            Ok(SerializedFrame::Copy(result))
+        }
+    }
+
+    /// Get index entry at offset and it's corresponding data slice.
+    fn get_index_and_data_at(&self, index_offset: usize) -> Result<(&IndexEntry, &[u8])> {
         let index_entry = self
             .get_index_entry_at(index_offset)
             .ok_or_else(|| anyhow!("Failed to get index entry at offset {}", index_offset))?;
@@ -393,13 +486,29 @@ impl StoreCursor {
                 index_entry.offset,
             );
         };
+        Ok((index_entry, data_slice))
+    }
 
-        let uncompressed_frame = if index_entry.flags.contains(IndexEntryFlags::COMPRESSED) {
-            SerializedFrame::Copy(
-                decode_all(data_slice).context("Failed to decompress data frame")?,
-            )
+    /// Get the index entry and uncompressed serialized data at an
+    /// index offset in the current shard.
+    fn get_index_and_serialized_frame_at(
+        &self,
+        index_offset: usize,
+    ) -> Result<(&IndexEntry, SerializedFrame)> {
+        let (index_entry, data_slice) = self.get_index_and_data_at(index_offset)?;
+        let chunk_compress_size_po2 = index_entry.flags.get_chunk_compress_size_po2();
+        let uncompressed_frame = if chunk_compress_size_po2 > 0 {
+            // This frame is dictionary compressed, or it is the
+            // first frame of a chunk which should be stored as
+            // dictionary.
+            self.get_serialized_chunk_frame(data_slice, index_offset, chunk_compress_size_po2)
+                .context("Failed to get serialized chunk frame")?
         } else {
-            SerializedFrame::Slice(data_slice)
+            Self::get_serialized_single_frame(
+                data_slice,
+                index_entry.flags.contains(IndexEntryFlags::COMPRESSED),
+            )
+            .context("Failed to get serialized single frame")?
         };
         Ok((index_entry, uncompressed_frame))
     }
@@ -476,7 +585,7 @@ impl Cursor for StoreCursor {
     /// advancing further to skip the holes.
     fn get(&self) -> Option<(SystemTime, DataFrame)> {
         match self.get_index_and_serialized_frame_at(self.index_offset?) {
-            Ok((index_entry, data_decompressed)) => {
+            Ok((index_entry, serialized_data)) => {
                 let format = if index_entry.flags.contains(IndexEntryFlags::CBOR) {
                     Format::Cbor
                 } else {
@@ -484,7 +593,7 @@ impl Cursor for StoreCursor {
                 };
                 let ts =
                     std::time::UNIX_EPOCH + std::time::Duration::from_secs(index_entry.timestamp);
-                match deserialize_frame(data_decompressed.data(), format) {
+                match deserialize_frame(serialized_data.data(), format) {
                     Ok(df) => Some((ts, df)),
                     Err(e) => {
                         warn!(self.logger, "Failed to deserialize data frame: {}", e);
@@ -493,7 +602,10 @@ impl Cursor for StoreCursor {
                 }
             }
             Err(e) => {
-                warn!(self.logger, "Failed to deserialize data frame: {}", e);
+                warn!(
+                    self.logger,
+                    "Failed to extract serialized data frame: {}", e
+                );
                 None
             }
         }
@@ -538,7 +650,7 @@ impl KeyedCursor<u64> for StoreCursor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{serialize_frame, CompressionMode, StoreWriter};
+    use crate::{serialize_frame, ChunkSizePo2, CompressionMode, StoreWriter};
     use common::util::get_unix_timestamp;
     use slog::Drain;
     use std::fs::OpenOptions;
@@ -703,6 +815,14 @@ mod tests {
     fn read_compressed_cbor() {
         simple_put_read(CompressionMode::Zstd, Format::Cbor);
     }
+
+    #[test]
+    fn read_dict_compressed_cbor() {
+        simple_put_read(
+            CompressionMode::ZstdDictionary(ChunkSizePo2(2)),
+            Format::Cbor,
+        );
+    }
     #[cfg(fbcode_build)]
     #[test]
     fn read_thrift() {
@@ -712,6 +832,14 @@ mod tests {
     #[test]
     fn read_compressed_thrift() {
         simple_put_read(CompressionMode::Zstd, Format::Thrift);
+    }
+
+    #[test]
+    fn read_dict_compressed_thrift() {
+        simple_put_read(
+            CompressionMode::ZstdDictionary(ChunkSizePo2(2)),
+            Format::Thrift,
+        );
     }
 
     /// For writing samples readable by the cursor and injecting corruptions.

@@ -177,7 +177,7 @@ pub struct StoreWriter {
     data_len: u64,
     /// Active shard
     shard: u64,
-    /// Active dictionary key frame
+    /// Active dictionary key frame as a prepared zstd dictionary.
     dict_key_frame: Option<zstd::dict::EncoderDictionary<'static>>,
     /// If non-empty, individual frames are compressed with
     /// `compression_mode`.
@@ -912,6 +912,13 @@ mod tests {
             }
 
             paste! {
+                #[test]
+                fn [<$name _dict_compressed_cbor>]() {
+                    $func(CompressionMode::ZstdDictionary(ChunkSizePo2(2)), Format::Cbor);
+                }
+            }
+
+            paste! {
                 #[cfg(fbcode_build)]
                 #[test]
                 fn [<$name _uncompressed_thrift>]() {
@@ -924,6 +931,14 @@ mod tests {
                 #[test]
                 fn [<$name _compressed_thrift>]() {
                     $func(CompressionMode::Zstd, Format::Thrift);
+                }
+            }
+
+            paste! {
+                #[cfg(fbcode_build)]
+                #[test]
+                fn [<$name _dict_compressed_thrift>]() {
+                    $func(CompressionMode::ZstdDictionary(ChunkSizePo2(2)), Format::Thrift);
                 }
             }
         };
@@ -944,6 +959,22 @@ mod tests {
             (CompressionMode::None, Format::Cbor),
             (CompressionMode::Zstd, Format::Thrift),
             (CompressionMode::Zstd, Format::Cbor),
+            (
+                CompressionMode::ZstdDictionary(ChunkSizePo2(0)),
+                Format::Thrift,
+            ),
+            (
+                CompressionMode::ZstdDictionary(ChunkSizePo2(1)),
+                Format::Cbor,
+            ),
+            (
+                CompressionMode::ZstdDictionary(ChunkSizePo2(2)),
+                Format::Thrift,
+            ),
+            (
+                CompressionMode::ZstdDictionary(ChunkSizePo2(3)),
+                Format::Cbor,
+            ),
         ];
         // State sequence that contains all possible transitions
         let state_sequence = states
@@ -978,6 +1009,125 @@ mod tests {
         }
     }
 
+    #[test]
+    fn write_index_padding() {
+        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        // Keep test on one shard
+        let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
+        // Write 1 frame without compression. Doesn't add padding.
+        {
+            let mut writer =
+                StoreWriter::new(get_logger(), &dir, CompressionMode::None, Format::Cbor)
+                    .expect("Failed to create store");
+            let mut frame = DataFrame::default();
+            for i in 0..1 {
+                frame.sample.cgroup.memory_current = Some(i);
+                writer
+                    .put(ts + Duration::from_secs(i as u64), &frame)
+                    .expect("Failed to store data");
+            }
+            assert_eq!(
+                writer.index.metadata().unwrap().len(),
+                INDEX_ENTRY_SIZE as u64
+            );
+        }
+
+        // Write 2 frames with without compression. Doesn't add padding.
+        {
+            let mut writer =
+                StoreWriter::new(get_logger(), &dir, CompressionMode::None, Format::Cbor)
+                    .expect("Failed to create store");
+            let mut frame = DataFrame::default();
+            for i in 1..3 {
+                frame.sample.cgroup.memory_current = Some(i);
+                writer
+                    .put(ts + Duration::from_secs(i as u64), &frame)
+                    .expect("Failed to store data");
+            }
+            assert_eq!(
+                writer.index.metadata().unwrap().len(),
+                3 * INDEX_ENTRY_SIZE as u64
+            );
+        }
+
+        // Write 2 frames with compression. Doesn't add padding.
+        {
+            let mut writer =
+                StoreWriter::new(get_logger(), &dir, CompressionMode::Zstd, Format::Cbor)
+                    .expect("Failed to create store");
+            let mut frame = DataFrame::default();
+            for i in 3..5 {
+                frame.sample.cgroup.memory_current = Some(i);
+                writer
+                    .put(ts + Duration::from_secs(i as u64), &frame)
+                    .expect("Failed to store data");
+            }
+            assert_eq!(
+                writer.index.metadata().unwrap().len(),
+                5 * INDEX_ENTRY_SIZE as u64
+            );
+        }
+
+        // Dict compress with chunk size of 4. Current size of 5 so
+        // need to pad by 3.
+        {
+            let mut writer = StoreWriter::new(
+                get_logger(),
+                &dir,
+                CompressionMode::ZstdDictionary(ChunkSizePo2(2)),
+                Format::Cbor,
+            )
+            .expect("Failed to create store");
+            let mut frame = DataFrame::default();
+            for i in 5..13 {
+                frame.sample.cgroup.memory_current = Some(i);
+                writer
+                    .put(ts + Duration::from_secs(i as u64), &frame)
+                    .expect("Failed to store data");
+            }
+            assert_eq!(
+                writer.index.metadata().unwrap().len(),
+                16 * INDEX_ENTRY_SIZE as u64
+            );
+        }
+
+        // Dict compress with chunk size of 8. Current size of 16 so
+        // no padding needed.
+        {
+            let mut writer = StoreWriter::new(
+                get_logger(),
+                &dir,
+                CompressionMode::ZstdDictionary(ChunkSizePo2(3)),
+                Format::Cbor,
+            )
+            .expect("Failed to create store");
+            let mut frame = DataFrame::default();
+            for i in 13..16 {
+                frame.sample.cgroup.memory_current = Some(i);
+                writer
+                    .put(ts + Duration::from_secs(i as u64), &frame)
+                    .expect("Failed to store data");
+            }
+            assert_eq!(
+                writer.index.metadata().unwrap().len(),
+                19 * INDEX_ENTRY_SIZE as u64
+            );
+        }
+
+        let mut store_cursor = StoreCursor::new(get_logger(), dir.path().to_path_buf());
+        for i in 0..16 {
+            let frame = store_cursor
+                .get_next(
+                    &get_unix_timestamp(ts + Duration::from_secs(i as u64)),
+                    Direction::Forward,
+                )
+                .expect("Failed to read sample")
+                .expect("Did not find stored sample");
+            assert_ts!(frame.0, ts + Duration::from_secs(i as u64));
+            assert_eq!(frame.1.sample.cgroup.memory_current, Some(i));
+        }
+    }
+
     store_test!(create_writer, _create_writer);
     fn _create_writer(compression_mode: CompressionMode, format: Format) {
         let dir = TempDir::new("below_store_test").expect("tempdir failed");
@@ -1005,6 +1155,37 @@ mod tests {
             .expect("Did not find stored sample");
         assert_ts!(frame.0, ts);
         assert_eq!(frame.1.sample.cgroup.memory_current, Some(333));
+    }
+
+    store_test!(simple_put_read_10, _simple_put_read_10);
+    fn _simple_put_read_10(compression_mode: CompressionMode, format: Format) {
+        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        // Keep test on one shard
+        let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
+        {
+            let mut writer = StoreWriter::new(get_logger(), &dir, compression_mode, format)
+                .expect("Failed to create store");
+            let mut frame = DataFrame::default();
+            for i in 0..10 {
+                frame.sample.cgroup.memory_current = Some(i);
+                writer
+                    .put(ts + Duration::from_secs(i as u64), &frame)
+                    .expect("Failed to store data");
+            }
+        }
+
+        let mut store_cursor = StoreCursor::new(get_logger(), dir.path().to_path_buf());
+        for i in 0..10 {
+            let frame = store_cursor
+                .get_next(
+                    &get_unix_timestamp(ts + Duration::from_secs(i as u64)),
+                    Direction::Forward,
+                )
+                .expect("Failed to read sample")
+                .expect("Did not find stored sample");
+            assert_ts!(frame.0, ts + Duration::from_secs(i as u64));
+            assert_eq!(frame.1.sample.cgroup.memory_current, Some(i));
+        }
     }
 
     store_test!(put_new_shard, _put_new_shard);
