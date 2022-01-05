@@ -71,6 +71,7 @@ const SHARD_TIME: u64 = 24 * 60 * 60;
 
 bitflags! {
     struct IndexEntryFlags: u32 {
+        /// If set, data item is compressed with zstd.
         const COMPRESSED = 0x1;
         /// If set, data item is serialized as CBOR. If unset,
         /// serialization is set to the default (also CBOR in the
@@ -113,11 +114,14 @@ pub struct StoreWriter {
     logger: slog::Logger,
     /// Directory of the store itself
     dir: PathBuf,
-    /// Currently active index file
+    /// Currently active index file. Append only so cursor always
+    /// points to end of file.
     index: File,
-    /// Currently active data file
+    /// Currently active data file. Append only so cursor always
+    /// point to end of file.
     data: File,
-    /// Current length of the data file (needed to record offsets in the index)
+    /// Current length of the data file (needed to record offsets in
+    /// the index)
     data_len: u64,
     /// Active shard
     shard: u64,
@@ -235,28 +239,7 @@ impl StoreWriter {
             )
         })?;
 
-        // Check the index len and pad if we are not on an
-        // INDEX_ENTRY_SIZE boundary. This could only happen if we
-        // partially wrote an index entry.
-        let index_len = index
-            .metadata()
-            .with_context(|| {
-                format!(
-                    "Failed to get metadata of index file: {}",
-                    index_path.display()
-                )
-            })?
-            .len();
-        if (index_len % INDEX_ENTRY_SIZE as u64) != 0 {
-            let remainder = INDEX_ENTRY_SIZE as u64 - (index_len % INDEX_ENTRY_SIZE as u64);
-            let zero_vec = vec![0; remainder as usize];
-            index.write_all(&zero_vec).with_context(|| {
-                format!(
-                    "Failed to pad partially written index file: {}",
-                    index_path.display()
-                )
-            })?;
-        }
+        let _index_len = Self::pad_and_get_index_len(logger.clone(), &mut index, shard);
 
         let data = OpenOptions::new()
             .append(true)
@@ -273,6 +256,7 @@ impl StoreWriter {
                 data_path.display(),
             )
         })?;
+
         let data_len = data
             .metadata()
             .with_context(|| {
@@ -282,6 +266,7 @@ impl StoreWriter {
                 )
             })?
             .len();
+
         Ok(StoreWriter {
             logger,
             dir: path.as_ref().to_path_buf(),
@@ -294,32 +279,86 @@ impl StoreWriter {
         })
     }
 
-    /// Store data with corresponding timestamp in current shard. Fails if data
-    /// does not belong to current shard. Errors may be returned if file
-    /// operations fail,
+    /// Gets the index length of the given index file. The file is
+    /// padded to the next INDEX_ENTRY_SIZE aligned boundary before
+    /// its length is returned. Misalignment can happen if we
+    /// partially wrote an index entry, or an external actor modified
+    /// the index file.
+    fn pad_and_get_index_len(logger: slog::Logger, index: &mut File, shard: u64) -> Result<u64> {
+        let index_len = index
+            .metadata()
+            .with_context(|| format!("Failed to get metadata of index file: index_{:011}", shard,))?
+            .len();
+        const INDEX_ENTRY_SIZE_MASK: u64 = INDEX_ENTRY_SIZE as u64 - 1;
+        let aligned_len = (index_len + INDEX_ENTRY_SIZE_MASK) & !INDEX_ENTRY_SIZE_MASK;
+        if aligned_len != index_len {
+            let aligned_len =
+                index_len + INDEX_ENTRY_SIZE as u64 - (index_len % INDEX_ENTRY_SIZE as u64);
+            warn!(
+                logger,
+                "Index length not a multiple of fixed index entry size: {}. Padding to size: {}",
+                index_len,
+                aligned_len,
+            );
+            index.set_len(aligned_len).with_context(|| {
+                format!(
+                    "Failed to pad partially written index file: index_{:011}",
+                    shard
+                )
+            })?;
+            // Since file is opened as append only, we don't need to
+            // move the cursor to end of file.
+            Ok(aligned_len)
+        } else {
+            Ok(index_len)
+        }
+    }
+
+    /// Returns the raw bytes to write to the data file and flags to
+    /// set in the index entry for the given data frame. The frame
+    /// is serialized and optionally compressed according to the
+    /// initialization of the `StoreWriter`.
+    fn get_bytes_and_flags_for_frame(
+        &self,
+        data_frame: &DataFrame,
+    ) -> Result<(bytes::Bytes, IndexEntryFlags)> {
+        let mut flags = match self.format {
+            Format::Thrift => IndexEntryFlags::empty(),
+            Format::Cbor => IndexEntryFlags::CBOR,
+        };
+        // Get serialized data frame
+        let frame_bytes =
+            serialize_frame(data_frame, self.format).context("Failed to serialize data frame")?;
+        let serialized = match self.compression_mode {
+            CompressionMode::None => frame_bytes,
+            CompressionMode::Zstd => {
+                flags |= IndexEntryFlags::COMPRESSED;
+                zstd::block::compress(&frame_bytes, 0)
+                    .context("Failed to compress data")?
+                    .into()
+            }
+        };
+        Ok((serialized, flags))
+    }
+
+    /// Store data with corresponding timestamp in current shard.
+    /// Fails if data does not belong to current shard. Errors may be
+    /// returned if file operations fail.
     fn put_in_current_shard(&mut self, timestamp: SystemTime, data: &DataFrame) -> Result<()> {
         let shard = calculate_shard(timestamp);
         if shard != self.shard {
             panic!("Can't write data to shard as it belongs to different shard")
         }
-        // It doesn't really matter which order we write the data in,
-        // most filesystems do not provide ordering guarantees for
-        // appends to different files anyways. We just need to handle
-        // various failure cases on the read side.
-        let serialized = {
-            let frame_bytes =
-                serialize_frame(data, self.format).context("Failed to serialize data frame")?;
-            match self.compression_mode {
-                CompressionMode::None => SerializedFrame::Bytes(frame_bytes),
-                CompressionMode::Zstd => SerializedFrame::Copy(
-                    zstd::block::compress(&frame_bytes, 0)
-                        .context("Failed to compress data serialized data frame")?,
-                ),
-            }
-        };
-        // Appends to data file are large and cannot be atomic. We may have
-        // partial writes that increases the file size without updating the
-        // stored state. Thus always read actual data file length.
+
+        let (serialized, flags) = self
+            .get_bytes_and_flags_for_frame(data)
+            .context("Failed to get serialized frame and flags")?;
+
+        // Appends to data file are large and cannot be atomic. We
+        // may have partial writes that increase file size without
+        // updating the stored state. Thus always read actual data
+        // file length. This is less of an issue for the index file
+        // but we track it anyway.
         let data_len = self
             .data
             .metadata()
@@ -338,29 +377,26 @@ impl StoreWriter {
             );
             self.data_len = data_len;
         }
-        let offset = self.data_len;
-        self.data
-            .write_all(serialized.data())
-            .context("Failed to write entry to data file")?;
-        self.data_len += serialized.data().len() as u64;
-        let data_crc = serialized.data().crc32();
 
-        let mut flags = IndexEntryFlags::empty();
-        match self.compression_mode {
-            CompressionMode::None => {}
-            CompressionMode::Zstd => flags |= IndexEntryFlags::COMPRESSED,
-        }
-        match self.format {
-            Format::Thrift => {}
-            Format::Cbor => flags |= IndexEntryFlags::CBOR,
-        }
+        let offset = self.data_len;
+        // It doesn't really matter which order we write the data in,
+        // most filesystems do not provide ordering guarantees for
+        // appends to different files anyways. We just need to handle
+        // various failure cases on the read side.
+        self.data
+            .write_all(&serialized)
+            .context("Failed to write entry to data file")?;
+        self.data_len += serialized.len() as u64;
+        let data_crc = serialized.crc32();
+
         let mut index_entry = IndexEntry {
             timestamp: get_unix_timestamp(timestamp),
             offset,
             flags,
-            len: serialized.data().len().try_into().with_context(|| {
-                format!("Serialized len={} overflows u32", serialized.data().len())
-            })?,
+            len: serialized
+                .len()
+                .try_into()
+                .with_context(|| format!("Serialized len={} overflows u32", serialized.len()))?,
             data_crc,
             index_crc: 0,
         };
