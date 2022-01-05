@@ -18,10 +18,10 @@ use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use bitflags::bitflags;
 use serde::{Deserialize, Serialize};
-use slog::warn;
+use slog::{info, warn};
 use static_assertions::const_assert_eq;
 
 use crate::cursor::{KeyedCursor, StoreCursor};
@@ -48,11 +48,18 @@ open_source_shim!();
 /// An IndexEntry is appended to a corresponding index file. Each
 /// IndexEntry contains the timestamp (e.g. key) of the data item, its
 /// offset into the data file, the length of the data entry, and a CRC
-/// of the data entry as well as a CRC of itself.
+/// of the data entry as well as a CRC of itself. It also contains
+/// flags that can indicate if the corresponding data is compressed
+/// and how it is compressed.
 ///
 /// The CRCs in the index entry give us an atomicity guarantee - if
 /// they are not present and correct, we treat it as if the entry
 /// never existed.
+///
+/// In dictionary compression mode, the index file may be padded with
+/// zeros (i.e. empty index entries). Thus empty index entries are
+/// not considered to be corrupt, but we ignore such entries as they
+/// do not point to any data.
 ///
 /// Data and Index files are append-only and never modified (only ever
 /// removed).
@@ -69,6 +76,14 @@ pub struct DataFrame {
 
 const SHARD_TIME: u64 = 24 * 60 * 60;
 
+// Number of bits used by other bit flags in IndexEntry before the
+// chunk compress flags.
+const CHUNK_COMPRESS_SHIFT: u32 = 2;
+
+const MAX_CHUNK_COMPRESS_SIZE_PO2: u32 = 0x0F;
+pub const MAX_CHUNK_COMPRESS_SIZE: u32 = 1 << MAX_CHUNK_COMPRESS_SIZE_PO2;
+const_assert_eq!(MAX_CHUNK_COMPRESS_SIZE, 32768);
+
 bitflags! {
     struct IndexEntryFlags: u32 {
         /// If set, data item is compressed with zstd.
@@ -77,6 +92,39 @@ bitflags! {
         /// serialization is set to the default (also CBOR in the
         /// case of open source build).
         const CBOR = 0x2;
+        /// If `COMPRESSED` is set `CHUNK_COMPRESS_SIZE_PO2` is
+        /// non-zero, then zstd dictionary compression is used.
+        /// Data is return in "chunks" of size
+        /// `2^CHUNK_COMPRESS_SIZE_PO2` entries. The first entry of
+        /// each chunk, in its uncompressed form, is used as the zstd
+        /// dictionary for the rest of the chunk.
+        ///
+        /// Chunks are aligned to chunk size. The index is padded
+        /// with empty index entries as necessary. For example, if
+        /// below is started with a chunk size of 4, and the index
+        /// has 5 entries, then the index will be zero-padded to the
+        /// length of 8 entries before the first dict key frame is
+        /// written. Padding occurs on a restart in recording, but
+        /// can also occur if possible data corruption has been
+        /// detected.
+        const CHUNK_COMPRESS_SIZE_PO2 = MAX_CHUNK_COMPRESS_SIZE_PO2 << CHUNK_COMPRESS_SHIFT;
+    }
+}
+
+impl IndexEntryFlags {
+    fn get_chunk_compress_size_po2(&self) -> u32 {
+        (self.bits & Self::CHUNK_COMPRESS_SIZE_PO2.bits) >> CHUNK_COMPRESS_SHIFT
+    }
+
+    fn set_chunk_compress_size_po2(&mut self, chunk_compress_size_po2: u32) -> Result<()> {
+        if chunk_compress_size_po2 > MAX_CHUNK_COMPRESS_SIZE_PO2 {
+            bail!(
+                "Chunk compress size po2 should be less than or equal to {}",
+                MAX_CHUNK_COMPRESS_SIZE_PO2
+            );
+        }
+        self.bits |= chunk_compress_size_po2 << CHUNK_COMPRESS_SHIFT;
+        Ok(())
     }
 }
 
@@ -100,16 +148,20 @@ const INDEX_ENTRY_SIZE: usize = std::mem::size_of::<IndexEntry>();
 const_assert_eq!(INDEX_ENTRY_SIZE, 32);
 
 #[derive(Copy, Clone, Debug)]
+pub struct ChunkSizePo2(pub u32);
+
+#[derive(Copy, Clone, Debug)]
 pub enum CompressionMode {
     None,
     Zstd,
+    ZstdDictionary(ChunkSizePo2),
 }
 
 /// The StoreWriter struct maintains state to put more data in the
 /// store. It keeps track of the index and data file it's currently
 /// working on so in the common case it can just append data. When it
 /// rolls over to a new shard, it will recreate itself.
-#[derive(Debug)]
+// #[derive(Debug)]
 pub struct StoreWriter {
     logger: slog::Logger,
     /// Directory of the store itself
@@ -125,6 +177,8 @@ pub struct StoreWriter {
     data_len: u64,
     /// Active shard
     shard: u64,
+    /// Active dictionary key frame
+    dict_key_frame: Option<zstd::dict::EncoderDictionary<'static>>,
     /// If non-empty, individual frames are compressed with
     /// `compression_mode`.
     compression_mode: CompressionMode,
@@ -152,6 +206,20 @@ fn get_index_files(path: &Path) -> Result<Vec<String>> {
 
     entries.sort_unstable();
     Ok(entries)
+}
+
+fn compress_with_dictionary(
+    prepared_dictionary: &zstd::dict::EncoderDictionary,
+    bytes: &[u8],
+) -> Result<Vec<u8>> {
+    let mut compressed = Vec::new();
+    let mut encoder = zstd::stream::write::Encoder::with_prepared_dictionary(
+        &mut compressed,
+        prepared_dictionary,
+    )?;
+    encoder.write_all(bytes)?;
+    encoder.finish()?;
+    Ok(compressed)
 }
 
 enum SerializedFrame<'a> {
@@ -274,6 +342,10 @@ impl StoreWriter {
             data,
             data_len,
             shard,
+            // Setting dict_key_frame to None ensures that first
+            // write in dictionary compression will always start a
+            // new chunk and write a new dict key frame.
+            dict_key_frame: None,
             compression_mode,
             format,
         })
@@ -314,14 +386,23 @@ impl StoreWriter {
         }
     }
 
-    /// Returns the raw bytes to write to the data file and flags to
-    /// set in the index entry for the given data frame. The frame
-    /// is serialized and optionally compressed according to the
-    /// initialization of the `StoreWriter`.
+    /// For the given `DataFrame` and current index length, returns a
+    /// tuple consisting of:
+    ///   1) Raw bytes to write to the data file
+    ///   2) Flags to write to the index entry
+    ///   3) If according to the state of the `StoreWriter` the frame
+    ///      is to be a dictionary key frame (i.e. first frame of a
+    ///      chunk), the zstd dictionary prepared from the raw
+    ///      serialized, but uncompressed bytes of the frame.
     fn get_bytes_and_flags_for_frame(
         &self,
         data_frame: &DataFrame,
-    ) -> Result<(bytes::Bytes, IndexEntryFlags)> {
+        index_len: u64,
+    ) -> Result<(
+        bytes::Bytes,
+        IndexEntryFlags,
+        Option<zstd::dict::EncoderDictionary<'static>>,
+    )> {
         let mut flags = match self.format {
             Format::Thrift => IndexEntryFlags::empty(),
             Format::Cbor => IndexEntryFlags::CBOR,
@@ -329,16 +410,51 @@ impl StoreWriter {
         // Get serialized data frame
         let frame_bytes =
             serialize_frame(data_frame, self.format).context("Failed to serialize data frame")?;
-        let serialized = match self.compression_mode {
-            CompressionMode::None => frame_bytes,
+        let (serialized, encoder_dict) = match self.compression_mode {
+            CompressionMode::None => (frame_bytes, /* encoder_dict */ None),
             CompressionMode::Zstd => {
                 flags |= IndexEntryFlags::COMPRESSED;
-                zstd::block::compress(&frame_bytes, 0)
-                    .context("Failed to compress data")?
-                    .into()
+                (
+                    zstd::block::compress(&frame_bytes, 0)
+                        .context("Failed to compress data")?
+                        .into(),
+                    /* encoder_dict */ None,
+                )
+            }
+            CompressionMode::ZstdDictionary(ChunkSizePo2(chunk_size_po2)) => {
+                let chunk_mask = ((INDEX_ENTRY_SIZE as u64) << chunk_size_po2) - 1;
+                flags |= IndexEntryFlags::COMPRESSED;
+                flags
+                    .set_chunk_compress_size_po2(chunk_size_po2)
+                    .expect("bug: invalid chunk compress size");
+                match &self.dict_key_frame {
+                    Some(dict_key_frame) if index_len & chunk_mask != 0 => {
+                        // Compress with dict key frame only if:
+                        //   a) We have a saved dict key frame.
+                        //   b) We are in the middle of a chunk (i.e.
+                        //      dict_key_frame is for the current chunk).
+                        (
+                            compress_with_dictionary(dict_key_frame, &frame_bytes)
+                                .context("Failed to compress data with dictionary")?
+                                .into(),
+                            /* encoder_dict */ None,
+                        )
+                    }
+                    _ => {
+                        // New key frame -- to further save on space, we
+                        // compress the frame as well.
+                        (
+                            zstd::block::compress(&frame_bytes, 0)
+                                .context("Failed to compress for data for new key frame")?
+                                .into(),
+                            // This uses `ZSTD_createCDict()`
+                            Some(zstd::dict::EncoderDictionary::copy(&frame_bytes, 0)),
+                        )
+                    }
+                }
             }
         };
-        Ok((serialized, flags))
+        Ok((serialized, flags, encoder_dict))
     }
 
     /// Store data with corresponding timestamp in current shard.
@@ -350,9 +466,47 @@ impl StoreWriter {
             panic!("Can't write data to shard as it belongs to different shard")
         }
 
-        let (serialized, flags) = self
-            .get_bytes_and_flags_for_frame(data)
+        // Get index length, ensuring that it is INDEX_ENTRY_SIZE
+        // aligned.
+        let index_len = Self::pad_and_get_index_len(self.logger.clone(), &mut self.index, shard)
+            .context("Failed to get index length and possibly pad index file")?;
+
+        let (serialized, flags, encoder_dict) = self
+            .get_bytes_and_flags_for_frame(data, index_len)
             .context("Failed to get serialized frame and flags")?;
+
+        if encoder_dict.is_some() {
+            let chunk_compress_po2 = match self.compression_mode {
+                CompressionMode::ZstdDictionary(ChunkSizePo2(size)) => size,
+                _ => panic!("bug: set dict key frame but not in dictionary compression mode"),
+            };
+            // Set dict_key_frame to None to indicate that we're
+            // about to start a new chunk. If we fail to
+            // successfully write the key frame entry, it will
+            // remain None, ensuring that the following put will
+            // also start a new chunk.
+            self.dict_key_frame = None;
+            // Pad index file as necessary if it's a new dict key
+            // frame
+            let chunk_mask = ((INDEX_ENTRY_SIZE as u64) << chunk_compress_po2) - 1;
+            let chunk_aligned_len = (index_len + chunk_mask) & !chunk_mask;
+            if chunk_aligned_len != index_len {
+                info!(
+                    self.logger,
+                    "Padding index so that first entry of block is aligned. Current len: {}. New len: {}",
+                    index_len,
+                    chunk_aligned_len,
+                );
+                self.index.set_len(chunk_aligned_len).with_context(|| {
+                    format!(
+                        "Failed to pad index file with empty entries: {:001}",
+                        self.shard,
+                    )
+                })?;
+                // Since file is opened as append only, we don't need
+                // to move the cursor to end of file.
+            }
+        }
 
         // Appends to data file are large and cannot be atomic. We
         // may have partial writes that increase file size without
@@ -412,6 +566,12 @@ impl StoreWriter {
             self.index
                 .write_all(entry_slice)
                 .context("Failed to write entry to index file")?;
+        }
+
+        // Set dict_key_frame only after successful writes
+        if encoder_dict.is_some() {
+            // We are guaranteed to be in dictionary compression mode
+            self.dict_key_frame = encoder_dict;
         }
         Ok(())
     }
@@ -1319,8 +1479,10 @@ mod tests {
         )
         .expect("Failed to acquire flock on index file");
 
-        StoreWriter::new(get_logger(), &dir, compression_mode, format)
-            .expect_err("Did not conflict on index lock");
+        assert!(
+            StoreWriter::new(get_logger(), &dir, compression_mode, format).is_err(),
+            "Did not conflict on index lock"
+        );
     }
 
     store_test!(
