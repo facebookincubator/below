@@ -824,27 +824,6 @@ mod tests {
         );
     }
 
-    #[cfg(fbcode_build)]
-    #[test]
-    fn read_thrift() {
-        simple_put_read(CompressionMode::None, Format::Thrift);
-    }
-
-    #[cfg(fbcode_build)]
-    #[test]
-    fn read_compressed_thrift() {
-        simple_put_read(CompressionMode::Zstd, Format::Thrift);
-    }
-
-    #[cfg(fbcode_build)]
-    #[test]
-    fn read_dict_compressed_thrift() {
-        simple_put_read(
-            CompressionMode::ZstdDictionary(ChunkSizePo2(2)),
-            Format::Thrift,
-        );
-    }
-
     /// For writing samples readable by the cursor and injecting corruptions.
     /// Read correctness is tested above. Following tests only care about
     /// whether the Cursor trait is implemented correctly, therefore using this

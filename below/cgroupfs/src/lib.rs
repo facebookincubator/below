@@ -25,11 +25,6 @@ use thiserror::Error;
 mod types;
 pub use types::*;
 
-#[cfg(fbcode_build)]
-mod facebook;
-#[cfg(fbcode_build)]
-pub use crate::facebook::*;
-
 #[cfg(test)]
 mod test;
 

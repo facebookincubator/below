@@ -38,11 +38,6 @@ pub use process::*;
 pub use sample::*;
 pub use system::*;
 
-#[cfg(fbcode_build)]
-mod facebook;
-#[cfg(fbcode_build)]
-pub use crate::facebook::*;
-
 /// A wrapper for different field types used in Models. By this way we can query
 /// different fields in a single function without using Box.
 #[derive(Clone, Debug)]

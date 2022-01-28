@@ -917,34 +917,9 @@ mod tests {
                     $func(CompressionMode::ZstdDictionary(ChunkSizePo2(2)), Format::Cbor);
                 }
             }
-
-            paste! {
-                #[cfg(fbcode_build)]
-                #[test]
-                fn [<$name _uncompressed_thrift>]() {
-                    $func(CompressionMode::None, Format::Thrift);
-                }
-            }
-
-            paste! {
-                #[cfg(fbcode_build)]
-                #[test]
-                fn [<$name _compressed_thrift>]() {
-                    $func(CompressionMode::Zstd, Format::Thrift);
-                }
-            }
-
-            paste! {
-                #[cfg(fbcode_build)]
-                #[test]
-                fn [<$name _dict_compressed_thrift>]() {
-                    $func(CompressionMode::ZstdDictionary(ChunkSizePo2(2)), Format::Thrift);
-                }
-            }
         };
     }
 
-    #[cfg(fbcode_build)]
     #[test]
     fn writing_to_already_written_index_with_different_compression_format_works() {
         use itertools::Itertools;
@@ -955,13 +930,11 @@ mod tests {
         // States, (compression_mode, format), that we transition between when
         // writing
         let states = vec![
-            (CompressionMode::None, Format::Thrift),
             (CompressionMode::None, Format::Cbor),
-            (CompressionMode::Zstd, Format::Thrift),
             (CompressionMode::Zstd, Format::Cbor),
             (
                 CompressionMode::ZstdDictionary(ChunkSizePo2(0)),
-                Format::Thrift,
+                Format::Cbor,
             ),
             (
                 CompressionMode::ZstdDictionary(ChunkSizePo2(1)),
@@ -969,7 +942,7 @@ mod tests {
             ),
             (
                 CompressionMode::ZstdDictionary(ChunkSizePo2(2)),
-                Format::Thrift,
+                Format::Cbor,
             ),
             (
                 CompressionMode::ZstdDictionary(ChunkSizePo2(3)),
