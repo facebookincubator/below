@@ -14,7 +14,6 @@
 
 use std::cell::RefCell;
 use std::fs::File;
-use std::io;
 use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::time::SystemTime;
@@ -23,6 +22,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use memmap::{Mmap, MmapOptions};
 use slog::{warn, Logger};
 
+use crate::compression::Decompressor;
 use crate::{
     deserialize_frame, get_index_files, Crc32, DataFrame, Direction, Format, IndexEntry,
     IndexEntryFlags, SerializedFrame, INDEX_ENTRY_SIZE, SHARD_TIME,
@@ -146,9 +146,9 @@ pub struct StoreCursor {
     // locates the exact sample of this store. Offset could be None if shard
     // does not exist or just moved to a newly initialized shard.
     index_offset: Option<usize>,
-    // Cache of the most recently used dict key frame. This is represented by
-    // a tuple (shard, dict_index_offset, uncompressed_dict).
-    recent_dict_key_frame: RefCell<Option<(u64, usize, bytes::Bytes)>>,
+    // Used for extracting compressed frames. If dictionary is used, it's also
+    // cached, along with the shard and dict_index_offset that identify it.
+    decompressor: RefCell<Option<Decompressor<(u64, usize)>>>,
 }
 
 enum StoreFile {
@@ -166,7 +166,7 @@ impl StoreCursor {
             index_mmap: None,
             data_mmap: None,
             index_offset: None,
-            recent_dict_key_frame: RefCell::new(None),
+            decompressor: RefCell::new(None),
         }
     }
 
@@ -376,10 +376,14 @@ impl StoreCursor {
     fn get_serialized_single_frame<'a>(
         data_slice: &'a [u8],
         compressed: bool,
+        decompressor: &mut Option<Decompressor<(u64, usize)>>,
     ) -> Result<SerializedFrame<'a>> {
         let serialized_frame = if compressed {
-            SerializedFrame::Copy(
-                zstd::stream::decode_all(data_slice).context("Failed to decompress data frame")?,
+            SerializedFrame::Bytes(
+                decompressor
+                    .get_or_insert_with(Decompressor::new)
+                    .decompress_with_dict_reset(data_slice)
+                    .context("Failed to decompress data frame")?,
             )
         } else {
             SerializedFrame::Slice(data_slice)
@@ -400,62 +404,43 @@ impl StoreCursor {
         data_slice: &[u8],
         index_offset: usize,
         chunk_compress_size_po2: u32,
+        decompressor: &mut Option<Decompressor<(u64, usize)>>,
     ) -> Result<SerializedFrame> {
         // Calculate offset into the chunk. If this is 0, then this
         // is the first frame and hence key frame of the chunk.
         let chunk_mask = (INDEX_ENTRY_SIZE << chunk_compress_size_po2) - 1;
         let dict_index_offset = index_offset & !chunk_mask;
 
-        // A single element cache avoids reading and potentially decompressing
-        // the dictionary frame up to N-1 times during sequential reads
-        let mut cache = self.recent_dict_key_frame.borrow_mut();
         let shard = self.shard.expect("shard should be set");
+        let dict_key = (shard, dict_index_offset);
 
-        // In both forward and reverse sequential reads, ensuring the
-        // dictionary cache points to the dictionary of the current
-        // chunk before checking if the requested frame is optimal.
-        // In the reverse case, on encountering the first frame, the
-        // cache will have already been populated on a prior read.
-        let dict_key_frame = match cache.as_ref() {
-            Some((cache_shard, cache_index_offset, cache_dict_key_frame))
-                if *cache_shard == shard && *cache_index_offset == dict_index_offset =>
-            {
-                SerializedFrame::Bytes(cache_dict_key_frame.clone())
-            }
+        let decompressor = match decompressor {
+            Some(d) if d.get_dict_key() == Some(&dict_key) => d,
             _ => {
                 let (index_entry, data_slice) = self.get_index_and_data_at(dict_index_offset)?;
-                // Use bytes::Bytes to avoid unnecessary copy
-                let dict_key_frame: bytes::Bytes = match Self::get_serialized_single_frame(
+                let dict_key_frame = Self::get_serialized_single_frame(
                     data_slice,
                     index_entry.flags.contains(IndexEntryFlags::COMPRESSED),
+                    decompressor,
                 )
-                .context("Failed to get serialized dict key frame")?
-                {
-                    SerializedFrame::Bytes(_) => {
-                        panic!("bug: get_serialized_single_frame cannot return Bytes")
-                    }
-                    SerializedFrame::Copy(v) => v.into(), // no copy
-                    SerializedFrame::Slice(s) => bytes::Bytes::copy_from_slice(s),
-                };
-                *cache = Some((shard, dict_index_offset, dict_key_frame.clone()));
-                SerializedFrame::Bytes(dict_key_frame)
+                .context("Failed to get serialized dict key frame")?;
+                let d = decompressor.get_or_insert_with(Decompressor::new);
+                d.load_dict(dict_key_frame.bytes(), dict_key)
+                    .context("Failed to set decompressor dict")?;
+                d
             }
         };
 
         // First frame in chunk is the dict key frame. Other frames
         // in the chunk are decompressed using the dict key frame.
-        if index_offset == dict_index_offset {
-            Ok(dict_key_frame)
+        let bytes = if index_offset == dict_index_offset {
+            decompressor.get_dict().clone()
         } else {
-            let mut result = Vec::new();
-            let mut decoder =
-                zstd::stream::read::Decoder::with_dictionary(data_slice, dict_key_frame.data())
-                    .context("Failed to create zstd decoder with dictionary")?;
-
-            io::copy(&mut decoder, &mut result)
-                .context("Failed to decompress data frame with dictionary")?;
-            Ok(SerializedFrame::Copy(result))
-        }
+            decompressor
+                .decompress_with_loaded_dict(data_slice)
+                .context("Failed to decompress data frame with dictionary")?
+        };
+        Ok(SerializedFrame::Bytes(bytes))
     }
 
     /// Get index entry at offset and it's corresponding data slice.
@@ -501,12 +486,18 @@ impl StoreCursor {
             // This frame is dictionary compressed, or it is the
             // first frame of a chunk which should be stored as
             // dictionary.
-            self.get_serialized_chunk_frame(data_slice, index_offset, chunk_compress_size_po2)
-                .context("Failed to get serialized chunk frame")?
+            self.get_serialized_chunk_frame(
+                data_slice,
+                index_offset,
+                chunk_compress_size_po2,
+                &mut self.decompressor.borrow_mut(),
+            )
+            .context("Failed to get serialized chunk frame")?
         } else {
             Self::get_serialized_single_frame(
                 data_slice,
                 index_entry.flags.contains(IndexEntryFlags::COMPRESSED),
+                &mut self.decompressor.borrow_mut(),
             )
             .context("Failed to get serialized single frame")?
         };

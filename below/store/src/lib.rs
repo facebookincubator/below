@@ -214,7 +214,6 @@ fn get_index_files(path: &Path) -> Result<Vec<String>> {
 
 enum SerializedFrame<'a> {
     Bytes(bytes::Bytes),
-    Copy(Vec<u8>),
     Slice(&'a [u8]),
 }
 
@@ -222,8 +221,14 @@ impl<'a> SerializedFrame<'a> {
     fn data(&self) -> &[u8] {
         match self {
             SerializedFrame::Bytes(b) => &b,
-            SerializedFrame::Copy(v) => &v,
             SerializedFrame::Slice(s) => s,
+        }
+    }
+
+    fn bytes(self) -> bytes::Bytes {
+        match self {
+            SerializedFrame::Bytes(b) => b,
+            SerializedFrame::Slice(s) => bytes::Bytes::copy_from_slice(s),
         }
     }
 }
