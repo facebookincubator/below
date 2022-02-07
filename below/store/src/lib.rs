@@ -33,6 +33,7 @@ use common::util::get_unix_timestamp;
 use model::{self, Model};
 
 pub mod advance;
+pub mod compression;
 pub mod cursor;
 #[cfg(test)]
 mod test;
