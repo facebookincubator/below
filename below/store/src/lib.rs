@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use slog::{info, warn};
 use static_assertions::const_assert_eq;
 
+use crate::compression::Compressor;
 use crate::cursor::{KeyedCursor, StoreCursor};
 
 use common::fileutil::get_dir_size;
@@ -146,6 +147,7 @@ struct IndexEntry {
 }
 
 const INDEX_ENTRY_SIZE: usize = std::mem::size_of::<IndexEntry>();
+const INDEX_ENTRY_SIZE_PO2: u32 = INDEX_ENTRY_SIZE.trailing_zeros();
 const_assert_eq!(INDEX_ENTRY_SIZE, 32);
 
 #[derive(Copy, Clone, Debug)]
@@ -178,8 +180,9 @@ pub struct StoreWriter {
     data_len: u64,
     /// Active shard
     shard: u64,
-    /// Active dictionary key frame as a prepared zstd dictionary.
-    dict_key_frame: Option<zstd::dict::EncoderDictionary<'static>>,
+    /// Cached compressor for memory efficiency. Compressor also stores key
+    /// frame for dict compression.
+    compressor: Option<Compressor>,
     /// If non-empty, individual frames are compressed with
     /// `compression_mode`.
     compression_mode: CompressionMode,
@@ -207,20 +210,6 @@ fn get_index_files(path: &Path) -> Result<Vec<String>> {
 
     entries.sort_unstable();
     Ok(entries)
-}
-
-fn compress_with_dictionary(
-    prepared_dictionary: &zstd::dict::EncoderDictionary,
-    bytes: &[u8],
-) -> Result<Vec<u8>> {
-    let mut compressed = Vec::new();
-    let mut encoder = zstd::stream::write::Encoder::with_prepared_dictionary(
-        &mut compressed,
-        prepared_dictionary,
-    )?;
-    encoder.write_all(bytes)?;
-    encoder.finish()?;
-    Ok(compressed)
 }
 
 enum SerializedFrame<'a> {
@@ -292,7 +281,7 @@ impl StoreWriter {
             (data_path, index_path)
         };
 
-        let mut index = OpenOptions::new()
+        let index = OpenOptions::new()
             .append(true)
             .create(true)
             .open(index_path.as_path())
@@ -307,8 +296,6 @@ impl StoreWriter {
                 index_path.display(),
             )
         })?;
-
-        let _index_len = Self::pad_and_get_index_len(logger.clone(), &mut index, shard);
 
         let data = OpenOptions::new()
             .append(true)
@@ -343,67 +330,49 @@ impl StoreWriter {
             data,
             data_len,
             shard,
-            // Setting dict_key_frame to None ensures that first
-            // write in dictionary compression will always start a
-            // new chunk and write a new dict key frame.
-            dict_key_frame: None,
+            // First compressed write initializes the compressor
+            compressor: None,
             compression_mode,
             format,
         })
     }
 
-    /// Gets the index length of the given index file. The file is
-    /// padded to the next INDEX_ENTRY_SIZE aligned boundary before
-    /// its length is returned. Misalignment can happen if we
-    /// partially wrote an index entry, or an external actor modified
-    /// the index file.
-    fn pad_and_get_index_len(logger: slog::Logger, index: &mut File, shard: u64) -> Result<u64> {
+    /// The index file is padded to the next (1 << alignment_po2) aligned
+    /// boundary. Both the original and aligned lengths are then returned.
+    /// Mostly used to align index file with INDEX_ENTRY_SIZE or chunk size if
+    /// dictionary compression is used. Misalignment can happen if we partially
+    /// wrote an index entry, a new chunk must be used, an external actor
+    /// modified the index file, etc.
+    fn pad_and_get_index_len(index: &mut File, alignment_po2: u32) -> Result<(u64, u64)> {
         let index_len = index
             .metadata()
-            .with_context(|| format!("Failed to get metadata of index file: index_{:011}", shard,))?
+            .context("Failed to get metadata of index file")?
             .len();
-        const INDEX_ENTRY_SIZE_MASK: u64 = INDEX_ENTRY_SIZE as u64 - 1;
-        let aligned_len = (index_len + INDEX_ENTRY_SIZE_MASK) & !INDEX_ENTRY_SIZE_MASK;
+        let alignment_mask = (1 << alignment_po2) - 1;
+        let aligned_len = (index_len + alignment_mask) & !alignment_mask;
         if aligned_len != index_len {
-            let aligned_len =
-                index_len + INDEX_ENTRY_SIZE as u64 - (index_len % INDEX_ENTRY_SIZE as u64);
-            warn!(
-                logger,
-                "Index length not a multiple of fixed index entry size: {}. Padding to size: {}",
-                index_len,
-                aligned_len,
-            );
-            index.set_len(aligned_len).with_context(|| {
-                format!(
-                    "Failed to pad partially written index file: index_{:011}",
-                    shard
-                )
-            })?;
+            index
+                .set_len(aligned_len)
+                .context("Failed to pad index file")?;
             // Since file is opened as append only, we don't need to
             // move the cursor to end of file.
-            Ok(aligned_len)
-        } else {
-            Ok(index_len)
         }
+        Ok((index_len, aligned_len))
     }
 
-    /// For the given `DataFrame` and current index length, returns a
+    /// For the given `DataFrame` and an optional Compressor mut ref, returns a
     /// tuple consisting of:
     ///   1) Raw bytes to write to the data file
     ///   2) Flags to write to the index entry
-    ///   3) If according to the state of the `StoreWriter` the frame
-    ///      is to be a dictionary key frame (i.e. first frame of a
-    ///      chunk), the zstd dictionary prepared from the raw
-    ///      serialized, but uncompressed bytes of the frame.
+    /// For compressed write, the Compressor will be initialized if None, and
+    /// potentially updated. is_key_frame is used to indicate the start of a new
+    /// chunk if dictionary compression is enabled.
     fn get_bytes_and_flags_for_frame(
         &self,
         data_frame: &DataFrame,
-        index_len: u64,
-    ) -> Result<(
-        bytes::Bytes,
-        IndexEntryFlags,
-        Option<zstd::dict::EncoderDictionary<'static>>,
-    )> {
+        compressor: &mut Option<Compressor>,
+        is_key_frame: bool,
+    ) -> Result<(bytes::Bytes, IndexEntryFlags)> {
         let mut flags = match self.format {
             Format::Thrift => IndexEntryFlags::empty(),
             Format::Cbor => IndexEntryFlags::CBOR,
@@ -411,51 +380,37 @@ impl StoreWriter {
         // Get serialized data frame
         let frame_bytes =
             serialize_frame(data_frame, self.format).context("Failed to serialize data frame")?;
-        let (serialized, encoder_dict) = match self.compression_mode {
-            CompressionMode::None => (frame_bytes, /* encoder_dict */ None),
+        let serialized = match self.compression_mode {
+            CompressionMode::None => frame_bytes,
             CompressionMode::Zstd => {
                 flags |= IndexEntryFlags::COMPRESSED;
-                (
-                    zstd::block::compress(&frame_bytes, 0)
-                        .context("Failed to compress data")?
-                        .into(),
-                    /* encoder_dict */ None,
-                )
+                compressor
+                    .get_or_insert_with(Compressor::new)
+                    .compress_with_dict_reset(&frame_bytes)
+                    .context("Failed to compress data")?
             }
             CompressionMode::ZstdDictionary(ChunkSizePo2(chunk_size_po2)) => {
-                let chunk_mask = ((INDEX_ENTRY_SIZE as u64) << chunk_size_po2) - 1;
                 flags |= IndexEntryFlags::COMPRESSED;
                 flags
                     .set_chunk_compress_size_po2(chunk_size_po2)
                     .expect("bug: invalid chunk compress size");
-                match &self.dict_key_frame {
-                    Some(dict_key_frame) if index_len & chunk_mask != 0 => {
-                        // Compress with dict key frame only if:
-                        //   a) We have a saved dict key frame.
-                        //   b) We are in the middle of a chunk (i.e.
-                        //      dict_key_frame is for the current chunk).
-                        (
-                            compress_with_dictionary(dict_key_frame, &frame_bytes)
-                                .context("Failed to compress data with dictionary")?
-                                .into(),
-                            /* encoder_dict */ None,
-                        )
-                    }
-                    _ => {
-                        // New key frame -- to further save on space, we
-                        // compress the frame as well.
-                        (
-                            zstd::block::compress(&frame_bytes, 0)
-                                .context("Failed to compress for data for new key frame")?
-                                .into(),
-                            // This uses `ZSTD_createCDict()`
-                            Some(zstd::dict::EncoderDictionary::copy(&frame_bytes, 0)),
-                        )
-                    }
+                let compressor = compressor.get_or_insert_with(Compressor::new);
+                if is_key_frame {
+                    let serialized = compressor
+                        .compress_with_dict_reset(&frame_bytes)
+                        .context("Failed to compress key frame")?;
+                    compressor
+                        .load_dict(&frame_bytes)
+                        .context("Failed to set key frame as dict")?;
+                    serialized
+                } else {
+                    compressor
+                        .compress_with_loaded_dict(&frame_bytes)
+                        .context("Failed to compress data frame")?
                 }
             }
         };
-        Ok((serialized, flags, encoder_dict))
+        Ok((serialized, flags))
     }
 
     /// Store data with corresponding timestamp in current shard.
@@ -467,47 +422,65 @@ impl StoreWriter {
             panic!("Can't write data to shard as it belongs to different shard")
         }
 
-        // Get index length, ensuring that it is INDEX_ENTRY_SIZE
-        // aligned.
-        let index_len = Self::pad_and_get_index_len(self.logger.clone(), &mut self.index, shard)
-            .context("Failed to get index length and possibly pad index file")?;
-
-        let (serialized, flags, encoder_dict) = self
-            .get_bytes_and_flags_for_frame(data, index_len)
-            .context("Failed to get serialized frame and flags")?;
-
-        if encoder_dict.is_some() {
-            let chunk_compress_po2 = match self.compression_mode {
-                CompressionMode::ZstdDictionary(ChunkSizePo2(size)) => size,
-                _ => panic!("bug: set dict key frame but not in dictionary compression mode"),
+        // PO2 chunk size in bytes if dict compression is used, otherwise 0.
+        let chunk_alignment_po2 =
+            if let CompressionMode::ZstdDictionary(ChunkSizePo2(chunk_size_po2)) =
+                self.compression_mode
+            {
+                // chunk_size_po2 is in number of entries. Add with entry size
+                // po2 to get size in bytes po2.
+                chunk_size_po2 + INDEX_ENTRY_SIZE_PO2
+            } else {
+                0
             };
-            // Set dict_key_frame to None to indicate that we're
-            // about to start a new chunk. If we fail to
-            // successfully write the key frame entry, it will
-            // remain None, ensuring that the following put will
-            // also start a new chunk.
-            self.dict_key_frame = None;
-            // Pad index file as necessary if it's a new dict key
-            // frame
-            let chunk_mask = ((INDEX_ENTRY_SIZE as u64) << chunk_compress_po2) - 1;
-            let chunk_aligned_len = (index_len + chunk_mask) & !chunk_mask;
-            if chunk_aligned_len != index_len {
+        // If dict compression is used but Compressor uninitialized, e.g. new
+        // shard, previous write failed, then pad index to start a new chunk.
+        // Otherwise pad to ensure index file is aligned with INDEX_ENTRY_SIZE.
+        let alignment_po2 = if chunk_alignment_po2 != 0 && self.compressor.is_none() {
+            chunk_alignment_po2
+        } else {
+            INDEX_ENTRY_SIZE_PO2
+        };
+        let (index_len, aligned_len) = Self::pad_and_get_index_len(&mut self.index, alignment_po2)
+            .with_context(|| {
+                format!(
+                    "Failed to get index length and possibly pad index file: index_{:011}",
+                    shard
+                )
+            })?;
+        if index_len != aligned_len {
+            if alignment_po2 == INDEX_ENTRY_SIZE_PO2 {
+                warn!(
+                    self.logger,
+                    "Index length not a multiple of fixed index entry size: {}. Padded to size: {}",
+                    index_len,
+                    aligned_len,
+                );
+            } else if alignment_po2 == chunk_alignment_po2 {
+                // Always happen when below restarts. Thus log with info level
                 info!(
                     self.logger,
-                    "Padding index so that first entry of block is aligned. Current len: {}. New len: {}",
+                    "Padded index so that first entry of block is aligned. Previous len: {}. New len: {}",
                     index_len,
-                    chunk_aligned_len,
+                    aligned_len,
                 );
-                self.index.set_len(chunk_aligned_len).with_context(|| {
-                    format!(
-                        "Failed to pad index file with empty entries: {:001}",
-                        self.shard,
-                    )
-                })?;
-                // Since file is opened as append only, we don't need
-                // to move the cursor to end of file.
+            } else {
+                panic!("Unexpected alignment_po2 value");
             }
         }
+
+        // Take the compressor from self before modifying it. In case any write
+        // failure occurs, the old compressor (potentially in bad state) will be
+        // discarded and a new one be created in the next write. No-op if
+        // compression is not used.
+        let mut compressor = self.compressor.take();
+        // If dict compression is used and the index file is chunk aligned, the
+        // current frame is the key frame.
+        let is_key_frame =
+            chunk_alignment_po2 != 0 && aligned_len.trailing_zeros() >= chunk_alignment_po2;
+        let (serialized, flags) = self
+            .get_bytes_and_flags_for_frame(data, &mut compressor, is_key_frame)
+            .context("Failed to get serialized frame and flags")?;
 
         // Appends to data file are large and cannot be atomic. We
         // may have partial writes that increase file size without
@@ -569,11 +542,9 @@ impl StoreWriter {
                 .context("Failed to write entry to index file")?;
         }
 
-        // Set dict_key_frame only after successful writes
-        if encoder_dict.is_some() {
-            // We are guaranteed to be in dictionary compression mode
-            self.dict_key_frame = encoder_dict;
-        }
+        // Set compressor only after successful writes. No-op if not in
+        // compression mode
+        self.compressor = compressor;
         Ok(())
     }
 
