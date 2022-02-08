@@ -233,18 +233,15 @@ impl<'a> SerializedFrame<'a> {
     }
 }
 
+/// Serialization format. Currently only Cbor is supported.
 #[derive(Copy, Clone, Debug)]
 pub enum Format {
-    Thrift,
     Cbor,
 }
 
 /// Serialize a single data frame with `format` format.
 fn serialize_frame(data: &DataFrame, format: Format) -> Result<bytes::Bytes> {
     match format {
-        Format::Thrift => {
-            bail!("Data format Thrift is unsupported");
-        }
         Format::Cbor => {
             let bytes = serde_cbor::to_vec(data)?;
             Ok(bytes::Bytes::from(bytes))
@@ -255,9 +252,6 @@ fn serialize_frame(data: &DataFrame, format: Format) -> Result<bytes::Bytes> {
 /// Deserialize a single data frame with `format` format.
 fn deserialize_frame(bytes: &[u8], format: Format) -> Result<DataFrame> {
     match format {
-        Format::Thrift => {
-            bail!("Data format Thrift is unsupported");
-        }
         Format::Cbor => {
             let data_frame = serde_cbor::from_slice(bytes)?;
             Ok(data_frame)
@@ -405,7 +399,6 @@ impl StoreWriter {
         is_key_frame: bool,
     ) -> Result<(bytes::Bytes, IndexEntryFlags)> {
         let mut flags = match self.format {
-            Format::Thrift => IndexEntryFlags::empty(),
             Format::Cbor => IndexEntryFlags::CBOR,
         };
         // Get serialized data frame

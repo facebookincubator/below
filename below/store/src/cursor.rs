@@ -580,7 +580,7 @@ impl Cursor for StoreCursor {
                 let format = if index_entry.flags.contains(IndexEntryFlags::CBOR) {
                     Format::Cbor
                 } else {
-                    Format::Thrift
+                    panic!("Unexpected format");
                 };
                 let ts =
                     std::time::UNIX_EPOCH + std::time::Duration::from_secs(index_entry.timestamp);
