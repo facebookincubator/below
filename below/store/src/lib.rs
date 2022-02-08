@@ -239,6 +239,32 @@ pub enum Format {
     Cbor,
 }
 
+/// Serialize a single data frame with `format` format.
+fn serialize_frame(data: &DataFrame, format: Format) -> Result<bytes::Bytes> {
+    match format {
+        Format::Thrift => {
+            bail!("Data format Thrift is unsupported");
+        }
+        Format::Cbor => {
+            let bytes = serde_cbor::to_vec(data)?;
+            Ok(bytes::Bytes::from(bytes))
+        }
+    }
+}
+
+/// Deserialize a single data frame with `format` format.
+fn deserialize_frame(bytes: &[u8], format: Format) -> Result<DataFrame> {
+    match format {
+        Format::Thrift => {
+            bail!("Data format Thrift is unsupported");
+        }
+        Format::Cbor => {
+            let data_frame = serde_cbor::from_slice(bytes)?;
+            Ok(data_frame)
+        }
+    }
+}
+
 impl StoreWriter {
     /// Create a new `StoreWriter` that writes data to `path`
     /// directory. Data serialized with `format`.

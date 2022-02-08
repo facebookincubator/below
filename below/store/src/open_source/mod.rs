@@ -13,33 +13,3 @@
 // limitations under the License.
 
 pub mod remote_store;
-
-use anyhow::{bail, Result};
-
-use crate::{DataFrame, Format};
-
-/// Serialize a single data frame with `format` format.
-pub fn serialize_frame(data: &DataFrame, format: Format) -> Result<bytes::Bytes> {
-    match format {
-        Format::Thrift => {
-            bail!("Data format Thrift is unsupported");
-        }
-        Format::Cbor => {
-            let bytes = serde_cbor::to_vec(data)?;
-            Ok(bytes::Bytes::from(bytes))
-        }
-    }
-}
-
-/// Deserialize a single data frame with `format` format.
-pub fn deserialize_frame(bytes: &[u8], format: Format) -> Result<DataFrame> {
-    match format {
-        Format::Thrift => {
-            bail!("Data format Thrift is unsupported");
-        }
-        Format::Cbor => {
-            let data_frame = serde_cbor::from_slice(bytes)?;
-            Ok(data_frame)
-        }
-    }
-}
