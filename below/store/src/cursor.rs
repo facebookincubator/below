@@ -379,14 +379,14 @@ impl StoreCursor {
         decompressor: &mut Option<Decompressor<(u64, usize)>>,
     ) -> Result<SerializedFrame<'a>> {
         let serialized_frame = if compressed {
-            SerializedFrame::Bytes(
+            SerializedFrame::Owned(
                 decompressor
                     .get_or_insert_with(Decompressor::new)
                     .decompress_with_dict_reset(data_slice)
                     .context("Failed to decompress data frame")?,
             )
         } else {
-            SerializedFrame::Slice(data_slice)
+            SerializedFrame::Borrowed(data_slice)
         };
         Ok(serialized_frame)
     }
@@ -425,7 +425,7 @@ impl StoreCursor {
                 )
                 .context("Failed to get serialized dict key frame")?;
                 let d = decompressor.get_or_insert_with(Decompressor::new);
-                d.load_dict(dict_key_frame.bytes(), dict_key)
+                d.load_dict(dict_key_frame.into_owned(), dict_key)
                     .context("Failed to set decompressor dict")?;
                 d
             }
@@ -440,7 +440,7 @@ impl StoreCursor {
                 .decompress_with_loaded_dict(data_slice)
                 .context("Failed to decompress data frame with dictionary")?
         };
-        Ok(SerializedFrame::Bytes(bytes))
+        Ok(SerializedFrame::Owned(bytes))
     }
 
     /// Get index entry at offset and it's corresponding data slice.
@@ -584,7 +584,7 @@ impl Cursor for StoreCursor {
                 };
                 let ts =
                     std::time::UNIX_EPOCH + std::time::Duration::from_secs(index_entry.timestamp);
-                match deserialize_frame(serialized_data.data(), format) {
+                match deserialize_frame(serialized_data.as_ref(), format) {
                     Ok(df) => Some((ts, df)),
                     Err(e) => {
                         warn!(self.logger, "Failed to deserialize data frame: {}", e);

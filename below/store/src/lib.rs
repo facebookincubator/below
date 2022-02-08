@@ -213,22 +213,24 @@ fn get_index_files(path: &Path) -> Result<Vec<String>> {
 }
 
 enum SerializedFrame<'a> {
-    Bytes(bytes::Bytes),
-    Slice(&'a [u8]),
+    Owned(bytes::Bytes),
+    Borrowed(&'a [u8]),
 }
 
-impl<'a> SerializedFrame<'a> {
-    fn data(&self) -> &[u8] {
+impl AsRef<[u8]> for SerializedFrame<'_> {
+    fn as_ref(&self) -> &[u8] {
         match self {
-            SerializedFrame::Bytes(b) => &b,
-            SerializedFrame::Slice(s) => s,
+            SerializedFrame::Owned(b) => b.as_ref(),
+            SerializedFrame::Borrowed(s) => s,
         }
     }
+}
 
-    fn bytes(self) -> bytes::Bytes {
+impl SerializedFrame<'_> {
+    fn into_owned(self) -> bytes::Bytes {
         match self {
-            SerializedFrame::Bytes(b) => b,
-            SerializedFrame::Slice(s) => bytes::Bytes::copy_from_slice(s),
+            SerializedFrame::Owned(b) => b,
+            SerializedFrame::Borrowed(s) => bytes::Bytes::copy_from_slice(s),
         }
     }
 }
