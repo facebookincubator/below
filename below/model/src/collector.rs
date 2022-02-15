@@ -202,23 +202,24 @@ pub fn collect_sample(
                     None
                 }
             },
-            disks: match (disable_disk_stat, reader.read_disk_stats_and_fsinfo()) {
-                (false, Ok(disks)) => disks
-                    .into_iter()
-                    .map(|(disk_name, disk_stat)| (disk_name, disk_stat.into()))
-                    .filter(|(disk_name, disk_stat)| {
-                        if disk_name.starts_with("ram") || disk_name.starts_with("loop") {
-                            return false;
-                        }
-
-                        !is_all_zero_disk_stats(&disk_stat)
-                    })
-                    .collect(),
-                (false, Err(e)) => {
-                    error!(logger, "{:#}", e);
-                    Default::default()
+            disks: if disable_disk_stat {
+                Default::default()
+            } else {
+                match reader.read_disk_stats_and_fsinfo() {
+                    Ok(disks) => disks
+                        .into_iter()
+                        .filter(|(disk_name, disk_stat)| {
+                            if disk_name.starts_with("ram") || disk_name.starts_with("loop") {
+                                return false;
+                            }
+                            !is_all_zero_disk_stats(disk_stat)
+                        })
+                        .collect(),
+                    Err(e) => {
+                        error!(logger, "{:#}", e);
+                        Default::default()
+                    }
                 }
-                (true, _) => Default::default(),
             },
         },
     })
