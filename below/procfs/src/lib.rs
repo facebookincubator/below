@@ -385,7 +385,7 @@ impl ProcReader {
             if let Ok(stat) = sys::statvfs::statvfs(Path::new(&mount_point)) {
                 let disk_usage = ((stat.blocks() - stat.blocks_available()) as f32 * 100.0)
                     / stat.blocks() as f32;
-                let partition_size = stat.blocks() * stat.block_size() as u64;
+                let partition_size = stat.blocks() as u64 * stat.block_size() as u64;
                 return Some((disk_usage, partition_size));
             }
         }
