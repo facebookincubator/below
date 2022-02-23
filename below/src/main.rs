@@ -37,6 +37,8 @@ use structopt::{
     clap::{AppSettings, Shell},
     StructOpt,
 };
+use tar::Builder as TarBuilder;
+use tempdir::TempDir;
 use users::{get_current_uid, get_user_by_uid};
 
 mod exitstat;
@@ -223,6 +225,21 @@ enum Command {
         port: Option<u16>,
         #[structopt(subcommand)]
         cmd: DumpCommand,
+    },
+    /// Create a historical snapshot file for a given time range
+    Snapshot {
+        /// Begin time, same format as replay
+        #[structopt(short, long, verbatim_doc_comment)]
+        begin: String,
+        /// End time, same format as replay
+        #[structopt(short, long, verbatim_doc_comment)]
+        end: String,
+        /// Supply hostname to take snapshot from remote
+        host: Option<String>,
+        #[structopt(long)]
+        /// Override default port to connect to remote
+        #[structopt(long)]
+        port: Option<u16>,
     },
     /// Generate a shell completions file
     #[structopt(setting = AppSettings::Hidden)]
@@ -616,6 +633,27 @@ fn real_main(init: init::InitToken) {
                 RedirectLogOnFail::Off,
                 |_, below_config, logger, errs| {
                     replay(logger, errs, time, below_config, host, port, days_adjuster)
+                },
+            )
+        }
+        Command::Snapshot {
+            ref begin,
+            ref end,
+            ref host,
+            ref port,
+        } => {
+            let begin = begin.clone();
+            let end = end.clone();
+            let host = host.clone();
+            let port = port.clone();
+            run(
+                init,
+                debug,
+                below_config,
+                Service::Off,
+                RedirectLogOnFail::Off,
+                |_, below_config, logger, _errs| {
+                    snapshot(logger, below_config, begin, end, host, port)
                 },
             )
         }
@@ -1196,6 +1234,69 @@ fn convert_store(
         cur_time += Duration::from_secs(1); // To actually move forward
     }
     pb.set_message(&format!("Done. Logged {} samples.", nr_samples));
+    Ok(())
+}
+
+fn snapshot(
+    logger: slog::Logger,
+    below_config: &BelowConfig,
+    begin: String,
+    end: String,
+    host: Option<String>,
+    port: Option<u16>,
+) -> Result<()> {
+    let (time_begin, time_end) = cliutil::system_time_range_from_date_and_adjuster(
+        begin.as_str(),
+        Some(end.as_str()),
+        /* days_adjuster */ None,
+    )?;
+    let (timestamp_begin, timestamp_end) = (
+        common::util::get_unix_timestamp(time_begin),
+        common::util::get_unix_timestamp(time_end),
+    );
+
+    // Create a directory for the output files
+    // Format: snapshot_<timestamp_begin>_<timestamp_end>
+    let temp_folder = TempDir::new(&format!(
+        "snapshot_{:011}_{:011}",
+        timestamp_begin, timestamp_end
+    ))?;
+    let snapshot_store_path = temp_folder.into_path();
+
+    // Build compression options to ensure snapshot is compressed before tarball
+    let compress_opts = CompressOpts {
+        compress: true,
+        dict_compress_chunk_size: Some(16),
+    };
+    convert_store(
+        logger,
+        below_config,
+        begin,
+        end,
+        None,
+        snapshot_store_path.clone(),
+        host,
+        port,
+        &compress_opts,
+    )
+    .context("Failed to convert store for snapshot")?;
+
+    // The temp dir path will be something like "/tmp/snapshot_<timestamp_begin>_<timestamp_end>.XXXX".
+    // We will use the dir name as name of the tarball.
+    let tarball_name = snapshot_store_path
+        .as_path()
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap();
+    let file = fs::File::create(&tarball_name)?;
+    // Create a new tarball with the snapshot dir name
+    let mut tar = TarBuilder::new(file);
+    tar.append_dir_all(tarball_name, snapshot_store_path.as_path())?;
+    tar.finish()
+        .context("Failed to build compressed snapshot file.")?;
+
+    println!("Snapshot has been created at {}.", tarball_name);
     Ok(())
 }
 
