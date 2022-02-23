@@ -413,8 +413,10 @@ pub mod fake_view {
             let time = SystemTime::now();
             let logger = get_logger();
             let advance = new_advance_local(logger.clone(), PathBuf::new(), time);
-            let mut collector = Collector::new(Default::default());
-            let model = collector.update_model(&logger).expect("Fail to get model");
+            let mut collector = Collector::new(logger.clone(), Default::default());
+            let model = collector
+                .collect_and_update_model()
+                .expect("Fail to get model");
 
             let mut inner = CursiveRunnable::dummy();
             inner.set_user_data(ViewState::new_with_advance(

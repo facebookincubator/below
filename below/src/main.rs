@@ -806,6 +806,17 @@ fn record(
         None
     };
 
+    let collector = model::Collector::new(
+        logger.clone(),
+        model::CollectorOptions {
+            cgroup_root: below_config.cgroup_root.clone(),
+            exit_data: exit_buffer,
+            collect_io_stat,
+            disable_disk_stat,
+            cgroup_re,
+        },
+    );
+
     loop {
         if !disable_exitstats {
             // Anything that comes over the error channel is an error
@@ -827,14 +838,7 @@ fn record(
 
         let collect_instant = Instant::now();
 
-        let collected_sample = model::collect_sample(
-            &below_config.cgroup_root,
-            &exit_buffer,
-            collect_io_stat,
-            &logger,
-            disable_disk_stat,
-            &cgroup_re,
-        );
+        let collected_sample = collector.collect_sample();
         let post_collect_sys_time = SystemTime::now();
         let post_collect_instant = Instant::now();
 
@@ -912,8 +916,14 @@ fn live_local(
     let (exit_buffer, bpf_errs) = start_exitstat(logger.clone(), debug);
     let mut bpf_err_warned = false;
 
-    let mut collector =
-        model::Collector::new_with_cgroup_root(below_config.cgroup_root.clone(), exit_buffer);
+    let mut collector = model::Collector::new(
+        logger.clone(),
+        model::CollectorOptions {
+            cgroup_root: below_config.cgroup_root.clone(),
+            exit_data: exit_buffer,
+            ..Default::default()
+        },
+    );
     logutil::set_current_log_target(logutil::TargetLog::File);
     // Prepare advance obj for pause mode
     let mut adv = new_advance_local(
@@ -923,7 +933,7 @@ fn live_local(
     );
     adv.initialize();
     let mut view = view::View::new_with_advance(
-        collector.update_model(&logger)?,
+        collector.collect_and_update_model()?,
         view::ViewMode::Live(Rc::new(RefCell::new(adv))),
     );
 
@@ -959,8 +969,7 @@ fn live_local(
                     Err(RecvTimeoutError::Timeout) => {}
                 };
 
-                let res = collector.update_model(&logger);
-                match res {
+                match collector.collect_and_update_model() {
                     Ok(model) => {
                         // Error only happens if the other side disconnected - just terminate the thread
                         let data_plane = Box::new(move |s: &mut Cursive| {

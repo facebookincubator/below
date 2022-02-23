@@ -26,9 +26,11 @@ use tempdir::TempDir;
 #[test]
 // Test correctness of system decoration
 fn test_dump_sys_content() {
-    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
-    collector.update_model(&logger).expect("Fail to get model");
+    let mut collector = Collector::new(logger.clone(), Default::default());
+    collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
 
     let mut opts: GeneralOpt = Default::default();
     let mut fields = command::expand_fields(command::DEFAULT_SYSTEM_FIELDS, true);
@@ -44,7 +46,9 @@ fn test_dump_sys_content() {
     let system_dumper = system::System::new(&opts, fields.clone());
 
     // update model again to populate cpu and io data
-    let model = collector.update_model(&logger).expect("Fail to get model");
+    let model = collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
     let mut system_content: Vec<u8> = Vec::new();
     let mut round = 0;
     let ctx = CommonFieldContext { timestamp: 0 };
@@ -186,9 +190,11 @@ fn test_dump_sys_titles() {
 // Test correctness of process decoration
 // This test will also test JSON correctness.
 fn test_dump_process_content() {
-    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
-    collector.update_model(&logger).expect("Fail to get model");
+    let mut collector = Collector::new(logger.clone(), Default::default());
+    collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
 
     let mut opts: GeneralOpt = Default::default();
     let fields = command::expand_fields(command::DEFAULT_PROCESS_FIELDS, true);
@@ -196,7 +202,9 @@ fn test_dump_process_content() {
     let process_dumper = process::Process::new(&opts, None, fields.clone());
 
     // update model again to populate cpu and io data
-    let model = collector.update_model(&logger).expect("Fail to get model");
+    let model = collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
     let mut process_content: Vec<u8> = Vec::new();
     let mut round = 0;
     let ctx = CommonFieldContext { timestamp: 0 };
@@ -292,11 +300,15 @@ fn test_dump_proc_titles() {
 
 #[test]
 fn test_dump_proc_select() {
-    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
-    collector.update_model(&logger).expect("Fail to get model");
+    let mut collector = Collector::new(logger.clone(), Default::default());
+    collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
     // update model again to populate cpu and io data
-    let model = collector.update_model(&logger).expect("Fail to get model");
+    let model = collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
 
     let fields = command::expand_fields(command::DEFAULT_PROCESS_FIELDS, true);
     let mut opts: GeneralOpt = Default::default();
@@ -412,9 +424,11 @@ fn traverse_cgroup_tree(model: &model::CgroupModel, jval: &Value) {
 
 #[test]
 fn test_dump_cgroup_content() {
-    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
-    collector.update_model(&logger).expect("Fail to get model");
+    let mut collector = Collector::new(logger.clone(), Default::default());
+    collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
 
     let mut opts: GeneralOpt = Default::default();
     let fields = command::expand_fields(command::DEFAULT_CGROUP_FIELDS, true);
@@ -422,7 +436,9 @@ fn test_dump_cgroup_content() {
     let cgroup_dumper = cgroup::Cgroup::new(&opts, None, fields);
 
     // update model again to populate cpu and io data
-    let model = collector.update_model(&logger).expect("Fail to get model");
+    let model = collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
     let mut cgroup_content: Vec<u8> = Vec::new();
     let mut round = 0;
     let ctx = CommonFieldContext { timestamp: 0 };
@@ -517,9 +533,11 @@ fn test_dump_cgroup_titles() {
 // Test correctness of iface decoration
 // This test will also test JSON correctness.
 fn test_dump_iface_content() {
-    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
-    collector.update_model(&logger).expect("Fail to get model");
+    let mut collector = Collector::new(logger.clone(), Default::default());
+    collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
 
     let mut opts: GeneralOpt = Default::default();
     let fields = command::expand_fields(command::DEFAULT_IFACE_FIELDS, true);
@@ -527,7 +545,9 @@ fn test_dump_iface_content() {
     let iface_dumper = iface::Iface::new(&opts, None, fields.clone());
 
     // update model again to populate net data
-    let model = collector.update_model(&logger).expect("Fail to get model");
+    let model = collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
     let mut iface_content: Vec<u8> = Vec::new();
     let mut round = 0;
     let ctx = CommonFieldContext { timestamp: 0 };
@@ -628,9 +648,11 @@ fn test_dump_iface_titles() {
 // Test correctness of network decoration
 // This test will also test JSON correctness.
 fn test_dump_network_content() {
-    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
-    collector.update_model(&logger).expect("Fail to get model");
+    let mut collector = Collector::new(logger.clone(), Default::default());
+    collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
 
     let mut opts: GeneralOpt = Default::default();
     let fields = command::expand_fields(command::DEFAULT_NETWORK_FIELDS, true);
@@ -638,7 +660,9 @@ fn test_dump_network_content() {
     let network_dumper = network::Network::new(&opts, fields.clone());
 
     // update model again to populate net data
-    let model = collector.update_model(&logger).expect("Fail to get model");
+    let model = collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
     let mut network_content: Vec<u8> = Vec::new();
     let mut round = 0;
     let ctx = CommonFieldContext { timestamp: 0 };
@@ -742,9 +766,11 @@ fn test_dump_network_titles() {
 // Test correctness of transport decoration
 // This test will also test JSON correctness.
 fn test_dump_transport_content() {
-    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
-    collector.update_model(&logger).expect("Fail to get model");
+    let mut collector = Collector::new(logger.clone(), Default::default());
+    collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
 
     let mut opts: GeneralOpt = Default::default();
     let fields = command::expand_fields(command::DEFAULT_TRANSPORT_FIELDS, true);
@@ -752,7 +778,9 @@ fn test_dump_transport_content() {
     let transport_dumper = transport::Transport::new(&opts, fields.clone());
 
     // update model again to populate net data
-    let model = collector.update_model(&logger).expect("Fail to get model");
+    let model = collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
     let mut transport_content: Vec<u8> = Vec::new();
     let mut round = 0;
     let ctx = CommonFieldContext { timestamp: 0 };
@@ -835,9 +863,11 @@ fn test_dump_transport_titles() {
 // Test correctness of disk decoration
 // This test will also test JSON correctness.
 fn test_dump_disk_content() {
-    let mut collector = Collector::new(Default::default());
     let logger = get_logger();
-    collector.update_model(&logger).expect("Fail to get model");
+    let mut collector = Collector::new(logger.clone(), Default::default());
+    collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
 
     let mut opts: GeneralOpt = Default::default();
     let fields = command::expand_fields(command::DEFAULT_DISK_FIELDS, true);
@@ -845,7 +875,9 @@ fn test_dump_disk_content() {
     let disk_dumper = disk::Disk::new(&opts, None, fields.clone());
 
     // update model again to populate disk data
-    let model = collector.update_model(&logger).expect("Fail to get model");
+    let model = collector
+        .collect_and_update_model()
+        .expect("Fail to get model");
     let mut disk_content: Vec<u8> = Vec::new();
     let mut round = 0;
     let ctx = CommonFieldContext { timestamp: 0 };

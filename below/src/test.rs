@@ -18,7 +18,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tempdir::TempDir;
 
-use crate::model::{collect_sample, CgroupPressureModel, Model, Sample};
+use crate::model::{CgroupPressureModel, Collector, CollectorOptions, Model, Sample};
 use crate::store::{self, advance::new_advance_local, ChunkSizePo2, CompressionMode, DataFrame};
 use common::logutil::get_logger;
 use common::util::fold_string;
@@ -35,17 +35,13 @@ fn record_replay_integration() {
     )
     .expect("Failed to create store");
 
-    let cgroup_root = Path::new(cgroupfs::DEFAULT_CG_ROOT).to_path_buf();
 
     // Collect a sample
-    let sample = collect_sample(
-        &cgroup_root,
-        &Default::default(),
-        true,
-        &logger,
-        false,
-        &None,
+    let sample = Collector::new(
+        logger.clone(),
+        /* collector_options */ Default::default(),
     )
+    .collect_sample()
     .expect("failed to collect sample");
 
     // Validate some data in the sample
@@ -130,19 +126,14 @@ fn advance_forward_and_reverse() {
     )
     .expect("Failed to create store");
 
-    let cgroup_root = Path::new(cgroupfs::DEFAULT_CG_ROOT).to_path_buf();
-
     // Collect and store the same sample 3 times
     let timestamp = 554433;
     let unix_ts = UNIX_EPOCH + Duration::from_secs(timestamp);
-    let sample = collect_sample(
-        &cgroup_root,
-        &Default::default(),
-        true,
-        &logger,
-        false,
-        &None,
+    let sample = Collector::new(
+        logger.clone(),
+        /* collector_options */ Default::default(),
     )
+    .collect_sample()
     .expect("failed to collect sample");
     for i in 0..3 {
         let df = DataFrame {
@@ -188,16 +179,16 @@ fn advance_forward_and_reverse() {
 
 #[test]
 fn disable_io_stat() {
-    let cgroup_root = Path::new(cgroupfs::DEFAULT_CG_ROOT).to_path_buf();
     let logger = get_logger();
-    let sample = collect_sample(
-        &cgroup_root,
-        &Default::default(),
-        false,
-        &logger,
-        false,
-        &None,
+    let sample = Collector::new(
+        logger.clone(),
+        CollectorOptions {
+            collect_io_stat: false,
+            disable_disk_stat: false,
+            ..Default::default()
+        },
     )
+    .collect_sample()
     .expect("failed to collect sample");
 
     assert_eq!(sample.cgroup.io_stat, None);
@@ -205,16 +196,16 @@ fn disable_io_stat() {
 
 #[test]
 fn disable_disk_stat() {
-    let cgroup_root = Path::new(cgroupfs::DEFAULT_CG_ROOT).to_path_buf();
     let logger = get_logger();
-    let sample = collect_sample(
-        &cgroup_root,
-        &Default::default(),
-        false,
-        &logger,
-        true,
-        &None,
+    let sample = Collector::new(
+        logger.clone(),
+        CollectorOptions {
+            collect_io_stat: false,
+            disable_disk_stat: true,
+            ..Default::default()
+        },
     )
+    .collect_sample()
     .expect("failed to collect sample");
     assert!(sample.system.disks.is_empty());
 }

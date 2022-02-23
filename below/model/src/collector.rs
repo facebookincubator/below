@@ -19,49 +19,58 @@ use regex::Regex;
 use slog::{self, error};
 use std::path::{Path, PathBuf};
 
+pub struct CollectorOptions {
+    pub cgroup_root: PathBuf,
+    pub exit_data: Arc<Mutex<procfs::PidMap>>,
+    pub collect_io_stat: bool,
+    pub disable_disk_stat: bool,
+    pub cgroup_re: Option<Regex>,
+}
+
+impl Default for CollectorOptions {
+    fn default() -> Self {
+        Self {
+            cgroup_root: Path::new(cgroupfs::DEFAULT_CG_ROOT).to_path_buf(),
+            exit_data: Default::default(),
+            collect_io_stat: true,
+            disable_disk_stat: false,
+            cgroup_re: None,
+        }
+    }
+}
+
 /// Collects data samples and maintains the latest data
 pub struct Collector {
-    cgroup_root: PathBuf,
-    last: Option<(Sample, Instant)>,
-    exit_data: Arc<Mutex<procfs::PidMap>>,
+    logger: slog::Logger,
+    prev_sample: Option<(Sample, Instant)>,
+    collector_options: CollectorOptions,
 }
 
 impl Collector {
-    pub fn new(exit_data: Arc<Mutex<procfs::PidMap>>) -> Collector {
-        Collector::new_with_cgroup_root(
-            Path::new(cgroupfs::DEFAULT_CG_ROOT).to_path_buf(),
-            exit_data,
-        )
-    }
-
-    pub fn new_with_cgroup_root(
-        cgroup_root: PathBuf,
-        exit_data: Arc<Mutex<procfs::PidMap>>,
-    ) -> Collector {
-        Collector {
-            cgroup_root,
-            last: None,
-            exit_data,
+    pub fn new(logger: slog::Logger, collector_options: CollectorOptions) -> Self {
+        Self {
+            logger,
+            prev_sample: None,
+            collector_options,
         }
     }
 
+    pub fn collect_sample(&self) -> Result<Sample> {
+        collect_sample(&self.logger, &self.collector_options)
+    }
+
     /// Collect a new `Sample`, returning an updated Model
-    pub fn update_model(&mut self, logger: &slog::Logger) -> Result<Model> {
+    pub fn collect_and_update_model(&mut self) -> Result<Model> {
         let now = Instant::now();
-        let sample = collect_sample(
-            &self.cgroup_root,
-            &self.exit_data,
-            true,
-            logger,
-            false,
-            &None,
-        )?;
-        let last = self.last.replace((sample, now));
+        let sample = self.collect_sample()?;
         let model = Model::new(
             SystemTime::now(),
-            &self.last.as_ref().unwrap().0,
-            last.as_ref().map(|(s, i)| (s, now.duration_since(*i))),
+            &sample,
+            self.prev_sample
+                .as_ref()
+                .map(|(s, i)| (s, now.duration_since(*i))),
         );
+        self.prev_sample = Some((sample, now));
         Ok(model)
     }
 }
@@ -145,28 +154,25 @@ fn is_all_zero_disk_stats(disk_stats: &procfs::DiskStat) -> bool {
         && disk_stats.time_spend_discard_ms == Some(0)
 }
 
-pub fn collect_sample(
-    cgroup_root: &PathBuf,
-    exit_data: &Arc<Mutex<procfs::PidMap>>,
-    collect_io_stat: bool,
-    logger: &slog::Logger,
-    disable_disk_stat: bool,
-    cgroup_re: &Option<Regex>,
-) -> Result<Sample> {
+fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<Sample> {
     let mut reader = procfs::ProcReader::new();
 
     // Take mutex, then take all values out of shared map and replace with default map
     //
     // NB: unconditionally drain the exit buffer otherwise we can leak the entries
-    let exit_pidmap =
-        std::mem::take(&mut *exit_data.lock().expect("tried to acquire poisoned lock"));
+    let exit_pidmap = std::mem::take(
+        &mut *options
+            .exit_data
+            .lock()
+            .expect("tried to acquire poisoned lock"),
+    );
 
     Ok(Sample {
         cgroup: collect_cgroup_sample(
-            &cgroupfs::CgroupReader::new(cgroup_root.to_owned())?,
-            collect_io_stat,
+            &cgroupfs::CgroupReader::new(options.cgroup_root.to_owned())?,
+            options.collect_io_stat,
             logger,
-            &cgroup_re,
+            &options.cgroup_re,
         )?,
         processes: merge_procfs_and_exit_data(
             reader
@@ -202,7 +208,7 @@ pub fn collect_sample(
                     None
                 }
             },
-            disks: if disable_disk_stat {
+            disks: if options.disable_disk_stat {
                 Default::default()
             } else {
                 match reader.read_disk_stats_and_fsinfo() {
