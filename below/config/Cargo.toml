@@ -5,7 +5,7 @@ name = "below-config"
 version = "0.5.0"
 authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
 edition = "2021"
-description = "Configerations for below"
+description = "Configurations for below"
 repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
