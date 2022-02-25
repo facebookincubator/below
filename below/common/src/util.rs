@@ -18,6 +18,21 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const BELOW_RC: &str = "/.config/below/belowrc";
 
+/// Execute an expression every n times. For example
+/// `every_n!(1 + 2, println!("I'm mod 3")` will print on the 1st,
+/// 4th, and so on calls.
+#[macro_export]
+macro_rules! every_n {
+    ($n:expr, $ex:expr) => {{
+        static COUNT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+        let p = COUNT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        if p % ($n) == 0 {
+            $ex
+        }
+    }};
+}
+pub use every_n;
+
 /// Convert `timestamp` from `SystemTime` to seconds since epoch
 pub fn get_unix_timestamp(timestamp: SystemTime) -> u64 {
     timestamp
@@ -132,4 +147,21 @@ pub fn get_belowrc_cmd_section_key() -> &'static str {
 /// The view section key for belowrc
 pub fn get_belowrc_view_section_key() -> &'static str {
     "view"
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_every_n() {
+        let mut v1 = Vec::new();
+        let mut v2 = Vec::new();
+        for i in 0..10 {
+            every_n!(2, v1.push(i));
+            every_n!(1 + 2, v2.push(i));
+        }
+        assert_eq!(v1, vec![0, 2, 4, 6, 8]);
+        assert_eq!(v2, vec![0, 3, 6, 9]);
+    }
 }
