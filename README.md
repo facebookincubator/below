@@ -1,4 +1,4 @@
-![below](https://github.com/facebookincubator/below/main/img/below_logo_horizontal.png)
+![below](https://github.com/facebookincubator/below/blob/main/img/below_logo_horizontal.png)
 
 [![CI](https://github.com/facebookincubator/below/workflows/CI/badge.svg)](https://github.com/facebookincubator/below/actions?query=workflow%3ACI+branch%3Amain+)
 [![Matrix chat](https://img.shields.io/matrix/below:matrix.org)](https://matrix.to/#/#below:matrix.org)
@@ -14,6 +14,7 @@ has support for:
 * `replay` mode to replay historical system data
 * `live` mode to view live system data
 * `dump` subcommand to report script-friendly information (eg JSON and CSV)
+* `snapshot` subcommand to create a replayable snapshot file of historical system data
 
 below does **not** have support for cgroup1.
 
