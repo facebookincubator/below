@@ -1288,7 +1288,8 @@ fn snapshot(
     let temp_folder = TempDir::new(&format!(
         "snapshot_{:011}_{:011}",
         timestamp_begin, timestamp_end
-    ))?;
+    ))
+    .context("Failed to create temporary folder for snapshot")?;
     let snapshot_store_path = temp_folder.into_path();
 
     // Build compression options to ensure snapshot is compressed before tarball
@@ -1317,10 +1318,12 @@ fn snapshot(
         .unwrap()
         .to_str()
         .unwrap();
-    let file = fs::File::create(&tarball_name)?;
+    let file = fs::File::create(&tarball_name)
+        .with_context(|| format!("Failed to create snapshot file {:?}", &tarball_name))?;
     // Create a new tarball with the snapshot dir name
     let mut tar = TarBuilder::new(file);
-    tar.append_dir_all(tarball_name, snapshot_store_path.as_path())?;
+    tar.append_dir_all(tarball_name, snapshot_store_path.as_path())
+        .context("Failed to add snapshot store to tar builder")?;
     tar.finish()
         .context("Failed to build compressed snapshot file.")?;
 
