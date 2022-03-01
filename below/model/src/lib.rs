@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 #[macro_use]
 pub mod collector;
 pub mod cgroup;
+pub mod collector_plugin;
 #[cfg(test)]
 mod field_ids;
 pub mod network;
