@@ -32,6 +32,11 @@ pub mod sample;
 mod sample_model;
 pub mod system;
 
+#[cfg(fbcode_build)]
+pub mod facebook;
+#[cfg(fbcode_build)]
+pub use facebook::*;
+
 pub use cgroup::*;
 pub use collector::*;
 pub use network::*;
