@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use std::collections::BTreeMap;
-use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tempdir::TempDir;
