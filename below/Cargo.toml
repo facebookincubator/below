@@ -39,7 +39,7 @@ view = { package = "below-view", version = "0.5.0", path = "view" }
 
 [dev-dependencies]
 maplit = "1.0"
-rand = { version = "0.8", features = ["small_rng"] }
+portpicker = "0.1.1"
 
 [build-dependencies]
 libbpf-cargo = "0.10.0"
