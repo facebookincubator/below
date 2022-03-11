@@ -239,6 +239,7 @@ enum Command {
         #[structopt(short, long, verbatim_doc_comment)]
         end: String,
         /// Supply hostname to take snapshot from remote
+        #[structopt(long)]
         host: Option<String>,
         #[structopt(long)]
         /// Override default port to connect to remote
