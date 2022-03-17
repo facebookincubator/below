@@ -20,10 +20,10 @@ use model::{
 };
 
 use anyhow::{bail, Error, Result};
+use clap::Parser;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::str::FromStr;
-use structopt::StructOpt;
 
 /// Field that represents a group of related FieldIds of a Queriable.
 /// Shorthand for specifying fields to dump.
@@ -57,7 +57,7 @@ pub fn expand_fields<F: FieldId + Clone, A: AggField<F>>(
     res
 }
 
-/// Used by structopt to parse user provided --fields.
+/// Used by Clap to parse user provided --fields.
 impl<F: FieldId + FromStr, A: AggField<F> + FromStr> FromStr for DumpOptionField<F, A> {
     type Err = Error;
 
@@ -904,147 +904,147 @@ make_option! (OutputFormat {
     "kv": KeyVal,
 });
 
-#[derive(Debug, StructOpt, Default, Clone)]
+#[derive(Debug, Parser, Default, Clone)]
 pub struct GeneralOpt {
     /// Show all top layer fields. If --default is specified, it overrides any specified fields via --fields.
-    #[structopt(long)]
+    #[clap(long)]
     pub default: bool,
     /// Show all fields. If --everything is specified, --fields and --default are overridden.
-    #[structopt(long)]
+    #[clap(long)]
     pub everything: bool,
     /// Show more infomation other than default.
-    #[structopt(short, long)]
+    #[clap(short, long)]
     pub detail: bool,
     /// Begin time, same format as replay
-    #[structopt(long, short)]
+    #[clap(long, short)]
     pub begin: String,
     /// End time, same format as replay
-    #[structopt(long, short)]
+    #[clap(long, short)]
     pub end: Option<String>,
     /// Take a regex and apply to --select selected field. See command level doc for example.
-    #[structopt(long, short = "F")]
+    #[clap(long, short = 'F')]
     pub filter: Option<Regex>,
     /// Sort (lower to higher) by --select selected field. See command level doc for example.
-    #[structopt(long)]
+    #[clap(long)]
     pub sort: bool,
     /// Sort (higher to lower) by --select selected field. See command level doc for example.
-    #[structopt(long)]
+    #[clap(long)]
     pub rsort: bool,
     // display top N field. See command level doc for example.
-    #[structopt(long, default_value = "0")]
+    #[clap(long, default_value = "0")]
     pub top: u32,
     /// Repeat title, for each N line, it will render a line of title. Only for raw output format.
-    #[structopt(long = "repeat-title")]
+    #[clap(long = "repeat-title")]
     pub repeat_title: Option<usize>,
     /// Output format. Choose from raw, csv, kv, json. Default to raw
-    #[structopt(long, short = "O")]
+    #[clap(long, short = 'O')]
     pub output_format: Option<OutputFormat>,
     /// Output destination, default to stdout.
-    #[structopt(long, short)]
+    #[clap(long, short)]
     pub output: Option<String>,
     /// Disable title in raw or csv format output
-    #[structopt(long)]
+    #[clap(long)]
     pub disable_title: bool,
     /// Days adjuster, same as -r option in replay.
-    #[structopt(short = "r")]
+    #[clap(short = 'r')]
     pub yesterdays: Option<String>,
     /// Line break symbol between samples
-    #[structopt(long)]
+    #[clap(long)]
     pub br: Option<String>,
     /// Dump raw data without units or conversion
-    #[structopt(long)]
+    #[clap(long)]
     pub raw: bool,
 }
 
-#[derive(Debug, StructOpt, Clone)]
+#[derive(Debug, Parser, Clone)]
 pub enum DumpCommand {
-    #[structopt(about = SYSTEM_ABOUT, long_about = SYSTEM_LONG_ABOUT.as_str())]
+    #[clap(about = SYSTEM_ABOUT, long_about = SYSTEM_LONG_ABOUT.as_str())]
     System {
         /// Select which fields to display and in what order.
-        #[structopt(short, long)]
+        #[clap(short, long)]
         fields: Option<Vec<SystemOptionField>>,
-        #[structopt(flatten)]
+        #[clap(flatten)]
         opts: GeneralOpt,
         /// Saved pattern in the dumprc file under [system] section.
-        #[structopt(long, short, conflicts_with("fields"))]
+        #[clap(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
-    #[structopt(about = DISK_ABOUT, long_about = DISK_LONG_ABOUT.as_str())]
+    #[clap(about = DISK_ABOUT, long_about = DISK_LONG_ABOUT.as_str())]
     Disk {
         /// Select which fields to display and in what order.
-        #[structopt(short, long)]
+        #[clap(short, long)]
         fields: Option<Vec<DiskOptionField>>,
-        #[structopt(flatten)]
+        #[clap(flatten)]
         opts: GeneralOpt,
         /// Select field for operation, use with --sort, --rsort, --filter, --top
-        #[structopt(long, short)]
+        #[clap(long, short)]
         select: Option<SingleDiskModelFieldId>,
         /// Saved pattern in the dumprc file under [disk] section.
-        #[structopt(long, short, conflicts_with("fields"))]
+        #[clap(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
-    #[structopt(about = PROCESS_ABOUT, long_about = PROCESS_LONG_ABOUT.as_str())]
+    #[clap(about = PROCESS_ABOUT, long_about = PROCESS_LONG_ABOUT.as_str())]
     Process {
         /// Select which fields to display and in what order.
-        #[structopt(short, long)]
+        #[clap(short, long)]
         fields: Option<Vec<ProcessOptionField>>,
-        #[structopt(flatten)]
+        #[clap(flatten)]
         opts: GeneralOpt,
         /// Select field for operation, use with --sort, --rsort, --filter, --top
-        #[structopt(long, short)]
+        #[clap(long, short)]
         select: Option<SingleProcessModelFieldId>,
         /// Saved pattern in the dumprc file under [process] section.
-        #[structopt(long, short, conflicts_with("fields"))]
+        #[clap(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
-    #[structopt(about = CGROUP_ABOUT, long_about = CGROUP_LONG_ABOUT.as_str())]
+    #[clap(about = CGROUP_ABOUT, long_about = CGROUP_LONG_ABOUT.as_str())]
     Cgroup {
         /// Select which fields to display and in what order.
-        #[structopt(short, long)]
+        #[clap(short, long)]
         fields: Option<Vec<CgroupOptionField>>,
-        #[structopt(flatten)]
+        #[clap(flatten)]
         opts: GeneralOpt,
         /// Select field for operation, use with --sort, --rsort, --filter, --top
-        #[structopt(long, short)]
+        #[clap(long, short)]
         select: Option<SingleCgroupModelFieldId>,
         /// Saved pattern in the dumprc file under [cgroup] section.
-        #[structopt(long, short, conflicts_with("fields"))]
+        #[clap(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
-    #[structopt(about = IFACE_ABOUT, long_about = IFACE_LONG_ABOUT.as_str())]
+    #[clap(about = IFACE_ABOUT, long_about = IFACE_LONG_ABOUT.as_str())]
     Iface {
         /// Select which fields to display and in what order.
-        #[structopt(short, long)]
+        #[clap(short, long)]
         fields: Option<Vec<IfaceOptionField>>,
-        #[structopt(flatten)]
+        #[clap(flatten)]
         opts: GeneralOpt,
         /// Select field for operation, use with --filter
-        #[structopt(long, short)]
+        #[clap(long, short)]
         select: Option<SingleNetModelFieldId>,
         /// Saved pattern in the dumprc file under [iface] section.
-        #[structopt(long, short, conflicts_with("fields"))]
+        #[clap(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
-    #[structopt(about = NETWORK_ABOUT, long_about = NETWORK_LONG_ABOUT.as_str())]
+    #[clap(about = NETWORK_ABOUT, long_about = NETWORK_LONG_ABOUT.as_str())]
     Network {
         /// Select which fields to display and in what order.
-        #[structopt(short, long)]
+        #[clap(short, long)]
         fields: Option<Vec<NetworkOptionField>>,
-        #[structopt(flatten)]
+        #[clap(flatten)]
         opts: GeneralOpt,
         /// Saved pattern in the dumprc file under [network] section.
-        #[structopt(long, short, conflicts_with("fields"))]
+        #[clap(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
-    #[structopt(about = TRANSPORT_ABOUT, long_about = TRANSPORT_LONG_ABOUT.as_str())]
+    #[clap(about = TRANSPORT_ABOUT, long_about = TRANSPORT_LONG_ABOUT.as_str())]
     Transport {
         /// Select which fields to display and in what order.
-        #[structopt(short, long)]
+        #[clap(short, long)]
         fields: Option<Vec<TransportOptionField>>,
-        #[structopt(flatten)]
+        #[clap(flatten)]
         opts: GeneralOpt,
         /// Saved pattern in the dumprc file under [transport] section.
-        #[structopt(long, short, conflicts_with("fields"))]
+        #[clap(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
 }

@@ -13,6 +13,8 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "1.0.51"
 cgroupfs = { version = "0.5.0", path = "cgroupfs" }
+clap = { version = "3.1.2", features = ["derive", "regex", "unicode", "wrap_help"] }
+clap_complete = "3.0.4"
 common = { package = "below-common", version = "0.5.0", path = "common" }
 config = { package = "below-config", version = "0.5.0", path = "config" }
 cursive = { version = "0.16.0", features = ["crossterm-backend", "termion-backend"], default-features = false }
@@ -31,7 +33,6 @@ slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 slog-async = "2.3"
 slog-term = "2.8"
 store = { package = "below-store", version = "0.5.0", path = "store" }
-structopt = "0.3.23"
 tar = "0.4"
 tempdir = "0.3"
 users = "0.11"

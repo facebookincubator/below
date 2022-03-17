@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use structopt::StructOpt;
+use clap::Parser;
 
 // This is a shim so we can add FB-internal commands without affecting the
 // open source build
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub enum Command {}
 
 pub fn run_command(

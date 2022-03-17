@@ -28,15 +28,13 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime};
 
 use anyhow::{anyhow, bail, Context, Error, Result};
+use clap::{CommandFactory, Parser};
+use clap_complete::{generate, Shell};
 use cursive::Cursive;
 use indicatif::ProgressBar;
 use regex::Regex;
 use signal_hook::iterator::Signals;
 use slog::{self, debug, error, warn};
-use structopt::{
-    clap::{AppSettings, Shell},
-    StructOpt,
-};
 use tar::{Archive, Builder as TarBuilder};
 use tempdir::TempDir;
 use users::{get_current_uid, get_user_by_uid};
@@ -57,25 +55,24 @@ open_source_shim!();
 
 static LIVE_REMOTE_MAX_LATENCY_SEC: u64 = 10;
 
-#[derive(Debug, StructOpt)]
-#[structopt(no_version)]
+#[derive(Debug, Parser)]
 struct Opt {
-    #[structopt(long, parse(from_os_str), default_value = config::BELOW_DEFAULT_CONF)]
+    #[clap(long, parse(from_os_str), default_value = config::BELOW_DEFAULT_CONF)]
     config: PathBuf,
-    #[structopt(short, long)]
+    #[clap(short, long)]
     debug: bool,
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     cmd: Option<Command>,
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 struct CompressOpts {
     /// Enable zstd data file compression
     ///
     /// Depending on typical data, you can expect around 10x
     /// smaller data files, and an even higher compression ratio if
     /// used with --dict-compress-chunk-size.
-    #[structopt(long)]
+    #[clap(long)]
     compress: bool,
     /// Only valid when used with --compress. Must be at least 2, a
     /// power of 2, and at most 32768.
@@ -87,7 +84,7 @@ struct CompressOpts {
     ///
     /// With --dict-compress-chunk-size 16, you can expect around
     /// 20-30x smaller data files.
-    #[structopt(long, requires("compress"), parse(try_from_str = parse_chunk_size))]
+    #[clap(long, requires("compress"), parse(try_from_str = parse_chunk_size))]
     dict_compress_chunk_size: Option<u32>,
 }
 
@@ -128,24 +125,24 @@ fn parse_chunk_size(s: &str) -> Result<u32> {
     Ok(x)
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 enum Command {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     External(commands::Command),
     /// Display live system data (interactive) (default)
     Live {
-        #[structopt(short, long, default_value = "5")]
+        #[clap(short, long, default_value = "5")]
         interval_s: u64,
         /// Supply hostname to activate remote viewing
-        #[structopt(long)]
+        #[clap(long)]
         host: Option<String>,
         /// Override default port to connect remote viewing to
-        #[structopt(long)]
+        #[clap(long)]
         port: Option<u16>,
     },
     /// Record local system data (daemon mode)
     Record {
-        #[structopt(short, long, default_value = "5")]
+        #[clap(short, long, default_value = "5")]
         interval_s: u64,
         /// Store retention in seconds. Data is stored in 24 hour shards.
         /// Whever an entire shard of data is outside the retention period it
@@ -154,7 +151,7 @@ enum Command {
         ///
         /// N.B. If --store-size-limit is set, data may be discarded earlier
         ///      than the specified retention.
-        #[structopt(long)]
+        #[clap(long)]
         retain_for_s: Option<u64>,
         /// Store size limit in bytes. Data is stored in 24 hour shards.
         /// Shards before the active shard are deleted, oldest first,
@@ -163,26 +160,26 @@ enum Command {
         ///
         /// N.B. Since the active shard cannot be deleted, the size limit may
         ///      be exceeded by a single active shard.
-        #[structopt(long)]
+        #[clap(long)]
         store_size_limit: Option<u64>,
         /// Whether or not to collect io.stat for cgroups which could
         /// be expensive
-        #[structopt(long)]
+        #[clap(long)]
         collect_io_stat: bool,
         /// Override default port for remote viewing server
-        #[structopt(long)]
+        #[clap(long)]
         port: Option<u16>,
         /// Threshold for hold long data collection takes to trigger warnings.
-        #[structopt(long, default_value = "500")]
+        #[clap(long, default_value = "500")]
         skew_detection_threshold_ms: u64,
         /// Flag to disable disk_stat collection.
-        #[structopt(long)]
+        #[clap(long)]
         disable_disk_stat: bool,
         /// Flag to disable eBPF-based exitstats
-        #[structopt(long)]
+        #[clap(long)]
         disable_exitstats: bool,
         /// Options for compression
-        #[structopt(flatten)]
+        #[clap(flatten)]
         compress_opts: CompressOpts,
     },
     /// Replay historical data (interactive)
@@ -194,97 +191,97 @@ enum Command {
         /// Absolute: "Jan 01 23:59", "01/01/1970 11:59PM", "1970-01-01 23:59:59"{n}
         /// Unix Epoch: 1589808367
         /// _
-        #[structopt(short, long, verbatim_doc_comment)]
+        #[clap(short, long, verbatim_doc_comment)]
         time: String,
         /// Supply hostname to activate remote viewing
-        #[structopt(long)]
+        #[clap(long)]
         host: Option<String>,
         /// Override default port to connect remote viewing to
-        #[structopt(long)]
+        #[clap(long)]
         port: Option<u16>,
         /// Days adjuster: y[y...] for yesterday (repeated).
         /// Each "y" will deduct 1 day from the input of "--time/-t"{n}
         /// Examples:
         /// * Yesterday at 2 pm: below replay -r y -t 2:00pm
         /// * 09/01/2020 17:00: below replay -r yy -t "09/03/2020 17:00"
-        #[structopt(short = "r", verbatim_doc_comment)]
+        #[clap(short = 'r', verbatim_doc_comment)]
         yesterdays: Option<String>,
         /// Replay from a snapshot file generated by the snapshot
         /// command instead of from the store directory.
-        #[structopt(long)]
+        #[clap(long)]
         snapshot: Option<String>,
     },
     /// Debugging facilities (for development use)
     Debug {
-        #[structopt(subcommand)]
+        #[clap(subcommand)]
         cmd: DebugCommand,
     },
     /// Dump historical data into parseable text format
     Dump {
         /// Supply hostname to activate remote dumping
-        #[structopt(long)]
+        #[clap(long)]
         host: Option<String>,
         /// Override default port to connect remote dumping to
-        #[structopt(long)]
+        #[clap(long)]
         port: Option<u16>,
-        #[structopt(subcommand)]
+        #[clap(subcommand)]
         cmd: DumpCommand,
     },
     /// Create a historical snapshot file for a given time range
     Snapshot {
         /// Begin time, same format as replay
-        #[structopt(short, long, verbatim_doc_comment)]
+        #[clap(short, long, verbatim_doc_comment)]
         begin: String,
         /// End time, same format as replay
-        #[structopt(short, long, verbatim_doc_comment)]
+        #[clap(short, long, verbatim_doc_comment)]
         end: String,
         /// Supply hostname to take snapshot from remote
-        #[structopt(long)]
+        #[clap(long)]
         host: Option<String>,
-        #[structopt(long)]
+        #[clap(long)]
         /// Override default port to connect to remote
-        #[structopt(long)]
+        #[clap(long)]
         port: Option<u16>,
     },
     /// Generate a shell completions file
-    #[structopt(setting = AppSettings::Hidden)]
+    #[clap(hide = true)]
     GenerateCompletions {
         /// The shell type
-        #[structopt(short, long, default_value = "bash")]
+        #[clap(short, long, default_value = "bash")]
         shell: Shell,
         /// Output file, stdout if not present
-        #[structopt(short, long, parse(from_os_str))]
+        #[clap(short, long, parse(from_os_str))]
         output: Option<PathBuf>,
     },
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 enum DebugCommand {
     DumpStore {
         /// Time string to dump data for (same format as Replay mode)
-        #[structopt(short, long)]
+        #[clap(short, long)]
         time: String,
         /// Pretty print in JSON
-        #[structopt(short, long)]
+        #[clap(short, long)]
         json: bool,
     },
     /// Convert frames from an existing store and write them to a new store.
     /// This can be used to test compression/serialization formats.
     ConvertStore {
-        #[structopt(short, long, verbatim_doc_comment)]
+        #[clap(short, long, verbatim_doc_comment)]
         start_time: String,
-        #[structopt(short, long, verbatim_doc_comment)]
+        #[clap(short, long, verbatim_doc_comment)]
         end_time: String,
-        #[structopt(long)]
+        #[clap(long)]
         from_store_dir: Option<PathBuf>,
-        #[structopt(long)]
+        #[clap(long)]
         to_store_dir: PathBuf,
-        #[structopt(long)]
+        #[clap(long)]
         host: Option<String>,
-        #[structopt(long)]
+        #[clap(long)]
         port: Option<u16>,
         /// Options for compression
-        #[structopt(flatten)]
+        #[clap(flatten)]
         compress_opts: CompressOpts,
     },
 }
@@ -535,7 +532,7 @@ fn main() {
 }
 
 fn real_main(init: init::InitToken) {
-    let opts = Opt::from_args();
+    let opts = Opt::parse();
     let debug = opts.debug;
     config::BELOW_CONFIG
         .set(match BelowConfig::load(&opts.config) {
@@ -1182,7 +1179,9 @@ fn generate_completions(shell: Shell, output: Option<PathBuf>) -> Result<()> {
         Some(path) => Box::new(fs::File::create(path)?),
         None => Box::new(io::stdout()),
     };
-    Opt::clap().gen_completions_to("below", shell, &mut file);
+
+    let mut app = Opt::command();
+    generate(shell, &mut app, "below", &mut file);
     Ok(())
 }
 
