@@ -20,6 +20,8 @@ pub struct Sample {
     pub processes: procfs::PidMap,
     pub system: SystemSample,
     pub netstats: procfs::NetStat,
+    #[cfg(fbcode_build)]
+    pub gpus: Option<gpu_stats::GpuSample>,
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]

@@ -15,6 +15,8 @@
 use std::sync::{Arc, Mutex};
 
 use super::*;
+use crate::collector_plugin;
+use gpu_stats::GpuSample;
 use regex::Regex;
 use slog::{self, error};
 use std::path::{Path, PathBuf};
@@ -25,6 +27,8 @@ pub struct CollectorOptions {
     pub collect_io_stat: bool,
     pub disable_disk_stat: bool,
     pub cgroup_re: Option<Regex>,
+    #[cfg(fbcode_build)]
+    pub gpu_stats_receiver: Option<collector_plugin::Consumer<GpuSample>>,
 }
 
 impl Default for CollectorOptions {
@@ -35,6 +39,8 @@ impl Default for CollectorOptions {
             collect_io_stat: true,
             disable_disk_stat: false,
             cgroup_re: None,
+            #[cfg(fbcode_build)]
+            gpu_stats_receiver: None,
         }
     }
 }
@@ -227,6 +233,26 @@ fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<S
                     }
                 }
             },
+        },
+        #[cfg(fbcode_build)]
+        gpus: {
+            if let Some(gpu_stats_receiver) = &options.gpu_stats_receiver {
+                // It is possible to receive no sample if the
+                // collector has not updated since the previous take
+                // or the collector encountered a recoverable error
+                // (e.g. timeout). The behavior for now is to store an
+                // empty map. Alternatively we could store the latest
+                // sample and read that, but then we have to decide how
+                // stale the data can be.
+                Some(
+                    gpu_stats_receiver
+                        .try_take()
+                        .context("GPU stats collector had an error")?
+                        .unwrap_or_default(),
+                )
+            } else {
+                None
+            }
         },
     })
 }

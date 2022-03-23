@@ -178,6 +178,9 @@ enum Command {
         /// Flag to disable eBPF-based exitstats
         #[clap(long)]
         disable_exitstats: bool,
+        /// Flag to enable GPU stats
+        #[structopt(long)]
+        enable_gpu_stats: bool,
         /// Options for compression
         #[clap(flatten)]
         compress_opts: CompressOpts,
@@ -589,6 +592,7 @@ fn real_main(init: init::InitToken) {
             ref skew_detection_threshold_ms,
             ref disable_disk_stat,
             ref disable_exitstats,
+            ref enable_gpu_stats,
             ref compress_opts,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
@@ -598,8 +602,9 @@ fn real_main(init: init::InitToken) {
                 below_config,
                 Service::On(*port),
                 RedirectLogOnFail::Off,
-                |_, below_config, logger, errs| {
+                |init, below_config, logger, errs| {
                     record(
+                        init,
                         logger,
                         errs,
                         Duration::from_secs(*interval_s as u64),
@@ -611,6 +616,7 @@ fn real_main(init: init::InitToken) {
                         debug,
                         *disable_disk_stat,
                         *disable_exitstats,
+                        *enable_gpu_stats,
                         compress_opts,
                     )
                 },
@@ -825,6 +831,7 @@ fn replay(
 }
 
 fn record(
+    init: init::InitToken,
     logger: slog::Logger,
     errs: Receiver<Error>,
     interval: Duration,
@@ -836,6 +843,7 @@ fn record(
     debug: bool,
     disable_disk_stat: bool,
     disable_exitstats: bool,
+    enable_gpu_stats: bool,
     compress_opts: &CompressOpts,
 ) -> Result<()> {
     debug!(logger, "Starting up!");
@@ -869,6 +877,48 @@ fn record(
         None
     };
 
+    #[cfg(fbcode_build)]
+    let gpu_stats_receiver = if enable_gpu_stats {
+        let thread_interval = interval.clone();
+        let gpu_collector = model::gpu_stats_collector_plugin::GpuStatsCollectorPlugin::new(
+            init.fb,
+            logger.clone(),
+        )
+        .context("Failed to initialize GPU stats collector")?;
+        let (mut collector, receiver) = model::collector_plugin::collector_consumer(gpu_collector);
+        let logger_clone = logger.clone();
+        thread::Builder::new()
+            .name("gpu_collector".to_owned())
+            .spawn(move || {
+                loop {
+                    let collect_instant = Instant::now();
+                    match futures::executor::block_on(collector.collect_and_update()) {
+                        Ok(_) => {}
+                        Err(e) => error!(logger_clone, "{:?}", e),
+                    }
+                    let collect_duration = Instant::now().duration_since(collect_instant);
+
+                    const COLLECT_DURATION_WARN_THRESHOLD: u64 = 2;
+                    if collect_duration > Duration::from_secs(COLLECT_DURATION_WARN_THRESHOLD) {
+                        warn!(
+                            logger_clone,
+                            "GPU collection took {} > {}",
+                            collect_duration.as_secs_f64(),
+                            COLLECT_DURATION_WARN_THRESHOLD
+                        );
+                    }
+                    if thread_interval > collect_duration {
+                        let sleep_duration = thread_interval - collect_duration;
+                        std::thread::sleep(sleep_duration);
+                    }
+                }
+            })
+            .expect("Failed to spawn thread");
+        Some(receiver)
+    } else {
+        None
+    };
+
     let collector = model::Collector::new(
         logger.clone(),
         model::CollectorOptions {
@@ -877,6 +927,8 @@ fn record(
             collect_io_stat,
             disable_disk_stat,
             cgroup_re,
+            #[cfg(fbcode_build)]
+            gpu_stats_receiver,
         },
     );
 
