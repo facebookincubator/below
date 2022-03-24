@@ -16,7 +16,6 @@ use std::sync::{Arc, Mutex};
 
 use super::*;
 use crate::collector_plugin;
-use gpu_stats::GpuSample;
 use regex::Regex;
 use slog::{self, error};
 use std::path::{Path, PathBuf};
@@ -28,7 +27,7 @@ pub struct CollectorOptions {
     pub disable_disk_stat: bool,
     pub cgroup_re: Option<Regex>,
     #[cfg(fbcode_build)]
-    pub gpu_stats_receiver: Option<collector_plugin::Consumer<GpuSample>>,
+    pub gpu_stats_receiver: Option<collector_plugin::Consumer<gpu_stats::GpuSample>>,
 }
 
 impl Default for CollectorOptions {
