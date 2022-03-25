@@ -1378,7 +1378,7 @@ fn snapshot(
     tar.finish()
         .context("Failed to build compressed snapshot file.")?;
 
-    println!("Snapshot has been created at {}.", tarball_name);
+    println!("Snapshot has been created at {}", tarball_name);
     Ok(())
 }
 
