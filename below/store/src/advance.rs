@@ -79,7 +79,7 @@ trait ModelStore: Store {
 
     /// Defines how should we generate a ModelType from a SamplePackage.
     fn to_model(&self, sample_package: &SamplePackage<Self::SampleType>)
-        -> Option<Self::ModelType>;
+    -> Option<Self::ModelType>;
 
     /// Syntactic sugar to extract the value from the store return and log on error
     fn extract_sample_and_log(

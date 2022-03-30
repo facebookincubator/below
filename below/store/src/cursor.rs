@@ -457,8 +457,7 @@ impl StoreCursor {
         let data_slice = data_mmap
             .get(
                 data_offset
-                    ..
-                    (data_offset
+                    ..(data_offset
                         .checked_add(data_len)
                         .ok_or_else(|| anyhow!("overflow"))?),
             )
