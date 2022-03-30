@@ -159,7 +159,6 @@ impl HgTime {
                     duration_str
                 };
 
-
                 if plus || from_now {
                     duration_str
                         .parse::<humantime::Duration>()

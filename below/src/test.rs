@@ -34,7 +34,6 @@ fn record_replay_integration() {
     )
     .expect("Failed to create store");
 
-
     // Collect a sample
     let sample = Collector::new(
         logger.clone(),

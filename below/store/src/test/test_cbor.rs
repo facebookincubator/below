@@ -51,7 +51,6 @@ lazy_static! {
         name: "alice".to_owned(),
         t: 1234,
     };
-
     static ref WITH_PAYLOAD: WithPayload = WithPayload {
         name: "alice".to_owned(),
         t: 1234,
@@ -66,13 +65,11 @@ lazy_static! {
             }
         },
     };
-
     static ref WITH_NO_PAYLOAD: WithOptionalPayload = WithOptionalPayload {
         name: "alice".to_owned(),
         t: 1234,
         payload: None,
     };
-
     static ref WITH_SOME_PAYLOAD: WithOptionalPayload = WithOptionalPayload {
         name: "alice".to_owned(),
         t: 1234,

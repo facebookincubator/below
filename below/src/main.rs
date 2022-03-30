@@ -1107,7 +1107,6 @@ fn live_local(
         })
         .expect("Failed to spawn thread");
 
-
     view.run()
 }
 
@@ -1171,7 +1170,6 @@ fn live_remote(
             }
         })
         .expect("Failed to spawn thread");
-
 
     logutil::set_current_log_target(logutil::TargetLog::File);
     view.run()
