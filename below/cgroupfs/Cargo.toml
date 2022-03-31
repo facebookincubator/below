@@ -14,7 +14,7 @@ license = "Apache-2.0"
 nix = "0.23"
 openat = "0.1.21"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
-thiserror = "1.0.29"
+thiserror = "1.0.30"
 
 [dev-dependencies]
 tempfile = "3.2"
