@@ -19,8 +19,8 @@ hostname = "0.3"
 os_info = "3.0.7"
 procfs = { package = "fb_procfs", version = "0.5.0", path = "../procfs" }
 regex = "1.5.4"
-serde = { version = "1.0.126", features = ["derive", "rc"] }
-serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
+serde = { version = "1.0.136", features = ["derive", "rc"] }
+serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 
 [dev-dependencies]
