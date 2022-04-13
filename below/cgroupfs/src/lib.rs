@@ -49,6 +49,43 @@ pub struct CgroupReader {
     dir: Dir,
 }
 
+macro_rules! impl_read_pressure {
+    ( $fn:ident, $e:expr, $typ:tt, FullPressureSupported ) => {
+        /// Read $typ
+        pub fn $fn(&self) -> Result<$typ> {
+            let (some_pressure, full_pressure_opt, file_name) =
+                impl_read_pressure!(Internal, &self, $e);
+            let full_pressure =
+                full_pressure_opt.ok_or_else(|| self.invalid_file_format(file_name))?;
+            Ok($typ {
+                some: some_pressure,
+                full: full_pressure,
+            })
+        }
+    };
+    ( $fn:ident, $e:expr, $typ:tt, FullPressureMaybeSupported ) => {
+        /// Read $typ
+        pub fn $fn(&self) -> Result<$typ> {
+            let (some_pressure, full_pressure_opt, _) = impl_read_pressure!(Internal, &self, $e);
+            Ok($typ {
+                some: some_pressure,
+                full: full_pressure_opt,
+            })
+        }
+    };
+    ( Internal, $self:expr, $e:expr) => {{
+        let file_name = concat!($e, ".pressure");
+        let mut pressure = PressureMetrics::read($self, file_name)?;
+        (
+            pressure
+                .remove("some")
+                .ok_or_else(|| $self.invalid_file_format(file_name))?,
+            pressure.remove("full"),
+            file_name,
+        )
+    }};
+}
+
 impl CgroupReader {
     pub fn new(root: PathBuf) -> Result<CgroupReader> {
         CgroupReader::new_with_relative_path(root, PathBuf::from(OsStr::new("")))
@@ -168,50 +205,21 @@ impl CgroupReader {
         MemoryEvents::read(&self)
     }
 
-    /// Read cpu.pressure
-    pub fn read_cpu_pressure(&self) -> Result<CpuPressure> {
-        let file_name = "cpu.pressure";
-        let mut pressure = PressureMetrics::read(&self, file_name)?;
-        let some_pressure = pressure
-            .remove("some")
-            .ok_or_else(|| self.invalid_file_format(file_name))?;
+    impl_read_pressure!(
+        read_cpu_pressure,
+        "cpu",
+        CpuPressure,
+        FullPressureMaybeSupported
+    );
 
-        Ok(CpuPressure {
-            some: some_pressure,
-        })
-    }
+    impl_read_pressure!(read_io_pressure, "io", IoPressure, FullPressureSupported);
 
-    /// Read io.pressure
-    pub fn read_io_pressure(&self) -> Result<IoPressure> {
-        let file_name = "io.pressure";
-        let mut pressure = PressureMetrics::read(&self, file_name)?;
-        let some_pressure = pressure
-            .remove("some")
-            .ok_or_else(|| self.invalid_file_format(file_name))?;
-        let full_pressure = pressure
-            .remove("full")
-            .ok_or_else(|| self.invalid_file_format(file_name))?;
-        Ok(IoPressure {
-            some: some_pressure,
-            full: full_pressure,
-        })
-    }
-
-    /// Read memory.pressure
-    pub fn read_memory_pressure(&self) -> Result<MemoryPressure> {
-        let file_name = "memory.pressure";
-        let mut pressure = PressureMetrics::read(&self, file_name)?;
-        let some_pressure = pressure
-            .remove("some")
-            .ok_or_else(|| self.invalid_file_format(file_name))?;
-        let full_pressure = pressure
-            .remove("full")
-            .ok_or_else(|| self.invalid_file_format(file_name))?;
-        Ok(MemoryPressure {
-            some: some_pressure,
-            full: full_pressure,
-        })
-    }
+    impl_read_pressure!(
+        read_memory_pressure,
+        "memory",
+        MemoryPressure,
+        FullPressureSupported
+    );
 
     /// Read all pressure metrics
     pub fn read_pressure(&self) -> Result<Pressure> {

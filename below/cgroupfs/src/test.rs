@@ -340,6 +340,33 @@ fn test_cpu_pressure_success() {
         val.some.total.expect("Failed to populate total field"),
         619176290
     );
+    assert_eq!(val.full, None);
+}
+
+#[test]
+fn test_cpu_pressure_full() {
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content(
+        "cpu.pressure",
+        b"some avg10=0.00 avg60=0.00 avg300=0.00 total=619176290\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=34509874",
+    );
+
+    let cgroup_reader = cgroup.get_reader();
+    let val = cgroup_reader
+        .read_cpu_pressure()
+        .expect("Failed to read cpu.pressure");
+    assert_eq!(
+        val.some.total.expect("Failed to populate total field"),
+        619176290
+    );
+
+    assert_eq!(
+        val.full
+            .expect("Failed to read cpu.pressure full")
+            .total
+            .expect("Failed to populate total field"),
+        34509874
+    );
 }
 
 #[test]

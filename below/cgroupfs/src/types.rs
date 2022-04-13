@@ -80,6 +80,7 @@ pub struct PressureMetrics {
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct CpuPressure {
     pub some: PressureMetrics,
+    pub full: Option<PressureMetrics>,
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]

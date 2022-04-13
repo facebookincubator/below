@@ -310,6 +310,7 @@ fn calculate_pressure() {
     sample.cgroup.pressure = Some(cgroupfs::Pressure {
         cpu: cgroupfs::CpuPressure {
             some: pressure.clone(),
+            full: Some(pressure.clone()),
         },
         io: cgroupfs::IoPressure {
             some: pressure.clone(),
@@ -323,6 +324,7 @@ fn calculate_pressure() {
     last_sample.cgroup.pressure = Some(cgroupfs::Pressure {
         cpu: cgroupfs::CpuPressure {
             some: last_pressure.clone(),
+            full: Some(last_pressure.clone()),
         },
         io: cgroupfs::IoPressure {
             some: last_pressure.clone(),
