@@ -185,6 +185,12 @@ impl CgroupReader {
         self.read_singleline_stat_file("memory.swap.current")
     }
 
+    /// Read memory.zswap.current - returning current cgroup memory
+    /// zswap consumption in bytes
+    pub fn read_memory_zswap_current(&self) -> Result<u64> {
+        self.read_singleline_stat_file("memory.zswap.current")
+    }
+
     /// Read cpu.stat - returning assorted cpu consumption statistics
     pub fn read_cpu_stat(&self) -> Result<CpuStat> {
         CpuStat::read(&self)

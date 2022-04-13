@@ -135,6 +135,18 @@ fn test_memory_swap_current_success() {
 }
 
 #[test]
+fn test_memory_zswap_current_success() {
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content("memory.zswap.current", b"1234\n");
+
+    let cgroup_reader = cgroup.get_reader();
+    let val = cgroup_reader
+        .read_memory_zswap_current()
+        .expect("Failed to read memory.zswap.current");
+    assert_eq!(val, 1234);
+}
+
+#[test]
 fn test_memory_high_success() {
     let cgroup = TestCgroup::new();
     cgroup.create_file_with_content("memory.high", b"1234\n");
