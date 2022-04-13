@@ -28,7 +28,7 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
         use model::CgroupMemoryModelFieldId::{
             Anon, File, Pgactivate, Pgdeactivate, Pgfault, Pglazyfree, Pglazyfreed, Pgmajfault,
             Pgrefill, Pgscan, Pgsteal, Shmem, Slab, Sock, Swap, ThpCollapseAlloc, ThpFaultAlloc,
-            Total, WorkingsetActivate, WorkingsetNodereclaim, WorkingsetRefault,
+            Total, WorkingsetActivate, WorkingsetNodereclaim, WorkingsetRefault, Zswap,
         };
         use model::CgroupPressureModelFieldId::{MemoryFullPct, MemorySomePct};
         use model::SingleCgroupModelFieldId::{Cpu, Io, Mem, Name, Pressure};
@@ -47,6 +47,7 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
             Io(RwbytesPerSec) => rc.title("RW Total"),
             Mem(Total) => rc.title("Mem Total"),
             Mem(Swap) => rc.title("Mem Swap"),
+            Mem(Zswap) => rc.title("Mem Zswap"),
             Mem(Anon) => rc.title("Mem Anon"),
             Mem(File) => rc.title("Mem File"),
             Mem(Slab) => rc.title("Mem Slab"),

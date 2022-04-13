@@ -136,6 +136,7 @@ pub const MODEL_FIELD_IDS: &[&'static str] = &[
     "cgroup.[path:/<cgroup_path>/.]cpu.throttled_pct",
     "cgroup.[path:/<cgroup_path>/.]mem.total",
     "cgroup.[path:/<cgroup_path>/.]mem.swap",
+    "cgroup.[path:/<cgroup_path>/.]mem.zswap",
     "cgroup.[path:/<cgroup_path>/.]mem.anon",
     "cgroup.[path:/<cgroup_path>/.]mem.file",
     "cgroup.[path:/<cgroup_path>/.]mem.kernel_stack",

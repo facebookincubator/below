@@ -75,6 +75,7 @@ impl HasRenderConfig for model::CgroupMemoryModel {
         match field_id {
             Total => rc.title("Memory").format(ReadableSize),
             Swap => rc.title("Memory Swap").format(ReadableSize),
+            Zswap => rc.title("Memory Zswap").format(ReadableSize),
             MemoryHigh => rc.title("Memory High").format(MaxOrReadableSize),
             EventsLow => rc.title("Events Low"),
             EventsHigh => rc.title("Events High"),

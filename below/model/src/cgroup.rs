@@ -391,6 +391,7 @@ impl std::ops::Add<&CgroupIoModel> for CgroupIoModel {
 pub struct CgroupMemoryModel {
     pub total: Option<u64>,
     pub swap: Option<u64>,
+    pub zswap: Option<u64>,
     pub anon: Option<u64>,
     pub file: Option<u64>,
     pub kernel_stack: Option<u64>,
@@ -437,6 +438,7 @@ impl std::ops::Add for CgroupMemoryModel {
         Self {
             total: opt_add(self.total, other.total),
             swap: opt_add(self.swap, other.swap),
+            zswap: opt_add(self.zswap, other.zswap),
             anon: opt_add(self.anon, other.anon),
             file: opt_add(self.file, other.file),
             kernel_stack: opt_add(self.kernel_stack, other.kernel_stack),
@@ -489,6 +491,7 @@ impl CgroupMemoryModel {
         let mut model = CgroupMemoryModel {
             total: sample.memory_current.map(|v| v as u64),
             swap: sample.memory_swap_current.map(|v| v as u64),
+            zswap: sample.memory_zswap_current.map(|v| v as u64),
             memory_high: sample.memory_high,
             ..Default::default()
         };

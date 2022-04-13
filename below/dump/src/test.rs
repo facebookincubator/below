@@ -476,6 +476,7 @@ fn test_dump_cgroup_titles() {
         "Throttled Pct",
         "Mem Total",
         "Mem Swap",
+        "Mem Zswap",
         "Mem Anon",
         "Mem File",
         "Kernel Stack",
