@@ -188,6 +188,7 @@ pub const MODEL_FIELD_IDS: &[&'static str] = &[
     "cgroup.[path:/<cgroup_path>/.]io.dios_per_sec",
     "cgroup.[path:/<cgroup_path>/.]io.rwbytes_per_sec",
     "cgroup.[path:/<cgroup_path>/.]pressure.cpu_some_pct",
+    "cgroup.[path:/<cgroup_path>/.]pressure.cpu_full_pct",
     "cgroup.[path:/<cgroup_path>/.]pressure.io_some_pct",
     "cgroup.[path:/<cgroup_path>/.]pressure.io_full_pct",
     "cgroup.[path:/<cgroup_path>/.]pressure.memory_some_pct",

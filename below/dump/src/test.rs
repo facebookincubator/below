@@ -520,6 +520,7 @@ fn test_dump_cgroup_titles() {
         "DBytes",
         "D I/O",
         "RW Total",
+        "CPU Some Pressure",
         "CPU Pressure",
         "I/O Some Pressure",
         "I/O Pressure",

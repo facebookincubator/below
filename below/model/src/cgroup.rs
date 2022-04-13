@@ -584,6 +584,7 @@ impl CgroupMemoryModel {
 )]
 pub struct CgroupPressureModel {
     pub cpu_some_pct: Option<f64>,
+    pub cpu_full_pct: Option<f64>,
     pub io_some_pct: Option<f64>,
     pub io_full_pct: Option<f64>,
     pub memory_some_pct: Option<f64>,
@@ -597,6 +598,7 @@ impl CgroupPressureModel {
         // long, pressure could exceed 100%.
         CgroupPressureModel {
             cpu_some_pct: pressure.cpu.some.avg10,
+            cpu_full_pct: pressure.cpu.full.as_ref().and_then(|f| f.avg10),
             io_some_pct: pressure.io.some.avg10,
             io_full_pct: pressure.io.full.avg10,
             memory_some_pct: pressure.memory.some.avg10,

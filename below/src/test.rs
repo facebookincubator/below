@@ -346,6 +346,7 @@ fn calculate_pressure() {
         model.cgroup.data.pressure,
         Some(CgroupPressureModel {
             cpu_some_pct: Some(90.0),
+            cpu_full_pct: Some(90.0),
             io_some_pct: Some(90.0),
             io_full_pct: Some(90.0),
             memory_some_pct: Some(90.0),

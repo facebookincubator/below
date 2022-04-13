@@ -121,7 +121,11 @@ impl HasRenderConfig for model::CgroupPressureModel {
         use model::CgroupPressureModelFieldId::*;
         let rc = RenderConfigBuilder::new();
         match field_id {
-            CpuSomePct => rc.title("CPU Pressure").suffix("%").format(Precision(2)),
+            CpuSomePct => rc
+                .title("CPU Some Pressure")
+                .suffix("%")
+                .format(Precision(2)),
+            CpuFullPct => rc.title("CPU Pressure").suffix("%").format(Precision(2)),
             IoSomePct => rc
                 .title("I/O Some Pressure")
                 .suffix("%")
