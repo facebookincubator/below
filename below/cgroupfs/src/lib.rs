@@ -40,6 +40,8 @@ pub enum Error {
     UnexpectedLine(PathBuf, String),
     #[error("Not cgroup2 filesystem: {0:?}")]
     NotCgroup2(PathBuf),
+    #[error("Pressure metrics not supported: {0:?}")]
+    PressureNotSupported(PathBuf),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -273,6 +275,12 @@ impl CgroupReader {
         p.push(file_name);
         Error::UnexpectedLine(p, line)
     }
+
+    fn pressure_not_supported<P: AsRef<Path>>(&self, file_name: P) -> Error {
+        let mut p = self.relative_path.clone();
+        p.push(file_name);
+        Error::PressureNotSupported(p)
+    }
 }
 
 // Trait to add a read() method for `key value` formatted files
@@ -374,15 +382,29 @@ trait NameKVRead: Sized {
     ) -> Result<BTreeMap<String, Self>>;
 }
 
+struct AllowsEmpty(bool);
+struct AllowsPressureEOpNotSupp(bool);
+
 macro_rules! name_key_equal_value_format {
-    ($struct:ident; $allows_empty:expr; [ $($field:ident,)+ ]) => (
+    ($struct:ident; $allows_empty:expr; $allows_pressure_eopnotsupp:expr; [ $($field:ident,)+ ]) => (
         impl NameKVRead for $struct {
             fn read<P: AsRef<Path> + AsPath + Clone>(r: &CgroupReader, file_name: P) -> Result<BTreeMap<String, $struct>> {
                 let mut map = BTreeMap::new();
                 let file = r.dir.open_file(file_name.clone()).map_err(|e| r.io_error(file_name.clone(), e))?;
                 let buf_reader = BufReader::new(file);
                 for line in buf_reader.lines() {
-                    let line = line.map_err(|e| r.io_error(file_name.clone(), e))?;
+                    let line = line.map_err(|e| {
+                        // Capture a different error if pressure
+                        // metrics aren't supported
+                        if $allows_pressure_eopnotsupp.0 {
+                            if let Some(errno) = e.raw_os_error() {
+                                if errno == /* EOPNOTSUPP */ 95 {
+                                    return r.pressure_not_supported(file_name.clone());
+                                }
+                            }
+                        }
+                        r.io_error(file_name.clone(), e)
+                    })?;
                     let items = line.split_whitespace().collect::<Vec<_>>();
                     // as an example, io.stat looks like:
                     // 253:0 rbytes=531745786880 wbytes=1623798909952 ...
@@ -405,7 +427,7 @@ macro_rules! name_key_equal_value_format {
                     }
                     map.insert(items[0].to_string(), s);
                 }
-                if !$allows_empty && map.is_empty() {
+                if !$allows_empty.0 && map.is_empty() {
                      Err(r.invalid_file_format(file_name))
                 } else {
                     Ok(map)
@@ -415,7 +437,7 @@ macro_rules! name_key_equal_value_format {
     );
 }
 
-name_key_equal_value_format!(IoStat; true; [
+name_key_equal_value_format!(IoStat; AllowsEmpty(true); AllowsPressureEOpNotSupp(false); [
     rbytes,
     wbytes,
     rios,
@@ -424,7 +446,7 @@ name_key_equal_value_format!(IoStat; true; [
     dios,
 ]);
 
-name_key_equal_value_format!(PressureMetrics; false; [
+name_key_equal_value_format!(PressureMetrics; AllowsEmpty(false); AllowsPressureEOpNotSupp(true); [
     avg10,
     avg60,
     avg300,

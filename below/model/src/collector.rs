@@ -296,6 +296,18 @@ fn io_stat_wrap<S: Sized>(
     }
 }
 
+/// Pressure metrics may not be supported, in which case cgroupfs will
+/// return a specific error. We don't fail all data collection, just
+/// omit pressure metrics.
+fn pressure_wrap<S: Sized>(
+    v: std::result::Result<S, cgroupfs::Error>,
+) -> std::result::Result<Option<S>, cgroupfs::Error> {
+    match wrap(v) {
+        Err(cgroupfs::Error::PressureNotSupported(_)) => Ok(None),
+        wrapped => wrapped,
+    }
+}
+
 fn collect_cgroup_sample(
     reader: &cgroupfs::CgroupReader,
     collect_io_stat: bool,
@@ -312,7 +324,7 @@ fn collect_cgroup_sample(
         io_stat: io_stat.map(|m| m.into_iter().map(|(k, v)| (k, v.into())).collect()),
         memory_current: wrap(reader.read_memory_current().map(|v| v as i64))?,
         memory_stat: wrap(reader.read_memory_stat())?.map(Into::into),
-        pressure: wrap(reader.read_pressure())?.map(Into::into),
+        pressure: pressure_wrap(reader.read_pressure())?.map(Into::into),
         // We transpose at the end here to convert the
         // Option<Result<BTreeMap... into Result<Option<BTreeMap and
         // then bail any errors with `?` - leaving us with the
