@@ -157,6 +157,7 @@ impl std::ops::Add for Field {
 
     fn add(self, other: Self) -> Self {
         match (self, other) {
+            (Field::U32(s), Field::U32(o)) => (s + o).into(),
             (Field::U64(s), Field::U64(o)) => (s + o).into(),
             (Field::I32(s), Field::I32(o)) => (s + o).into(),
             (Field::I64(s), Field::I64(o)) => (s + o).into(),
@@ -171,6 +172,7 @@ impl std::ops::Add for Field {
 impl PartialEq for Field {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
+            (Field::U32(s), Field::U32(o)) => s == o,
             (Field::U64(s), Field::U64(o)) => s == o,
             (Field::I32(s), Field::I32(o)) => s == o,
             (Field::I64(s), Field::I64(o)) => s == o,
@@ -186,6 +188,7 @@ impl PartialEq for Field {
 impl PartialOrd for Field {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         match (self, other) {
+            (Field::U32(s), Field::U32(o)) => s.partial_cmp(o),
             (Field::U64(s), Field::U64(o)) => s.partial_cmp(o),
             (Field::I32(s), Field::I32(o)) => s.partial_cmp(o),
             (Field::I64(s), Field::I64(o)) => s.partial_cmp(o),
