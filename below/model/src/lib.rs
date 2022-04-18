@@ -25,7 +25,7 @@ pub mod collector;
 pub mod cgroup;
 pub mod collector_plugin;
 #[cfg(test)]
-mod field_ids;
+mod common_field_ids;
 pub mod network;
 pub mod process;
 pub mod sample;
@@ -36,6 +36,10 @@ pub mod system;
 pub mod facebook;
 #[cfg(fbcode_build)]
 pub use facebook::*;
+#[cfg(not(fbcode_build))]
+pub mod open_source;
+#[cfg(not(fbcode_build))]
+pub use open_source::*;
 
 pub use cgroup::*;
 pub use collector::*;
@@ -440,11 +444,14 @@ mod tests {
 
     #[test]
     fn test_model_field_ids() {
-        // Ensure MODEL_FIELD_IDS is update to date.
-        let all_variants = ModelFieldId::all_variant_iter()
+        // Ensure COMMON_MODEL_FIELD_IDS is update to date.
+        let mut all_variants = ModelFieldId::all_variant_iter()
             .map(|v| v.to_string())
             .collect::<Vec<_>>();
-        assert_eq!(all_variants, field_ids::MODEL_FIELD_IDS);
+        all_variants.sort_unstable();
+        let mut expected_field_ids = field_ids::MODEL_FIELD_IDS.to_vec();
+        expected_field_ids.sort_unstable();
+        assert_eq!(all_variants, expected_field_ids);
     }
 
     #[test]

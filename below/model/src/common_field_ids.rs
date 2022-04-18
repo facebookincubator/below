@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// All available field id representations of the base `Model` struct.
+/// Common available field id representations of the base `Model` struct.
 ///
 /// Most can be parsed as `ModelFieldId` and used to query a Model. Some are
 /// parameterized field ids (with angle bracketed variable like <idx>) that must
@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const MODEL_FIELD_IDS: &[&'static str] = &[
+pub const COMMON_MODEL_FIELD_IDS: &[&str] = &[
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
