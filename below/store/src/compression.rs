@@ -231,7 +231,7 @@ mod test {
         }
         // zstd compress => Decompressor
         {
-            let comp = zstd::block::compress(&data, 0).expect("Failed to compress");
+            let comp = zstd::bulk::compress(&data, 0).expect("Failed to compress");
             let decomp = Decompressor::<()>::new()
                 .decompress_with_dict_reset(&comp)
                 .expect("Failed to decompress");
