@@ -1,4 +1,6 @@
-![below](https://github.com/facebookincubator/below/blob/main/img/below_logo_horizontal.png)
+<h1 align="center">
+  <img width="300" src="https://github.com/facebookincubator/below/blob/main/img/below_logo_horizontal.png" alt="Neovim">
+</h1>
 
 [![CI](https://github.com/facebookincubator/below/workflows/CI/badge.svg)](https://github.com/facebookincubator/below/actions?query=workflow%3ACI+branch%3Amain+)
 [![Matrix chat](https://img.shields.io/matrix/below:matrix.org)](https://matrix.to/#/#below:matrix.org)
