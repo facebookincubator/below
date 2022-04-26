@@ -1,7 +1,19 @@
-![below](https://github.com/facebookincubator/below/blob/main/img/below_logo_horizontal.png)
+<div align="center">
+  <p>
+    <img width=300 src="https://github.com/facebookincubator/below/blob/main/img/below_logo_horizontal.png" align="center" alt="Below" />
+  </p>
+</div>
 
-[![CI](https://github.com/facebookincubator/below/workflows/CI/badge.svg)](https://github.com/facebookincubator/below/actions?query=workflow%3ACI+branch%3Amain+)
-[![Matrix chat](https://img.shields.io/matrix/below:matrix.org)](https://matrix.to/#/#below:matrix.org)
+<div align="center">
+  <p>
+    <a href="https://matrix.to/#/#below:matrix.org">
+      <img alt="Matrix chat" src="https://img.shields.io/matrix/below:matrix.org" />
+    </a>
+    <a href="https://github.com/facebookincubator/below/actions?query=workflow%3ACI+branch%3Amain+">
+      <img alt="CI" src="https://github.com/facebookincubator/below/workflows/CI/badge.svg" />
+    </a>
+  </p>
+</div>
 
 `below` is an interactive tool to view and record historical system data. It
 has support for:
