@@ -46,23 +46,33 @@ pub fn get_system_time(timestamp: u64) -> SystemTime {
     UNIX_EPOCH + Duration::from_secs(timestamp)
 }
 
-/// Convert `val` bytes into a human friendly string
-pub fn convert_bytes(val: f64) -> String {
-    let units = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+fn convert(val: f64, base: f64, units: &[&'static str]) -> String {
     if val < 1_f64 {
-        return format!("{:.1} B", val);
+        return format!("{:.1} {}", val, units[0]);
     }
-    let delimiter = 1024_f64;
     let exponent = std::cmp::min(
-        (val.ln() / delimiter.ln()).floor() as i32,
+        (val.ln() / base.ln()).floor() as i32,
         (units.len() - 1) as i32,
     );
-    let pretty_bytes = format!("{:.1}", val / delimiter.powi(exponent))
+    let pretty_val = format!("{:.1}", val / base.powi(exponent))
         .parse::<f64>()
         .unwrap()
         * 1_f64;
     let unit = units[exponent as usize];
-    format!("{} {}", pretty_bytes, unit)
+    format!("{} {}", pretty_val, unit)
+}
+
+/// Convert `val` bytes into a human friendly string
+pub fn convert_bytes(val: f64) -> String {
+    const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+    convert(val, 1024_f64, UNITS)
+}
+
+/// Convert `val` Hz into a human friendly string
+pub fn convert_freq(val: u64) -> String {
+    const UNITS: &[&str] = &["Hz", "kHz", "MHz", "GHz", "THz", "PHz", "EHz", "ZHz", "YHz"];
+    let val_f64 = val as f64;
+    convert(val_f64, 1000_f64, UNITS)
 }
 
 pub fn get_prefix(collapsed: bool) -> &'static str {
@@ -163,5 +173,37 @@ mod test {
         }
         assert_eq!(v1, vec![0, 2, 4, 6, 8]);
         assert_eq!(v2, vec![0, 3, 6, 9]);
+    }
+
+    #[test]
+    fn test_convert_bytes() {
+        // TODO(T118356932): This should really be 0 B
+        assert_eq!(convert_bytes(0.0), "0.0 B".to_owned());
+        assert_eq!(convert_bytes(1_024.0), "1 KB".to_owned());
+        assert_eq!(convert_bytes(1_023.0), "1023 B".to_owned());
+        assert_eq!(convert_bytes(1_076.0), "1.1 KB".to_owned());
+        assert_eq!(convert_bytes(10_239.0), "10 KB".to_owned());
+        assert_eq!(convert_bytes(1024_f64.powi(2)), "1 MB".to_owned());
+        // TODO(T118356932): This should really be 1 MB
+        assert_eq!(convert_bytes(1024_f64.powi(2) - 1.0), "1024 KB".to_owned());
+        // TODO(T118356932): This should really be 1 GB
+        assert_eq!(convert_bytes(1024_f64.powi(3) - 1.0), "1024 MB".to_owned());
+        assert_eq!(convert_bytes(1024_f64.powi(3)), "1 GB".to_owned());
+        assert_eq!(convert_bytes(1024_f64.powi(4)), "1 TB".to_owned());
+    }
+
+    #[test]
+    fn test_convert_freq() {
+        // TODO(T118356932): This should really be 0 Hz
+        assert_eq!(convert_freq(0), "0.0 Hz".to_owned());
+        assert_eq!(convert_freq(1_000), "1 kHz".to_owned());
+        assert_eq!(convert_freq(999), "999 Hz".to_owned());
+        assert_eq!(convert_freq(1_050), "1.1 kHz".to_owned());
+        assert_eq!(convert_freq(9_999), "10 kHz".to_owned());
+        assert_eq!(convert_freq(1_000_000), "1 MHz".to_owned());
+        // TODO(T118356932): This should really be 1 GHz
+        assert_eq!(convert_freq(999_950_000), "1000 MHz".to_owned());
+        assert_eq!(convert_freq(1_000_000_000), "1 GHz".to_owned());
+        assert_eq!(convert_freq(1_000_000_000_000), "1 THz".to_owned());
     }
 }
