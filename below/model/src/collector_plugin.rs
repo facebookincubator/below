@@ -71,7 +71,7 @@ impl<T, Plugin: AsyncCollectorPlugin<T = T>> AsyncCollector<T, Plugin> {
             }
             Ok(None) => Ok(false),
             Err(e) => {
-                let error_msg = e.to_string();
+                let error_msg = format!("{:#}", e);
                 self.update(Err(e));
                 Err(anyhow!(error_msg))
             }

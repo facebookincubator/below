@@ -879,7 +879,7 @@ fn record(
 
     #[cfg(fbcode_build)]
     let gpu_stats_receiver = if enable_gpu_stats {
-        let thread_interval = interval.clone();
+        let target_interval = interval.clone();
         let gpu_collector = model::gpu_stats_collector_plugin::GpuStatsCollectorPlugin::new(
             init.fb,
             logger.clone(),
@@ -890,11 +890,30 @@ fn record(
         thread::Builder::new()
             .name("gpu_collector".to_owned())
             .spawn(move || {
+                // Exponential backoff on unrecoverable errors
+                const EXP_BACKOFF_FACTOR: u32 = 2;
+                const MAX_BACKOFF_SECS: u64 = 900;
+                let max_backoff = Duration::from_secs(MAX_BACKOFF_SECS);
+                let mut interval = target_interval;
                 loop {
                     let collect_instant = Instant::now();
                     match futures::executor::block_on(collector.collect_and_update()) {
-                        Ok(_) => {}
-                        Err(e) => error!(logger_clone, "{:?}", e),
+                        Ok(_) => {
+                            interval = target_interval;
+                        }
+                        Err(e) => {
+                            interval = std::cmp::min(
+                                interval
+                                    .saturating_mul(EXP_BACKOFF_FACTOR),
+                                max_backoff,
+                            );
+                            error!(
+                                logger_clone,
+                                "GPU stats collection backing off {:?} because of unrecoverable error: {:?}",
+                                interval,
+                                e
+                            );
+                        }
                     }
                     let collect_duration = Instant::now().duration_since(collect_instant);
 
@@ -907,8 +926,8 @@ fn record(
                             COLLECT_DURATION_WARN_THRESHOLD
                         );
                     }
-                    if thread_interval > collect_duration {
-                        let sleep_duration = thread_interval - collect_duration;
+                    if interval > collect_duration {
+                        let sleep_duration = interval - collect_duration;
                         std::thread::sleep(sleep_duration);
                     }
                 }
