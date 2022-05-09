@@ -2,6 +2,7 @@
 members = [
   "below/",
   "below/below_derive",
+  "below/btrfs",
   "below/cgroupfs",
   "below/common",
   "below/config",
