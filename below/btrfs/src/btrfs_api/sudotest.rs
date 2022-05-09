@@ -83,3 +83,16 @@ fn tree_search_cb_test() {
         println!("Not on Btrfs");
     }
 }
+
+#[test]
+fn find_root_backref_test() {
+    let base_path = Path::new(&"/");
+    if is_btrfs(base_path) {
+        let f = File::open(base_path).expect("File did not open");
+        let fd = f.as_raw_fd();
+
+        find_root_backref(fd, BTRFS_FS_TREE_OBJECTID.into()).expect("Unexpected error");
+    } else {
+        println!("Not on Btrfs");
+    }
+}

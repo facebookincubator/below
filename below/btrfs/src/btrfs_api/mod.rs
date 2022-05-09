@@ -231,3 +231,31 @@ pub fn tree_search_cb(
 
     Ok(())
 }
+
+pub fn find_root_backref(fd: i32, root_id: u64) -> Result<Option<(String, u64)>> {
+    // This is parent name and parent subvolume id.
+    let mut res: Option<(String, u64)> = None;
+    tree_search_cb(
+        fd,
+        BTRFS_ROOT_TREE_OBJECTID as u64,
+        SearchKey::range_fixed_id_type(root_id, BTRFS_ROOT_BACKREF_KEY as u8),
+        |sh, data| {
+            match sh.type_ {
+                BTRFS_ROOT_BACKREF_KEY => {
+                    let root_ref =
+                        unsafe { get_and_move_typed::<btrfs_root_ref>(&mut data.as_ptr()) };
+
+                    let name = unsafe {
+                        std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                            data.as_ptr(),
+                            (*root_ref).name_len as usize,
+                        ))
+                    };
+                    res = Some((name.to_owned(), sh.offset));
+                }
+                _ => {}
+            };
+        },
+    )?;
+    Ok(res)
+}
