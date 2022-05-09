@@ -60,3 +60,13 @@ impl<T: Sized, const N: usize> DerefMut for WithMemAfter<T, N> {
         &mut self.value
     }
 }
+
+pub unsafe fn get_and_move(ptr: &mut *const u8, n: usize) -> *const u8 {
+    let res = *ptr;
+    *ptr = (*ptr).add(n);
+    res
+}
+
+pub unsafe fn get_and_move_typed<T: Sized>(ptr: &mut *const u8) -> *const T {
+    get_and_move(ptr, std::mem::size_of::<T>()) as *const T
+}
