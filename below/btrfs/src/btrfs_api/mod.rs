@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ffi::CStr;
+use std::{ffi::CStr, ops::RangeInclusive};
 
 pub use btrfs_sys::*;
+
+#[cfg(test)]
+mod test;
 
 mod utils;
 pub use crate::btrfs_api::utils::*;
@@ -116,6 +119,50 @@ pub fn ino_lookup(fd: i32, root: u64, inum: u64, mut cb: impl FnMut(Result<&CStr
             Err(err) => {
                 cb(Err(Error::SysError(err)));
             }
+        }
+    }
+}
+
+pub struct SearchKey {
+    pub objectid: u64,
+    pub typ: u8,
+    pub offset: u64,
+}
+
+impl SearchKey {
+    pub const MIN: Self = SearchKey::new(u64::MIN, u8::MIN, u64::MIN);
+    pub const MAX: Self = SearchKey::new(u64::MAX, u8::MAX, u64::MAX);
+
+    pub const ALL: RangeInclusive<Self> = Self::MIN..=Self::MAX;
+
+    pub const fn range_fixed_id_type(objectid: u64, typ: u8) -> RangeInclusive<Self> {
+        Self::new(objectid, typ, u64::MIN)..=Self::new(objectid, typ, u64::MAX)
+    }
+
+    pub const fn new(objectid: u64, typ: u8, offset: u64) -> Self {
+        Self {
+            objectid,
+            typ,
+            offset,
+        }
+    }
+
+    pub fn next(&self) -> Self {
+        let (offset, carry1) = self.offset.overflowing_add(1);
+        let (typ, carry2) = self.typ.overflowing_add(carry1 as u8);
+        let (objectid, _) = self.objectid.overflowing_add(carry2 as u64);
+        SearchKey {
+            objectid,
+            typ,
+            offset,
+        }
+    }
+
+    fn from(h: &btrfs_ioctl_search_header) -> Self {
+        SearchKey {
+            objectid: h.objectid,
+            typ: h.type_ as u8,
+            offset: h.offset,
         }
     }
 }
