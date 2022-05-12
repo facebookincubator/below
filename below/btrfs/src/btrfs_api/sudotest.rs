@@ -58,3 +58,28 @@ fn ino_lookup_test() {
         println!("Not on Btrfs");
     }
 }
+
+#[test]
+fn tree_search_cb_test() {
+    let base_path = Path::new(&"/");
+    if is_btrfs(base_path) {
+        let f = File::open(base_path).expect("File did not open");
+        let fd = f.as_raw_fd();
+        let mut chunk_length = 0;
+        let _ = tree_search_cb(
+            fd,
+            BTRFS_CHUNK_TREE_OBJECTID as u64,
+            SearchKey::ALL,
+            |sh, data| match sh.type_ {
+                BTRFS_CHUNK_ITEM_KEY => {
+                    let chunk = unsafe { &*(data.as_ptr() as *const btrfs_chunk) };
+                    chunk_length += chunk.length;
+                }
+                _ => {}
+            },
+        );
+        assert!(chunk_length > 0);
+    } else {
+        println!("Not on Btrfs");
+    }
+}

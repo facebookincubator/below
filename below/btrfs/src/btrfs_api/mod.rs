@@ -166,3 +166,68 @@ impl SearchKey {
         }
     }
 }
+
+pub fn tree_search_cb(
+    fd: i32,
+    tree_id: u64,
+    range: RangeInclusive<SearchKey>,
+    mut cb: impl FnMut(&btrfs_ioctl_search_header, &[u8]),
+) -> Result<()> {
+    const BUF_SIZE: usize = 16 * 1024;
+    let mut args = WithMemAfter::<btrfs_ioctl_search_args_v2, BUF_SIZE>::new();
+    args.key = btrfs_ioctl_search_key {
+        tree_id,
+        min_objectid: range.start().objectid,
+        max_objectid: range.end().objectid,
+        min_offset: range.start().offset,
+        max_offset: range.end().offset,
+        min_transid: u64::MIN,
+        max_transid: u64::MAX,
+        min_type: range.start().typ as u32,
+        max_type: range.end().typ as u32,
+        nr_items: u32::MAX,
+
+        unused: 0,
+        unused1: 0,
+        unused2: 0,
+        unused3: 0,
+        unused4: 0,
+    };
+    args.buf_size = args.extra_size() as u64;
+
+    loop {
+        args.key.nr_items = u32::MAX;
+        unsafe {
+            ioctl::search_v2(fd, args.as_mut_ptr()).map_err(Error::SysError)?;
+        }
+        if args.key.nr_items == 0 {
+            break;
+        }
+
+        let mut ptr = args.buf.as_ptr() as *const u8;
+        let mut last_search_header: *const btrfs_ioctl_search_header = std::ptr::null();
+        for _ in 0..args.key.nr_items {
+            let search_header =
+                unsafe { get_and_move_typed::<btrfs_ioctl_search_header>(&mut ptr) };
+
+            let data = unsafe {
+                std::slice::from_raw_parts(
+                    get_and_move(&mut ptr, (*search_header).len as usize),
+                    (*search_header).len as usize,
+                )
+            };
+            last_search_header = search_header;
+            unsafe {
+                cb(&*search_header, data);
+            }
+        }
+
+        let min_key = unsafe { SearchKey::from(&*last_search_header).next() };
+
+        args.key.min_objectid = min_key.objectid;
+        args.key.min_type = min_key.typ as u32;
+        args.key.min_offset = min_key.offset;
+    }
+
+    Ok(())
+}
