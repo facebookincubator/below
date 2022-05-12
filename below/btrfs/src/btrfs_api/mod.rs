@@ -14,10 +14,19 @@
 
 use std::{ffi::CStr, ops::RangeInclusive};
 
+#[cfg(fbcode_build)]
 pub use btrfs_sys::*;
+#[cfg(not(fbcode_build))]
+mod open_source;
+#[cfg(not(fbcode_build))]
+pub use open_source::btrfs_sys::*;
 
 #[cfg(test)]
 mod test;
+
+#[cfg(not(fbcode_build))]
+#[cfg(test)]
+mod sudotest;
 
 mod utils;
 pub use crate::btrfs_api::utils::*;

@@ -1,0 +1,4 @@
+`btrfs` is a rust library that interacts with
+[btrfs](https://btrfs.readthedocs.io/en/latest/btrfs.html)
+and enables tracking large file sizes on btrfs and thus,
+ understanding the storage composition of a host.

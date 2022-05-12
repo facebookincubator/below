@@ -1,4 +1,22 @@
+// Copyright (c) Facebook, Inc. and its affiliates.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#[cfg(fbcode_build)]
 pub use btrfs::btrfs_api::*;
+
+#[cfg(not(fbcode_build))]
+pub use crate::btrfs_api::*;
 
 use openat::Dir;
 use std::fs;
@@ -8,6 +26,8 @@ use std::os::unix::io::AsRawFd;
 use std::path::Path;
 
 use nix::sys::statfs::{fstatfs, FsType};
+
+// Currently, sudotests test basic functionality. Will testing infrastructure in later commits
 
 fn is_btrfs(base_path: &Path) -> bool {
     let dir = Dir::open(base_path)
