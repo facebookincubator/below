@@ -211,7 +211,7 @@ pub mod default_tabs {
         WorkingsetNodereclaim, WorkingsetRefault,
     };
     use model::CgroupPressureModelFieldId::{
-        CpuSomePct, IoFullPct, IoSomePct, MemoryFullPct, MemorySomePct,
+        CpuFullPct, CpuSomePct, IoFullPct, IoSomePct, MemoryFullPct, MemorySomePct,
     };
     use model::SingleCgroupModelFieldId::{Cpu, Io, Mem, Name, Pressure};
 
@@ -228,7 +228,7 @@ pub mod default_tabs {
         CgroupTab::new(vec![
             ViewItem::from_default(Cpu(UsagePct)).update(Rc::new().title("CPU")),
             ViewItem::from_default(Mem(Total)),
-            ViewItem::from_default(Pressure(CpuSomePct)),
+            ViewItem::from_default(Pressure(CpuFullPct)),
             ViewItem::from_default(Pressure(MemoryFullPct)),
             ViewItem::from_default(Pressure(IoFullPct)),
             ViewItem::from_default(Io(RbytesPerSec)),
@@ -306,6 +306,7 @@ pub mod default_tabs {
     pub static CGROUP_PRESSURE_TAB: Lazy<CgroupTab> = Lazy::new(|| {
         CgroupTab::new(vec![
             ViewItem::from_default(Pressure(CpuSomePct)),
+            ViewItem::from_default(Pressure(CpuFullPct)),
             ViewItem::from_default(Pressure(MemorySomePct)),
             ViewItem::from_default(Pressure(MemoryFullPct)),
             ViewItem::from_default(Pressure(IoSomePct)),
