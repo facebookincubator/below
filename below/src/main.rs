@@ -1280,15 +1280,15 @@ fn convert_store(
             bail!("Only one of --from-store-dir and --host should be specified");
         }
         (Some(from_store_dir), None) => {
-            pb.set_message(&format!("Using local store at {:?}", from_store_dir));
+            pb.set_message(format!("Using local store at {:?}", from_store_dir));
             Box::new(store::LocalStore::new(logger.clone(), from_store_dir))
         }
         (None, Some(host)) => {
-            pb.set_message(&format!("Using remote store for {}", host));
+            pb.set_message(format!("Using remote store for {}", host));
             Box::new(store::RemoteStore::new(host, port)?)
         }
         (None, None) => {
-            pb.set_message(&format!(
+            pb.set_message(format!(
                 "Using local store at {:?}",
                 &below_config.store_dir
             ));
@@ -1306,7 +1306,7 @@ fn convert_store(
         store::Format::Cbor,
     )?;
 
-    pb.set_message(&format!("Writing to local store at {:?}", to_store_dir));
+    pb.set_message(format!("Writing to local store at {:?}", to_store_dir));
 
     let mut nr_samples = 0;
     let mut cur_time = time_begin;
@@ -1314,12 +1314,12 @@ fn convert_store(
         match store.get_sample_at_timestamp(cur_time, store::Direction::Forward)? {
             Some((frame_time, frame)) => {
                 cur_time = frame_time;
-                pb.set_message(&format!("Storing frame at t = {:?}", frame_time));
+                pb.set_message(format!("Storing frame at t = {:?}", frame_time));
                 dest_store.put(frame_time, &frame)?;
                 nr_samples += 1;
             }
             None => {
-                pb.set_message(&format!(
+                pb.set_message(format!(
                     "Error: Breaking early. Couldn't find any frames after t = {:?}",
                     cur_time
                 ));
@@ -1329,7 +1329,7 @@ fn convert_store(
         pb.set_position(common::util::get_unix_timestamp(cur_time) - timestamp_begin);
         cur_time += Duration::from_secs(1); // To actually move forward
     }
-    pb.set_message(&format!("Done. Logged {} samples.", nr_samples));
+    pb.set_message(format!("Done. Logged {} samples.", nr_samples));
     Ok(())
 }
 
