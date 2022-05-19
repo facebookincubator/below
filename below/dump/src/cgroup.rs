@@ -151,6 +151,18 @@ impl Dumper for Cgroup {
                             handle.opts.raw,
                         )
                     )?,
+                    Some(OutputFormat::Tsv) => write!(
+                        output,
+                        "{}",
+                        print::dump_tsv(
+                            &handle.fields,
+                            ctx,
+                            cgroup,
+                            *round,
+                            handle.opts.disable_title,
+                            handle.opts.raw,
+                        )
+                    )?,
                     Some(OutputFormat::KeyVal) => write!(
                         output,
                         "{}",

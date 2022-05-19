@@ -95,6 +95,18 @@ impl Dumper for Iface {
                             self.opts.raw
                         )
                     )?,
+                    Some(OutputFormat::Tsv) => write!(
+                        output,
+                        "{}",
+                        print::dump_tsv(
+                            &self.fields,
+                            ctx,
+                            model,
+                            *round,
+                            self.opts.disable_title,
+                            self.opts.raw
+                        )
+                    )?,
                     Some(OutputFormat::KeyVal) => write!(
                         output,
                         "{}",

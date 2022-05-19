@@ -65,6 +65,18 @@ impl Dumper for Network {
                     self.opts.raw
                 )
             )?,
+            Some(OutputFormat::Tsv) => write!(
+                output,
+                "{}",
+                print::dump_tsv(
+                    &self.fields,
+                    ctx,
+                    &model.network,
+                    *round,
+                    self.opts.disable_title,
+                    self.opts.raw
+                )
+            )?,
             Some(OutputFormat::KeyVal) => write!(
                 output,
                 "{}",

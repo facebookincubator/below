@@ -900,6 +900,7 @@ $ below dump transport -b "08:30:00" -e "08:30:30" -f tcp udp -O json
 make_option! (OutputFormat {
     "raw": Raw,
     "csv": Csv,
+    "tsv": Tsv,
     "json": Json,
     "kv": KeyVal,
 });
@@ -936,13 +937,13 @@ pub struct GeneralOpt {
     /// Repeat title, for each N line, it will render a line of title. Only for raw output format.
     #[clap(long = "repeat-title")]
     pub repeat_title: Option<usize>,
-    /// Output format. Choose from raw, csv, kv, json. Default to raw
+    /// Output format. Choose from raw, csv, tsv, kv, json. Default to raw
     #[clap(long, short = 'O')]
     pub output_format: Option<OutputFormat>,
     /// Output destination, default to stdout.
     #[clap(long, short)]
     pub output: Option<String>,
-    /// Disable title in raw or csv format output
+    /// Disable title in raw, csv or tsv format output
     #[clap(long)]
     pub disable_title: bool,
     /// Days adjuster, same as -r option in replay.

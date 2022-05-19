@@ -201,3 +201,23 @@ pub fn dump_csv<T: HasRenderConfigForDump>(
     res.push('\n');
     res
 }
+
+pub fn dump_tsv<T: HasRenderConfigForDump>(
+    fields: &[DumpField<T::FieldId>],
+    ctx: &CommonFieldContext,
+    model: &T,
+    round: usize,
+    disable_title: bool,
+    raw: bool,
+) -> String {
+    let mut res = String::new();
+    if !disable_title && round == 0 {
+        res.push_str(&dump_title_line(fields, "\t", false));
+    }
+    for field in fields {
+        res.push_str(&field.dump_field(ctx, model, raw, false));
+        res.push('\t');
+    }
+    res.push('\n');
+    res
+}
