@@ -455,13 +455,25 @@ mod tests {
     #[test]
     fn test_model_field_ids() {
         // Ensure COMMON_MODEL_FIELD_IDS is update to date.
-        let mut all_variants = ModelFieldId::all_variant_iter()
+        let all_variants: BTreeSet<String> = ModelFieldId::all_variant_iter()
             .map(|v| v.to_string())
-            .collect::<Vec<_>>();
-        all_variants.sort_unstable();
-        let mut expected_field_ids = field_ids::MODEL_FIELD_IDS.to_vec();
-        expected_field_ids.sort_unstable();
-        assert_eq!(all_variants, expected_field_ids);
+            .collect();
+        let expected_field_ids: BTreeSet<String> = field_ids::MODEL_FIELD_IDS
+            .iter()
+            .map(|v| v.to_string())
+            .collect();
+
+        assert_eq!(
+            all_variants,
+            expected_field_ids,
+            "new fields: {:?}. missing fields: {:?}",
+            expected_field_ids
+                .difference(&all_variants)
+                .collect::<Vec<_>>(),
+            all_variants
+                .difference(&expected_field_ids)
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]
