@@ -125,11 +125,9 @@ fn get_queriable_struct_props(ast: &DeriveInput) -> syn::Result<QueriableStructP
     })
 }
 
-#[derive(Clone, Debug)]
 struct QueriableFieldProps {
     pub ignore: bool,
     pub subquery: Option<syn::Type>,
-    pub preferred_name: Ident,
     pub ident: Ident,
     pub variant_name: Ident,
     pub option_type: Option<syn::Type>,
@@ -182,7 +180,6 @@ fn get_queriable_field_props(field: &Field) -> syn::Result<QueriableFieldProps> 
     Ok(QueriableFieldProps {
         ignore,
         subquery,
-        preferred_name,
         ident,
         variant_name,
         option_type,
