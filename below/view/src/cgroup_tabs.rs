@@ -16,7 +16,7 @@ use std::collections::HashSet;
 
 use crate::cgroup_view::CgroupState;
 use crate::render::ViewItem;
-use crate::stats_view::StateCommon;
+use crate::stats_view::{ColumnTitles, StateCommon};
 
 use model::{sort_queriables, CgroupModel, SingleCgroupModel};
 
@@ -68,11 +68,14 @@ impl CgroupTab {
         line
     }
 
-    pub fn get_title_vec(&self) -> Vec<String> {
-        std::iter::once(&*default_tabs::CGROUP_NAME_ITEM)
-            .chain(self.view_items.iter())
-            .map(|item| item.config.render_title())
-            .collect()
+    pub fn get_titles(&self) -> ColumnTitles {
+        ColumnTitles {
+            titles: std::iter::once(&*default_tabs::CGROUP_NAME_ITEM)
+                .chain(self.view_items.iter())
+                .map(|item| item.config.render_title())
+                .collect(),
+            pinned_titles: 1,
+        }
     }
 
     fn output_cgroup(

@@ -33,6 +33,7 @@ pub struct TabView {
     pub cur_length: usize,
     pub cur_offset: usize,
     pub total_length: usize,
+    pub fixed_tabs: usize,
 }
 
 impl View for TabView {
@@ -41,7 +42,7 @@ impl View for TabView {
         let mut current_offset_idx = self.current_offset_idx;
         for idx in 0..self.tabs.len() {
             // Skip the hide item
-            if idx != 0 && current_offset_idx > 0 {
+            if idx >= self.fixed_tabs && current_offset_idx > 0 {
                 current_offset_idx -= 1;
                 continue;
             }
@@ -76,7 +77,7 @@ impl View for TabView {
 
 impl TabView {
     /// Create a new TabView
-    pub fn new(tabs: Vec<String>, sep: &str) -> Result<Self> {
+    pub fn new(tabs: Vec<String>, sep: &str, fixed_tabs: usize) -> Result<Self> {
         if tabs.is_empty() {
             bail!("Fail to construct TabView with empty tabs");
         }
@@ -94,6 +95,7 @@ impl TabView {
             cur_length,
             cur_offset: 0,
             total_length,
+            fixed_tabs,
         })
     }
 

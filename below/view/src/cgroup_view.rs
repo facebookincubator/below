@@ -27,7 +27,7 @@ use crate::cgroup_tabs::{
     },
     CgroupTab,
 };
-use crate::stats_view::{StateCommon, StatsView, ViewBridge};
+use crate::stats_view::{ColumnTitles, StateCommon, StatsView, ViewBridge};
 use crate::ViewState;
 use model::{
     CgroupCpuModelFieldId, CgroupIoModelFieldId, CgroupMemoryModelFieldId, CgroupModel,
@@ -300,8 +300,8 @@ impl ViewBridge for CgroupView {
     fn get_view_name() -> &'static str {
         "cgroup_view"
     }
-    fn get_title_vec(&self) -> Vec<String> {
-        self.tab.get_title_vec()
+    fn get_titles(&self) -> ColumnTitles {
+        self.tab.get_titles()
     }
 
     fn get_rows(

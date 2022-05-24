@@ -23,7 +23,7 @@ use cursive::views::{NamedView, SelectView, ViewRef};
 use cursive::Cursive;
 
 use crate::core_tabs::*;
-use crate::stats_view::{StateCommon, StatsView, ViewBridge};
+use crate::stats_view::{ColumnTitles, StateCommon, StatsView, ViewBridge};
 use crate::ViewState;
 
 use model::system::SystemModel;
@@ -134,8 +134,8 @@ impl ViewBridge for CoreView {
     fn get_view_name() -> &'static str {
         "core_view"
     }
-    fn get_title_vec(&self) -> Vec<String> {
-        self.get_inner().get_title_vec()
+    fn get_titles(&self) -> ColumnTitles {
+        self.get_inner().get_titles()
     }
 
     fn get_rows(

@@ -14,7 +14,7 @@
 
 use crate::process_view::ProcessState;
 use crate::render::ViewItem;
-use crate::stats_view::StateCommon;
+use crate::stats_view::{ColumnTitles, StateCommon};
 use model::SingleProcessModel;
 
 use cursive::utils::markup::StyledString;
@@ -55,12 +55,15 @@ impl ProcessTab {
         line
     }
 
-    pub fn get_title_vec(&self) -> Vec<String> {
-        std::iter::once(&*default_tabs::COMM_VIEW_ITEM)
-            .chain(std::iter::once(&*default_tabs::CGROUP_VIEW_ITEM))
-            .chain(self.view_items.iter())
-            .map(|item| item.config.render_title())
-            .collect()
+    pub fn get_titles(&self) -> ColumnTitles {
+        ColumnTitles {
+            titles: std::iter::once(&*default_tabs::COMM_VIEW_ITEM)
+                .chain(std::iter::once(&*default_tabs::CGROUP_VIEW_ITEM))
+                .chain(self.view_items.iter())
+                .map(|item| item.config.render_title())
+                .collect(),
+            pinned_titles: 1,
+        }
     }
 
     pub fn get_rows(

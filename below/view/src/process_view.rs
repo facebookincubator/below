@@ -30,7 +30,7 @@ use crate::process_tabs::{
     default_tabs::{PROCESS_CPU_TAB, PROCESS_GENERAL_TAB, PROCESS_IO_TAB, PROCESS_MEM_TAB},
     ProcessTab,
 };
-use crate::stats_view::{StateCommon, StatsView, ViewBridge};
+use crate::stats_view::{ColumnTitles, StateCommon, StatsView, ViewBridge};
 use crate::ViewState;
 
 pub type ViewType = StatsView<ProcessView>;
@@ -292,8 +292,8 @@ impl ViewBridge for ProcessView {
     fn get_view_name() -> &'static str {
         "process_view"
     }
-    fn get_title_vec(&self) -> Vec<String> {
-        self.tab.get_title_vec()
+    fn get_titles(&self) -> ColumnTitles {
+        self.tab.get_titles()
     }
 
     fn get_rows(

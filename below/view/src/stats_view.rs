@@ -30,6 +30,11 @@ use crate::controllers::Controllers;
 use crate::tab_view::TabView;
 use common::logutil::{get_last_log_to_display, CPMsgRecord};
 
+pub struct ColumnTitles {
+    pub titles: Vec<String>,
+    pub pinned_titles: usize, // the first `pinned_titles` titles are fixed
+}
+
 /// A trait that defines common state data querying or event handling.
 ///
 /// This trait must be implemented by all view state. It will help to expose
@@ -63,10 +68,8 @@ pub trait ViewBridge {
     /// query view by name.
     fn get_view_name() -> &'static str;
 
-    /// Return a vec of the view column names or title. This function will
-    /// call the below_derive trait `get_title_piped` function and split by '|'.
-    /// We cannot default implement this function since `below_derive` is not a trait.
-    fn get_title_vec(&self) -> Vec<String>;
+    /// Return the column titles of the view
+    fn get_titles(&self) -> ColumnTitles;
 
     /// The essential function that defines how a StatsView should fill
     /// the data. This function will iterate through the data, apply filter and sorting,
@@ -114,7 +117,7 @@ pub trait ViewBridge {
 ///
 /// `state` defines the state of a view. Filters, sorting orders will be defined here.
 pub struct StatsView<V: 'static + ViewBridge> {
-    tab_titles_map: HashMap<String, Vec<String>>,
+    tab_titles_map: HashMap<String, ColumnTitles>,
     tab_view_map: HashMap<String, V>,
     detailed_view: OnEventView<Panel<LinearLayout>>,
     pub state: Rc<RefCell<V::StateType>>,
@@ -170,19 +173,19 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         cmd_controllers: Rc<RefCell<HashMap<&'static str, Controllers>>>,
     ) -> Self {
         let mut tab_titles_map = HashMap::new();
-        // Generating titles. The get_title_vec will call BelowDerive's get_title_pipe()
-        // function and split it to a vec of string.
         for (tab, bridge) in &tab_view_map {
-            let mut title_vec = bridge.get_title_vec();
-            tab_titles_map.insert(tab.into(), title_vec);
+            let mut titles = bridge.get_titles();
+            tab_titles_map.insert(tab.into(), titles);
         }
 
         let default_tab = tabs[0].clone();
-
+        let tab_titles = tab_titles_map
+            .get(&default_tab)
+            .expect("Failed to query default tab");
         let detailed_view = OnEventView::new(Panel::new(
             LinearLayout::vertical()
                 .child(
-                    TabView::new(tabs, "   ")
+                    TabView::new(tabs, "   ", 0 /* pinned titles */)
                         .expect("Fail to construct tab")
                         .with_name(format!("{}_tab", &name)),
                 )
@@ -190,11 +193,9 @@ impl<V: 'static + ViewBridge> StatsView<V> {
                     LinearLayout::vertical()
                         .child(
                             TabView::new(
-                                tab_titles_map
-                                    .get(&default_tab)
-                                    .expect("Fail to query general tab")
-                                    .clone(),
+                                tab_titles.titles.clone(),
                                 " ",
+                                tab_titles.pinned_titles, /* pinned titles */
                             )
                             .expect("Fail to construct title")
                             .with_name(format!("{}_title", &name)),
@@ -226,11 +227,12 @@ impl<V: 'static + ViewBridge> StatsView<V> {
     pub fn update_title(&mut self) {
         let cur_tab = self.get_tab_view().get_cur_selected().to_string();
         let mut title_view = self.get_title_view();
-        title_view.tabs = self
+        let tabs = self
             .tab_titles_map
             .get(&cur_tab)
-            .unwrap_or_else(|| panic!("Fail to query title from tab {}", cur_tab))
-            .clone();
+            .unwrap_or_else(|| panic!("Fail to query title from tab {}", cur_tab));
+        title_view.tabs = tabs.titles.clone();
+        title_view.fixed_tabs = tabs.pinned_titles;
         title_view.current_selected = 0;
         title_view.current_offset_idx = 0;
         title_view.cur_offset = 0;

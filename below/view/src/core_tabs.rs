@@ -14,7 +14,7 @@
 
 use crate::core_view::CoreState;
 use crate::render::ViewItem;
-use crate::stats_view::StateCommon;
+use crate::stats_view::{ColumnTitles, StateCommon};
 use base_render::{get_fixed_width, RenderConfigBuilder as Rc};
 use common::util::get_prefix;
 use model::system::{
@@ -28,11 +28,14 @@ const FIELD_NAME_WIDTH: usize = 20;
 const FIELD_WIDTH: usize = 20;
 
 pub trait CoreTab {
-    fn get_title_vec(&self) -> Vec<String> {
-        vec![
-            get_fixed_width("Field", FIELD_NAME_WIDTH),
-            get_fixed_width("Value", FIELD_WIDTH),
-        ]
+    fn get_titles(&self) -> ColumnTitles {
+        ColumnTitles {
+            titles: vec![
+                get_fixed_width("Field", FIELD_NAME_WIDTH),
+                get_fixed_width("Value", FIELD_WIDTH),
+            ],
+            pinned_titles: 1,
+        }
     }
 
     fn get_rows(&self, state: &CoreState, offset: Option<usize>) -> Vec<(StyledString, String)>;
@@ -42,10 +45,13 @@ pub trait CoreTab {
 pub struct CoreCpu;
 
 impl CoreTab for CoreCpu {
-    fn get_title_vec(&self) -> Vec<String> {
-        SingleCpuModelFieldId::unit_variant_iter()
-            .map(|field_id| ViewItem::from_default(field_id).config.render_title())
-            .collect()
+    fn get_titles(&self) -> ColumnTitles {
+        ColumnTitles {
+            titles: SingleCpuModelFieldId::unit_variant_iter()
+                .map(|field_id| ViewItem::from_default(field_id).config.render_title())
+                .collect(),
+            pinned_titles: 1,
+        }
     }
 
     fn get_rows(&self, state: &CoreState, offset: Option<usize>) -> Vec<(StyledString, String)> {
@@ -149,10 +155,13 @@ impl CoreTab for CoreVm {
 pub struct CoreDisk;
 
 impl CoreTab for CoreDisk {
-    fn get_title_vec(&self) -> Vec<String> {
-        SingleDiskModelFieldId::unit_variant_iter()
-            .map(|field_id| ViewItem::from_default(field_id).config.render_title())
-            .collect()
+    fn get_titles(&self) -> ColumnTitles {
+        ColumnTitles {
+            titles: SingleDiskModelFieldId::unit_variant_iter()
+                .map(|field_id| ViewItem::from_default(field_id).config.render_title())
+                .collect(),
+            pinned_titles: 0,
+        }
     }
 
     fn get_rows(&self, state: &CoreState, offset: Option<usize>) -> Vec<(StyledString, String)> {

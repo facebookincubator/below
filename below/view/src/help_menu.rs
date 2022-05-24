@@ -199,7 +199,7 @@ pub fn new(event_controllers: Rc<RefCell<HashMap<Event, Controllers>>>) -> impl 
         .child(Panel::new(
             LinearLayout::vertical()
                 .child(
-                    TabView::new(get_title(), " ")
+                    TabView::new(get_title(), " ", 0 /* pinned titles */)
                         .expect("Failed to construct title tab in help menu"),
                 )
                 .child(controllers)
