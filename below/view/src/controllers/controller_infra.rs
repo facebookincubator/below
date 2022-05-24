@@ -236,46 +236,64 @@ macro_rules! make_event_controller {
 // The controllers enum will map the enum member to the actual controller
 // struct that implement the EventController trait.
 macro_rules! make_controllers {
-    ($($enum_item:tt: $struct_item:tt,)*) => {
+    ($($(#[$attr:meta])* $enum_item:ident: $struct_item:ident,)*) => {
         #[derive(Clone, PartialEq, Debug, Hash, Eq)]
         pub enum Controllers {
             Unknown,
-            $($enum_item,)*
+            $(
+                $(#[$attr])*
+                $enum_item,
+            )*
         }
 
         impl Controllers {
             pub fn command(&self) -> &'static str {
                 match self {
                     Controllers::Unknown => "",
-                    $(Controllers::$enum_item => $struct_item::command(),)*
+                    $(
+                        $(#[$attr])*
+                        Controllers::$enum_item => $struct_item::command(),
+                    )*
                 }
             }
 
             pub fn cmd_shortcut(&self) -> &'static str {
                 match self {
                     Controllers::Unknown => "",
-                    $(Controllers::$enum_item => $struct_item::cmd_shortcut(),)*
+                    $(
+                        $(#[$attr])*
+                        Controllers::$enum_item => $struct_item::cmd_shortcut(),
+                    )*
                 }
             }
 
             pub fn default_event(&self) -> Event {
                 match self {
                     Controllers::Unknown => Event::Unknown(vec![]),
-                    $(Controllers::$enum_item => $struct_item::default_event(),)*
+                    $(
+                        $(#[$attr])*
+                        Controllers::$enum_item => $struct_item::default_event(),
+                    )*
                 }
             }
 
             pub fn handle<T: 'static + ViewBridge>(&self, view: &mut StatsView<T>, cmd_vec: &[&str]) {
                 match self {
                     Controllers::Unknown => (),
-                    $(Controllers::$enum_item => $struct_item::handle(view, cmd_vec),)*
+                    $(
+                        $(#[$attr])*
+                        Controllers::$enum_item => $struct_item::handle(view, cmd_vec),
+                    )*
                 }
             }
 
             pub fn callback<T: 'static + ViewBridge>(&self, c: &mut Cursive, cmd_vec: &[&str]) {
                 match self {
                     Controllers::Unknown => (),
-                    $(Controllers::$enum_item => $struct_item::callback::<T>(c, cmd_vec),)*
+                    $(
+                        $(#[$attr])*
+                        Controllers::$enum_item => $struct_item::callback::<T>(c, cmd_vec),
+                    )*
                 }
             }
         }
@@ -286,6 +304,7 @@ macro_rules! make_controllers {
 
             // Generate default hashmap
             $(
+                $(#[$attr])*
                 res.insert(
                     $struct_item::default_event(),
                     Controllers::$enum_item
@@ -345,11 +364,13 @@ macro_rules! make_controllers {
         pub fn make_cmd_controller_map() -> HashMap<&'static str, Controllers> {
             let mut res = HashMap::new();
             $(
+                $(#[$attr])*
                 res.insert(
                     $struct_item::command(),
                     Controllers::$enum_item
                 );
 
+                $(#[$attr])*
                 if !$struct_item::cmd_shortcut().is_empty() {
                     res.insert(
                         $struct_item::cmd_shortcut(),
