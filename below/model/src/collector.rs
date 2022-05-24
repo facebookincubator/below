@@ -15,6 +15,7 @@
 use std::sync::{Arc, Mutex};
 
 use super::*;
+#[cfg(fbcode_build)]
 use crate::collector_plugin;
 use regex::Regex;
 use slog::{self, error};

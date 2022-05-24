@@ -33,7 +33,7 @@ mod tests {
     use tempdir::TempDir;
 
     fn make_file<P: AsRef<Path>>(path: P, size: u64) {
-        let mut file = File::create(&path).expect("Failed to create file");
+        let file = File::create(&path).expect("Failed to create file");
         let mut writer = BufWriter::new(file);
         for _ in 0..size {
             writer.write_all(&[0]).expect("Failed to write");

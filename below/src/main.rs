@@ -831,7 +831,7 @@ fn replay(
 }
 
 fn record(
-    init: init::InitToken,
+    #[allow(unused)] init: init::InitToken,
     logger: slog::Logger,
     errs: Receiver<Error>,
     interval: Duration,
@@ -843,7 +843,7 @@ fn record(
     debug: bool,
     disable_disk_stat: bool,
     disable_exitstats: bool,
-    enable_gpu_stats: bool,
+    #[allow(unused)] enable_gpu_stats: bool,
     compress_opts: &CompressOpts,
 ) -> Result<()> {
     debug!(logger, "Starting up!");
