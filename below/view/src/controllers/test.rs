@@ -23,6 +23,7 @@ use tempdir::TempDir;
 #[test]
 fn test_event_controller_override() {
     let mut fake_view = FakeView::new();
+    fake_view.add_cgroup_view();
 
     let cmdrc_str = b"invoke_cmd_palette = 'a'
 next_tab = 'b'
@@ -31,7 +32,7 @@ prev_tab = 'c'
 next_col = 'd'
 prev_col = 'e'
 right = 'f'
-left = 'g'
+left = 'w'
 quit = 'h'
 help = 'i'
 process = 'j'
@@ -81,7 +82,7 @@ url = 'n'
         Some(&Controllers::Right)
     );
     assert_eq!(
-        event_controllers.get(&Event::Char('g')),
+        event_controllers.get(&Event::Char('w')),
         Some(&Controllers::Left)
     );
     assert_eq!(

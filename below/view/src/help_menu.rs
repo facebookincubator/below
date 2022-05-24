@@ -79,6 +79,8 @@ fn get_description(controller: &Controllers) -> &'static str {
         Controllers::Process => "Show process view.",
         Controllers::Cgroup => "Show cgroup view.",
         Controllers::System => "Show system core view.",
+        #[cfg(fbcode_build)]
+        Controllers::Gpu => "Show GPU view.",
         Controllers::Zoom => "Zoom into process view filtered by selected cgroup.",
         Controllers::Fold => "Fold processes (post filter) and display aggregated values.",
         Controllers::NextPage => "scroll down 15 lines primary display.",

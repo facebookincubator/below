@@ -36,6 +36,7 @@ fn set_cp_filter(c: &mut Cursive, text: Option<String>) {
             crate::process_view::ViewType::cp_filter(c, text)
         }
         MainViewState::Core => crate::core_view::ViewType::cp_filter(c, text),
+        MainViewState::Gpu => crate::gpu_view::ViewType::cp_filter(c, text),
     }
 }
 

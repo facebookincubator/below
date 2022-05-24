@@ -121,6 +121,8 @@ make_controllers!(
     Process: ProcessView,
     Cgroup: CgroupView,
     System: SystemView,
+    #[cfg(fbcode_build)]
+    Gpu: GpuView,
     Zoom: ZoomView,
     Fold: FoldProcessView,
     NextPage: NextPageImpl,

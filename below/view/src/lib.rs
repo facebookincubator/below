@@ -72,6 +72,8 @@ use common::open_source_shim;
 use common::util::{
     get_belowrc_cmd_section_key, get_belowrc_filename, get_belowrc_view_section_key,
 };
+#[cfg(fbcode_build)]
+use model::GpuModel;
 use model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
 use store::Advance;
 extern crate render as base_render;
@@ -134,6 +136,8 @@ macro_rules! view_warn {
                 crate::process_view::ViewType::cp_warn($c, &msg)
             }
             crate::MainViewState::Core => crate::core_view::ViewType::cp_warn($c, &msg),
+            #[cfg(fbcode_build)]
+            crate::MainViewState::Gpu => crate::gpu_view::ViewType::cp_warn($c, &msg),
         }
     }};
 }
@@ -150,6 +154,8 @@ pub enum MainViewState {
     Process,
     ProcessZoomedIntoCgroup,
     Core,
+    #[cfg(fbcode_build)]
+    Gpu,
 }
 
 #[derive(Clone)]
@@ -175,6 +181,8 @@ fn refresh(c: &mut Cursive) {
             process_view::ProcessView::refresh(c)
         }
         MainViewState::Core => core_view::CoreView::refresh(c),
+        #[cfg(fbcode_build)]
+        MainViewState::Gpu => gpu_view::GpuView::refresh(c),
     }
 }
 
@@ -189,6 +197,8 @@ pub struct ViewState {
     pub cgroup: Rc<RefCell<CgroupModel>>,
     pub process: Rc<RefCell<ProcessModel>>,
     pub network: Rc<RefCell<NetworkModel>>,
+    #[cfg(fbcode_build)]
+    pub gpu: Rc<RefCell<Option<GpuModel>>>,
     pub main_view_state: MainViewState,
     pub mode: ViewMode,
     pub event_controllers: Rc<RefCell<HashMap<Event, controllers::Controllers>>>,
@@ -206,6 +216,8 @@ impl ViewState {
         self.cgroup.replace(model.cgroup);
         self.process.replace(model.process);
         self.network.replace(model.network);
+        #[cfg(fbcode_build)]
+        self.gpu.replace(model.gpu);
     }
 
     pub fn new_with_advance(main_view_state: MainViewState, model: Model, mode: ViewMode) -> Self {
@@ -217,6 +229,8 @@ impl ViewState {
             cgroup: Rc::new(RefCell::new(model.cgroup)),
             process: Rc::new(RefCell::new(model.process)),
             network: Rc::new(RefCell::new(model.network)),
+            #[cfg(fbcode_build)]
+            gpu: Rc::new(RefCell::new(model.gpu)),
             main_view_state,
             mode,
             event_controllers: Rc::new(RefCell::new(HashMap::new())),
@@ -346,6 +360,24 @@ impl View {
         let cgroup_view = cgroup_view::CgroupView::new(&mut self.inner);
         let process_view = process_view::ProcessView::new(&mut self.inner);
         let core_view = core_view::CoreView::new(&mut self.inner);
+        #[cfg(fbcode_build)]
+        let gpu_view = gpu_view::GpuView::new(&mut self.inner);
+
+        let mut stack_view = StackView::new();
+        #[cfg(fbcode_build)]
+        stack_view.add_fullscreen_layer(ResizedView::with_full_screen(
+            gpu_view.with_name("gpu_view_panel"),
+        ));
+
+        stack_view.add_fullscreen_layer(ResizedView::with_full_screen(
+            core_view.with_name("core_view_panel"),
+        ));
+        stack_view.add_fullscreen_layer(ResizedView::with_full_screen(
+            process_view.with_name("process_view_panel"),
+        ));
+        stack_view.add_fullscreen_layer(ResizedView::with_full_screen(
+            cgroup_view.with_name("cgroup_view_panel"),
+        ));
 
         self.inner
             .add_fullscreen_layer(ResizedView::with_full_screen(
@@ -353,20 +385,8 @@ impl View {
                     .child(Panel::new(status_bar))
                     .child(Panel::new(system_view))
                     .child(
-                        OnEventView::new(
-                            StackView::new()
-                                .fullscreen_layer(ResizedView::with_full_screen(
-                                    core_view.with_name("core_view_panel"),
-                                ))
-                                .fullscreen_layer(ResizedView::with_full_screen(
-                                    process_view.with_name("process_view_panel"),
-                                ))
-                                .fullscreen_layer(ResizedView::with_full_screen(
-                                    cgroup_view.with_name("cgroup_view_panel"),
-                                ))
-                                .with_name("main_view_stack"),
-                        )
-                        .with_name("dynamic_view"),
+                        OnEventView::new(stack_view.with_name("main_view_stack"))
+                            .with_name("dynamic_view"),
                     ),
             ));
 
@@ -374,7 +394,7 @@ impl View {
             .focus_name("dynamic_view")
             .expect("Could not set focus at initialization!");
 
-        // Raise warning message if failed to map the customzied command.
+        // Raise warning message if failed to map the customized command.
         Self::generate_event_controller_map(&mut self.inner, get_belowrc_filename());
         viewrc::ViewRc::process(&mut self.inner);
         if let Some(msg) = init_warnings {

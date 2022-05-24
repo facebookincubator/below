@@ -255,6 +255,28 @@ make_event_controller!(
     }
 );
 
+// Invoke Gpu View
+#[cfg(fbcode_build)]
+make_event_controller!(
+    GpuView,
+    "gpu",
+    "",
+    Event::Char('g'),
+    |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        c.call_on_name("main_view_stack", |stack: &mut NamedView<StackView>| {
+            let position = (*stack.get_mut())
+                .find_layer_from_name("gpu_view_panel")
+                .expect("Failed to find view view");
+            (*stack.get_mut()).move_to_front(position);
+        });
+
+        c.user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .main_view_state = MainViewState::Gpu;
+    }
+);
+
 // Zoom in View
 make_event_controller!(
     ZoomView,
@@ -320,6 +342,8 @@ make_event_controller!(
                     (*stack.get_mut()).move_to_front(cgroup_pos);
                 }
                 MainViewState::Core => {}
+                #[cfg(fbcode_build)]
+                MainViewState::Gpu => {}
             }
         })
         .expect("failed to find main_view_stack");
