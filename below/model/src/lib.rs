@@ -63,6 +63,16 @@ pub enum Field {
     VecU32(Vec<u32>),
 }
 
+impl From<Field> for u64 {
+    fn from(field: Field) -> u64 {
+        match field {
+            Field::U32(v) => v as u64,
+            Field::U64(v) => v as u64,
+            _ => panic!("Operation for unsupported types"),
+        }
+    }
+}
+
 impl From<Field> for i64 {
     fn from(field: Field) -> i64 {
         match field {

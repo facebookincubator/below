@@ -14,7 +14,7 @@
 
 mod default_configs;
 
-use common::util::{convert_bytes, fold_string};
+use common::util::{convert_bytes, convert_freq, fold_string};
 use model::{Field, Queriable};
 
 /// Specifies how to format a Field into String
@@ -26,7 +26,7 @@ pub enum RenderFormat {
     /// suffixes (KB, MB, GB etc).
     ReadableSize,
     /// Only works on numeric Fields. Format number of 4K pages as
-    /// human-readable size with suffixes (KB, MB, GB etc).
+    /// human-readable size with suffixes (KB, MB, GB, etc).
     PageReadableSize,
     /// Only works on numeric Fields. Formats number of 512b sectors as
     /// human-readable size with suffixes (KB, MB, GB, etc).
@@ -34,6 +34,8 @@ pub enum RenderFormat {
     /// Only works on int Fields. Same as ReadableSize except when Field is -1,
     /// in which case "max" is returned.
     MaxOrReadableSize,
+    /// Frequency. Format with human-readable freq with suffixes (MHz, GHz etc.)
+    ReadableFrequency,
 }
 
 /// Specifies how a long string is folded to fit into a shorter width.
@@ -171,6 +173,7 @@ impl RenderConfig {
                         convert_bytes(field as f64)
                     }
                 }
+                ReadableFrequency => convert_freq(u64::from(field)),
             },
             None => field.to_string(),
         }
