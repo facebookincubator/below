@@ -14,8 +14,11 @@
 
 mod default_configs;
 
+use common::open_source_shim;
 use common::util::{convert_bytes, convert_freq, fold_string};
 use model::{Field, Queriable};
+
+open_source_shim!();
 
 /// Specifies how to format a Field into String
 #[derive(Clone)]
