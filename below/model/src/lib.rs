@@ -60,6 +60,7 @@ pub enum Field {
     F64(f64),
     Str(String),
     PidState(procfs::PidState),
+    VecU32(Vec<u32>),
 }
 
 impl From<Field> for i64 {
@@ -150,6 +151,12 @@ impl From<procfs::PidState> for Field {
     }
 }
 
+impl From<Vec<u32>> for Field {
+    fn from(v: Vec<u32>) -> Self {
+        Field::VecU32(v)
+    }
+}
+
 impl<T: Into<Field> + Clone> From<&T> for Field {
     fn from(v: &T) -> Self {
         v.clone().into()
@@ -184,6 +191,7 @@ impl PartialEq for Field {
             (Field::F64(s), Field::F64(o)) => s == o,
             (Field::Str(s), Field::Str(o)) => s == o,
             (Field::PidState(s), Field::PidState(o)) => s == o,
+            (Field::VecU32(s), Field::VecU32(o)) => s == o,
             _ => false,
         }
     }
@@ -200,6 +208,7 @@ impl PartialOrd for Field {
             (Field::F64(s), Field::F64(o)) => s.partial_cmp(o),
             (Field::Str(s), Field::Str(o)) => s.partial_cmp(o),
             (Field::PidState(s), Field::PidState(o)) => s.partial_cmp(o),
+            (Field::VecU32(s), Field::VecU32(o)) => s.partial_cmp(o),
             _ => None,
         }
     }
@@ -216,6 +225,7 @@ impl fmt::Display for Field {
             Field::F64(v) => v.fmt(f),
             Field::Str(v) => v.fmt(f),
             Field::PidState(v) => v.fmt(f),
+            Field::VecU32(v) => f.write_fmt(format_args!("{:?}", v)),
         }
     }
 }
