@@ -416,6 +416,9 @@ pub struct Model {
     pub process: ProcessModel,
     #[queriable(subquery)]
     pub network: NetworkModel,
+    #[cfg(fbcode_build)]
+    #[queriable(subquery)]
+    pub gpu: Option<GpuModel>,
 }
 
 impl Model {
@@ -437,6 +440,16 @@ impl Model {
             .aggr_top_level_val(),
             process: ProcessModel::new(&sample.processes, last.map(|(s, d)| (&s.processes, d))),
             network: NetworkModel::new(&sample.netstats, last.map(|(s, d)| (&s.netstats, d))),
+            #[cfg(fbcode_build)]
+            gpu: sample.gpus.as_ref().map(|gpus| {
+                GpuModel::new(&gpus.gpu_map, {
+                    if let Some((s, d)) = last {
+                        s.gpus.as_ref().map(|g| (&g.gpu_map, d))
+                    } else {
+                        None
+                    }
+                })
+            }),
         }
     }
 }

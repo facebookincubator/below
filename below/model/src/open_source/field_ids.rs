@@ -23,4 +23,4 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const MODEL_FIELD_IDS: &[&str] = crate::common_field_ids::COMMON_MODEL_FIELD_IDS;
+pub const MODEL_FIELD_IDS: &[&str] = &crate::common_field_ids::COMMON_MODEL_FIELD_IDS;
