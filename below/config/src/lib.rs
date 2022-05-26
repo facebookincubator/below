@@ -37,6 +37,7 @@ pub struct BelowConfig {
     pub store_dir: PathBuf,
     pub cgroup_root: PathBuf,
     pub cgroup_filter_out: String,
+    pub enable_gpu_stats: bool,
 }
 
 impl Default for BelowConfig {
@@ -46,6 +47,7 @@ impl Default for BelowConfig {
             store_dir: BELOW_DEFAULT_STORE.into(),
             cgroup_root: cgroupfs::DEFAULT_CG_ROOT.into(),
             cgroup_filter_out: String::new(),
+            enable_gpu_stats: false,
         }
     }
 }

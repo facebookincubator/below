@@ -31,6 +31,7 @@ fn test_config_default() {
         cgroupfs::DEFAULT_CG_ROOT
     );
     assert_eq!(below_config.cgroup_filter_out, String::new());
+    assert!(!below_config.enable_gpu_stats);
 }
 
 #[test]

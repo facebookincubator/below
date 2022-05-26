@@ -178,6 +178,8 @@ enum Command {
         /// Flag to disable eBPF-based exitstats
         #[clap(long)]
         disable_exitstats: bool,
+        /// Deprecated: Use enable_gpu_stats in below config.
+        ///
         /// Flag to enable GPU stats
         #[structopt(long)]
         enable_gpu_stats: bool,
@@ -616,7 +618,6 @@ fn real_main(init: init::InitToken) {
                         debug,
                         *disable_disk_stat,
                         *disable_exitstats,
-                        *enable_gpu_stats,
                         compress_opts,
                     )
                 },
@@ -843,7 +844,6 @@ fn record(
     debug: bool,
     disable_disk_stat: bool,
     disable_exitstats: bool,
-    #[allow(unused)] enable_gpu_stats: bool,
     compress_opts: &CompressOpts,
 ) -> Result<()> {
     debug!(logger, "Starting up!");
@@ -878,7 +878,7 @@ fn record(
     };
 
     #[cfg(fbcode_build)]
-    let gpu_stats_receiver = if enable_gpu_stats {
+    let gpu_stats_receiver = if below_config.enable_gpu_stats {
         let target_interval = interval.clone();
         let gpu_collector = model::gpu_stats_collector_plugin::GpuStatsCollectorPlugin::new(
             init.fb,
