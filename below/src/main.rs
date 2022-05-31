@@ -381,6 +381,64 @@ fn start_exitstat(
     (exit_buffer, Some(bpf_err_recv))
 }
 
+pub fn start_gpu_stats_thread_and_get_stats_receiver(
+    init: init::InitToken,
+    logger: slog::Logger,
+    interval: Duration,
+) -> Result<model::collector_plugin::Consumer<model::gpu_stats_collector_plugin::SampleType>> {
+    let target_interval = interval.clone();
+    let gpu_collector = gpu_stats::get_gpu_stats_collector_plugin(init, logger.clone())
+        .context("Failed to initialize GPU stats collector")?;
+    let (mut collector, receiver) = model::collector_plugin::collector_consumer(gpu_collector);
+    thread::Builder::new()
+        .name("gpu_stats_collector".to_owned())
+        .spawn(move || {
+            // Exponential backoff on unrecoverable errors
+            const EXP_BACKOFF_FACTOR: u32 = 2;
+            const MAX_BACKOFF_SECS: u64 = 900;
+            let max_backoff = Duration::from_secs(MAX_BACKOFF_SECS);
+            let mut interval = target_interval;
+            loop {
+                let collect_instant = Instant::now();
+                match futures::executor::block_on(collector.collect_and_update()) {
+                    Ok(_) => {
+                        interval = target_interval;
+                    }
+                    Err(e) => {
+                        interval = std::cmp::min(
+                            interval
+                                .saturating_mul(EXP_BACKOFF_FACTOR),
+                            max_backoff,
+                        );
+                        error!(
+                            logger,
+                            "GPU stats collection backing off {:?} because of unrecoverable error: {:?}",
+                            interval,
+                            e
+                        );
+                    }
+                }
+                let collect_duration = Instant::now().duration_since(collect_instant);
+
+                const COLLECT_DURATION_WARN_THRESHOLD: u64 = 2;
+                if collect_duration > Duration::from_secs(COLLECT_DURATION_WARN_THRESHOLD) {
+                    warn!(
+                        logger,
+                        "GPU collection took {} > {}",
+                        collect_duration.as_secs_f64(),
+                        COLLECT_DURATION_WARN_THRESHOLD
+                    );
+                }
+                if interval > collect_duration {
+                    let sleep_duration = interval - collect_duration;
+                    std::thread::sleep(sleep_duration);
+                }
+            }
+        })
+        .expect("Failed to spawn thread");
+    Ok(receiver)
+}
+
 /// Returns true if other end disconnected, false otherwise
 fn check_for_exitstat_errors(logger: &slog::Logger, receiver: &Receiver<Error>) -> bool {
     // Print an error but don't exit on bpf issues. Do this b/c we can't always
@@ -574,6 +632,7 @@ fn real_main(init: init::InitToken) {
                 RedirectLogOnFail::On,
                 |_, below_config, logger, errs| {
                     live(
+                        init,
                         logger,
                         errs,
                         Duration::from_secs(*interval_s as u64),
@@ -832,7 +891,7 @@ fn replay(
 }
 
 fn record(
-    #[allow(unused)] init: init::InitToken,
+    init: init::InitToken,
     logger: slog::Logger,
     errs: Receiver<Error>,
     interval: Duration,
@@ -877,63 +936,12 @@ fn record(
         None
     };
 
-    #[cfg(fbcode_build)]
     let gpu_stats_receiver = if below_config.enable_gpu_stats {
-        let target_interval = interval.clone();
-        let gpu_collector = model::gpu_stats_collector_plugin::GpuStatsCollectorPlugin::new(
-            init.fb,
+        Some(start_gpu_stats_thread_and_get_stats_receiver(
+            init,
             logger.clone(),
-        )
-        .context("Failed to initialize GPU stats collector")?;
-        let (mut collector, receiver) = model::collector_plugin::collector_consumer(gpu_collector);
-        let logger_clone = logger.clone();
-        thread::Builder::new()
-            .name("gpu_collector".to_owned())
-            .spawn(move || {
-                // Exponential backoff on unrecoverable errors
-                const EXP_BACKOFF_FACTOR: u32 = 2;
-                const MAX_BACKOFF_SECS: u64 = 900;
-                let max_backoff = Duration::from_secs(MAX_BACKOFF_SECS);
-                let mut interval = target_interval;
-                loop {
-                    let collect_instant = Instant::now();
-                    match futures::executor::block_on(collector.collect_and_update()) {
-                        Ok(_) => {
-                            interval = target_interval;
-                        }
-                        Err(e) => {
-                            interval = std::cmp::min(
-                                interval
-                                    .saturating_mul(EXP_BACKOFF_FACTOR),
-                                max_backoff,
-                            );
-                            error!(
-                                logger_clone,
-                                "GPU stats collection backing off {:?} because of unrecoverable error: {:?}",
-                                interval,
-                                e
-                            );
-                        }
-                    }
-                    let collect_duration = Instant::now().duration_since(collect_instant);
-
-                    const COLLECT_DURATION_WARN_THRESHOLD: u64 = 2;
-                    if collect_duration > Duration::from_secs(COLLECT_DURATION_WARN_THRESHOLD) {
-                        warn!(
-                            logger_clone,
-                            "GPU collection took {} > {}",
-                            collect_duration.as_secs_f64(),
-                            COLLECT_DURATION_WARN_THRESHOLD
-                        );
-                    }
-                    if interval > collect_duration {
-                        let sleep_duration = interval - collect_duration;
-                        std::thread::sleep(sleep_duration);
-                    }
-                }
-            })
-            .expect("Failed to spawn thread");
-        Some(receiver)
+            interval,
+        )?)
     } else {
         None
     };
@@ -946,7 +954,6 @@ fn record(
             collect_io_stat,
             disable_disk_stat,
             cgroup_re,
-            #[cfg(fbcode_build)]
             gpu_stats_receiver,
         },
     );
@@ -1028,6 +1035,7 @@ fn record(
 }
 
 fn live_local(
+    init: init::InitToken,
     logger: slog::Logger,
     errs: Receiver<Error>,
     interval: Duration,
@@ -1050,11 +1058,22 @@ fn live_local(
     let (exit_buffer, bpf_errs) = start_exitstat(logger.clone(), debug);
     let mut bpf_err_warned = false;
 
+    let gpu_stats_receiver = if below_config.enable_gpu_stats {
+        Some(start_gpu_stats_thread_and_get_stats_receiver(
+            init,
+            logger.clone(),
+            interval,
+        )?)
+    } else {
+        None
+    };
+
     let mut collector = model::Collector::new(
         logger.clone(),
         model::CollectorOptions {
             cgroup_root: below_config.cgroup_root.clone(),
             exit_data: exit_buffer,
+            gpu_stats_receiver,
             ..Default::default()
         },
     );
@@ -1195,6 +1214,7 @@ fn live_remote(
 }
 
 fn live(
+    init: init::InitToken,
     logger: slog::Logger,
     errs: Receiver<Error>,
     interval: Duration,
@@ -1206,7 +1226,7 @@ fn live(
     if let Some(host) = host {
         live_remote(logger, errs, interval, host, port)
     } else {
-        live_local(logger, errs, interval, debug, below_config)
+        live_local(init, logger, errs, interval, debug, below_config)
     }
 }
 

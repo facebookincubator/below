@@ -15,6 +15,7 @@
 #[path = "../bpf/.output/exitstat.skel.rs"]
 mod bpf;
 pub mod commands;
+pub mod gpu_stats;
 pub mod init;
 pub mod logging;
 pub mod statistics;

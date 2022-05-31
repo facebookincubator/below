@@ -12,6 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(test)]
-pub mod field_ids;
-pub mod gpu_stats_collector_plugin;
+use crate::collector_plugin::AsyncCollectorPlugin;
+use anyhow::Result;
+use async_trait::async_trait;
+
+pub type SampleType = ();
+
+pub struct GpuStatsCollectorPlugin {}
+
+impl GpuStatsCollectorPlugin {
+    pub fn new(_logger: slog::Logger) -> Result<Self> {
+        Ok(Self {})
+    }
+}
+
+// Wrapper plugin for GpuStatsCollector
+#[async_trait]
+impl AsyncCollectorPlugin for GpuStatsCollectorPlugin {
+    type T = SampleType;
+
+    async fn try_collect(&mut self) -> Result<Option<SampleType>> {
+        Ok(Some(()))
+    }
+}
