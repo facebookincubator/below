@@ -77,6 +77,7 @@ pub fn enum_to_string_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream>
             fn to_string(&self) -> ::std::string::String {
                 match self {
                     #(#variant_to_string_arms)*
+                    _ => unreachable!(),
                 }
             }
         }

@@ -266,6 +266,7 @@ pub fn queriable_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream> {
             fn query(&self, field_id: &Self::FieldId) -> ::std::option::Option<Field> {
                 match field_id {
                     #(#queriable_match_arms)*
+                    _ => unreachable!(),
                 }
             }
         }
