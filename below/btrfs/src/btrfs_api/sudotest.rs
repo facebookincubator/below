@@ -14,11 +14,13 @@
 
 #[cfg(fbcode_build)]
 pub use btrfs::btrfs_api::*;
+#[cfg(fbcode_build)]
+use btrfs::BtrfsReader;
 
 #[cfg(not(fbcode_build))]
 pub use crate::btrfs_api::*;
-
-use btrfs::BtrfsReader;
+#[cfg(not(fbcode_build))]
+use crate::BtrfsReader;
 
 use common::logutil::get_logger;
 

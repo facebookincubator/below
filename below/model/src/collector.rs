@@ -25,6 +25,9 @@ pub struct CollectorOptions {
     pub exit_data: Arc<Mutex<procfs::PidMap>>,
     pub collect_io_stat: bool,
     pub disable_disk_stat: bool,
+    pub enable_btrfs_stat: bool,
+    pub btrfs_samples: u64,
+    pub btrfs_min_pct: f64,
     pub cgroup_re: Option<Regex>,
     #[allow(unused)]
     pub gpu_stats_receiver:
@@ -38,6 +41,9 @@ impl Default for CollectorOptions {
             exit_data: Default::default(),
             collect_io_stat: true,
             disable_disk_stat: false,
+            enable_btrfs_stat: false,
+            btrfs_samples: btrfs::DEFAULT_SAMPLES,
+            btrfs_min_pct: btrfs::DEFAULT_MIN_PCT,
             cgroup_re: None,
             gpu_stats_receiver: None,
         }
@@ -161,6 +167,8 @@ fn is_all_zero_disk_stats(disk_stats: &procfs::DiskStat) -> bool {
 
 fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<Sample> {
     let mut reader = procfs::ProcReader::new();
+    let btrfs_reader =
+        btrfs::BtrfsReader::new(options.btrfs_samples, options.btrfs_min_pct, logger.clone());
 
     // Take mutex, then take all values out of shared map and replace with default map
     //
@@ -226,6 +234,17 @@ fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<S
                             !is_all_zero_disk_stats(disk_stat)
                         })
                         .collect(),
+                    Err(e) => {
+                        error!(logger, "{:#}", e);
+                        Default::default()
+                    }
+                }
+            },
+            btrfs: if !options.enable_btrfs_stat {
+                Default::default()
+            } else {
+                match btrfs_reader.sample() {
+                    Ok(btrfs) => Some(btrfs),
                     Err(e) => {
                         error!(logger, "{:#}", e);
                         Default::default()

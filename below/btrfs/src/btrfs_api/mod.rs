@@ -17,7 +17,7 @@ use std::{ffi::CStr, ops::RangeInclusive};
 #[cfg(fbcode_build)]
 pub use btrfs_sys::*;
 #[cfg(not(fbcode_build))]
-mod open_source;
+pub mod open_source;
 #[cfg(not(fbcode_build))]
 pub use open_source::btrfs_sys::*;
 
@@ -251,12 +251,11 @@ pub fn find_root_backref(fd: i32, root_id: u64) -> Result<Option<(String, u64)>>
         |sh, data| {
             match sh.type_ {
                 BTRFS_ROOT_BACKREF_KEY => {
-                    let root_ref =
-                        unsafe { get_and_move_typed::<btrfs_root_ref>(&mut data.as_ptr()) };
-
+                    let mut data_ptr = data.as_ptr();
+                    let root_ref = unsafe { get_and_move_typed::<btrfs_root_ref>(&mut data_ptr) };
                     let name = unsafe {
                         std::str::from_utf8_unchecked(std::slice::from_raw_parts(
-                            data.as_ptr(),
+                            data_ptr,
                             (*root_ref).name_len as usize,
                         ))
                     };

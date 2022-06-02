@@ -40,6 +40,8 @@ pub struct SystemModel {
     pub vm: VmModel,
     #[queriable(subquery)]
     pub disks: BTreeMap<String, SingleDiskModel>,
+    #[queriable(subquery)]
+    pub btrfs: Option<BTreeMap<String, BtrfsModel>>,
 }
 
 impl SystemModel {
@@ -87,6 +89,20 @@ impl SystemModel {
             );
         });
 
+        let mut btrfs: Option<BTreeMap<String, BtrfsModel>> = None;
+        match &sample.btrfs {
+            Some(b) => {
+                let tmp_btrfs: BTreeMap<String, BtrfsModel> = b
+                    .iter()
+                    .map(|(dir_name, end_dir_stat)| {
+                        (dir_name.clone(), BtrfsModel::new(end_dir_stat))
+                    })
+                    .collect();
+                btrfs = Some(tmp_btrfs);
+            }
+            None => {}
+        }
+
         SystemModel {
             hostname: sample.hostname.clone(),
             kernel_version: sample.kernel_version.clone(),
@@ -97,6 +113,7 @@ impl SystemModel {
             mem,
             vm,
             disks,
+            btrfs,
         }
     }
 }
@@ -435,6 +452,31 @@ impl SingleDiskModel {
     }
 }
 
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
+pub struct BtrfsModel {
+    pub name: Option<String>,
+    pub disk_fraction: Option<f64>,
+    pub disk_bytes: Option<u64>,
+}
+
+impl BtrfsModel {
+    fn new(end: &btrfs::BtrfsStat) -> BtrfsModel {
+        BtrfsModel {
+            name: end.name.clone(),
+            disk_fraction: end.disk_fraction.map(|v| v as f64),
+            disk_bytes: end.disk_bytes.map(|v| v as u64),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -456,7 +498,8 @@ mod test {
                     "name": "sda",
                     "read_bytes_per_sec": 42
                 }
-            }
+            },
+            "btrfs": {}
         }
         "#;
         let model: SystemModel = serde_json::from_str(model_json).unwrap();

@@ -38,6 +38,8 @@ pub struct BelowConfig {
     pub cgroup_root: PathBuf,
     pub cgroup_filter_out: String,
     pub enable_gpu_stats: bool,
+    pub btrfs_samples: u64,
+    pub btrfs_min_pct: f64,
 }
 
 impl Default for BelowConfig {
@@ -48,6 +50,8 @@ impl Default for BelowConfig {
             cgroup_root: cgroupfs::DEFAULT_CG_ROOT.into(),
             cgroup_filter_out: String::new(),
             enable_gpu_stats: false,
+            btrfs_samples: btrfs::DEFAULT_SAMPLES,
+            btrfs_min_pct: btrfs::DEFAULT_MIN_PCT,
         }
     }
 }

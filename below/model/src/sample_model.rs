@@ -174,6 +174,13 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                 "major": 20,
                 "minor": 0
             }
+        },
+        "btrfs": {
+            "b_name": {
+                "name": "b_name",
+                "disk_fraction": 5.0,
+                "disk_bytes": 123
+            }
         }
     },
     "cgroup": {
