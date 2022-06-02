@@ -32,6 +32,7 @@ fn test_config_default() {
     );
     assert_eq!(below_config.cgroup_filter_out, String::new());
     assert!(!below_config.enable_gpu_stats);
+    assert!(!below_config.enable_btrfs_stats);
 }
 
 #[test]
