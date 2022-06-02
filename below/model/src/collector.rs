@@ -26,7 +26,6 @@ pub struct CollectorOptions {
     pub collect_io_stat: bool,
     pub disable_disk_stat: bool,
     pub cgroup_re: Option<Regex>,
-    #[allow(unused)]
     pub gpu_stats_receiver:
         Option<collector_plugin::Consumer<crate::gpu_stats_collector_plugin::SampleType>>,
 }
@@ -233,7 +232,6 @@ fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<S
                 }
             },
         },
-        #[cfg(fbcode_build)]
         gpus: {
             if let Some(gpu_stats_receiver) = &options.gpu_stats_receiver {
                 // It is possible to receive no sample if the

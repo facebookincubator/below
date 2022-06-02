@@ -30,10 +30,10 @@ macro_rules! open_source_shim {
         #[cfg(fbcode_build)]
         mod facebook;
         #[cfg(fbcode_build)]
-        use facebook::*;
+        pub use facebook::*;
         #[cfg(not(fbcode_build))]
         mod open_source;
         #[cfg(not(fbcode_build))]
-        use open_source::*;
+        pub use open_source::*;
     };
 }

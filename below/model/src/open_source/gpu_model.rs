@@ -1,5 +1,6 @@
 // Copyright (c) Facebook, Inc. and its affiliates.
 //
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -12,26 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::collector_plugin::AsyncCollectorPlugin;
-use anyhow::Result;
-use async_trait::async_trait;
+use super::*;
 
-pub type SampleType = gpu_stats::GpuSample;
+use serde::{Deserialize, Serialize};
 
-pub struct GpuStatsCollectorPlugin {}
+#[derive(Default, Clone, Serialize, Deserialize, below_derive::Queriable)]
+pub struct GpuModel {}
 
-impl GpuStatsCollectorPlugin {
-    pub fn new(_logger: slog::Logger) -> Result<Self> {
-        Ok(Self {})
-    }
-}
-
-// Wrapper plugin for GpuStatsCollector
-#[async_trait]
-impl AsyncCollectorPlugin for GpuStatsCollectorPlugin {
-    type T = SampleType;
-
-    async fn try_collect(&mut self) -> Result<Option<SampleType>> {
-        Ok(None)
+impl GpuModel {
+    pub fn new(_sample: &gpu_stats::GpuMap, _last: Option<(&gpu_stats::GpuMap, Duration)>) -> Self {
+        // Open source GPU Model not implemented yet
+        Self {}
     }
 }
