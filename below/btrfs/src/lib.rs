@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use btrfs_sys::*;
+
 use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 pub mod btrfs_api;
 
@@ -33,6 +36,12 @@ pub enum Error {
     IoError(PathBuf, #[source] std::io::Error),
     #[error("Failed call to btrfs")]
     SysError(btrfs_api::Error),
+}
+
+impl From<btrfs_api::Error> for Error {
+    fn from(item: btrfs_api::Error) -> Self {
+        Error::SysError(item)
+    }
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -130,5 +139,44 @@ impl SampleTree {
         }
 
         Ok(())
+    }
+}
+
+// This structure contains for each btrfs instance a hashmap of the subvolume ids and
+// their respective paths.
+struct Roots {
+    fd: i32,
+    // hashmap key is subvolume id and value is vector with the path of that subvolume
+    m: HashMap<u64, Rc<Vec<String>>>,
+}
+
+impl Roots {
+    fn new(fd: i32) -> Self {
+        Self {
+            fd,
+            m: HashMap::from([(BTRFS_FS_TREE_OBJECTID as u64, Rc::new(Vec::new()))]),
+        }
+    }
+
+    fn get_root(&mut self, root_id: u64) -> Result<Rc<Vec<String>>> {
+        match self.m.get(&root_id) {
+            Some(path) => Ok(Rc::clone(path)),
+            None => {
+                let root_backref = btrfs_api::find_root_backref(self.fd, root_id)?;
+                match root_backref {
+                    Some((name, parent_id)) => {
+                        let rec_root = self.get_root(parent_id)?;
+                        let mut path = Vec::clone(&rec_root);
+                        path.push(name);
+                        let path_rc = Rc::new(path);
+                        self.m.insert(root_id, path_rc.clone());
+                        Ok(path_rc)
+                    }
+                    None => Err(Error::SysError(btrfs_api::Error::SysError(
+                        nix::errno::Errno::ENOENT,
+                    ))),
+                }
+            }
+        }
     }
 }
