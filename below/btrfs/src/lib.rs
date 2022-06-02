@@ -16,7 +16,7 @@ use btrfs_sys::*;
 
 use std::collections::HashMap;
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 pub mod btrfs_api;
@@ -47,6 +47,9 @@ impl From<btrfs_api::Error> for Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub const DEFAULT_ROOT: &str = "/";
+pub const DEFAULT_SAMPLES: u64 = 100;
+pub const DEFAULT_MIN_PCT: f64 = 0.0;
+
 // The SampleTree structure stores a hierarchical structure
 // of path names that we have some size estimations for. This
 // is supposed to follow the structure of files in the subvolume
@@ -178,5 +181,37 @@ impl Roots {
                 }
             }
         }
+    }
+}
+
+pub struct BtrfsReader {
+    samples: u64,
+    min_pct: f64,
+    path: PathBuf,
+}
+
+impl BtrfsReader {
+    pub fn new() -> BtrfsReader {
+        BtrfsReader::new_with_path(DEFAULT_ROOT.to_string())
+    }
+
+    pub fn new_with_path(p: String) -> BtrfsReader {
+        let path = p.into();
+        BtrfsReader {
+            samples: DEFAULT_SAMPLES,
+            min_pct: DEFAULT_MIN_PCT,
+            path,
+        }
+    }
+
+    pub fn sample(&self) -> Result<BtrfsMap> {
+        // Stub implementation of sample. This does nothing for now.
+        Ok(Default::default())
+    }
+
+    fn io_error<P: AsRef<Path>>(&self, file_name: P, e: std::io::Error) -> Error {
+        let mut p = self.path.clone();
+        p.push(file_name);
+        Error::IoError(p, e)
     }
 }
