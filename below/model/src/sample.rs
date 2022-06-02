@@ -46,6 +46,7 @@ pub struct SystemSample {
     pub vmstat: procfs::VmStat,
     pub hostname: String,
     pub disks: procfs::DiskMap,
+    pub btrfs: Option<btrfs::BtrfsMap>,
     pub kernel_version: Option<String>,
     pub os_release: Option<String>,
 }
