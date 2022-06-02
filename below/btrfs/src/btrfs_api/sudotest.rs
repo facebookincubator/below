@@ -18,6 +18,10 @@ pub use btrfs::btrfs_api::*;
 #[cfg(not(fbcode_build))]
 pub use crate::btrfs_api::*;
 
+use btrfs::BtrfsReader;
+
+use common::logutil::get_logger;
+
 use openat::Dir;
 use std::fs;
 use std::fs::File;
@@ -110,8 +114,19 @@ fn find_root_backref_test() {
     if is_btrfs(base_path) {
         let f = File::open(base_path).expect("File did not open");
         let fd = f.as_raw_fd();
-
         find_root_backref(fd, BTRFS_FS_TREE_OBJECTID.into()).expect("Unexpected error");
+    } else {
+        println!("Not on Btrfs");
+    }
+}
+
+#[test]
+fn test_sample() {
+    if is_btrfs(Path::new(&"/")) {
+        let logger = get_logger();
+        let btrfs_reader = BtrfsReader::new(100, 0.0, logger);
+        let btrfs_map = btrfs_reader.sample().expect("Sample returned error");
+        assert!(!btrfs_map.is_empty());
     } else {
         println!("Not on Btrfs");
     }

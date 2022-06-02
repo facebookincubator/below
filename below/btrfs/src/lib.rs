@@ -14,8 +14,11 @@
 
 use btrfs_sys::*;
 
+use rand_distr::{Distribution, Uniform};
+use slog::{self, error, warn};
 use std::collections::HashMap;
-use std::fmt;
+use std::fs::File;
+use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -188,25 +191,146 @@ pub struct BtrfsReader {
     samples: u64,
     min_pct: f64,
     path: PathBuf,
+    logger: slog::Logger,
 }
 
 impl BtrfsReader {
-    pub fn new() -> BtrfsReader {
-        BtrfsReader::new_with_path(DEFAULT_ROOT.to_string())
+    pub fn new(samples: u64, min_pct: f64, logger: slog::Logger) -> BtrfsReader {
+        BtrfsReader::new_with_path(DEFAULT_ROOT.to_string(), samples, min_pct, logger)
     }
 
-    pub fn new_with_path(p: String) -> BtrfsReader {
-        let path = p.into();
+    pub fn new_with_path(
+        p: String,
+        samples: u64,
+        min_pct: f64,
+        logger: slog::Logger,
+    ) -> BtrfsReader {
         BtrfsReader {
-            samples: DEFAULT_SAMPLES,
-            min_pct: DEFAULT_MIN_PCT,
-            path,
+            samples,
+            min_pct,
+            path: p.into(),
+            logger,
         }
     }
 
     pub fn sample(&self) -> Result<BtrfsMap> {
-        // Stub implementation of sample. This does nothing for now.
-        Ok(Default::default())
+        let f = File::open(&self.path).map_err(|e| self.io_error(&self.path, e))?;
+
+        let fd = f.as_raw_fd();
+
+        #[derive(Debug)]
+        struct ChunkInfo {
+            pos: u64,
+            chunk_offset: u64,
+            chunk_length: u64,
+            chunk_type: u64,
+        }
+
+        let samples = self.samples;
+        let mut chunks = Vec::<ChunkInfo>::new();
+        let mut total_chunk_length = 0;
+        let mut chunks_size = 0;
+        btrfs_api::tree_search_cb(
+            fd,
+            btrfs_api::BTRFS_CHUNK_TREE_OBJECTID as u64,
+            btrfs_api::SearchKey::ALL,
+            |sh, data| {
+                match sh.type_ {
+                    btrfs_api::BTRFS_CHUNK_ITEM_KEY => {
+                        let chunk = unsafe { &*(data.as_ptr() as *const btrfs_api::btrfs_chunk) };
+                        chunks.push(ChunkInfo {
+                            pos: total_chunk_length,
+                            chunk_offset: sh.offset,
+                            chunk_length: chunk.length,
+                            chunk_type: chunk.type_,
+                        });
+                        chunks_size += 1;
+                        total_chunk_length += chunk.length;
+                    }
+                    _ => {}
+                };
+            },
+        )
+        .map_err(Error::SysError)?;
+
+        let mut roots = Roots::new(fd);
+        let uniform = Uniform::new(0, total_chunk_length);
+        let mut rng = rand::thread_rng();
+
+        let mut sample_tree = SampleTree::new();
+        let mut total_samples = 0;
+
+        let mut random_positions = Vec::new();
+        for _ in 0..samples {
+            random_positions.push(uniform.sample(&mut rng));
+        }
+        random_positions.sort_unstable();
+
+        let mut chunk_idx = 0;
+        for random_position in &random_positions {
+            while random_position > &(chunks[chunk_idx].pos + chunks[chunk_idx].chunk_length) {
+                chunk_idx += 1;
+            }
+
+            let random_chunk = &chunks[chunk_idx];
+            total_samples += 1;
+            match (random_chunk.chunk_type as u32) & btrfs_api::BTRFS_BLOCK_GROUP_TYPE_MASK {
+                btrfs_api::BTRFS_BLOCK_GROUP_DATA => {
+                    let random_offset =
+                        random_chunk.chunk_offset + (random_position - random_chunk.pos);
+                    let mut err = Ok(());
+                    btrfs_api::logical_ino(fd, random_offset, false, |res| match res {
+                        Ok(inodes) => {
+                            for inode in inodes {
+                                btrfs_api::ino_lookup(fd, inode.root, inode.inum, |res| match res {
+                                    Ok(path) => match roots.get_root(inode.root) {
+                                        Ok(root_path) => {
+                                            let root_path_it = root_path.iter().map(|s| s.as_str());
+                                            let inode_path = path
+                                                .to_str()
+                                                .expect("Could not convert path to string")
+                                                .split('/')
+                                                .filter(|s| !s.is_empty());
+                                            sample_tree.add(root_path_it.chain(inode_path));
+                                        }
+                                        Err(e) => {
+                                            err = Err(e);
+                                        }
+                                    },
+                                    Err(e) => {
+                                        warn!(
+                                            self.logger,
+                                            "INO_LOOKUP Returned error {} for inode.root {} and inode.inum {}",
+                                            e,
+                                            inode.root,
+                                            inode.inum
+                                        );
+                                    }
+                                })
+                            }
+                        }
+                        Err(e) => {
+                            warn!(
+                                self.logger,
+                                "LOGICAL_INO returned error {} for random offset {} ",
+                                e,
+                                random_offset
+                            );
+                        }
+                    });
+                    err?;
+                }
+                btrfs_api::BTRFS_BLOCK_GROUP_METADATA => {}
+                btrfs_api::BTRFS_BLOCK_GROUP_SYSTEM => {}
+                _ => {}
+            };
+        }
+
+        sample_tree.convert(
+            total_samples,
+            total_chunk_length,
+            Some(self.min_pct as f64 / 100.0),
+        )
     }
 
     fn io_error<P: AsRef<Path>>(&self, file_name: P, e: std::io::Error) -> Error {
