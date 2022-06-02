@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 302] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 305] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -125,6 +125,9 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 302] = [
     "system.disks.<key>.time_spend_discard_ms",
     "system.disks.<key>.major",
     "system.disks.<key>.minor",
+    "system.btrfs.<key>.name",
+    "system.btrfs.<key>.disk_fraction",
+    "system.btrfs.<key>.disk_bytes",
     "cgroup.[path:/<cgroup_path>/.]name",
     "cgroup.[path:/<cgroup_path>/.]full_path",
     "cgroup.[path:/<cgroup_path>/.]inode_number",

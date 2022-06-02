@@ -419,6 +419,7 @@ impl HasRenderConfig for model::SystemModel {
             Disks(field_id) => {
                 model::SingleDiskModel::get_render_config_builder(&field_id.subquery_id)
             }
+            Btrfs(field_id) => model::BtrfsModel::get_render_config_builder(&field_id.subquery_id),
         }
     }
 }
@@ -566,6 +567,18 @@ impl HasRenderConfig for model::SingleDiskModel {
             DiskUsage => rc.title("Disk Usage").suffix("%").format(Precision(2)),
             PartitionSize => rc.title("Partition Size").format(ReadableSize),
             FilesystemType => rc.title("Filesystem Type"),
+        }
+    }
+}
+
+impl HasRenderConfig for model::BtrfsModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::BtrfsModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            Name => rc.title("Name").width(50),
+            DiskFraction => rc.title("Disk Fraction"),
+            DiskBytes => rc.title("Disk Bytes").format(ReadableSize),
         }
     }
 }

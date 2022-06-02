@@ -175,6 +175,12 @@ enum Command {
         /// Flag to disable disk_stat collection.
         #[clap(long)]
         disable_disk_stat: bool,
+        /// Flag to enable btrfs_stat collection. If enabled, below will use
+        /// the btdu algorithm to sample disk usage btrfs. btdu randomly samples
+        /// the disk, finds what is located at that point, adds the path to results
+        /// and repeats. Default configuration uses 100 samples.
+        #[clap(long)]
+        enable_btrfs_stat: bool,
         /// Flag to disable eBPF-based exitstats
         #[clap(long)]
         disable_exitstats: bool,
@@ -652,6 +658,7 @@ fn real_main(init: init::InitToken) {
             ref port,
             ref skew_detection_threshold_ms,
             ref disable_disk_stat,
+            ref enable_btrfs_stat,
             ref disable_exitstats,
             ref enable_gpu_stats,
             ref compress_opts,
@@ -676,6 +683,7 @@ fn real_main(init: init::InitToken) {
                         Duration::from_millis(*skew_detection_threshold_ms),
                         debug,
                         *disable_disk_stat,
+                        *enable_btrfs_stat,
                         *disable_exitstats,
                         compress_opts,
                     )
@@ -902,6 +910,7 @@ fn record(
     skew_detection_threshold: Duration,
     debug: bool,
     disable_disk_stat: bool,
+    enable_btrfs_stat: bool,
     disable_exitstats: bool,
     compress_opts: &CompressOpts,
 ) -> Result<()> {
@@ -953,6 +962,9 @@ fn record(
             exit_data: exit_buffer,
             collect_io_stat,
             disable_disk_stat,
+            enable_btrfs_stat,
+            btrfs_samples: below_config.btrfs_samples,
+            btrfs_min_pct: below_config.btrfs_min_pct,
             cgroup_re,
             gpu_stats_receiver,
         },

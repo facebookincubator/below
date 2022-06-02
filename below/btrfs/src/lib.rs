@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use btrfs_sys::*;
-
 use rand_distr::{Distribution, Uniform};
 use slog::{self, error, warn};
 use std::collections::HashMap;
@@ -23,6 +21,11 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 pub mod btrfs_api;
+
+#[cfg(not(fbcode_build))]
+pub use btrfs_api::open_source::btrfs_sys::*;
+#[cfg(fbcode_build)]
+pub use btrfs_sys::*;
 
 mod types;
 pub use types::*;
@@ -297,6 +300,7 @@ impl BtrfsReader {
                                             err = Err(e);
                                         }
                                     },
+                                    Err(btrfs_api::Error::SysError(nix::errno::Errno::ENOENT)) => {}
                                     Err(e) => {
                                         warn!(
                                             self.logger,
@@ -309,6 +313,7 @@ impl BtrfsReader {
                                 })
                             }
                         }
+                        Err(btrfs_api::Error::SysError(nix::errno::Errno::ENOENT)) => {}
                         Err(e) => {
                             warn!(
                                 self.logger,
