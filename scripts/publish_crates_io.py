@@ -13,6 +13,7 @@ PACKAGES = [
     "below/cgroupfs",
     "below/procfs",
     "below/common",
+    "below/gpu_stats",
     "below/config",
     "below/below_derive",
     "below/model",

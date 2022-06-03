@@ -14,4 +14,8 @@
 
 #[cfg(test)]
 pub mod field_ids;
+pub mod gpu_model;
 pub mod gpu_stats_collector_plugin;
+pub use gpu_model::*;
+
+pub use crate::*;

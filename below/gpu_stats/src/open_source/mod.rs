@@ -12,26 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::collector_plugin::AsyncCollectorPlugin;
-use anyhow::Result;
-use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 
-pub type SampleType = gpu_stats::GpuSample;
+// Open source gpu_stats not implemented yet
 
-pub struct GpuStatsCollectorPlugin {}
+pub type GpuMap = ();
 
-impl GpuStatsCollectorPlugin {
-    pub fn new(_logger: slog::Logger) -> Result<Self> {
-        Ok(Self {})
-    }
-}
-
-// Wrapper plugin for GpuStatsCollector
-#[async_trait]
-impl AsyncCollectorPlugin for GpuStatsCollectorPlugin {
-    type T = SampleType;
-
-    async fn try_collect(&mut self) -> Result<Option<SampleType>> {
-        Ok(None)
-    }
+#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct GpuSample {
+    pub gpu_map: GpuMap,
 }

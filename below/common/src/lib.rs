@@ -26,14 +26,17 @@ pub mod util;
 // eg `crate::logging::setup(..)`.
 #[macro_export]
 macro_rules! open_source_shim {
-    () => {
+    ($v:vis) => {
         #[cfg(fbcode_build)]
         mod facebook;
         #[cfg(fbcode_build)]
-        use facebook::*;
+        $v use facebook::*;
         #[cfg(not(fbcode_build))]
         mod open_source;
         #[cfg(not(fbcode_build))]
-        use open_source::*;
+        $v use open_source::*;
+    };
+    () => {
+        open_source_shim!(pub(self));
     };
 }

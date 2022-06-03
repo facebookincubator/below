@@ -12,26 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::collector_plugin::AsyncCollectorPlugin;
-use anyhow::Result;
-use async_trait::async_trait;
+use common::open_source_shim;
 
-pub type SampleType = gpu_stats::GpuSample;
-
-pub struct GpuStatsCollectorPlugin {}
-
-impl GpuStatsCollectorPlugin {
-    pub fn new(_logger: slog::Logger) -> Result<Self> {
-        Ok(Self {})
-    }
-}
-
-// Wrapper plugin for GpuStatsCollector
-#[async_trait]
-impl AsyncCollectorPlugin for GpuStatsCollectorPlugin {
-    type T = SampleType;
-
-    async fn try_collect(&mut self) -> Result<Option<SampleType>> {
-        Ok(None)
-    }
-}
+open_source_shim!(pub);

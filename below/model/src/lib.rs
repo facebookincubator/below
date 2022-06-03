@@ -20,6 +20,8 @@ use std::time::{Duration, Instant, SystemTime};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 
+use common::open_source_shim;
+
 #[macro_use]
 pub mod collector;
 pub mod cgroup;
@@ -32,14 +34,7 @@ pub mod sample;
 mod sample_model;
 pub mod system;
 
-#[cfg(fbcode_build)]
-pub mod facebook;
-#[cfg(fbcode_build)]
-pub use facebook::*;
-#[cfg(not(fbcode_build))]
-pub mod open_source;
-#[cfg(not(fbcode_build))]
-pub use open_source::*;
+open_source_shim!(pub);
 
 pub use cgroup::*;
 pub use collector::*;
@@ -426,7 +421,6 @@ pub struct Model {
     pub process: ProcessModel,
     #[queriable(subquery)]
     pub network: NetworkModel,
-    #[cfg(fbcode_build)]
     #[queriable(subquery)]
     pub gpu: Option<GpuModel>,
 }
@@ -450,7 +444,6 @@ impl Model {
             .aggr_top_level_val(),
             process: ProcessModel::new(&sample.processes, last.map(|(s, d)| (&s.processes, d))),
             network: NetworkModel::new(&sample.netstats, last.map(|(s, d)| (&s.netstats, d))),
-            #[cfg(fbcode_build)]
             gpu: sample.gpus.as_ref().map(|gpus| {
                 GpuModel::new(&gpus.gpu_map, {
                     if let Some((s, d)) = last {
