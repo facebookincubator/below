@@ -54,6 +54,8 @@ pub struct CgroupState {
 impl StateCommon for CgroupState {
     type ModelType = CgroupModel;
     type TagType = SingleCgroupModelFieldId;
+    type KeyType = String;
+
     fn get_filter(&mut self) -> &mut Option<String> {
         &mut self.filter
     }

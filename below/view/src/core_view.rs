@@ -42,6 +42,8 @@ pub enum CoreOrder {}
 impl StateCommon for CoreState {
     type ModelType = SystemModel;
     type TagType = CoreOrder;
+    type KeyType = String;
+
     fn get_filter(&mut self) -> &mut Option<String> {
         &mut self.filter
     }
