@@ -151,6 +151,7 @@ mod jump_popup;
 pub enum ProcessZoomState {
     NoZoom,
     Cgroup,
+    Pids,
 }
 
 #[derive(Clone, Debug, PartialEq)]

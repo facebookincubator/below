@@ -39,6 +39,7 @@ pub type ViewType = StatsView<ProcessView>;
 pub struct ProcessState {
     pub filter: Option<String>,
     pub cgroup_filter: Option<String>,
+    pub pids_filter: Option<Vec<i32>>,
     // For zoomed view, we should save current filter to here and reset the
     // filter when go back to cgroup or process view.
     pub filter_cache_for_zoom: Option<String>,
@@ -112,6 +113,7 @@ impl StateCommon for ProcessState {
         sort_tags.insert("I/O".into(), &*PROCESS_IO_TAB);
         Self {
             cgroup_filter: None,
+            pids_filter: None,
             filter: None,
             filter_cache_for_zoom: None,
             sort_order: None,
@@ -140,12 +142,21 @@ impl ProcessState {
         self.cgroup_filter = Some(current_selection);
         std::mem::swap(&mut self.filter_cache_for_zoom, &mut self.filter);
         self.filter = None;
+        self.pids_filter = None;
     }
 
     pub fn reset_state_for_quiting_zoom(&mut self) {
         std::mem::swap(&mut self.filter, &mut self.filter_cache_for_zoom);
         self.cgroup_filter = None;
         self.filter_cache_for_zoom = None;
+        self.pids_filter = None;
+    }
+
+    pub fn handle_state_for_entering_pids_zoom(&mut self, current_selection: Vec<i32>) {
+        self.pids_filter = Some(current_selection);
+        std::mem::swap(&mut self.filter, &mut self.filter_cache_for_zoom);
+        self.filter = None;
+        self.cgroup_filter = None;
     }
 }
 
