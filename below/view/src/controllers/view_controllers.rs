@@ -271,6 +271,19 @@ make_event_controller!(
             (*stack.get_mut()).move_to_front(position);
         });
 
+        let current_state = c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .main_view_state
+            .clone();
+
+        // If the previous state is zoom state, we need to clear the zoom state
+        if current_state.is_process_zoom_state() {
+            crate::process_view::ProcessView::get_process_view(c)
+                .state
+                .borrow_mut()
+                .reset_state_for_quiting_zoom();
+        }
         c.user_data::<ViewState>()
             .expect("No data stored in Cursive object!")
             .main_view_state = MainViewState::Gpu;
