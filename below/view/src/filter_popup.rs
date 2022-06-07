@@ -32,9 +32,7 @@ fn set_cp_filter(c: &mut Cursive, text: Option<String>) {
         .clone();
     match state {
         MainViewState::Cgroup => crate::cgroup_view::ViewType::cp_filter(c, text),
-        MainViewState::Process | MainViewState::ProcessZoomedIntoCgroup => {
-            crate::process_view::ViewType::cp_filter(c, text)
-        }
+        MainViewState::Process(_) => crate::process_view::ViewType::cp_filter(c, text),
         MainViewState::Core => crate::core_view::ViewType::cp_filter(c, text),
         #[cfg(fbcode_build)]
         MainViewState::Gpu => crate::gpu_view::ViewType::cp_filter(c, text),
