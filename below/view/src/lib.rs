@@ -132,9 +132,8 @@ macro_rules! view_warn {
         let msg = format!($($args)*);
         match state {
             crate::MainViewState::Cgroup => crate::cgroup_view::ViewType::cp_warn($c, &msg),
-            crate::MainViewState::Process | crate::MainViewState::ProcessZoomedIntoCgroup => {
-                crate::process_view::ViewType::cp_warn($c, &msg)
-            }
+            crate::MainViewState::Process(_) =>
+                crate::process_view::ViewType::cp_warn($c, &msg),
             crate::MainViewState::Core => crate::core_view::ViewType::cp_warn($c, &msg),
             #[cfg(fbcode_build)]
             crate::MainViewState::Gpu => crate::gpu_view::ViewType::cp_warn($c, &msg),
@@ -149,13 +148,27 @@ pub mod viewrc;
 mod jump_popup;
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum ProcessZoomState {
+    NoZoom,
+    Cgroup,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum MainViewState {
     Cgroup,
-    Process,
-    ProcessZoomedIntoCgroup,
+    Process(ProcessZoomState),
     Core,
     #[cfg(fbcode_build)]
     Gpu,
+}
+
+impl MainViewState {
+    pub fn is_process_zoom_state(&self) -> bool {
+        match &self {
+            &MainViewState::Process(zoom) if zoom != &ProcessZoomState::NoZoom => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -177,9 +190,7 @@ fn refresh(c: &mut Cursive) {
         .clone();
     match current_state {
         MainViewState::Cgroup => cgroup_view::CgroupView::refresh(c),
-        MainViewState::Process | MainViewState::ProcessZoomedIntoCgroup => {
-            process_view::ProcessView::refresh(c)
-        }
+        MainViewState::Process(_) => process_view::ProcessView::refresh(c),
         MainViewState::Core => core_view::CoreView::refresh(c),
         #[cfg(fbcode_build)]
         MainViewState::Gpu => gpu_view::GpuView::refresh(c),

@@ -21,7 +21,7 @@ use serde::Deserialize;
 
 /// Enum of supported front view.
 // We didn't re-use the MainViewState because we don't want to
-// expose those internal state like ProcessZoomedIntoCgroup
+// expose internal state like Process(ProcessZoomState::Cgroup)
 #[derive(Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum DefaultFrontView {
@@ -116,7 +116,7 @@ mod test {
     use super::*;
 
     use crate::fake_view::FakeView;
-    use crate::{MainViewState, ViewState};
+    use crate::{MainViewState, ProcessZoomState, ViewState};
 
     #[test]
     fn test_viewrc_collapse_cgroups() {
@@ -169,7 +169,7 @@ mod test {
         let expected_state = vec![
             MainViewState::Cgroup,
             MainViewState::Cgroup,
-            MainViewState::Process,
+            MainViewState::Process(ProcessZoomState::NoZoom),
             MainViewState::Core,
         ];
         desired_state

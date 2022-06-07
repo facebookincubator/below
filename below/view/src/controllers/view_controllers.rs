@@ -14,7 +14,7 @@
 
 use super::*;
 
-use crate::MainViewState;
+use crate::{MainViewState, ProcessZoomState};
 use cursive::views::{NamedView, OnEventView, ResizedView, StackView};
 
 // Invoke command palette
@@ -175,7 +175,7 @@ make_event_controller!(
             .clone();
 
         // If the previous state is zoom state, we need to clear the zoom state
-        if current_state == MainViewState::ProcessZoomedIntoCgroup {
+        if current_state.is_process_zoom_state() {
             crate::process_view::ProcessView::get_process_view(c)
                 .state
                 .borrow_mut()
@@ -183,7 +183,7 @@ make_event_controller!(
         }
         c.user_data::<ViewState>()
             .expect("No data stored in Cursive object!")
-            .main_view_state = MainViewState::Process;
+            .main_view_state = MainViewState::Process(ProcessZoomState::NoZoom);
     }
 );
 
@@ -209,7 +209,7 @@ make_event_controller!(
             .clone();
 
         // If the previous state is zoom state, we need to clear the zoom state
-        if current_state == MainViewState::ProcessZoomedIntoCgroup {
+        if current_state.is_process_zoom_state() {
             crate::process_view::ProcessView::get_process_view(c)
                 .state
                 .borrow_mut()
@@ -243,7 +243,7 @@ make_event_controller!(
             .clone();
 
         // If the previous state is zoom state, we need to clear the zoom state
-        if current_state == MainViewState::ProcessZoomedIntoCgroup {
+        if current_state.is_process_zoom_state() {
             crate::process_view::ProcessView::get_process_view(c)
                 .state
                 .borrow_mut()
@@ -300,7 +300,7 @@ make_event_controller!(
         let next_state = match current_state {
             // Pressing 'z' in zoomed view should remove zoom
             // and bring user back to cgroup view
-            MainViewState::ProcessZoomedIntoCgroup => {
+            MainViewState::Process(ProcessZoomState::Cgroup) => {
                 crate::process_view::ProcessView::get_process_view(c)
                     .state
                     .borrow_mut()
@@ -312,22 +312,22 @@ make_event_controller!(
                     .state
                     .borrow_mut()
                     .handle_state_for_entering_zoom(current_selection);
-                MainViewState::ProcessZoomedIntoCgroup
+                MainViewState::Process(ProcessZoomState::Cgroup)
             }
             // Pressing 'z' in process view should do nothing
-            MainViewState::Process => {
+            MainViewState::Process(ProcessZoomState::NoZoom) => {
                 crate::process_view::ProcessView::get_process_view(c)
                     .state
                     .borrow_mut()
                     .cgroup_filter = None;
-                MainViewState::Process
+                MainViewState::Process(ProcessZoomState::NoZoom)
             }
             _ => return,
         };
 
         c.call_on_name("main_view_stack", |stack: &mut NamedView<StackView>| {
             match &next_state {
-                MainViewState::Process | MainViewState::ProcessZoomedIntoCgroup => {
+                MainViewState::Process(_) => {
                     // Bring process_view to front
                     let process_pos = (*stack.get_mut())
                         .find_layer_from_name("process_view_panel")
@@ -373,7 +373,7 @@ make_event_controller!(
             .clone();
 
         // NB: scope the borrowing to refresh() doesn't re-borrow and panic
-        if current_state == MainViewState::Process {
+        if current_state == MainViewState::Process(ProcessZoomState::NoZoom) {
             let mut process_view = crate::process_view::ProcessView::get_process_view(c);
             process_view.get_cmd_palette().toggle_fold();
             process_view.state.borrow_mut().toggle_fold();
