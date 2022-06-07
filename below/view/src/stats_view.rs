@@ -43,6 +43,7 @@ pub struct ColumnTitles {
 pub trait StateCommon {
     type ModelType;
     type TagType;
+    type KeyType;
     /// Expose the filter data for StatsView to implement common '/' fitlering.
     fn get_filter(&mut self) -> &mut Option<String>;
     /// Set the sorting tag to common state
@@ -81,7 +82,10 @@ pub trait ViewBridge {
         &mut self,
         state: &Self::StateType,
         offset: Option<usize>,
-    ) -> Vec<(StyledString, String)>;
+    ) -> Vec<(
+        StyledString,
+        <<Self as ViewBridge>::StateType as StateCommon>::KeyType,
+    )>;
 }
 
 /// StatsView is a view wrapper that wraps tabs, titles, and list of stats.
@@ -290,10 +294,14 @@ impl<V: 'static + ViewBridge> StatsView<V> {
     }
 
     // A convenience function to get the scroll view of the list
-    pub fn get_list_scroll_view(&mut self) -> &mut ScrollView<NamedView<SelectView>> {
+    pub fn get_list_scroll_view(
+        &mut self,
+    ) -> &mut ScrollView<NamedView<SelectView<<V::StateType as StateCommon>::KeyType>>> {
         let scroll_view = self.get_scroll_view();
 
-        let select_named: &mut ResizedView<ScrollView<NamedView<SelectView>>> = scroll_view
+        let select_named: &mut ResizedView<
+            ScrollView<NamedView<SelectView<<V::StateType as StateCommon>::KeyType>>>,
+        > = scroll_view
             .get_inner_mut() // LinearLayout
             .get_child_mut(1) // ResizedView
             .expect("Fail to get title, StatsView may not properly init")
@@ -304,7 +312,9 @@ impl<V: 'static + ViewBridge> StatsView<V> {
     }
 
     // A convenience function to get the detail stats SelectView
-    pub fn get_detail_view(&mut self) -> ViewRef<SelectView> {
+    pub fn get_detail_view(
+        &mut self,
+    ) -> ViewRef<SelectView<<V::StateType as StateCommon>::KeyType>> {
         self.get_list_scroll_view().get_inner_mut().get_mut()
     }
 

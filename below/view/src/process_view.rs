@@ -52,6 +52,8 @@ pub struct ProcessState {
 impl StateCommon for ProcessState {
     type ModelType = ProcessModel;
     type TagType = SingleProcessModelFieldId;
+    type KeyType = String;
+
     fn get_filter(&mut self) -> &mut Option<String> {
         &mut self.filter
     }
