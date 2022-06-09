@@ -18,4 +18,28 @@ use crate::stats_view::{StatsView, ViewBridge};
 
 use super::*;
 
-make_event_controller!(URLPopup, "url", "", Event::Char('u'), |_, _| {}, |_, _| {});
+make_event_controller!(
+    URLPopup,
+    "__unused_url",
+    "",
+    Event::Char('u'),
+    |_, _| {},
+    |_, _| {}
+);
+make_event_controller!(
+    GpuView,
+    "__unused_gpu",
+    "",
+    Event::Char('g'),
+    |_, _| {},
+    |_, _| {}
+);
+
+make_event_controller!(
+    GpuZoomView,
+    "__unused_gpu_zoom",
+    "",
+    Event::Char('x'),
+    |_, _| {},
+    |_, _| {}
+);

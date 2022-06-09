@@ -255,41 +255,6 @@ make_event_controller!(
     }
 );
 
-// Invoke Gpu View
-#[cfg(fbcode_build)]
-make_event_controller!(
-    GpuView,
-    "gpu",
-    "",
-    Event::Char('g'),
-    |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
-    |c: &mut Cursive, _cmd_vec: &[&str]| {
-        c.call_on_name("main_view_stack", |stack: &mut NamedView<StackView>| {
-            let position = (*stack.get_mut())
-                .find_layer_from_name("gpu_view_panel")
-                .expect("Failed to find view view");
-            (*stack.get_mut()).move_to_front(position);
-        });
-
-        let current_state = c
-            .user_data::<ViewState>()
-            .expect("No data stored in Cursive object!")
-            .main_view_state
-            .clone();
-
-        // If the previous state is zoom state, we need to clear the zoom state
-        if current_state.is_process_zoom_state() {
-            crate::process_view::ProcessView::get_process_view(c)
-                .state
-                .borrow_mut()
-                .reset_state_for_quiting_zoom();
-        }
-        c.user_data::<ViewState>()
-            .expect("No data stored in Cursive object!")
-            .main_view_state = MainViewState::Gpu;
-    }
-);
-
 // Zoom in View
 make_event_controller!(
     ZoomView,

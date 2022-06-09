@@ -79,8 +79,8 @@ fn get_description(controller: &Controllers) -> &'static str {
         Controllers::Process => "Show process view.",
         Controllers::Cgroup => "Show cgroup view.",
         Controllers::System => "Show system core view.",
-        #[cfg(fbcode_build)]
         Controllers::Gpu => "Show GPU view.",
+        Controllers::GpuZoom => "Zoom into process view filtered by selected GPU.",
         Controllers::Zoom => "Zoom into process view filtered by selected cgroup.",
         Controllers::Fold => "Fold processes (post filter) and display aggregated values.",
         Controllers::NextPage => "scroll down 15 lines primary display.",
@@ -135,8 +135,8 @@ fn fill_controllers(
         })
         .collect();
 
-    // Unwrap in this vec! must be sccuess, otherwise we may have lost controller(s) and should be detected
-    // by unit test.
+    // Unwrap in this vec! must be success, otherwise we may have lost
+    // controller(s) and should be detected by unit test.
     let mut controllers = vec![
         cmd_map.get(&Controllers::Help).unwrap().to_string(),
         cmd_map.get(&Controllers::CmdPalette).unwrap().to_string(),
