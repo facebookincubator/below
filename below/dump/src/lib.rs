@@ -31,6 +31,7 @@ use store::advance::{new_advance_local, new_advance_remote};
 use store::Advance;
 use store::Direction;
 
+pub mod btrfs;
 pub mod cgroup;
 pub mod command;
 pub mod disk;
@@ -93,6 +94,7 @@ pub type CgroupField = DumpField<model::SingleCgroupModelFieldId>;
 pub type ProcessField = DumpField<model::SingleProcessModelFieldId>;
 pub type SystemField = DumpField<model::SystemModelFieldId>;
 pub type DiskField = DumpField<model::SingleDiskModelFieldId>;
+pub type BtrfsField = DumpField<model::BtrfsModelFieldId>;
 pub type NetworkField = DumpField<model::NetworkModelFieldId>;
 pub type IfaceField = DumpField<model::SingleNetModelFieldId>;
 // Essentially the same as NetworkField
@@ -252,6 +254,43 @@ pub fn run(
                 time_begin,
                 time_end,
                 &disk,
+                output.as_mut(),
+                opts.output_format,
+                opts.br,
+                errs,
+            )
+        }
+        DumpCommand::Btrfs {
+            fields,
+            opts,
+            select,
+            pattern,
+        } => {
+            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let default = opts.everything || opts.default;
+            let detail = opts.everything || opts.detail;
+            let fields = if let Some(pattern_key) = pattern {
+                parse_pattern(filename, pattern_key, "btrfs")
+            } else {
+                fields
+            };
+            let fields = expand_fields(
+                match fields.as_ref() {
+                    Some(fields) if !default => fields,
+                    _ => command::DEFAULT_BTRFS_FIELDS,
+                },
+                detail,
+            );
+            let btrfs = btrfs::Btrfs::new(&opts, select, fields);
+            let mut output: Box<dyn Write> = match opts.output.as_ref() {
+                Some(file_path) => Box::new(File::create(file_path)?),
+                None => Box::new(io::stdout()),
+            };
+            dump_timeseries(
+                advance,
+                time_begin,
+                time_end,
+                &btrfs,
                 output.as_mut(),
                 opts.output_format,
                 opts.br,
