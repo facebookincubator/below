@@ -15,8 +15,8 @@
 use crate::{CommonField, DumpField};
 use model::EnumIter;
 use model::{
-    FieldId, NetworkModelFieldId, SingleCgroupModelFieldId, SingleDiskModelFieldId,
-    SingleNetModelFieldId, SingleProcessModelFieldId, SystemModelFieldId,
+    BtrfsModelFieldId, FieldId, NetworkModelFieldId, SingleCgroupModelFieldId,
+    SingleDiskModelFieldId, SingleNetModelFieldId, SingleProcessModelFieldId, SystemModelFieldId,
 };
 
 use anyhow::{bail, Error, Result};
@@ -365,6 +365,74 @@ $ below dump disk -b "08:30:00" -e "08:30:30" -s read_bytes_per_sec --rsort --to
         agg_discard_fields = join(DiskAggField::Discard.expand(false)),
         agg_fsinfo_fields = join(DiskAggField::FsInfo.expand(false)),
         default_fields = join(DEFAULT_DISK_FIELDS.to_owned()),
+    )
+});
+
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    below_derive::EnumFromStr,
+    below_derive::EnumToString
+)]
+pub enum BtrfsAggField {
+    DiskUsage,
+}
+
+impl AggField<BtrfsModelFieldId> for BtrfsAggField {
+    fn expand(&self, _detail: bool) -> Vec<BtrfsModelFieldId> {
+        use model::BtrfsModelFieldId::*;
+
+        match self {
+            Self::DiskUsage => vec![DiskFraction, DiskBytes],
+        }
+    }
+}
+
+pub type BtrfsOptionField = DumpOptionField<BtrfsModelFieldId, BtrfsAggField>;
+
+pub static DEFAULT_BTRFS_FIELDS: &[BtrfsOptionField] = &[
+    DumpOptionField::Unit(DumpField::Common(CommonField::Datetime)),
+    DumpOptionField::Unit(DumpField::FieldId(BtrfsModelFieldId::Name)),
+    DumpOptionField::Agg(BtrfsAggField::DiskUsage),
+    DumpOptionField::Unit(DumpField::Common(CommonField::Timestamp)),
+];
+
+const BTRFS_ABOUT: &str = "Dump btrfs Stats";
+
+static BTRFS_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+    format!(
+        r#"{about}
+
+********************** Available fields **********************
+
+{common_fields}, and expanded fields below.
+
+********************** Aggregated fields **********************
+
+* usage: includes [{agg_disk_usage_fields}].
+
+* --detail: no effect.
+
+* --default: includes [{default_fields}].
+
+* --everything: includes everything (equivalent to --default --detail).
+
+********************** Example Commands **********************
+
+Simple example:
+
+$ below dump btrfs -b "08:30:00" -e "08:30:30" -f usage -O csv
+
+Output stats for top 5 subvolumes for each time slice from 08:30:00 to 08:30:30:
+
+$ below dump btrfs -b "08:30:00" -e "08:30:30" -s disk_bytes --rsort --top 5
+
+"#,
+        about = BTRFS_ABOUT,
+        common_fields = join(CommonField::unit_variant_iter()),
+        agg_disk_usage_fields = join(BtrfsAggField::DiskUsage.expand(false)),
+        default_fields = join(DEFAULT_BTRFS_FIELDS.to_owned()),
     )
 });
 
@@ -981,6 +1049,20 @@ pub enum DumpCommand {
         #[clap(long, short)]
         select: Option<SingleDiskModelFieldId>,
         /// Saved pattern in the dumprc file under [disk] section.
+        #[clap(long, short, conflicts_with("fields"))]
+        pattern: Option<String>,
+    },
+    #[clap(about = BTRFS_ABOUT, long_about = BTRFS_LONG_ABOUT.as_str())]
+    Btrfs {
+        /// Select which fields to display and in what order.
+        #[clap(short, long)]
+        fields: Option<Vec<BtrfsOptionField>>,
+        #[clap(flatten)]
+        opts: GeneralOpt,
+        /// Select field for operation, use with --sort, --rsort, --filter, --top
+        #[clap(long, short)]
+        select: Option<BtrfsModelFieldId>,
+        /// Saved pattern in the dumprc file under [btrfs] section.
         #[clap(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
