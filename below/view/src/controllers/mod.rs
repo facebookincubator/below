@@ -122,6 +122,7 @@ make_controllers!(
     Cgroup: CgroupView,
     System: SystemView,
     Gpu: GpuView,
+    GpuProcess: GpuProcessView,
     GpuZoom: GpuZoomView,
     Zoom: ZoomView,
     Fold: FoldProcessView,

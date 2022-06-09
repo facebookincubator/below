@@ -36,6 +36,15 @@ make_event_controller!(
 );
 
 make_event_controller!(
+    GpuProcessView,
+    "__unused_gpu_process",
+    "",
+    Event::Char('G'),
+    |_, _| {},
+    |_, _| {}
+);
+
+make_event_controller!(
     GpuZoomView,
     "__unused_gpu_zoom",
     "",

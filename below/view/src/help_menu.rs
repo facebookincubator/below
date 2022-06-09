@@ -81,6 +81,7 @@ fn get_description(controller: &Controllers) -> &'static str {
         Controllers::System => "Show system core view.",
         Controllers::Gpu => "Show GPU view.",
         Controllers::GpuZoom => "Zoom into process view filtered by selected GPU.",
+        Controllers::GpuProcess => "Zoom into process view for all GPU processes.",
         Controllers::Zoom => "Zoom into process view filtered by selected cgroup.",
         Controllers::Fold => "Fold processes (post filter) and display aggregated values.",
         Controllers::NextPage => "scroll down 15 lines primary display.",
