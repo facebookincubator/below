@@ -186,13 +186,6 @@ impl CgroupView {
             view.refresh(c);
         });
 
-        list.set_on_select(|c, cgroup: &String| {
-            c.call_on_name(Self::get_view_name(), |view: &mut ViewType| {
-                view.state.borrow_mut().current_selected_cgroup = cgroup.clone();
-                view.get_cmd_palette().set_info(cgroup);
-            });
-        });
-
         let tabs = vec![
             "General".into(),
             "CPU".into(),
@@ -284,15 +277,6 @@ impl CgroupView {
     pub fn refresh(c: &mut Cursive) {
         let mut view = Self::get_cgroup_view(c);
         view.refresh(c);
-        let mut cmd_palette = view.get_cmd_palette();
-        // We should not override alert on refresh. Only selection should override alert.
-        match (
-            cmd_palette.is_alerting(),
-            view.get_detail_view().selection(),
-        ) {
-            (false, Some(selection)) => cmd_palette.set_info(selection.to_string()),
-            _ => {}
-        }
     }
 }
 
@@ -312,5 +296,13 @@ impl ViewBridge for CgroupView {
         offset: Option<usize>,
     ) -> Vec<(StyledString, String)> {
         self.tab.get_rows(state, offset)
+    }
+
+    fn on_select_update_state(state: &mut Self::StateType, selected_key: Option<&String>) {
+        state.current_selected_cgroup = selected_key.cloned().unwrap_or_default();
+    }
+
+    fn on_select_update_cmd_palette(_view: &Self::StateType, selected_key: &String) -> String {
+        selected_key.clone()
     }
 }

@@ -166,21 +166,7 @@ pub struct ProcessView {
 
 impl ProcessView {
     pub fn new(c: &mut Cursive) -> NamedView<ViewType> {
-        let mut list = SelectView::<String>::new();
-        list.set_on_select(|c, pid: &String| {
-            c.call_on_name(Self::get_view_name(), |view: &mut ViewType| {
-                let cmdline = view
-                    .state
-                    .borrow()
-                    .get_model()
-                    .processes
-                    .get(&pid.parse::<i32>().unwrap_or(0))
-                    .map_or("?".to_string(), |spm| {
-                        spm.cmdline.clone().unwrap_or_else(|| "?".to_string())
-                    });
-                view.get_cmd_palette().set_info(cmdline);
-            });
-        });
+        let list = SelectView::<String>::new();
 
         let tabs = vec!["General".into(), "CPU".into(), "Mem".into(), "I/O".into()];
         let mut tabs_map: HashMap<String, ProcessView> = HashMap::new();
@@ -277,26 +263,6 @@ impl ProcessView {
     pub fn refresh(c: &mut Cursive) {
         let mut view = Self::get_process_view(c);
         view.refresh(c);
-        let mut cmd_palette = view.get_cmd_palette();
-        // We should not override alert on refresh. Only selection should override alert.
-        match (
-            cmd_palette.is_alerting(),
-            view.get_detail_view().selection(),
-        ) {
-            (false, Some(selection)) => {
-                let cmdline = view
-                    .state
-                    .borrow()
-                    .get_model()
-                    .processes
-                    .get(&selection.parse::<i32>().unwrap_or(0))
-                    .map_or("?".to_string(), |spm| {
-                        spm.cmdline.clone().unwrap_or_else(|| "?".to_string())
-                    });
-                cmd_palette.set_info(cmdline)
-            }
-            _ => {}
-        }
     }
 }
 
@@ -315,5 +281,15 @@ impl ViewBridge for ProcessView {
         offset: Option<usize>,
     ) -> Vec<(StyledString, String)> {
         self.tab.get_rows(state, offset)
+    }
+
+    fn on_select_update_cmd_palette(state: &Self::StateType, pid: &String) -> String {
+        state
+            .get_model()
+            .processes
+            .get(&pid.parse::<i32>().unwrap_or(0))
+            .map_or("?".to_string(), |spm| {
+                spm.cmdline.clone().unwrap_or_else(|| "?".to_string())
+            })
     }
 }

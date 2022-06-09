@@ -43,7 +43,7 @@ pub struct ColumnTitles {
 pub trait StateCommon {
     type ModelType;
     type TagType;
-    type KeyType;
+    type KeyType: Clone;
     /// Expose the filter data for StatsView to implement common '/' fitlering.
     fn get_filter(&mut self) -> &mut Option<String>;
     /// Set the sorting tag to common state
@@ -86,6 +86,23 @@ pub trait ViewBridge {
         StyledString,
         <<Self as ViewBridge>::StateType as StateCommon>::KeyType,
     )>;
+
+    /// Optional callback called by on_select of inner SelectView and on
+    /// refresh for updating state based on selected key.
+    fn on_select_update_state(
+        _state: &mut Self::StateType,
+        _selected_key: Option<&<<Self as ViewBridge>::StateType as StateCommon>::KeyType>,
+    ) {
+    }
+
+    /// Optional callback called by on_select of inner SelectView for
+    /// updating command palette. Returns info String set on the palette.
+    fn on_select_update_cmd_palette(
+        _state: &Self::StateType,
+        _selected_key: &<<Self as ViewBridge>::StateType as StateCommon>::KeyType,
+    ) -> String {
+        "".to_owned()
+    }
 }
 
 /// StatsView is a view wrapper that wraps tabs, titles, and list of stats.
@@ -171,7 +188,7 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         name: &'static str,
         tabs: Vec<String>,
         tab_view_map: HashMap<String, V>,
-        list: impl View,
+        select_view: SelectView<<V::StateType as StateCommon>::KeyType>,
         state: V::StateType,
         event_controllers: Rc<RefCell<HashMap<Event, Controllers>>>,
         cmd_controllers: Rc<RefCell<HashMap<&'static str, Controllers>>>,
@@ -186,6 +203,19 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         let tab_titles = tab_titles_map
             .get(&default_tab)
             .expect("Failed to query default tab");
+
+        let select_view_with_cb =
+            select_view.on_select(|c, selected_key: &<V::StateType as StateCommon>::KeyType| {
+                c.call_on_name(V::get_view_name(), |view: &mut StatsView<V>| {
+                    V::on_select_update_state(&mut view.state.borrow_mut(), Some(selected_key));
+                    let mut cmd_palette = view.get_cmd_palette();
+                    cmd_palette.set_info(V::on_select_update_cmd_palette(
+                        &view.state.borrow(),
+                        selected_key,
+                    ));
+                });
+            });
+
         let detailed_view = OnEventView::new(Panel::new(
             LinearLayout::vertical()
                 .child(
@@ -205,7 +235,9 @@ impl<V: 'static + ViewBridge> StatsView<V> {
                             .with_name(format!("{}_title", &name)),
                         )
                         .child(ResizedView::with_full_screen(
-                            list.with_name(format!("{}_detail", &name)).scrollable(),
+                            select_view_with_cb
+                                .with_name(format!("{}_detail", &name))
+                                .scrollable(),
                         ))
                         .scrollable()
                         .scroll_x(true)
@@ -364,9 +396,27 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             .get_mut(&cur_tab)
             .unwrap_or_else(|| panic!("Fail to query data from tab {}", cur_tab));
         select_view.add_all(tab_detail.get_rows(&self.state.borrow(), Some(horizontal_offset)));
+
+        // This will trigger on_select handler, but handler will not be able to
+        // find the current StatsView from cursive, presumably because we are
+        // holding on a mutable reference to self at this moment.
         select_view.select_down(pos)(c);
+
+        let mut cmd_palette = self.get_cmd_palette();
         if let Some(msg) = get_last_log_to_display() {
-            self.get_cmd_palette().set_alert(msg);
+            cmd_palette.set_alert(msg);
+        }
+
+        let selection = select_view.selection().map(|rc| rc.as_ref().clone());
+        V::on_select_update_state(&mut self.state.borrow_mut(), selection.as_ref());
+        // We should not override alert on refresh. Only selection should
+        // override alert.
+        match (cmd_palette.is_alerting(), selection) {
+            (false, Some(selection)) => {
+                let info_msg = V::on_select_update_cmd_palette(&self.state.borrow(), &selection);
+                cmd_palette.set_info(info_msg);
+            }
+            _ => {}
         }
     }
 
