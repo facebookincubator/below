@@ -72,6 +72,7 @@ impl ProcessTab {
         offset: Option<usize>,
     ) -> Vec<(StyledString, String)> {
         let unknown = "?".to_string();
+        let unknown_pid: i32 = -1;
         let process_model = state.get_model();
         let mut processes: Vec<&SingleProcessModel> =
             process_model.processes.iter().map(|(_, spm)| spm).collect();
@@ -81,6 +82,15 @@ impl ProcessTab {
         }
         processes
             .iter()
+            .filter(|spm| {
+                // If we're in zoomed pids mode, only show processes belonging
+                // to set of pids
+                if let Some(f) = &state.pids_filter {
+                    f.contains(&spm.pid.unwrap_or(unknown_pid))
+                } else {
+                    true
+                }
+            })
             .filter(|spm| {
                 // If we're in zoomed cgroup mode, only show processes belonging to
                 // our zoomed cgroup
@@ -98,8 +108,7 @@ impl ProcessTab {
                     true
                 }
             })
-            // Convert double ref to single ref
-            .map(|spm| *spm)
+            .copied()
             // Abuse batching() to conditionally fold iter
             .batching(|it| {
                 if state.fold {

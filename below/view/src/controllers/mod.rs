@@ -123,6 +123,8 @@ make_controllers!(
     System: SystemView,
     #[cfg(fbcode_build)]
     Gpu: GpuView,
+    #[cfg(fbcode_build)]
+    GpuZoom: GpuZoomView,
     Zoom: ZoomView,
     Fold: FoldProcessView,
     NextPage: NextPageImpl,

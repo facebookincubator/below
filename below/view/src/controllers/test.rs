@@ -47,7 +47,7 @@ pause_resume = 's'
 sort = 't'
 filter = 'u'
 clear_filter = 'v'
-next_page = 'x'
+next_page = 'Y'
 prev_page = 'y'
 url = 'n'
 ";
@@ -142,7 +142,7 @@ url = 'n'
         Some(&Controllers::Zoom)
     );
     assert_eq!(
-        event_controllers.get(&Event::Char('x')),
+        event_controllers.get(&Event::Char('Y')),
         Some(&Controllers::NextPage)
     );
     assert_eq!(
