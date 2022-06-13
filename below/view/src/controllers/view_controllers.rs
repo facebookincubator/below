@@ -263,12 +263,6 @@ make_event_controller!(
     Event::Char('z'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
-        let current_selection = crate::cgroup_view::CgroupView::get_cgroup_view(c)
-            .state
-            .borrow()
-            .current_selected_cgroup
-            .clone();
-
         let current_state = c
             .user_data::<ViewState>()
             .expect("No data stored in Cursive object!")
@@ -276,29 +270,42 @@ make_event_controller!(
             .clone();
 
         let next_state = match current_state {
-            // Pressing 'z' in zoomed view should remove zoom
-            // and bring user back to cgroup view
-            MainViewState::Process(ProcessZoomState::Cgroup) => {
-                crate::process_view::ProcessView::get_process_view(c)
+            // Pressing 'z' in process view should remove any zoom
+            // and bring user back to cgroup view, selected on
+            // leaf cgroup of selected process
+            MainViewState::Process(zoom) => {
+                if zoom != ProcessZoomState::NoZoom {
+                    crate::process_view::ProcessView::get_process_view(c)
+                        .state
+                        .borrow_mut()
+                        .reset_state_for_quiting_zoom();
+                }
+                let selected_cgroup = crate::process_view::ProcessView::get_process_view(c)
                     .state
-                    .borrow_mut()
-                    .reset_state_for_quiting_zoom();
-                MainViewState::Cgroup
+                    .borrow()
+                    .get_cgroup_for_selected_pid();
+                if let Some(cgroup) = selected_cgroup {
+                    crate::cgroup_view::CgroupView::get_cgroup_view(c)
+                        .state
+                        .borrow_mut()
+                        .handle_state_for_entering_focus(cgroup);
+                    MainViewState::Cgroup
+                } else {
+                    // Stay in process view
+                    return;
+                }
             }
             MainViewState::Cgroup => {
+                let current_selection = crate::cgroup_view::CgroupView::get_cgroup_view(c)
+                    .state
+                    .borrow()
+                    .current_selected_cgroup
+                    .clone();
                 crate::process_view::ProcessView::get_process_view(c)
                     .state
                     .borrow_mut()
                     .handle_state_for_entering_zoom(current_selection);
                 MainViewState::Process(ProcessZoomState::Cgroup)
-            }
-            // Pressing 'z' in process view should do nothing
-            MainViewState::Process(ProcessZoomState::NoZoom) => {
-                crate::process_view::ProcessView::get_process_view(c)
-                    .state
-                    .borrow_mut()
-                    .cgroup_filter = None;
-                MainViewState::Process(ProcessZoomState::NoZoom)
             }
             _ => return,
         };
@@ -388,7 +395,6 @@ make_event_controller!(
             Ok(p) => {
                 let mut view = StatsView::<T>::get_view(c);
                 view.get_detail_view().select_down(p)(c);
-                view.get_list_scroll_view().scroll_to_important_area();
             }
             Err(e) => StatsView::<T>::get_view(c).get_cmd_palette().set_alert(e),
         };
@@ -408,7 +414,6 @@ make_event_controller!(
             Ok(p) => {
                 let mut view = StatsView::<T>::get_view(c);
                 view.get_detail_view().select_up(p)(c);
-                view.get_list_scroll_view().scroll_to_important_area();
             }
             Err(e) => StatsView::<T>::get_view(c).get_cmd_palette().set_alert(e),
         };

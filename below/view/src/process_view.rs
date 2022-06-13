@@ -43,6 +43,7 @@ pub struct ProcessState {
     // For zoomed view, we should save current filter to here and reset the
     // filter when go back to cgroup or process view.
     pub filter_cache_for_zoom: Option<String>,
+    pub current_selected_pid: Option<i32>,
     pub sort_order: Option<SingleProcessModelFieldId>,
     pub sort_tags: HashMap<String, &'static ProcessTab>,
     pub reverse: bool,
@@ -53,7 +54,7 @@ pub struct ProcessState {
 impl StateCommon for ProcessState {
     type ModelType = ProcessModel;
     type TagType = SingleProcessModelFieldId;
-    type KeyType = String;
+    type KeyType = i32;
 
     fn get_filter(&mut self) -> &mut Option<String> {
         &mut self.filter
@@ -112,10 +113,11 @@ impl StateCommon for ProcessState {
         sort_tags.insert("Mem".into(), &*PROCESS_MEM_TAB);
         sort_tags.insert("I/O".into(), &*PROCESS_IO_TAB);
         Self {
+            filter: None,
             cgroup_filter: None,
             pids_filter: None,
-            filter: None,
             filter_cache_for_zoom: None,
+            current_selected_pid: None,
             sort_order: None,
             sort_tags,
             reverse: false,
@@ -158,6 +160,13 @@ impl ProcessState {
         self.filter = None;
         self.cgroup_filter = None;
     }
+
+    pub fn get_cgroup_for_selected_pid(&self) -> Option<String> {
+        self.get_model()
+            .processes
+            .get(&self.current_selected_pid?)
+            .and_then(|spm| spm.cgroup.clone())
+    }
 }
 
 pub struct ProcessView {
@@ -166,8 +175,7 @@ pub struct ProcessView {
 
 impl ProcessView {
     pub fn new(c: &mut Cursive) -> NamedView<ViewType> {
-        let list = SelectView::<String>::new();
-
+        let list = SelectView::<i32>::new();
         let tabs = vec!["General".into(), "CPU".into(), "Mem".into(), "I/O".into()];
         let mut tabs_map: HashMap<String, ProcessView> = HashMap::new();
         tabs_map.insert(
@@ -279,15 +287,19 @@ impl ViewBridge for ProcessView {
         &mut self,
         state: &Self::StateType,
         offset: Option<usize>,
-    ) -> Vec<(StyledString, String)> {
+    ) -> Vec<(StyledString, i32)> {
         self.tab.get_rows(state, offset)
     }
 
-    fn on_select_update_cmd_palette(state: &Self::StateType, pid: &String) -> String {
+    fn on_select_update_state(state: &mut Self::StateType, selected_key: Option<&i32>) {
+        state.current_selected_pid = selected_key.cloned();
+    }
+
+    fn on_select_update_cmd_palette(state: &Self::StateType, selected_key: &i32) -> String {
         state
             .get_model()
             .processes
-            .get(&pid.parse::<i32>().unwrap_or(0))
+            .get(selected_key /* pid */)
             .map_or("?".to_string(), |spm| {
                 spm.cmdline.clone().unwrap_or_else(|| "?".to_string())
             })

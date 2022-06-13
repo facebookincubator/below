@@ -70,7 +70,7 @@ impl ProcessTab {
         &self,
         state: &ProcessState,
         offset: Option<usize>,
-    ) -> Vec<(StyledString, String)> {
+    ) -> Vec<(StyledString, i32)> {
         let unknown = "?".to_string();
         let unknown_pid: i32 = -1;
         let process_model = state.get_model();
@@ -126,7 +126,7 @@ impl ProcessTab {
             .map(|spm| {
                 (
                     self.get_process_field_line(&spm, offset),
-                    spm.pid.unwrap_or(0).to_string(),
+                    spm.pid.unwrap_or(0),
                 )
             })
             .collect()

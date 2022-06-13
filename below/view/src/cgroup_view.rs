@@ -43,6 +43,9 @@ pub struct CgroupState {
     // mutable.
     pub collapsed_cgroups: Rc<RefCell<HashSet<String>>>,
     pub current_selected_cgroup: String,
+    // cgroup row to move focus on. If set, on next refresh, selector will be
+    // moved to the cgroup
+    pub cgroup_to_focus: Option<String>,
     pub filter: Option<String>,
     pub sort_order: Option<SingleCgroupModelFieldId>,
     pub sort_tags: HashMap<String, &'static CgroupTab>,
@@ -115,6 +118,7 @@ impl StateCommon for CgroupState {
         Self {
             collapsed_cgroups: Rc::new(RefCell::new(HashSet::new())),
             current_selected_cgroup: "<root>".into(),
+            cgroup_to_focus: None,
             filter: None,
             sort_order: None,
             sort_tags,
@@ -136,6 +140,25 @@ impl CgroupState {
 
     fn toggle_collapse_root_flag(&mut self) {
         self.collapse_all_top_level_cgroup = !self.collapse_all_top_level_cgroup;
+    }
+
+    // Recursively fold open to given cgroup
+    fn uncollapse_cgroup(&mut self, cgroup: &str) {
+        // Root is always uncollapsed
+        if cgroup.is_empty() {
+            return;
+        }
+        self.collapse_all_top_level_cgroup = false;
+        let mut sub_cgroup = Some(cgroup);
+        while let Some(c) = sub_cgroup {
+            self.collapsed_cgroups.borrow_mut().remove(c);
+            sub_cgroup = c.rsplit_once('/').map(|(s, _)| s);
+        }
+    }
+
+    pub fn handle_state_for_entering_focus(&mut self, cgroup: String) {
+        self.uncollapse_cgroup(cgroup.as_str());
+        self.cgroup_to_focus = Some(cgroup);
     }
 }
 
@@ -276,6 +299,16 @@ impl CgroupView {
 
     pub fn refresh(c: &mut Cursive) {
         let mut view = Self::get_cgroup_view(c);
+        let cgroup_to_focus = view.state.borrow_mut().cgroup_to_focus.take();
+        if let Some(cgroup) = &cgroup_to_focus {
+            let pos = view
+                .get_detail_view()
+                .iter()
+                .position(|(_row, key)| key == cgroup);
+            if let Some(pos) = pos {
+                view.get_detail_view().set_selection(pos)(c);
+            }
+        }
         view.refresh(c);
     }
 }

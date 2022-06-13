@@ -383,41 +383,45 @@ impl<V: 'static + ViewBridge> StatsView<V> {
     // A potential optimize here is put the model of the cursive view_state as Rc<RefCell>
     // member of StatsView. In that case, we don't need to borrow the cursive object here.
     pub fn refresh(&mut self, c: &mut Cursive) {
-        let cur_tab = self.get_tab_view().get_cur_selected().to_string();
-        let mut select_view = self.get_detail_view();
+        {
+            let cur_tab = self.get_tab_view().get_cur_selected().to_string();
+            let mut select_view = self.get_detail_view();
 
-        let pos = select_view.selected_id().unwrap_or(0);
-        select_view.clear();
+            let pos = select_view.selected_id().unwrap_or(0);
+            select_view.clear();
 
-        let horizontal_offset = self.get_title_view().current_offset_idx;
+            let horizontal_offset = self.get_title_view().current_offset_idx;
 
-        let tab_detail = self
-            .tab_view_map
-            .get_mut(&cur_tab)
-            .unwrap_or_else(|| panic!("Fail to query data from tab {}", cur_tab));
-        select_view.add_all(tab_detail.get_rows(&self.state.borrow(), Some(horizontal_offset)));
+            let tab_detail = self
+                .tab_view_map
+                .get_mut(&cur_tab)
+                .unwrap_or_else(|| panic!("Fail to query data from tab {}", cur_tab));
+            select_view.add_all(tab_detail.get_rows(&self.state.borrow(), Some(horizontal_offset)));
 
-        // This will trigger on_select handler, but handler will not be able to
-        // find the current StatsView from cursive, presumably because we are
-        // holding on a mutable reference to self at this moment.
-        select_view.select_down(pos)(c);
+            // This will trigger on_select handler, but handler will not be able to
+            // find the current StatsView from cursive, presumably because we are
+            // holding on a mutable reference to self at this moment.
+            select_view.select_down(pos)(c);
 
-        let mut cmd_palette = self.get_cmd_palette();
-        if let Some(msg) = get_last_log_to_display() {
-            cmd_palette.set_alert(msg);
-        }
-
-        let selection = select_view.selection().map(|rc| rc.as_ref().clone());
-        V::on_select_update_state(&mut self.state.borrow_mut(), selection.as_ref());
-        // We should not override alert on refresh. Only selection should
-        // override alert.
-        match (cmd_palette.is_alerting(), selection) {
-            (false, Some(selection)) => {
-                let info_msg = V::on_select_update_cmd_palette(&self.state.borrow(), &selection);
-                cmd_palette.set_info(info_msg);
+            let mut cmd_palette = self.get_cmd_palette();
+            if let Some(msg) = get_last_log_to_display() {
+                cmd_palette.set_alert(msg);
             }
-            _ => {}
+
+            let selection = select_view.selection().map(|rc| rc.as_ref().clone());
+            V::on_select_update_state(&mut self.state.borrow_mut(), selection.as_ref());
+            // We should not override alert on refresh. Only selection should
+            // override alert.
+            match (cmd_palette.is_alerting(), selection) {
+                (false, Some(selection)) => {
+                    let info_msg =
+                        V::on_select_update_cmd_palette(&self.state.borrow(), &selection);
+                    cmd_palette.set_info(info_msg);
+                }
+                _ => {}
+            }
         }
+        self.get_list_scroll_view().scroll_to_important_area();
     }
 
     // Chaining call. Use for construction to get initial data.
