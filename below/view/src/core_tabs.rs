@@ -160,7 +160,7 @@ impl CoreTab for CoreDisk {
             titles: SingleDiskModelFieldId::unit_variant_iter()
                 .map(|field_id| ViewItem::from_default(field_id).config.render_title())
                 .collect(),
-            pinned_titles: 0,
+            pinned_titles: 1,
         }
     }
 
