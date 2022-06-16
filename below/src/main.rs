@@ -1076,6 +1076,9 @@ fn live_local(
         model::CollectorOptions {
             cgroup_root: below_config.cgroup_root.clone(),
             exit_data: exit_buffer,
+            enable_btrfs_stats: below_config.enable_btrfs_stats,
+            btrfs_samples: below_config.btrfs_samples,
+            btrfs_min_pct: below_config.btrfs_min_pct,
             gpu_stats_receiver,
             ..Default::default()
         },
