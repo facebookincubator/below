@@ -18,9 +18,12 @@ use crate::stats_view::{ColumnTitles, StateCommon};
 use base_render::{get_fixed_width, RenderConfigBuilder as Rc};
 use common::util::get_prefix;
 use model::system::{
-    MemoryModelFieldId, SingleCpuModelFieldId, SingleDiskModelFieldId, VmModelFieldId,
+    BtrfsModelFieldId, MemoryModelFieldId, SingleCpuModelFieldId, SingleDiskModelFieldId,
+    VmModelFieldId,
 };
-use model::EnumIter;
+use model::{BtrfsModel, EnumIter};
+
+use crate::core_view::CoreStateFieldId;
 
 use cursive::utils::markup::StyledString;
 
@@ -205,5 +208,80 @@ impl CoreTab for CoreDisk {
                 }
             })
             .collect()
+    }
+}
+
+/// Renders corresponding Fields From BtrfsModel.
+type BtrfsViewItem = ViewItem<model::BtrfsModelFieldId>;
+
+#[derive(Default, Clone)]
+pub struct CoreBtrfs {
+    pub view_items: Vec<BtrfsViewItem>,
+}
+
+impl CoreBtrfs {
+    fn new(view_items: Vec<BtrfsViewItem>) -> Self {
+        Self { view_items }
+    }
+}
+
+impl CoreTab for CoreBtrfs {
+    fn get_titles(&self) -> ColumnTitles {
+        ColumnTitles {
+            titles: BtrfsModelFieldId::unit_variant_iter()
+                .map(|field_id| ViewItem::from_default(field_id).config.render_title())
+                .collect(),
+            pinned_titles: 0,
+        }
+    }
+
+    fn get_rows(&self, state: &CoreState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
+        if let Some(btrfs_model) = state.get_model().btrfs.as_ref() {
+            let mut subvolumes: Vec<&BtrfsModel> = btrfs_model.values().collect();
+
+            if let Some(CoreStateFieldId::Btrfs(sort_order)) = state.sort_order.as_ref() {
+                model::sort_queriables(&mut subvolumes, sort_order, state.reverse);
+            }
+
+            subvolumes
+                .iter()
+                .map(|bmodel| {
+                    (
+                        BtrfsModelFieldId::unit_variant_iter().fold(
+                            StyledString::new(),
+                            |mut line, field_id| {
+                                let view_item = ViewItem::from_default(field_id);
+                                let rendered = view_item.render(bmodel);
+                                line.append(rendered);
+                                line.append_plain(" ");
+                                line
+                            },
+                        ),
+                        bmodel.name.as_ref().expect("No name for row").clone(),
+                    )
+                })
+                .collect()
+        } else {
+            Vec::new()
+        }
+    }
+}
+
+pub mod default_tabs {
+    use super::*;
+
+    use model::BtrfsModelFieldId::{DiskBytes, DiskFraction, Name};
+
+    use once_cell::sync::Lazy;
+
+    pub static CORE_BTRFS_TAB: Lazy<CoreBtrfs> = Lazy::new(|| {
+        CoreBtrfs::new(vec![
+            ViewItem::from_default(Name),
+            ViewItem::from_default(DiskFraction),
+            ViewItem::from_default(DiskBytes),
+        ])
+    });
+    pub enum CoreTabs {
+        Btrfs(&'static CoreBtrfs),
     }
 }

@@ -26,26 +26,88 @@ use crate::core_tabs::*;
 use crate::stats_view::{ColumnTitles, StateCommon, StatsView, ViewBridge};
 use crate::ViewState;
 
-use model::system::SystemModel;
+use model::{
+    system::SystemModel, BtrfsModelFieldId, MemoryModelFieldId, SingleCpuModelFieldId,
+    SingleDiskModelFieldId, VmModelFieldId,
+};
 
 pub type ViewType = StatsView<CoreView>;
 
+use crate::core_view::default_tabs::CORE_BTRFS_TAB;
+
+// TODO(T123679020): Ideally we want to decouple states for core view tabs.
+// Each core view tab really deserves its own view and state
 #[derive(Default)]
 pub struct CoreState {
     pub filter: Option<String>,
     pub collapsed_disk: HashSet<String>,
     pub model: Rc<RefCell<SystemModel>>,
+    pub sort_order: Option<CoreStateFieldId>,
+    pub sort_tags: HashMap<String, default_tabs::CoreTabs>,
+    pub reverse: bool,
 }
 
-pub enum CoreOrder {}
+#[derive(PartialEq)]
+pub enum CoreStateFieldId {
+    Disk(SingleDiskModelFieldId),
+    Btrfs(BtrfsModelFieldId),
+    Cpu(SingleCpuModelFieldId),
+    Mem(MemoryModelFieldId),
+    Vm(VmModelFieldId),
+}
 
 impl StateCommon for CoreState {
     type ModelType = SystemModel;
-    type TagType = CoreOrder;
+    type TagType = CoreStateFieldId;
     type KeyType = String;
 
     fn get_filter(&mut self) -> &mut Option<String> {
         &mut self.filter
+    }
+
+    fn set_sort_tag(&mut self, sort_order: Self::TagType, reverse: &mut bool) -> bool {
+        let sort_order = Some(sort_order);
+        if self.sort_order == sort_order {
+            *reverse = !*reverse;
+        } else {
+            *reverse = true;
+            self.sort_order = sort_order;
+        }
+        self.reverse = *reverse;
+        true
+    }
+
+    fn set_sort_tag_from_tab_idx(&mut self, tab: &str, idx: usize, reverse: &mut bool) -> bool {
+        match tab {
+            "Btrfs" => {
+                let sort_order = {
+                    let core_tab = self
+                        .sort_tags
+                        .get(tab)
+                        .unwrap_or_else(|| panic!("Fail to find tab: {}", tab));
+                    let default_tabs::CoreTabs::Btrfs(core_tab) = core_tab;
+
+                    core_tab
+                        .view_items
+                        .get(idx)
+                        .expect("Out of title scope")
+                        .field_id
+                        .to_owned()
+                };
+
+                self.set_sort_tag(CoreStateFieldId::Btrfs(sort_order), reverse)
+            }
+            // This is to notify that tab is not currently sortable
+            _ => false,
+        }
+    }
+
+    fn set_sort_string(&mut self, selection: &str, reverse: &mut bool) -> bool {
+        use std::str::FromStr;
+        match BtrfsModelFieldId::from_str(selection) {
+            Ok(field_id) => self.set_sort_tag(CoreStateFieldId::Btrfs(field_id), reverse),
+            Err(_) => false,
+        }
     }
 
     fn get_model(&self) -> Ref<Self::ModelType> {
@@ -57,7 +119,15 @@ impl StateCommon for CoreState {
     }
 
     fn new(model: Rc<RefCell<Self::ModelType>>) -> Self {
+        let mut sort_tags = HashMap::new();
+        sort_tags.insert(
+            "Btrfs".into(),
+            default_tabs::CoreTabs::Btrfs(&*CORE_BTRFS_TAB),
+        );
         Self {
+            sort_order: None,
+            reverse: false,
+            sort_tags,
             model,
             ..Default::default()
         }
@@ -69,6 +139,7 @@ pub enum CoreView {
     Mem(CoreMem),
     Vm(CoreVm),
     Disk(CoreDisk),
+    Btrfs(CoreBtrfs),
 }
 
 impl CoreView {
@@ -91,12 +162,19 @@ impl CoreView {
             }
         });
 
-        let tabs = vec!["CPU".into(), "Mem".into(), "Vm".into(), "Disk".into()];
+        let tabs = vec![
+            "CPU".into(),
+            "Mem".into(),
+            "Vm".into(),
+            "Disk".into(),
+            "Btrfs".into(),
+        ];
         let mut tabs_map: HashMap<String, CoreView> = HashMap::new();
         tabs_map.insert("CPU".into(), CoreView::Cpu(Default::default()));
         tabs_map.insert("Mem".into(), CoreView::Mem(Default::default()));
         tabs_map.insert("Vm".into(), CoreView::Vm(Default::default()));
         tabs_map.insert("Disk".into(), CoreView::Disk(Default::default()));
+        tabs_map.insert("Btrfs".into(), CoreView::Btrfs(Default::default()));
         let user_data = c
             .user_data::<ViewState>()
             .expect("No data stored in Cursive Object!");
@@ -127,6 +205,7 @@ impl CoreView {
             Self::Mem(inner) => Box::new(inner.clone()),
             Self::Vm(inner) => Box::new(inner.clone()),
             Self::Disk(inner) => Box::new(inner.clone()),
+            Self::Btrfs(inner) => Box::new(inner.clone()),
         }
     }
 }
@@ -146,5 +225,9 @@ impl ViewBridge for CoreView {
         offset: Option<usize>,
     ) -> Vec<(StyledString, String)> {
         self.get_inner().get_rows(state, offset)
+    }
+
+    fn on_select_update_cmd_palette(_view: &Self::StateType, selected_key: &String) -> String {
+        selected_key.clone()
     }
 }
