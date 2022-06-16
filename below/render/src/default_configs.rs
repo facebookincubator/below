@@ -576,9 +576,12 @@ impl HasRenderConfig for model::BtrfsModel {
         use model::BtrfsModelFieldId::*;
         let rc = RenderConfigBuilder::new();
         match field_id {
-            Name => rc.title("Name").width(50),
-            DiskFraction => rc.title("Disk Fraction"),
-            DiskBytes => rc.title("Disk Bytes").format(ReadableSize),
+            Name => rc.title("Name").width(100).fold(FoldOption::Path),
+            DiskFraction => rc
+                .title("Approx Disk Usage")
+                .format(Precision(1))
+                .suffix("%"),
+            DiskBytes => rc.title("Approx Disk Bytes").format(ReadableSize),
         }
     }
 }
