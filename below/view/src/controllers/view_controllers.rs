@@ -289,11 +289,11 @@ make_event_controller!(
                         .state
                         .borrow_mut()
                         .handle_state_for_entering_focus(cgroup);
-                    MainViewState::Cgroup
                 } else {
-                    // Stay in process view
-                    return;
+                    // Probably no entries in process view. We still move to
+                    // cgroup view in this case.
                 }
+                MainViewState::Cgroup
             }
             MainViewState::Cgroup => {
                 let current_selection = crate::cgroup_view::CgroupView::get_cgroup_view(c)
