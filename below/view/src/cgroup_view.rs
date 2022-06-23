@@ -301,6 +301,8 @@ impl CgroupView {
         let mut view = Self::get_cgroup_view(c);
         let cgroup_to_focus = view.state.borrow_mut().cgroup_to_focus.take();
         if let Some(cgroup) = &cgroup_to_focus {
+            // Refresh before getting position to ensure cgroup is expanded
+            view.refresh(c);
             let pos = view
                 .get_detail_view()
                 .iter()
