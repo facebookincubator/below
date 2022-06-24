@@ -14,7 +14,7 @@ anyhow = "1.0.56"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 cursive = { version = "0.16.0", features = ["crossterm-backend", "termion-backend"], default-features = false }
 humantime = "2.1"
-once_cell = "1.8"
+once_cell = "1.12"
 regex = "1.5.4"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 slog-term = "2.8"
