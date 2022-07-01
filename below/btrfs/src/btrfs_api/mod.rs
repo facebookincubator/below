@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{ffi::CStr, ops::RangeInclusive};
+use std::ffi::CStr;
+use std::ops::RangeInclusive;
 
 #[cfg(fbcode_build)]
 pub use btrfs_sys::*;

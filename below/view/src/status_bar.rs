@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use chrono::{DateTime, Local};
+use chrono::DateTime;
+use chrono::Local;
 use cursive::utils::markup::StyledString;
-use cursive::view::{Identifiable, View};
+use cursive::view::Identifiable;
+use cursive::view::View;
 use cursive::views::TextView;
 use cursive::Cursive;
 

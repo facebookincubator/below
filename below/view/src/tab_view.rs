@@ -17,7 +17,8 @@ use cursive::vec::Vec2;
 use cursive::Printer;
 use cursive::View;
 
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 
 /// TextView that has a vector of string as tabs
 ///

@@ -15,11 +15,17 @@
 #![deny(clippy::all)]
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
-use std::io::{BufRead, BufReader, ErrorKind};
-use std::path::{Path, PathBuf};
+use std::io::BufRead;
+use std::io::BufReader;
+use std::io::ErrorKind;
+use std::path::Path;
+use std::path::PathBuf;
 
-use nix::sys::statfs::{fstatfs, CGROUP2_SUPER_MAGIC};
-use openat::{AsPath, Dir, SimpleType};
+use nix::sys::statfs::fstatfs;
+use nix::sys::statfs::CGROUP2_SUPER_MAGIC;
+use openat::AsPath;
+use openat::Dir;
+use openat::SimpleType;
 use thiserror::Error;
 
 mod types;

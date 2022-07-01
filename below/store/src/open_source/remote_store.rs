@@ -14,9 +14,11 @@
 
 use std::time::SystemTime;
 
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 
-use crate::{DataFrame, Direction};
+use crate::DataFrame;
+use crate::Direction;
 
 pub struct RemoteStore {}
 

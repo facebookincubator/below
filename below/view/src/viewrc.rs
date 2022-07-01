@@ -14,7 +14,8 @@
 
 use super::cgroup_view::CgroupView;
 use super::controllers::Controllers;
-use super::{get_belowrc_filename, get_belowrc_view_section_key};
+use super::get_belowrc_filename;
+use super::get_belowrc_view_section_key;
 
 use cursive::Cursive;
 use serde::Deserialize;
@@ -116,7 +117,9 @@ mod test {
     use super::*;
 
     use crate::fake_view::FakeView;
-    use crate::{MainViewState, ProcessZoomState, ViewState};
+    use crate::MainViewState;
+    use crate::ProcessZoomState;
+    use crate::ViewState;
 
     #[test]
     fn test_viewrc_collapse_cgroups() {

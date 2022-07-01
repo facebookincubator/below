@@ -14,9 +14,11 @@
 
 use super::*;
 
-use RenderFormat::{
-    MaxOrReadableSize, PageReadableSize, Precision, ReadableSize, SectorReadableSize,
-};
+use RenderFormat::MaxOrReadableSize;
+use RenderFormat::PageReadableSize;
+use RenderFormat::Precision;
+use RenderFormat::ReadableSize;
+use RenderFormat::SectorReadableSize;
 
 impl HasRenderConfig for model::SingleCgroupModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {

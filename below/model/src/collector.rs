@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use super::*;
 use crate::collector_plugin;
 use regex::Regex;
-use slog::{self, error};
-use std::path::{Path, PathBuf};
+use slog::error;
+use slog::{self};
+use std::path::Path;
+use std::path::PathBuf;
 
 pub struct CollectorOptions {
     pub cgroup_root: PathBuf,

@@ -14,7 +14,8 @@
 
 use super::*;
 use async_trait::async_trait;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 
 // For data collection that should be performed on a different thread
 #[async_trait]
@@ -115,7 +116,8 @@ pub fn collector_consumer<T, Plugin: AsyncCollectorPlugin<T = T>>(
 mod test {
     use super::*;
 
-    use std::sync::{Arc, Barrier};
+    use std::sync::Arc;
+    use std::sync::Barrier;
     use std::thread;
 
     struct TestCollector {

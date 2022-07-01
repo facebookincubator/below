@@ -14,7 +14,9 @@
 
 /// This file contains various helpers
 use chrono::prelude::*;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 const BELOW_RC: &str = "/.config/below/belowrc";
 

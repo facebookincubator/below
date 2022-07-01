@@ -18,15 +18,27 @@ use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-use anyhow::{anyhow, bail, Context, Result};
-use memmap::{Mmap, MmapOptions};
-use slog::{warn, Logger};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
+use memmap::Mmap;
+use memmap::MmapOptions;
+use slog::warn;
+use slog::Logger;
 
 use crate::compression::Decompressor;
-use crate::{
-    deserialize_frame, get_index_files, Crc32, DataFrame, Direction, Format, IndexEntry,
-    IndexEntryFlags, SerializedFrame, INDEX_ENTRY_SIZE, SHARD_TIME,
-};
+use crate::deserialize_frame;
+use crate::get_index_files;
+use crate::Crc32;
+use crate::DataFrame;
+use crate::Direction;
+use crate::Format;
+use crate::IndexEntry;
+use crate::IndexEntryFlags;
+use crate::SerializedFrame;
+use crate::INDEX_ENTRY_SIZE;
+use crate::SHARD_TIME;
 
 /// A read-only Iterator that can move back and forth.
 pub trait Cursor {
@@ -640,13 +652,17 @@ impl KeyedCursor<u64> for StoreCursor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{serialize_frame, ChunkSizePo2, CompressionMode, StoreWriter};
+    use crate::serialize_frame;
+    use crate::ChunkSizePo2;
+    use crate::CompressionMode;
+    use crate::StoreWriter;
     use common::util::get_unix_timestamp;
     use slog::Drain;
     use std::fs::OpenOptions;
     use std::io::Write;
     use tempdir::TempDir;
-    use Direction::{Forward, Reverse};
+    use Direction::Forward;
+    use Direction::Reverse;
 
     /// Simple cursor to illustrate implementation and test default methods.
     struct TestCursor<'a> {

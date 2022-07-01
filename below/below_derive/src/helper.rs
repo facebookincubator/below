@@ -13,7 +13,12 @@
 // limitations under the License.
 
 use quote::ToTokens;
-use syn::{parse::Parse, punctuated::Punctuated, spanned::Spanned, Attribute, Ident, Token};
+use syn::parse::Parse;
+use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
+use syn::Attribute;
+use syn::Ident;
+use syn::Token;
 
 /// Adapted from strum_macros
 pub fn get_metadata<'a, T: Parse + Spanned>(

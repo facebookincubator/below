@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::render::{HasViewStyle, ViewStyle, CPU_HIGHLIGHT, MEM_HIGHLIGHT, PRESSURE_HIGHLIGHT};
+use crate::render::HasViewStyle;
+use crate::render::ViewStyle;
+use crate::render::CPU_HIGHLIGHT;
+use crate::render::MEM_HIGHLIGHT;
+use crate::render::PRESSURE_HIGHLIGHT;
 
 impl HasViewStyle for model::SingleCgroupModel {
     fn get_view_style(field_id: &Self::FieldId) -> Option<ViewStyle> {
-        use model::SingleCgroupModelFieldId::{Cpu, Pressure};
+        use model::SingleCgroupModelFieldId::Cpu;
+        use model::SingleCgroupModelFieldId::Pressure;
         match field_id {
             Cpu(field_id) => model::CgroupCpuModel::get_view_style(field_id),
             Pressure(field_id) => model::CgroupPressureModel::get_view_style(field_id),
@@ -27,7 +32,9 @@ impl HasViewStyle for model::SingleCgroupModel {
 
 impl HasViewStyle for model::CgroupCpuModel {
     fn get_view_style(field_id: &Self::FieldId) -> Option<ViewStyle> {
-        use model::CgroupCpuModelFieldId::{SystemPct, UsagePct, UserPct};
+        use model::CgroupCpuModelFieldId::SystemPct;
+        use model::CgroupCpuModelFieldId::UsagePct;
+        use model::CgroupCpuModelFieldId::UserPct;
         match field_id {
             UsagePct | UserPct | SystemPct => Some(CPU_HIGHLIGHT.clone()),
             _ => None,
@@ -55,7 +62,9 @@ impl HasViewStyle for model::SingleProcessModel {
 
 impl HasViewStyle for model::ProcessCpuModel {
     fn get_view_style(field_id: &Self::FieldId) -> Option<ViewStyle> {
-        use model::ProcessCpuModelFieldId::{SystemPct, UsagePct, UserPct};
+        use model::ProcessCpuModelFieldId::SystemPct;
+        use model::ProcessCpuModelFieldId::UsagePct;
+        use model::ProcessCpuModelFieldId::UserPct;
         match field_id {
             UsagePct | UserPct | SystemPct => Some(CPU_HIGHLIGHT.clone()),
             _ => None,

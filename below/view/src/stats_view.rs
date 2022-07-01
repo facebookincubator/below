@@ -12,23 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::Ref;
+use std::cell::RefCell;
+use std::cell::RefMut;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use ::cursive::view::{Identifiable, Scrollable, View};
-use cursive::event::{Event, EventResult, EventTrigger};
+use ::cursive::view::Identifiable;
+use ::cursive::view::Scrollable;
+use ::cursive::view::View;
+use cursive::event::Event;
+use cursive::event::EventResult;
+use cursive::event::EventTrigger;
 use cursive::utils::markup::StyledString;
 use cursive::view::ViewWrapper;
-use cursive::views::{
-    LinearLayout, NamedView, OnEventView, Panel, ResizedView, ScrollView, SelectView, ViewRef,
-};
+use cursive::views::LinearLayout;
+use cursive::views::NamedView;
+use cursive::views::OnEventView;
+use cursive::views::Panel;
+use cursive::views::ResizedView;
+use cursive::views::ScrollView;
+use cursive::views::SelectView;
+use cursive::views::ViewRef;
 use cursive::Cursive;
 
 use crate::command_palette::CommandPalette;
 use crate::controllers::Controllers;
 use crate::tab_view::TabView;
-use common::logutil::{get_last_log_to_display, CPMsgRecord};
+use common::logutil::get_last_log_to_display;
+use common::logutil::CPMsgRecord;
 
 pub struct ColumnTitles {
     pub titles: Vec<String>,

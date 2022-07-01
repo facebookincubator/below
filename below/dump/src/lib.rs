@@ -13,21 +13,31 @@
 // limitations under the License.
 
 use std::fs::File;
-use std::io::{self, Write};
+use std::io::Write;
+use std::io::{self};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::mpsc::Receiver;
 use std::time::SystemTime;
 
-use anyhow::{bail, Error, Result};
-use serde_json::{json, Value};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
+use serde_json::json;
+use serde_json::Value;
 use toml::value::Value as TValue;
 
 use common::cliutil;
-use common::util::{get_belowrc_dump_section_key, get_belowrc_filename, timestamp_to_datetime};
-use model::{EnumIter, Field, FieldId, Queriable};
+use common::util::get_belowrc_dump_section_key;
+use common::util::get_belowrc_filename;
+use common::util::timestamp_to_datetime;
+use model::EnumIter;
+use model::Field;
+use model::FieldId;
+use model::Queriable;
 
-use store::advance::{new_advance_local, new_advance_remote};
+use store::advance::new_advance_local;
+use store::advance::new_advance_remote;
 use store::Advance;
 use store::Direction;
 
@@ -46,10 +56,14 @@ pub mod transport;
 #[cfg(test)]
 mod test;
 
+use command::expand_fields;
 pub use command::DumpCommand;
-use command::{expand_fields, GeneralOpt, OutputFormat};
+use command::GeneralOpt;
+use command::OutputFormat;
 use print::HasRenderConfigForDump;
-use tmain::{dump_timeseries, Dumper, IterExecResult};
+use tmain::dump_timeseries;
+use tmain::Dumper;
+use tmain::IterExecResult;
 
 /// Fields available to all commands. Each enum represents some semantics and
 /// knows how to extract relevant data from a CommonFieldContext.

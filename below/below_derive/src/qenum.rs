@@ -24,9 +24,12 @@
 
 use crate::helper::to_snakecase;
 
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::Span;
+use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{spanned::Spanned, DeriveInput, LitStr};
+use syn::spanned::Spanned;
+use syn::DeriveInput;
+use syn::LitStr;
 
 fn get_variants(
     ast: &DeriveInput,

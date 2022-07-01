@@ -14,8 +14,12 @@
 
 use super::*;
 
-use crate::{MainViewState, ProcessZoomState};
-use cursive::views::{NamedView, OnEventView, ResizedView, StackView};
+use crate::MainViewState;
+use crate::ProcessZoomState;
+use cursive::views::NamedView;
+use cursive::views::OnEventView;
+use cursive::views::ResizedView;
+use cursive::views::StackView;
 
 // Invoke command palette
 make_event_controller!(

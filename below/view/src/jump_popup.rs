@@ -16,12 +16,18 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use cursive::event::Key;
-use cursive::view::{Identifiable, View};
-use cursive::views::{Dialog, EditView, LinearLayout, OnEventView, TextView};
+use cursive::view::Identifiable;
+use cursive::view::View;
+use cursive::views::Dialog;
+use cursive::views::EditView;
+use cursive::views::LinearLayout;
+use cursive::views::OnEventView;
+use cursive::views::TextView;
 use cursive::Cursive;
 
 use common::dateutil;
-use store::{Advance, Direction};
+use store::Advance;
+use store::Direction;
 
 use crate::ViewState;
 

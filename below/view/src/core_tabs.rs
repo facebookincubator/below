@@ -14,14 +14,18 @@
 
 use crate::core_view::CoreState;
 use crate::render::ViewItem;
-use crate::stats_view::{ColumnTitles, StateCommon};
-use base_render::{get_fixed_width, RenderConfigBuilder as Rc};
+use crate::stats_view::ColumnTitles;
+use crate::stats_view::StateCommon;
+use base_render::get_fixed_width;
+use base_render::RenderConfigBuilder as Rc;
 use common::util::get_prefix;
-use model::system::{
-    BtrfsModelFieldId, MemoryModelFieldId, SingleCpuModelFieldId, SingleDiskModelFieldId,
-    VmModelFieldId,
-};
-use model::{BtrfsModel, EnumIter};
+use model::system::BtrfsModelFieldId;
+use model::system::MemoryModelFieldId;
+use model::system::SingleCpuModelFieldId;
+use model::system::SingleDiskModelFieldId;
+use model::system::VmModelFieldId;
+use model::BtrfsModel;
+use model::EnumIter;
 
 use crate::core_view::CoreStateFieldId;
 
@@ -270,7 +274,9 @@ impl CoreTab for CoreBtrfs {
 pub mod default_tabs {
     use super::*;
 
-    use model::BtrfsModelFieldId::{DiskBytes, DiskFraction, Name};
+    use model::BtrfsModelFieldId::DiskBytes;
+    use model::BtrfsModelFieldId::DiskFraction;
+    use model::BtrfsModelFieldId::Name;
 
     use once_cell::sync::Lazy;
 

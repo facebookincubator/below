@@ -13,14 +13,20 @@
 // limitations under the License.
 
 use cursive::event::Event;
-use cursive::view::{Identifiable, Scrollable, View};
-use cursive::views::{LinearLayout, Panel, SelectView, TextView};
+use cursive::view::Identifiable;
+use cursive::view::Scrollable;
+use cursive::view::View;
+use cursive::views::LinearLayout;
+use cursive::views::Panel;
+use cursive::views::SelectView;
+use cursive::views::TextView;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::controllers::{event_to_string, Controllers};
+use crate::controllers::event_to_string;
+use crate::controllers::Controllers;
 use crate::tab_view::TabView;
 
 pub struct ControllerHelper {

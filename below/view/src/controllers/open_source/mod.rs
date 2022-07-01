@@ -14,7 +14,8 @@
 use cursive::event::Event;
 use cursive::Cursive;
 
-use crate::stats_view::{StatsView, ViewBridge};
+use crate::stats_view::StatsView;
+use crate::stats_view::ViewBridge;
 
 use super::*;
 

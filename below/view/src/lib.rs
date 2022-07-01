@@ -53,28 +53,38 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
+use std::time::SystemTime;
 
 use anyhow::Result;
-use crossterm::{event::DisableMouseCapture, execute};
+use crossterm::event::DisableMouseCapture;
+use crossterm::execute;
 use cursive::event::Event;
-use cursive::views::{LinearLayout, OnEventView, Panel, ResizedView, StackView};
+use cursive::theme::BaseColor;
+use cursive::theme::Color;
+use cursive::theme::PaletteColor;
+use cursive::view::Identifiable;
+use cursive::views::LinearLayout;
+use cursive::views::OnEventView;
+use cursive::views::Panel;
+use cursive::views::ResizedView;
+use cursive::views::StackView;
 use cursive::Cursive;
 use cursive::CursiveRunnable;
-use cursive::{
-    theme::{BaseColor, Color, PaletteColor},
-    view::Identifiable,
-};
 use toml::value::Value;
 
 use common::logutil::get_last_log_to_display;
 use common::open_source_shim;
-use common::util::{
-    get_belowrc_cmd_section_key, get_belowrc_filename, get_belowrc_view_section_key,
-};
+use common::util::get_belowrc_cmd_section_key;
+use common::util::get_belowrc_filename;
+use common::util::get_belowrc_view_section_key;
+use model::CgroupModel;
 #[cfg(fbcode_build)]
 use model::GpuModel;
-use model::{CgroupModel, Model, NetworkModel, ProcessModel, SystemModel};
+use model::Model;
+use model::NetworkModel;
+use model::ProcessModel;
+use model::SystemModel;
 use store::Advance;
 extern crate render as base_render;
 
@@ -333,8 +343,10 @@ impl View {
 
         self.inner
             .add_global_callback(Event::CtrlChar('z'), |c| unsafe {
-                use crossterm::cursor::{Hide, Show};
-                use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
+                use crossterm::cursor::Hide;
+                use crossterm::cursor::Show;
+                use crossterm::terminal::EnterAlternateScreen;
+                use crossterm::terminal::LeaveAlternateScreen;
 
                 // The following logic is necessary on crossterm as it does not
                 // disable/re-enable tty on SIGTSTP, while ncurses does.
@@ -424,10 +436,12 @@ pub mod fake_view {
     use cursive::views::ViewRef;
 
     use super::*;
-    use crate::{
-        cgroup_view::CgroupView, command_palette::CommandPalette, stats_view::StatsView,
-        MainViewState, ViewMode, ViewState,
-    };
+    use crate::cgroup_view::CgroupView;
+    use crate::command_palette::CommandPalette;
+    use crate::stats_view::StatsView;
+    use crate::MainViewState;
+    use crate::ViewMode;
+    use crate::ViewState;
     use common::logutil::get_logger;
     use model::Collector;
     use store::advance::new_advance_local;

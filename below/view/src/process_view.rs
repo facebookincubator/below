@@ -12,25 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::Ref;
+use std::cell::RefCell;
+use std::cell::RefMut;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 use cursive::utils::markup::StyledString;
 use cursive::view::Identifiable;
-use cursive::views::{NamedView, SelectView, ViewRef};
+use cursive::views::NamedView;
+use cursive::views::SelectView;
+use cursive::views::ViewRef;
 use cursive::Cursive;
 
-use model::{
-    ProcessCpuModelFieldId, ProcessIoModelFieldId, ProcessMemoryModelFieldId, ProcessModel,
-    SingleProcessModelFieldId,
-};
+use model::ProcessCpuModelFieldId;
+use model::ProcessIoModelFieldId;
+use model::ProcessMemoryModelFieldId;
+use model::ProcessModel;
+use model::SingleProcessModelFieldId;
 
-use crate::process_tabs::{
-    default_tabs::{PROCESS_CPU_TAB, PROCESS_GENERAL_TAB, PROCESS_IO_TAB, PROCESS_MEM_TAB},
-    ProcessTab,
-};
-use crate::stats_view::{ColumnTitles, StateCommon, StatsView, ViewBridge};
+use crate::process_tabs::default_tabs::PROCESS_CPU_TAB;
+use crate::process_tabs::default_tabs::PROCESS_GENERAL_TAB;
+use crate::process_tabs::default_tabs::PROCESS_IO_TAB;
+use crate::process_tabs::default_tabs::PROCESS_MEM_TAB;
+use crate::process_tabs::ProcessTab;
+use crate::stats_view::ColumnTitles;
+use crate::stats_view::StateCommon;
+use crate::stats_view::StatsView;
+use crate::stats_view::ViewBridge;
 use crate::ViewState;
 
 pub type ViewType = StatsView<ProcessView>;

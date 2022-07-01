@@ -11,8 +11,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use cursive::view::{Identifiable, View};
-use cursive::views::{LinearLayout, TextView};
+use cursive::view::Identifiable;
+use cursive::view::View;
+use cursive::views::LinearLayout;
+use cursive::views::TextView;
 use cursive::Cursive;
 
 use crate::ViewState;
@@ -26,13 +28,18 @@ mod render_impl {
     use crate::render::ViewItem;
 
     use base_render::RenderConfigBuilder as Rc;
-    use model::{Queriable, SingleDiskModel, SingleNetModel, SystemModel};
+    use model::Queriable;
+    use model::SingleDiskModel;
+    use model::SingleNetModel;
+    use model::SystemModel;
 
     /// Renders corresponding Fields From SystemModel.
     type SystemViewItem = ViewItem<model::SystemModelFieldId>;
 
     static SYS_CPU_ITEMS: Lazy<Vec<SystemViewItem>> = Lazy::new(|| {
-        use model::SingleCpuModelFieldId::{SystemPct, UsagePct, UserPct};
+        use model::SingleCpuModelFieldId::SystemPct;
+        use model::SingleCpuModelFieldId::UsagePct;
+        use model::SingleCpuModelFieldId::UserPct;
         use model::SystemModelFieldId::Cpu;
         vec![
             ViewItem::from_default(Cpu(UsagePct)),
@@ -42,7 +49,10 @@ mod render_impl {
     });
 
     static SYS_MEM_ITEMS: Lazy<Vec<SystemViewItem>> = Lazy::new(|| {
-        use model::MemoryModelFieldId::{Anon, File, Free, Total};
+        use model::MemoryModelFieldId::Anon;
+        use model::MemoryModelFieldId::File;
+        use model::MemoryModelFieldId::Free;
+        use model::MemoryModelFieldId::Total;
         use model::SystemModelFieldId::Mem;
         vec![
             ViewItem::from_default(Mem(Total)),
@@ -54,7 +64,10 @@ mod render_impl {
 
     static SYS_VM_ITEMS: Lazy<Vec<SystemViewItem>> = Lazy::new(|| {
         use model::SystemModelFieldId::Vm;
-        use model::VmModelFieldId::{PgpginPerSec, PgpgoutPerSec, PswpinPerSec, PswpoutPerSec};
+        use model::VmModelFieldId::PgpginPerSec;
+        use model::VmModelFieldId::PgpgoutPerSec;
+        use model::VmModelFieldId::PswpinPerSec;
+        use model::VmModelFieldId::PswpoutPerSec;
         vec![
             ViewItem::from_default(Vm(PgpginPerSec)),
             ViewItem::from_default(Vm(PgpgoutPerSec)),

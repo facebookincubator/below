@@ -12,8 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use base_render::{HasRenderConfig, RenderConfig};
-use model::{Field, FieldId, Queriable, Recursive};
+use base_render::HasRenderConfig;
+use base_render::RenderConfig;
+use model::Field;
+use model::FieldId;
+use model::Queriable;
+use model::Recursive;
 
 use cursive::utils::markup::StyledString;
 

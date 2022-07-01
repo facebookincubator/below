@@ -12,15 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::helper::{get_metadata, occurrence_error, parse_option, to_camelcase};
+use crate::helper::get_metadata;
+use crate::helper::occurrence_error;
+use crate::helper::parse_option;
+use crate::helper::to_camelcase;
 
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::Span;
+use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{
-    parse::{Parse, ParseStream},
-    spanned::Spanned,
-    DeriveInput, Field, Ident, Token,
-};
+use syn::parse::Parse;
+use syn::parse::ParseStream;
+use syn::spanned::Spanned;
+use syn::DeriveInput;
+use syn::Field;
+use syn::Ident;
+use syn::Token;
 
 mod kw {
     use syn::custom_keyword;

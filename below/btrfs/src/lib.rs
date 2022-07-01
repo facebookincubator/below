@@ -12,12 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use rand_distr::{Distribution, Uniform};
-use slog::{self, error, warn};
+use rand_distr::Distribution;
+use rand_distr::Uniform;
+use slog::error;
+use slog::warn;
+use slog::{self};
 use std::collections::HashMap;
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 pub mod btrfs_api;

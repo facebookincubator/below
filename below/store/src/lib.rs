@@ -12,26 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fs::{self, File, OpenOptions};
-use std::io::{ErrorKind, Write};
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::fs::{self};
+use std::io::ErrorKind;
+use std::io::Write;
 use std::os::unix::io::AsRawFd;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use std::time::SystemTime;
 
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use bitflags::bitflags;
-use serde::{Deserialize, Serialize};
-use slog::{info, warn};
+use serde::Deserialize;
+use serde::Serialize;
+use slog::info;
+use slog::warn;
 use static_assertions::const_assert_eq;
 
 use crate::compression::Compressor;
-use crate::cursor::{KeyedCursor, StoreCursor};
+use crate::cursor::KeyedCursor;
+use crate::cursor::StoreCursor;
 
 use common::fileutil::get_dir_size;
 use common::open_source_shim;
 use common::util::get_unix_timestamp;
 
-use model::{self, Model};
+use model::Model;
+use model::{self};
 
 pub mod advance;
 pub mod compression;

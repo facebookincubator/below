@@ -12,24 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::Ref;
+use std::cell::RefCell;
+use std::cell::RefMut;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::rc::Rc;
 
 use cursive::utils::markup::StyledString;
 use cursive::view::Identifiable;
-use cursive::views::{NamedView, SelectView, ViewRef};
+use cursive::views::NamedView;
+use cursive::views::SelectView;
+use cursive::views::ViewRef;
 use cursive::Cursive;
 
 use crate::core_tabs::*;
-use crate::stats_view::{ColumnTitles, StateCommon, StatsView, ViewBridge};
+use crate::stats_view::ColumnTitles;
+use crate::stats_view::StateCommon;
+use crate::stats_view::StatsView;
+use crate::stats_view::ViewBridge;
 use crate::ViewState;
 
-use model::{
-    system::SystemModel, BtrfsModelFieldId, MemoryModelFieldId, SingleCpuModelFieldId,
-    SingleDiskModelFieldId, VmModelFieldId,
-};
+use model::system::SystemModel;
+use model::BtrfsModelFieldId;
+use model::MemoryModelFieldId;
+use model::SingleCpuModelFieldId;
+use model::SingleDiskModelFieldId;
+use model::VmModelFieldId;
 
 pub type ViewType = StatsView<CoreView>;
 

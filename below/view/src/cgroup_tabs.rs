@@ -16,9 +16,12 @@ use std::collections::HashSet;
 
 use crate::cgroup_view::CgroupState;
 use crate::render::ViewItem;
-use crate::stats_view::{ColumnTitles, StateCommon};
+use crate::stats_view::ColumnTitles;
+use crate::stats_view::StateCommon;
 
-use model::{sort_queriables, CgroupModel, SingleCgroupModel};
+use model::sort_queriables;
+use model::CgroupModel;
+use model::SingleCgroupModel;
 
 use cursive::utils::markup::StyledString;
 
@@ -199,24 +202,68 @@ pub mod default_tabs {
 
     use base_render::RenderConfigBuilder as Rc;
     use common::util::get_prefix;
-    use model::CgroupCpuModelFieldId::{
-        NrPeriodsPerSec, NrThrottledPerSec, SystemPct, ThrottledPct, UsagePct, UserPct,
-    };
-    use model::CgroupIoModelFieldId::{
-        DbytesPerSec, DiosPerSec, RbytesPerSec, RiosPerSec, RwbytesPerSec, WbytesPerSec, WiosPerSec,
-    };
-    use model::CgroupMemoryModelFieldId::{
-        ActiveAnon, ActiveFile, Anon, AnonThp, EventsHigh, EventsLow, EventsMax, EventsOom,
-        EventsOomKill, File, FileDirty, FileMapped, FileWriteback, InactiveAnon, InactiveFile,
-        KernelStack, Pgactivate, Pgdeactivate, Pgfault, Pglazyfree, Pglazyfreed, Pgmajfault,
-        Pgrefill, Pgscan, Pgsteal, Shmem, Slab, SlabReclaimable, SlabUnreclaimable, Sock, Swap,
-        ThpCollapseAlloc, ThpFaultAlloc, Total, Unevictable, WorkingsetActivate,
-        WorkingsetNodereclaim, WorkingsetRefault,
-    };
-    use model::CgroupPressureModelFieldId::{
-        CpuFullPct, CpuSomePct, IoFullPct, IoSomePct, MemoryFullPct, MemorySomePct,
-    };
-    use model::SingleCgroupModelFieldId::{Cpu, Io, Mem, Name, Pressure};
+    use model::CgroupCpuModelFieldId::NrPeriodsPerSec;
+    use model::CgroupCpuModelFieldId::NrThrottledPerSec;
+    use model::CgroupCpuModelFieldId::SystemPct;
+    use model::CgroupCpuModelFieldId::ThrottledPct;
+    use model::CgroupCpuModelFieldId::UsagePct;
+    use model::CgroupCpuModelFieldId::UserPct;
+    use model::CgroupIoModelFieldId::DbytesPerSec;
+    use model::CgroupIoModelFieldId::DiosPerSec;
+    use model::CgroupIoModelFieldId::RbytesPerSec;
+    use model::CgroupIoModelFieldId::RiosPerSec;
+    use model::CgroupIoModelFieldId::RwbytesPerSec;
+    use model::CgroupIoModelFieldId::WbytesPerSec;
+    use model::CgroupIoModelFieldId::WiosPerSec;
+    use model::CgroupMemoryModelFieldId::ActiveAnon;
+    use model::CgroupMemoryModelFieldId::ActiveFile;
+    use model::CgroupMemoryModelFieldId::Anon;
+    use model::CgroupMemoryModelFieldId::AnonThp;
+    use model::CgroupMemoryModelFieldId::EventsHigh;
+    use model::CgroupMemoryModelFieldId::EventsLow;
+    use model::CgroupMemoryModelFieldId::EventsMax;
+    use model::CgroupMemoryModelFieldId::EventsOom;
+    use model::CgroupMemoryModelFieldId::EventsOomKill;
+    use model::CgroupMemoryModelFieldId::File;
+    use model::CgroupMemoryModelFieldId::FileDirty;
+    use model::CgroupMemoryModelFieldId::FileMapped;
+    use model::CgroupMemoryModelFieldId::FileWriteback;
+    use model::CgroupMemoryModelFieldId::InactiveAnon;
+    use model::CgroupMemoryModelFieldId::InactiveFile;
+    use model::CgroupMemoryModelFieldId::KernelStack;
+    use model::CgroupMemoryModelFieldId::Pgactivate;
+    use model::CgroupMemoryModelFieldId::Pgdeactivate;
+    use model::CgroupMemoryModelFieldId::Pgfault;
+    use model::CgroupMemoryModelFieldId::Pglazyfree;
+    use model::CgroupMemoryModelFieldId::Pglazyfreed;
+    use model::CgroupMemoryModelFieldId::Pgmajfault;
+    use model::CgroupMemoryModelFieldId::Pgrefill;
+    use model::CgroupMemoryModelFieldId::Pgscan;
+    use model::CgroupMemoryModelFieldId::Pgsteal;
+    use model::CgroupMemoryModelFieldId::Shmem;
+    use model::CgroupMemoryModelFieldId::Slab;
+    use model::CgroupMemoryModelFieldId::SlabReclaimable;
+    use model::CgroupMemoryModelFieldId::SlabUnreclaimable;
+    use model::CgroupMemoryModelFieldId::Sock;
+    use model::CgroupMemoryModelFieldId::Swap;
+    use model::CgroupMemoryModelFieldId::ThpCollapseAlloc;
+    use model::CgroupMemoryModelFieldId::ThpFaultAlloc;
+    use model::CgroupMemoryModelFieldId::Total;
+    use model::CgroupMemoryModelFieldId::Unevictable;
+    use model::CgroupMemoryModelFieldId::WorkingsetActivate;
+    use model::CgroupMemoryModelFieldId::WorkingsetNodereclaim;
+    use model::CgroupMemoryModelFieldId::WorkingsetRefault;
+    use model::CgroupPressureModelFieldId::CpuFullPct;
+    use model::CgroupPressureModelFieldId::CpuSomePct;
+    use model::CgroupPressureModelFieldId::IoFullPct;
+    use model::CgroupPressureModelFieldId::IoSomePct;
+    use model::CgroupPressureModelFieldId::MemoryFullPct;
+    use model::CgroupPressureModelFieldId::MemorySomePct;
+    use model::SingleCgroupModelFieldId::Cpu;
+    use model::SingleCgroupModelFieldId::Io;
+    use model::SingleCgroupModelFieldId::Mem;
+    use model::SingleCgroupModelFieldId::Name;
+    use model::SingleCgroupModelFieldId::Pressure;
 
     use once_cell::sync::Lazy;
 

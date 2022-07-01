@@ -18,9 +18,14 @@ use openat::Dir;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader, ErrorKind, Read};
-use std::path::{Path, PathBuf};
-use std::sync::mpsc::{channel, RecvTimeoutError};
+use std::io::BufRead;
+use std::io::BufReader;
+use std::io::ErrorKind;
+use std::io::Read;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::mpsc::channel;
+use std::sync::mpsc::RecvTimeoutError;
 use std::time::Duration;
 
 use lazy_static::lazy_static;

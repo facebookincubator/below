@@ -12,20 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use cursive::event::{Event, EventResult, Key};
+use cursive::event::Event;
+use cursive::event::EventResult;
+use cursive::event::Key;
 use cursive::theme::ColorStyle;
 use cursive::vec::Vec2;
-use cursive::views::{EditView, NamedView};
+use cursive::views::EditView;
+use cursive::views::NamedView;
 use cursive::Cursive;
 use cursive::Printer;
 use cursive::View;
 
 use std::cell::RefCell;
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::rc::Rc;
 
 use crate::controllers::Controllers;
-use crate::stats_view::{StatsView, ViewBridge};
+use crate::stats_view::StatsView;
+use crate::stats_view::ViewBridge;
 
 const MAX_CMD_HISTORY: usize = 10;
 

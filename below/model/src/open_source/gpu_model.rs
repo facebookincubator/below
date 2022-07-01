@@ -15,7 +15,8 @@
 
 use super::*;
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 #[derive(Default, Clone, Serialize, Deserialize, below_derive::Queriable)]
 pub struct GpuModel {}

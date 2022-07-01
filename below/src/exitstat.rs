@@ -1,8 +1,10 @@
 use core::time::Duration;
 use std::ffi::CStr;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use libbpf_rs::PerfBufferBuilder;
 use once_cell::sync::Lazy;
 use plain::Plain;

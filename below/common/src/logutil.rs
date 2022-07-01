@@ -18,7 +18,9 @@ use slog::Level;
 
 use std::cell::RefCell;
 use std::io;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::RwLock;
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum TargetLog {

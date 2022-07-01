@@ -12,27 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::{Ref, RefCell, RefMut};
-use std::collections::{HashMap, HashSet};
+use std::cell::Ref;
+use std::cell::RefCell;
+use std::cell::RefMut;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 use cursive::utils::markup::StyledString;
 use cursive::view::Identifiable;
-use cursive::views::{NamedView, SelectView, ViewRef};
+use cursive::views::NamedView;
+use cursive::views::SelectView;
+use cursive::views::ViewRef;
 use cursive::Cursive;
 
-use crate::cgroup_tabs::{
-    default_tabs::{
-        CGROUP_CPU_TAB, CGROUP_GENERAL_TAB, CGROUP_IO_TAB, CGROUP_MEM_TAB, CGROUP_PRESSURE_TAB,
-    },
-    CgroupTab,
-};
-use crate::stats_view::{ColumnTitles, StateCommon, StatsView, ViewBridge};
+use crate::cgroup_tabs::default_tabs::CGROUP_CPU_TAB;
+use crate::cgroup_tabs::default_tabs::CGROUP_GENERAL_TAB;
+use crate::cgroup_tabs::default_tabs::CGROUP_IO_TAB;
+use crate::cgroup_tabs::default_tabs::CGROUP_MEM_TAB;
+use crate::cgroup_tabs::default_tabs::CGROUP_PRESSURE_TAB;
+use crate::cgroup_tabs::CgroupTab;
+use crate::stats_view::ColumnTitles;
+use crate::stats_view::StateCommon;
+use crate::stats_view::StatsView;
+use crate::stats_view::ViewBridge;
 use crate::ViewState;
-use model::{
-    CgroupCpuModelFieldId, CgroupIoModelFieldId, CgroupMemoryModelFieldId, CgroupModel,
-    SingleCgroupModelFieldId,
-};
+use model::CgroupCpuModelFieldId;
+use model::CgroupIoModelFieldId;
+use model::CgroupMemoryModelFieldId;
+use model::CgroupModel;
+use model::SingleCgroupModelFieldId;
 
 pub type ViewType = StatsView<CgroupView>;
 

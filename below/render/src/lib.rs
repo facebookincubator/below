@@ -15,8 +15,11 @@
 mod default_configs;
 
 use common::open_source_shim;
-use common::util::{convert_bytes, convert_freq, fold_string};
-use model::{Field, Queriable};
+use common::util::convert_bytes;
+use common::util::convert_freq;
+use common::util::fold_string;
+use model::Field;
+use model::Queriable;
 
 open_source_shim!();
 

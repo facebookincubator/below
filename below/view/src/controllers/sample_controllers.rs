@@ -14,7 +14,8 @@
 
 use super::*;
 
-use crate::{jump_popup, ViewMode};
+use crate::jump_popup;
+use crate::ViewMode;
 use store::Direction;
 
 // Jump forward

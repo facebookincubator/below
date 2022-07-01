@@ -12,14 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{CommonField, DumpField};
+use crate::CommonField;
+use crate::DumpField;
+use model::BtrfsModelFieldId;
 use model::EnumIter;
-use model::{
-    BtrfsModelFieldId, FieldId, NetworkModelFieldId, SingleCgroupModelFieldId,
-    SingleDiskModelFieldId, SingleNetModelFieldId, SingleProcessModelFieldId, SystemModelFieldId,
-};
+use model::FieldId;
+use model::NetworkModelFieldId;
+use model::SingleCgroupModelFieldId;
+use model::SingleDiskModelFieldId;
+use model::SingleNetModelFieldId;
+use model::SingleProcessModelFieldId;
+use model::SystemModelFieldId;
 
-use anyhow::{bail, Error, Result};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
 use clap::Parser;
 use once_cell::sync::Lazy;
 use regex::Regex;

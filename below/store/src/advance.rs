@@ -13,15 +13,22 @@
 // limitations under the License.
 
 use std::path::PathBuf;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
+use std::time::SystemTime;
 
 use anyhow::Result;
-use slog::{self, error};
+use slog::error;
+use slog::{self};
 
 use common::util;
-use model::{self, Model};
+use model::Model;
+use model::{self};
 
-use crate::{DataFrame, Direction, LocalStore, RemoteStore, Store};
+use crate::DataFrame;
+use crate::Direction;
+use crate::LocalStore;
+use crate::RemoteStore;
+use crate::Store;
 
 /// A SamplePackage consists of enough information to construct a Model.
 // A SamplePackage consists of the sample(newer_sample) at target timestamp

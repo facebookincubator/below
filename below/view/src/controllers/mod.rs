@@ -71,7 +71,9 @@
 //!   2.2 if found, get the Controllers value. For example Controllers::Cgroup
 //! 3. Invoke the handle function. For example Controllers::Cgroup.hanle()
 //! 4. Invoke the callback function. For example Controllers::Cgroup.callback()
-use cursive::event::{Event, EventTrigger, Key};
+use cursive::event::Event;
+use cursive::event::EventTrigger;
+use cursive::event::Key;
 use cursive::Cursive;
 use toml::value::Value;
 
@@ -84,8 +86,11 @@ mod view_controllers;
 #[cfg(test)]
 mod test;
 
-use crate::stats_view::{StateCommon, StatsView, ViewBridge};
-use crate::{refresh, ViewState};
+use crate::refresh;
+use crate::stats_view::StateCommon;
+use crate::stats_view::StatsView;
+use crate::stats_view::ViewBridge;
+use crate::ViewState;
 
 use content_controllers::*;
 use controller_infra::*;
@@ -96,7 +101,8 @@ use common::open_source_shim;
 
 open_source_shim!();
 
-pub use controller_infra::{event_to_string, str_to_event};
+pub use controller_infra::event_to_string;
+pub use controller_infra::str_to_event;
 
 use std::collections::HashMap;
 

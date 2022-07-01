@@ -31,7 +31,8 @@ use std::os::unix::fs::MetadataExt;
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
 
-use nix::sys::statfs::{fstatfs, FsType};
+use nix::sys::statfs::fstatfs;
+use nix::sys::statfs::FsType;
 
 // Currently, sudotests test basic functionality. Will testing infrastructure in later commits
 

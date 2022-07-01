@@ -14,7 +14,8 @@
 
 use crate::process_view::ProcessState;
 use crate::render::ViewItem;
-use crate::stats_view::{ColumnTitles, StateCommon};
+use crate::stats_view::ColumnTitles;
+use crate::stats_view::StateCommon;
 use model::SingleProcessModel;
 
 use cursive::utils::markup::StyledString;
@@ -136,15 +137,35 @@ impl ProcessTab {
 pub mod default_tabs {
     use super::*;
 
-    use model::ProcessCpuModelFieldId::{NumThreads, SystemPct, UsagePct, UserPct};
-    use model::ProcessIoModelFieldId::{RbytesPerSec, RwbytesPerSec, WbytesPerSec};
-    use model::ProcessMemoryModelFieldId::{
-        Anon, File, HugeTlb, Lock, MajorfaultsPerSec, MinorfaultsPerSec, Pin, Pte, RssBytes, Shmem,
-        Swap, VmSize,
-    };
-    use model::SingleProcessModelFieldId::{
-        Cgroup, Cmdline, Comm, Cpu, Io, Mem, Pid, Ppid, State, UptimeSecs,
-    };
+    use model::ProcessCpuModelFieldId::NumThreads;
+    use model::ProcessCpuModelFieldId::SystemPct;
+    use model::ProcessCpuModelFieldId::UsagePct;
+    use model::ProcessCpuModelFieldId::UserPct;
+    use model::ProcessIoModelFieldId::RbytesPerSec;
+    use model::ProcessIoModelFieldId::RwbytesPerSec;
+    use model::ProcessIoModelFieldId::WbytesPerSec;
+    use model::ProcessMemoryModelFieldId::Anon;
+    use model::ProcessMemoryModelFieldId::File;
+    use model::ProcessMemoryModelFieldId::HugeTlb;
+    use model::ProcessMemoryModelFieldId::Lock;
+    use model::ProcessMemoryModelFieldId::MajorfaultsPerSec;
+    use model::ProcessMemoryModelFieldId::MinorfaultsPerSec;
+    use model::ProcessMemoryModelFieldId::Pin;
+    use model::ProcessMemoryModelFieldId::Pte;
+    use model::ProcessMemoryModelFieldId::RssBytes;
+    use model::ProcessMemoryModelFieldId::Shmem;
+    use model::ProcessMemoryModelFieldId::Swap;
+    use model::ProcessMemoryModelFieldId::VmSize;
+    use model::SingleProcessModelFieldId::Cgroup;
+    use model::SingleProcessModelFieldId::Cmdline;
+    use model::SingleProcessModelFieldId::Comm;
+    use model::SingleProcessModelFieldId::Cpu;
+    use model::SingleProcessModelFieldId::Io;
+    use model::SingleProcessModelFieldId::Mem;
+    use model::SingleProcessModelFieldId::Pid;
+    use model::SingleProcessModelFieldId::Ppid;
+    use model::SingleProcessModelFieldId::State;
+    use model::SingleProcessModelFieldId::UptimeSecs;
 
     use once_cell::sync::Lazy;
 

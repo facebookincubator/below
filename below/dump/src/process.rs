@@ -19,9 +19,11 @@ use render::RenderConfig;
 
 impl HasRenderConfigForDump for model::SingleProcessModel {
     fn get_render_config_for_dump(field_id: &SingleProcessModelFieldId) -> RenderConfig {
-        use model::ProcessCpuModelFieldId::{SystemPct, UserPct};
+        use model::ProcessCpuModelFieldId::SystemPct;
+        use model::ProcessCpuModelFieldId::UserPct;
         use model::ProcessIoModelFieldId::RwbytesPerSec;
-        use model::SingleProcessModelFieldId::{Cpu, Io};
+        use model::SingleProcessModelFieldId::Cpu;
+        use model::SingleProcessModelFieldId::Io;
         use render::HasRenderConfig;
 
         let rc = model::SingleProcessModel::get_render_config_builder(field_id);

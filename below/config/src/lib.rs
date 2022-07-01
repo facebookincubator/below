@@ -13,11 +13,14 @@
 // limitations under the License.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 use once_cell::sync::OnceCell;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 #[cfg(test)]
 mod test;

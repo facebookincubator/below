@@ -12,8 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::{anyhow, bail, Result};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Result;
+use std::time::Duration;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 use crate::dateutil;
 use crate::util;

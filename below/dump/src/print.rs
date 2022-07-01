@@ -14,8 +14,12 @@
 
 use super::*;
 
-use model::{Field, FieldId, Queriable, Recursive};
-use render::{HasRenderConfig, RenderConfig};
+use model::Field;
+use model::FieldId;
+use model::Queriable;
+use model::Recursive;
+use render::HasRenderConfig;
+use render::RenderConfig;
 
 impl CommonField {
     /// Default RenderConfig for CommonField

@@ -21,17 +21,42 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
     fn get_render_config_for_dump(field_id: &SingleCgroupModelFieldId) -> RenderConfig {
         use common::util::get_prefix;
         use model::CgroupCpuModelFieldId::ThrottledPct;
-        use model::CgroupIoModelFieldId::{
-            DbytesPerSec, DiosPerSec, RbytesPerSec, RiosPerSec, RwbytesPerSec, WbytesPerSec,
-            WiosPerSec,
-        };
-        use model::CgroupMemoryModelFieldId::{
-            Anon, File, Pgactivate, Pgdeactivate, Pgfault, Pglazyfree, Pglazyfreed, Pgmajfault,
-            Pgrefill, Pgscan, Pgsteal, Shmem, Slab, Sock, Swap, ThpCollapseAlloc, ThpFaultAlloc,
-            Total, WorkingsetActivate, WorkingsetNodereclaim, WorkingsetRefault, Zswap,
-        };
-        use model::CgroupPressureModelFieldId::{MemoryFullPct, MemorySomePct};
-        use model::SingleCgroupModelFieldId::{Cpu, Io, Mem, Name, Pressure};
+        use model::CgroupIoModelFieldId::DbytesPerSec;
+        use model::CgroupIoModelFieldId::DiosPerSec;
+        use model::CgroupIoModelFieldId::RbytesPerSec;
+        use model::CgroupIoModelFieldId::RiosPerSec;
+        use model::CgroupIoModelFieldId::RwbytesPerSec;
+        use model::CgroupIoModelFieldId::WbytesPerSec;
+        use model::CgroupIoModelFieldId::WiosPerSec;
+        use model::CgroupMemoryModelFieldId::Anon;
+        use model::CgroupMemoryModelFieldId::File;
+        use model::CgroupMemoryModelFieldId::Pgactivate;
+        use model::CgroupMemoryModelFieldId::Pgdeactivate;
+        use model::CgroupMemoryModelFieldId::Pgfault;
+        use model::CgroupMemoryModelFieldId::Pglazyfree;
+        use model::CgroupMemoryModelFieldId::Pglazyfreed;
+        use model::CgroupMemoryModelFieldId::Pgmajfault;
+        use model::CgroupMemoryModelFieldId::Pgrefill;
+        use model::CgroupMemoryModelFieldId::Pgscan;
+        use model::CgroupMemoryModelFieldId::Pgsteal;
+        use model::CgroupMemoryModelFieldId::Shmem;
+        use model::CgroupMemoryModelFieldId::Slab;
+        use model::CgroupMemoryModelFieldId::Sock;
+        use model::CgroupMemoryModelFieldId::Swap;
+        use model::CgroupMemoryModelFieldId::ThpCollapseAlloc;
+        use model::CgroupMemoryModelFieldId::ThpFaultAlloc;
+        use model::CgroupMemoryModelFieldId::Total;
+        use model::CgroupMemoryModelFieldId::WorkingsetActivate;
+        use model::CgroupMemoryModelFieldId::WorkingsetNodereclaim;
+        use model::CgroupMemoryModelFieldId::WorkingsetRefault;
+        use model::CgroupMemoryModelFieldId::Zswap;
+        use model::CgroupPressureModelFieldId::MemoryFullPct;
+        use model::CgroupPressureModelFieldId::MemorySomePct;
+        use model::SingleCgroupModelFieldId::Cpu;
+        use model::SingleCgroupModelFieldId::Io;
+        use model::SingleCgroupModelFieldId::Mem;
+        use model::SingleCgroupModelFieldId::Name;
+        use model::SingleCgroupModelFieldId::Pressure;
         use render::HasRenderConfig;
 
         let rc = model::SingleCgroupModel::get_render_config_builder(field_id);

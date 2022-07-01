@@ -16,11 +16,14 @@ use std::fs::OpenOptions;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
-use slog::{error, o, Drain};
+use slog::error;
+use slog::o;
+use slog::Drain;
 use slog_term;
 
 use crate::init::InitToken;
-use crate::logutil::{CommandPaletteDrain, CompoundDecorator};
+use crate::logutil::CommandPaletteDrain;
+use crate::logutil::CompoundDecorator;
 use crate::RedirectLogOnFail;
 
 fn setup_log<T: 'static + std::io::Write + std::marker::Send>(

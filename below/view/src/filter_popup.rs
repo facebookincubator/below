@@ -16,8 +16,11 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use cursive::event::Key;
-use cursive::view::{Identifiable, View};
-use cursive::views::{Dialog, EditView, OnEventView};
+use cursive::view::Identifiable;
+use cursive::view::View;
+use cursive::views::Dialog;
+use cursive::views::EditView;
+use cursive::views::OnEventView;
 use cursive::Cursive;
 
 use crate::stats_view::StateCommon;
