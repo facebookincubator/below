@@ -70,13 +70,23 @@ pub fn system_time_from_date_and_adjuster(
 pub fn system_time_range_from_date_and_adjuster(
     start_date: &str,
     end_date: Option<&str>,
+    duration_str: Option<&str>,
     days_adjuster: Option<&str>,
 ) -> Result<(SystemTime, SystemTime)> {
     let start = system_time_from_date_and_adjuster(start_date, days_adjuster)?;
-    let end = match end_date {
-        Some(t) => system_time_from_date_and_adjuster(t, days_adjuster)?,
-        None => SystemTime::now(),
+    let end = match (end_date, duration_str) {
+        (Some(_), Some(_)) => {
+            bail!("--end and --duration are incompatible options")
+        }
+        (Some(end_date), None) => system_time_from_date_and_adjuster(end_date, days_adjuster)?,
+        (None, Some(duration_str)) => duration_str
+            .parse::<humantime::Duration>()
+            .ok()
+            .map(|duration| start + duration.into())
+            .unwrap(),
+        _ => SystemTime::now(),
     };
+
     Ok((start, end))
 }
 
@@ -181,11 +191,22 @@ mod tests {
             system_time_range_from_date_and_adjuster(
                 "2006-02-01 13:00:30 UTC",
                 Some("2006-02-01 15:00:30 UTC"),
-                Some("y")
+                None,
+                Some("y"),
             )
             .unwrap(),
             (t("2006-01-31 13:00:30 UTC"), t("2006-01-31 15:00:30 UTC"))
-        )
+        );
+        assert_eq!(
+            system_time_range_from_date_and_adjuster(
+                "2006-02-01 13:00:30 UTC",
+                None,
+                Some("10min"),
+                Some("y"),
+            )
+            .unwrap(),
+            (t("2006-01-31 13:00:30 UTC"), t("2006-01-31 13:10:30 UTC"))
+        );
     }
 
     /// Convert date to `SystemTime`

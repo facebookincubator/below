@@ -995,8 +995,14 @@ pub struct GeneralOpt {
     #[clap(long, short)]
     pub begin: String,
     /// End time, same format as replay
-    #[clap(long, short)]
+    #[clap(long, short, group = "time")]
     pub end: Option<String>,
+    /// Time string specifying the duration, e.g. "10 min"{n}
+    /// Keywords: days min, h, sec{n}
+    /// Relative: {humantime}, e.g. "2 days 3 hr 15m 10sec"{n}
+    /// _
+    #[clap(long, group = "time")]
+    pub duration: Option<String>,
     /// Take a regex and apply to --select selected field. See command level doc for example.
     #[clap(long, short = 'F')]
     pub filter: Option<Regex>,

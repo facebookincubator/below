@@ -262,8 +262,14 @@ enum Command {
         #[clap(short, long, verbatim_doc_comment)]
         begin: String,
         /// End time, same format as replay
-        #[clap(short, long, verbatim_doc_comment)]
-        end: String,
+        #[clap(short, long, verbatim_doc_comment, group = "time")]
+        end: Option<String>,
+        /// Time string specifying the snapshot duration, e.g. "10 min"{n}
+        /// Keywords: days min, h, sec{n}
+        /// Relative: {humantime}, e.g. "2 days 3 hr 15m 10sec"{n}
+        /// _
+        #[clap(long, verbatim_doc_comment, group = "time")]
+        duration: Option<String>,
         /// Supply hostname to take snapshot from remote
         #[clap(long)]
         host: Option<String>,
@@ -298,8 +304,10 @@ enum DebugCommand {
     ConvertStore {
         #[clap(short, long, verbatim_doc_comment)]
         start_time: String,
-        #[clap(short, long, verbatim_doc_comment)]
-        end_time: String,
+        #[clap(short, long, verbatim_doc_comment, group = "time")]
+        end_time: Option<String>,
+        #[clap(long, verbatim_doc_comment, group = "time")]
+        duration: Option<String>,
         #[clap(long)]
         from_store_dir: Option<PathBuf>,
         #[clap(long)]
@@ -741,11 +749,13 @@ fn real_main(init: init::InitToken) {
         Command::Snapshot {
             ref begin,
             ref end,
+            ref duration,
             ref host,
             ref port,
         } => {
             let begin = begin.clone();
             let end = end.clone();
+            let duration = duration.clone();
             let host = host.clone();
             let port = port.clone();
             run(
@@ -755,7 +765,7 @@ fn real_main(init: init::InitToken) {
                 Service::Off,
                 RedirectLogOnFail::Off,
                 |_, below_config, logger, _errs| {
-                    snapshot(logger, below_config, begin, end, host, port)
+                    snapshot(logger, below_config, begin, end, duration, host, port)
                 },
             )
         }
@@ -775,6 +785,7 @@ fn real_main(init: init::InitToken) {
             DebugCommand::ConvertStore {
                 ref start_time,
                 ref end_time,
+                ref duration,
                 ref from_store_dir,
                 ref to_store_dir,
                 ref host,
@@ -783,6 +794,7 @@ fn real_main(init: init::InitToken) {
             } => {
                 let start_time = start_time.clone();
                 let end_time = end_time.clone();
+                let duration = duration.clone();
                 let from_store_dir = from_store_dir.clone();
                 let to_store_dir = to_store_dir.clone();
                 let host = host.clone();
@@ -799,6 +811,7 @@ fn real_main(init: init::InitToken) {
                             below_config,
                             start_time,
                             end_time,
+                            duration,
                             from_store_dir,
                             to_store_dir,
                             host,
@@ -1307,7 +1320,8 @@ fn convert_store(
     logger: slog::Logger,
     below_config: &BelowConfig,
     start_time: String,
-    end_time: String,
+    end_time: Option<String>,
+    duration: Option<String>,
     from_store_dir: Option<PathBuf>,
     to_store_dir: PathBuf,
     host: Option<String>,
@@ -1316,7 +1330,8 @@ fn convert_store(
 ) -> Result<()> {
     let (time_begin, time_end) = cliutil::system_time_range_from_date_and_adjuster(
         start_time.as_str(),
-        Some(end_time.as_str()),
+        end_time.as_deref(),
+        duration.as_deref(),
         /* days_adjuster */ None,
     )?;
     let (timestamp_begin, timestamp_end) = (
@@ -1387,13 +1402,15 @@ fn snapshot(
     logger: slog::Logger,
     below_config: &BelowConfig,
     begin: String,
-    end: String,
+    end: Option<String>,
+    duration: Option<String>,
     host: Option<String>,
     port: Option<u16>,
 ) -> Result<()> {
     let (time_begin, time_end) = cliutil::system_time_range_from_date_and_adjuster(
         begin.as_str(),
-        Some(end.as_str()),
+        end.as_deref(),
+        duration.as_deref(),
         /* days_adjuster */ None,
     )?;
     let (timestamp_begin, timestamp_end) = (
@@ -1420,6 +1437,7 @@ fn snapshot(
         below_config,
         begin,
         end,
+        duration,
         None,
         snapshot_store_path.clone(),
         host,

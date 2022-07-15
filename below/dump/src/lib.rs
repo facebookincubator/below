@@ -124,6 +124,7 @@ fn get_advance(
     let (time_begin, time_end) = cliutil::system_time_range_from_date_and_adjuster(
         opts.begin.as_str(),
         opts.end.as_deref(),
+        opts.duration.as_deref(),
         opts.yesterdays.as_deref(),
     )?;
 
