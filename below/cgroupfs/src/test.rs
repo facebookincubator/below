@@ -553,3 +553,63 @@ fn test_validate_cgroup2_fs() {
     let root = TestCgroup::new();
     assert!(root.get_reader_validate().is_err());
 }
+
+#[test]
+fn test_cgroup_stat_success() {
+    let expected_nr_descendants = 10;
+    let expected_nr_dying_descendants = 20;
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content(
+        "cgroup.stat",
+        format!(
+             "nr_descendants {expected_nr_descendants}\nnr_dying_descendants {expected_nr_dying_descendants}")
+             .as_bytes());
+
+    let cgroup_reader = cgroup.get_reader();
+    let val = cgroup_reader
+        .read_cgroup_stat()
+        .expect("Failed to read cgroup.stat");
+    assert_eq!(
+        val.nr_descendants
+            .expect("Failed to populate nr_descendants field"),
+        expected_nr_descendants
+    );
+    assert_eq!(
+        val.nr_dying_descendants
+            .expect("Failed to populate nr_dying_descendants field"),
+        expected_nr_dying_descendants
+    );
+}
+
+#[test]
+fn test_cgroup_stat_parse_failure() {
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content(
+        "cgroup.stat",
+        b"nr_descendants garbage\nnr_dying_descendantsa garbage",
+    );
+
+    let cgroup_reader = cgroup.get_reader();
+    let err = cgroup_reader
+        .read_cgroup_stat()
+        .expect_err("Failed to read cgroup.stat");
+    match err {
+        Error::UnexpectedLine(_, _) => {}
+        _ => panic!("Got unexpected error type {}", err),
+    }
+}
+
+#[test]
+fn test_cgroup_stat_invalid_format() {
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content("cgroup.stat", b"");
+
+    let cgroup_reader = cgroup.get_reader();
+    let err = cgroup_reader
+        .read_cgroup_stat()
+        .expect_err("Did not fail to read cgroup.stat");
+    match err {
+        Error::InvalidFileFormat(_) => {}
+        _ => panic!("Got unexpected error type: {}", err),
+    }
+}

@@ -219,6 +219,10 @@ impl CgroupReader {
         MemoryEvents::read(&self)
     }
 
+    pub fn read_cgroup_stat(&self) -> Result<CgroupStat> {
+        CgroupStat::read(self)
+    }
+
     impl_read_pressure!(
         read_cpu_pressure,
         "cpu",
@@ -313,7 +317,7 @@ macro_rules! key_values_format {
                         return Err(r.unexpected_line(file_name, line));
                     }
                     let key = items[0];
-                    let val = items[1].parse::<u64>().map_err(|_| r.unexpected_line(file_name, line.clone()))?;
+                    let val = items[1].parse::<_>().map_err(|_| r.unexpected_line(file_name, line.clone()))?;
                     match key.as_ref() {
                         $(stringify!($field) => s.$field = Some(val),)*
                         _ => (),
@@ -379,6 +383,8 @@ key_values_format!(MemoryEvents; memory.events; [
     oom,
     oom_kill
 ]);
+
+key_values_format!(CgroupStat; cgroup.stat; [nr_descendants, nr_dying_descendants]);
 
 // Trait to add a read() method for `<string> key=value` formatted files
 trait NameKVRead: Sized {

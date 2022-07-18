@@ -392,6 +392,7 @@ fn collect_cgroup_sample(
                 None
             }
         },
+        cgroup_stat: wrap(reader.read_cgroup_stat())?.map(Into::into),
     })
 }
 

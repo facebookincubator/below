@@ -111,3 +111,9 @@ pub struct MemoryEvents {
     pub oom: Option<u64>,
     pub oom_kill: Option<u64>,
 }
+
+#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct CgroupStat {
+    pub nr_descendants: Option<u32>,
+    pub nr_dying_descendants: Option<u32>,
+}
