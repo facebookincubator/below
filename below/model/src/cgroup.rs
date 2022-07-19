@@ -36,6 +36,8 @@ pub struct SingleCgroupModel {
     pub io_total: Option<CgroupIoModel>,
     #[queriable(subquery)]
     pub pressure: Option<CgroupPressureModel>,
+    #[queriable(subquery)]
+    pub cgroup_stat: Option<CgroupStatModel>,
 }
 
 /// A model that represents a cgroup subtree. Each instance is a node that uses
@@ -221,6 +223,8 @@ impl CgroupModel {
             .as_ref()
             .map(|p| CgroupPressureModel::new(p));
 
+        let cgroup_stat = sample.cgroup_stat.as_ref().map(CgroupStatModel::new);
+
         // recursively calculate view of children
         // `children` is optional, but we treat it the same as an empty map
         let empty = BTreeMap::new();
@@ -257,6 +261,7 @@ impl CgroupModel {
                 io_total,
                 pressure,
                 depth,
+                cgroup_stat,
             },
             children,
             count: nr_descendants + 1,
@@ -309,6 +314,29 @@ impl CgroupCpuModel {
             nr_periods_per_sec: count_per_sec!(begin.nr_periods, end.nr_periods, delta),
             nr_throttled_per_sec: count_per_sec!(begin.nr_throttled, end.nr_throttled, delta),
             throttled_pct: usec_pct!(begin.throttled_usec, end.throttled_usec, delta),
+        }
+    }
+}
+
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
+pub struct CgroupStatModel {
+    pub nr_descendants: Option<u32>,
+    pub nr_dying_descendants: Option<u32>,
+}
+
+impl CgroupStatModel {
+    pub fn new(cgroup_stat: &cgroupfs::CgroupStat) -> CgroupStatModel {
+        CgroupStatModel {
+            nr_descendants: cgroup_stat.nr_descendants,
+            nr_dying_descendants: cgroup_stat.nr_dying_descendants,
         }
     }
 }

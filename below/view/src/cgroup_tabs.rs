@@ -259,6 +259,9 @@ pub mod default_tabs {
     use model::CgroupPressureModelFieldId::IoSomePct;
     use model::CgroupPressureModelFieldId::MemoryFullPct;
     use model::CgroupPressureModelFieldId::MemorySomePct;
+    use model::CgroupStatModelFieldId::NrDescendants;
+    use model::CgroupStatModelFieldId::NrDyingDescendants;
+    use model::SingleCgroupModelFieldId::CgroupStat;
     use model::SingleCgroupModelFieldId::Cpu;
     use model::SingleCgroupModelFieldId::Io;
     use model::SingleCgroupModelFieldId::Mem;
@@ -284,6 +287,8 @@ pub mod default_tabs {
             ViewItem::from_default(Io(RbytesPerSec)),
             ViewItem::from_default(Io(WbytesPerSec)),
             ViewItem::from_default(Io(RwbytesPerSec)),
+            ViewItem::from_default(CgroupStat(NrDescendants)),
+            ViewItem::from_default(CgroupStat(NrDyingDescendants)),
         ])
     });
 

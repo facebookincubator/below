@@ -35,6 +35,7 @@ impl HasRenderConfig for model::SingleCgroupModel {
             }
             Mem(field_id) => model::CgroupMemoryModel::get_render_config_builder(field_id),
             Pressure(field_id) => model::CgroupPressureModel::get_render_config_builder(field_id),
+            CgroupStat(field_id) => model::CgroupStatModel::get_render_config_builder(field_id),
         }
     }
 }
@@ -584,6 +585,17 @@ impl HasRenderConfig for model::BtrfsModel {
                 .format(Precision(1))
                 .suffix("%"),
             DiskBytes => rc.title("Approx Disk Bytes").format(ReadableSize),
+        }
+    }
+}
+
+impl HasRenderConfig for model::CgroupStatModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::CgroupStatModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            NrDescendants => rc.title("Nr Descendants"),
+            NrDyingDescendants => rc.title("Nr Dying Descendants"),
         }
     }
 }

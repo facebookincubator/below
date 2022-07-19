@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 305] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 307] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -197,6 +197,8 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 305] = [
     "cgroup.[path:/<cgroup_path>/.]pressure.io_full_pct",
     "cgroup.[path:/<cgroup_path>/.]pressure.memory_some_pct",
     "cgroup.[path:/<cgroup_path>/.]pressure.memory_full_pct",
+    "cgroup.[path:/<cgroup_path>/.]cgroup_stat.nr_descendants",
+    "cgroup.[path:/<cgroup_path>/.]cgroup_stat.nr_dying_descendants",
     "process.processes.<key>.pid",
     "process.processes.<key>.ppid",
     "process.processes.<key>.comm",
