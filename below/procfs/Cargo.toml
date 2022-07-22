@@ -11,7 +11,7 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
-lazy_static = "1.0"
+lazy_static = "1.4"
 libc = "0.2.121"
 nix = "0.23"
 openat = "0.1.21"

@@ -27,7 +27,7 @@ zstd-safe = "5.0.1+zstd.1.5.2"
 
 [dev-dependencies]
 itertools = "0.10.3"
-lazy_static = "1.0"
+lazy_static = "1.4"
 paste = "1.0"
 slog-term = "2.8"
 tempdir = "0.3"
