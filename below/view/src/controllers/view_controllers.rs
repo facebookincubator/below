@@ -14,12 +14,11 @@
 
 use super::*;
 
+use crate::set_active_screen;
 use crate::MainViewState;
 use crate::ProcessZoomState;
-use cursive::views::NamedView;
 use cursive::views::OnEventView;
 use cursive::views::ResizedView;
-use cursive::views::StackView;
 
 // Invoke command palette
 make_event_controller!(
@@ -165,12 +164,7 @@ make_event_controller!(
     Event::Char('p'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
-        c.call_on_name("main_view_stack", |stack: &mut NamedView<StackView>| {
-            let position = (*stack.get_mut())
-                .find_layer_from_name("process_view_panel")
-                .expect("Failed to find process view");
-            (*stack.get_mut()).move_to_front(position);
-        });
+        set_active_screen(c, "process_view_panel");
 
         let current_state = c
             .user_data::<ViewState>()
@@ -199,12 +193,7 @@ make_event_controller!(
     Event::Char('c'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
-        c.call_on_name("main_view_stack", |stack: &mut NamedView<StackView>| {
-            let position = (*stack.get_mut())
-                .find_layer_from_name("cgroup_view_panel")
-                .expect("Failed to find cgroup view");
-            (*stack.get_mut()).move_to_front(position);
-        });
+        set_active_screen(c, "cgroup_view_panel");
 
         let current_state = c
             .user_data::<ViewState>()
@@ -233,12 +222,7 @@ make_event_controller!(
     Event::Char('s'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
-        c.call_on_name("main_view_stack", |stack: &mut NamedView<StackView>| {
-            let position = (*stack.get_mut())
-                .find_layer_from_name("core_view_panel")
-                .expect("Failed to find core view");
-            (*stack.get_mut()).move_to_front(position);
-        });
+        set_active_screen(c, "core_view_panel");
 
         let current_state = c
             .user_data::<ViewState>()
@@ -314,28 +298,19 @@ make_event_controller!(
             _ => return,
         };
 
-        c.call_on_name("main_view_stack", |stack: &mut NamedView<StackView>| {
-            match &next_state {
-                MainViewState::Process(_) => {
-                    // Bring process_view to front
-                    let process_pos = (*stack.get_mut())
-                        .find_layer_from_name("process_view_panel")
-                        .expect("Failed to find process view");
-                    (*stack.get_mut()).move_to_front(process_pos);
-                }
-                MainViewState::Cgroup => {
-                    // Bring cgroup_view to front
-                    let cgroup_pos = (*stack.get_mut())
-                        .find_layer_from_name("cgroup_view_panel")
-                        .expect("Failed to find cgroup view");
-                    (*stack.get_mut()).move_to_front(cgroup_pos);
-                }
-                MainViewState::Core => {}
-                #[cfg(fbcode_build)]
-                MainViewState::Gpu => {}
+        match &next_state {
+            MainViewState::Process(_) => {
+                // Bring process_view to front
+                set_active_screen(c, "process_view_panel");
             }
-        })
-        .expect("failed to find main_view_stack");
+            MainViewState::Cgroup => {
+                // Bring cgroup_view to front
+                set_active_screen(c, "cgroup_view_panel");
+            }
+            MainViewState::Core => {}
+            #[cfg(fbcode_build)]
+            MainViewState::Gpu => {}
+        }
 
         // Set next state
         c.user_data::<ViewState>()

@@ -64,13 +64,16 @@ use cursive::theme::BaseColor;
 use cursive::theme::Color;
 use cursive::theme::PaletteColor;
 use cursive::view::Identifiable;
+use cursive::views::BoxedView;
 use cursive::views::LinearLayout;
+use cursive::views::NamedView;
 use cursive::views::OnEventView;
 use cursive::views::Panel;
 use cursive::views::ResizedView;
-use cursive::views::StackView;
+use cursive::views::ScreensView;
 use cursive::Cursive;
 use cursive::CursiveRunnable;
+use cursive::ScreenId;
 use toml::value::Value;
 
 use common::logutil::get_last_log_to_display;
@@ -208,6 +211,27 @@ fn refresh(c: &mut Cursive) {
     }
 }
 
+pub fn set_active_screen(c: &mut Cursive, name: &str) {
+    let screen_id = *c
+        .user_data::<ViewState>()
+        .expect("No data stored in Cursive object!")
+        .main_view_screens
+        .get(name)
+        .unwrap_or_else(|| panic!("Failed to find screen id for {}", name));
+    c.call_on_name(
+        "main_view_screens",
+        |screens: &mut NamedView<ScreensView>| {
+            screens.get_mut().set_active_screen(screen_id);
+            screens
+                .get_mut()
+                .screen_mut()
+                .unwrap()
+                .take_focus(cursive::direction::Direction::none());
+        },
+    )
+    .expect("failed to find main_view_screens");
+}
+
 pub struct ViewState {
     pub time_elapsed: Duration,
     /// Keep track of the lowest seen `time_elapsed` so that view can highlight abnormal
@@ -222,6 +246,7 @@ pub struct ViewState {
     #[cfg(fbcode_build)]
     pub gpu: Rc<RefCell<Option<GpuModel>>>,
     pub main_view_state: MainViewState,
+    pub main_view_screens: HashMap<String, ScreenId>,
     pub mode: ViewMode,
     pub event_controllers: Rc<RefCell<HashMap<Event, controllers::Controllers>>>,
     pub cmd_controllers: Rc<RefCell<HashMap<&'static str, controllers::Controllers>>>,
@@ -254,6 +279,7 @@ impl ViewState {
             #[cfg(fbcode_build)]
             gpu: Rc::new(RefCell::new(model.gpu)),
             main_view_state,
+            main_view_screens: HashMap::new(),
             mode,
             event_controllers: Rc::new(RefCell::new(HashMap::new())),
             cmd_controllers: Rc::new(RefCell::new(controllers::make_cmd_controller_map())),
@@ -387,21 +413,31 @@ impl View {
         #[cfg(fbcode_build)]
         let gpu_view = gpu_view::GpuView::new(&mut self.inner);
 
-        let mut stack_view = StackView::new();
+        let mut screens_view = ScreensView::new();
+        let main_view_screens = &mut self
+            .inner
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .main_view_screens;
+        main_view_screens.insert(
+            "cgroup_view_panel".to_owned(),
+            screens_view.add_screen(BoxedView::boxed(ResizedView::with_full_screen(cgroup_view))),
+        );
+        main_view_screens.insert(
+            "process_view_panel".to_owned(),
+            screens_view.add_screen(BoxedView::boxed(ResizedView::with_full_screen(
+                process_view,
+            ))),
+        );
+        main_view_screens.insert(
+            "core_view_panel".to_owned(),
+            screens_view.add_screen(BoxedView::boxed(ResizedView::with_full_screen(core_view))),
+        );
         #[cfg(fbcode_build)]
-        stack_view.add_fullscreen_layer(ResizedView::with_full_screen(
-            gpu_view.with_name("gpu_view_panel"),
-        ));
-
-        stack_view.add_fullscreen_layer(ResizedView::with_full_screen(
-            core_view.with_name("core_view_panel"),
-        ));
-        stack_view.add_fullscreen_layer(ResizedView::with_full_screen(
-            process_view.with_name("process_view_panel"),
-        ));
-        stack_view.add_fullscreen_layer(ResizedView::with_full_screen(
-            cgroup_view.with_name("cgroup_view_panel"),
-        ));
+        main_view_screens.insert(
+            "gpu_view_panel".to_owned(),
+            screens_view.add_screen(BoxedView::boxed(ResizedView::with_full_screen(gpu_view))),
+        );
 
         self.inner
             .add_fullscreen_layer(ResizedView::with_full_screen(
@@ -409,7 +445,7 @@ impl View {
                     .child(Panel::new(status_bar))
                     .child(Panel::new(system_view))
                     .child(
-                        OnEventView::new(stack_view.with_name("main_view_stack"))
+                        OnEventView::new(screens_view.with_name("main_view_screens"))
                             .with_name("dynamic_view"),
                     ),
             ));
@@ -433,6 +469,7 @@ impl View {
 
 #[cfg(test)]
 pub mod fake_view {
+    use cursive::views::DummyView;
     use cursive::views::ViewRef;
 
     use super::*;
@@ -465,11 +502,23 @@ pub mod fake_view {
                 .expect("Fail to get model");
 
             let mut inner = CursiveRunnable::dummy();
-            inner.set_user_data(ViewState::new_with_advance(
+            let mut user_data = ViewState::new_with_advance(
                 MainViewState::Cgroup,
                 model,
                 ViewMode::Live(Rc::new(RefCell::new(advance))),
-            ));
+            );
+            // Dummy screen to make switching panel no-op except state changes.
+            inner.add_layer(
+                ScreensView::single_screen(BoxedView::boxed(DummyView))
+                    .with_name("main_view_screens"),
+            );
+            user_data.main_view_screens = [
+                ("cgroup_view_panel".to_owned(), 0),
+                ("process_view_panel".to_owned(), 0),
+                ("core_view_panel".to_owned(), 0),
+            ]
+            .into();
+            inner.set_user_data(user_data);
 
             Self { inner }
         }
