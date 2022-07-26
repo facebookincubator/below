@@ -15,7 +15,7 @@
 use chrono::DateTime;
 use chrono::Local;
 use cursive::utils::markup::StyledString;
-use cursive::view::Identifiable;
+use cursive::view::Nameable;
 use cursive::view::View;
 use cursive::views::TextView;
 use cursive::Cursive;

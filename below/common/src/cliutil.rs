@@ -82,7 +82,7 @@ pub fn system_time_range_from_date_and_adjuster(
         (None, Some(duration_str)) => duration_str
             .parse::<humantime::Duration>()
             .ok()
-            .map(|duration| start + duration.into())
+            .map(|duration: humantime::Duration| start + Into::<Duration>::into(duration))
             .unwrap(),
         _ => SystemTime::now(),
     };

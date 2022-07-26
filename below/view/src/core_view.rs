@@ -20,7 +20,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use cursive::utils::markup::StyledString;
-use cursive::view::Identifiable;
+use cursive::view::Nameable;
 use cursive::views::NamedView;
 use cursive::views::SelectView;
 use cursive::views::ViewRef;

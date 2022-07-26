@@ -16,7 +16,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use cursive::event::Key;
-use cursive::view::Identifiable;
+use cursive::view::Nameable;
 use cursive::view::View;
 use cursive::views::Dialog;
 use cursive::views::EditView;

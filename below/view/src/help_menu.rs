@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use cursive::event::Event;
-use cursive::view::Identifiable;
+use cursive::view::Nameable;
 use cursive::view::Scrollable;
 use cursive::view::View;
 use cursive::views::LinearLayout;

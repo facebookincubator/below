@@ -18,13 +18,13 @@ use std::cell::RefMut;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use ::cursive::view::Identifiable;
 use ::cursive::view::Scrollable;
 use ::cursive::view::View;
 use cursive::event::Event;
 use cursive::event::EventResult;
 use cursive::event::EventTrigger;
 use cursive::utils::markup::StyledString;
+use cursive::view::Nameable;
 use cursive::view::ViewWrapper;
 use cursive::views::LinearLayout;
 use cursive::views::NamedView;

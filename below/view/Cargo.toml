@@ -14,8 +14,8 @@ anyhow = "1.0.56"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 common = { package = "below-common", version = "0.5.0", path = "../common" }
 crossterm = { version = "0.23.1", features = ["event-stream"] }
-cursive = { version = "0.16.0", features = ["crossterm-backend", "termion-backend"], default-features = false }
-cursive_buffered_backend = "0.5.0"
+cursive = { version = "0.19.0", features = ["crossterm-backend", "termion-backend"], default-features = false }
+cursive_buffered_backend = "0.6.0"
 humantime = "2.1"
 itertools = "0.10.3"
 libc = "0.2.121"

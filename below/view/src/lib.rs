@@ -63,7 +63,7 @@ use cursive::event::Event;
 use cursive::theme::BaseColor;
 use cursive::theme::Color;
 use cursive::theme::PaletteColor;
-use cursive::view::Identifiable;
+use cursive::view::Nameable;
 use cursive::views::BoxedView;
 use cursive::views::LinearLayout;
 use cursive::views::NamedView;
