@@ -16,7 +16,6 @@ use rand_distr::Distribution;
 use rand_distr::Uniform;
 use slog::error;
 use slog::warn;
-use slog::{self};
 use std::collections::HashMap;
 use std::fs::File;
 use std::os::unix::io::AsRawFd;

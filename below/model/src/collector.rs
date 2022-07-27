@@ -19,7 +19,6 @@ use super::*;
 use crate::collector_plugin;
 use regex::Regex;
 use slog::error;
-use slog::{self};
 use std::path::Path;
 use std::path::PathBuf;
 

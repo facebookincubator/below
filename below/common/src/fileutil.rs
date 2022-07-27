@@ -28,8 +28,8 @@ pub fn get_dir_size<P: AsRef<Path>>(path: P) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
     use std::fs::File;
-    use std::fs::{self};
     use std::io::BufWriter;
     use std::io::Write;
     use tempdir::TempDir;

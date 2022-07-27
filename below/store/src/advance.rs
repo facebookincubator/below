@@ -18,11 +18,9 @@ use std::time::SystemTime;
 
 use anyhow::Result;
 use slog::error;
-use slog::{self};
 
 use common::util;
 use model::Model;
-use model::{self};
 
 use crate::DataFrame;
 use crate::Direction;

@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
-use std::fs::{self};
 use std::io::ErrorKind;
 use std::io::Write;
 use std::os::unix::io::AsRawFd;
@@ -41,7 +41,6 @@ use common::open_source_shim;
 use common::util::get_unix_timestamp;
 
 use model::Model;
-use model::{self};
 
 pub mod advance;
 pub mod compression;
