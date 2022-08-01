@@ -19,18 +19,17 @@ use std::time::UNIX_EPOCH;
 
 use tempdir::TempDir;
 
-use crate::model::CgroupPressureModel;
-use crate::model::Collector;
-use crate::model::CollectorOptions;
-use crate::model::Model;
-use crate::model::Sample;
-use crate::store;
-use crate::store::advance::new_advance_local;
-use crate::store::ChunkSizePo2;
-use crate::store::CompressionMode;
-use crate::store::DataFrame;
 use common::logutil::get_logger;
 use common::util::fold_string;
+use model::CgroupPressureModel;
+use model::Collector;
+use model::CollectorOptions;
+use model::Model;
+use model::Sample;
+use store::advance::new_advance_local;
+use store::ChunkSizePo2;
+use store::CompressionMode;
+use store::DataFrame;
 
 #[test]
 fn record_replay_integration() {

@@ -19,7 +19,6 @@ use std::path::PathBuf;
 use slog::error;
 use slog::o;
 use slog::Drain;
-use slog_term;
 
 use crate::init::InitToken;
 use crate::logutil::CommandPaletteDrain;

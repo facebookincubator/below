@@ -64,8 +64,6 @@ use common::logutil;
 use common::open_source_shim;
 use config::BelowConfig;
 use dump::DumpCommand;
-use model;
-use store;
 use store::advance::new_advance_local;
 use store::advance::new_advance_remote;
 use store::ChunkSizePo2;

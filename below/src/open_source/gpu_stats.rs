@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use anyhow::Result;
-use model;
 
 use crate::init::InitToken;
 
