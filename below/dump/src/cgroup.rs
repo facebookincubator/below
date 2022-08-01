@@ -21,6 +21,10 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
     fn get_render_config_for_dump(field_id: &SingleCgroupModelFieldId) -> RenderConfig {
         use common::util::get_prefix;
         use model::CgroupCpuModelFieldId::ThrottledPct;
+        use model::CgroupIoModelFieldId::CostIndebtPct;
+        use model::CgroupIoModelFieldId::CostIndelayPct;
+        use model::CgroupIoModelFieldId::CostUsagePct;
+        use model::CgroupIoModelFieldId::CostWaitPct;
         use model::CgroupIoModelFieldId::DbytesPerSec;
         use model::CgroupIoModelFieldId::DiosPerSec;
         use model::CgroupIoModelFieldId::RbytesPerSec;
@@ -70,6 +74,10 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
             Io(WiosPerSec) => rc.title("W I/O"),
             Io(DiosPerSec) => rc.title("D I/O"),
             Io(RwbytesPerSec) => rc.title("RW Total"),
+            Io(CostUsagePct) => rc.title("Cost Usage"),
+            Io(CostWaitPct) => rc.title("Cost Wait"),
+            Io(CostIndebtPct) => rc.title("Cost Indebt"),
+            Io(CostIndelayPct) => rc.title("Cost Indelay"),
             Mem(Total) => rc.title("Mem Total"),
             Mem(Swap) => rc.title("Mem Swap"),
             Mem(Zswap) => rc.title("Mem Zswap"),

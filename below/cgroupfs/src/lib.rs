@@ -426,7 +426,8 @@ macro_rules! name_key_equal_value_format {
                         if kv.len() != 2 {
                             return Err(r.invalid_file_format(file_name));
                         }
-                        let key = kv[0];
+                        // Certain keys such as cost.usage can not be struct fields so must use cost_usage
+                        let key = kv[0].replace(".", "_");
                         match key.as_ref() {
                             $(stringify!($field) => s.$field = Some(
                                 kv[1].parse().map_err(|_| r.unexpected_line(file_name.clone(), line.clone()))?
@@ -456,6 +457,10 @@ name_key_equal_value_format!(IoStat; AllowsEmpty(true); AllowsPressureEOpNotSupp
     wios,
     dbytes,
     dios,
+    cost_usage,
+    cost_wait,
+    cost_indebt,
+    cost_indelay,
 ]);
 
 name_key_equal_value_format!(PressureMetrics; AllowsEmpty(false); AllowsPressureEOpNotSupp(true); [

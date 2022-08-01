@@ -358,6 +358,10 @@ pub struct CgroupIoModel {
     pub dbytes_per_sec: Option<f64>,
     pub dios_per_sec: Option<f64>,
     pub rwbytes_per_sec: Option<f64>,
+    pub cost_usage_pct: Option<f64>,
+    pub cost_wait_pct: Option<f64>,
+    pub cost_indebt_pct: Option<f64>,
+    pub cost_indelay_pct: Option<f64>,
 }
 
 impl CgroupIoModel {
@@ -373,6 +377,10 @@ impl CgroupIoModel {
             dbytes_per_sec: count_per_sec!(begin.dbytes, end.dbytes, delta),
             dios_per_sec: count_per_sec!(begin.dios, end.dios, delta),
             rwbytes_per_sec,
+            cost_usage_pct: usec_pct!(begin.cost_usage, end.cost_usage, delta),
+            cost_wait_pct: usec_pct!(begin.cost_wait, end.cost_wait, delta),
+            cost_indebt_pct: usec_pct!(begin.cost_indebt, end.cost_indebt, delta),
+            cost_indelay_pct: usec_pct!(begin.cost_indelay, end.cost_indelay, delta),
         }
     }
 
@@ -387,6 +395,10 @@ impl CgroupIoModel {
             dbytes_per_sec: Some(0.0),
             dios_per_sec: Some(0.0),
             rwbytes_per_sec: Some(0.0),
+            cost_usage_pct: Some(0.0),
+            cost_wait_pct: Some(0.0),
+            cost_indebt_pct: Some(0.0),
+            cost_indelay_pct: Some(0.0),
         }
     }
 }
@@ -403,6 +415,10 @@ impl std::ops::Add<&CgroupIoModel> for CgroupIoModel {
             dbytes_per_sec: opt_add(self.dbytes_per_sec, other.dbytes_per_sec),
             dios_per_sec: opt_add(self.dios_per_sec, other.dios_per_sec),
             rwbytes_per_sec: opt_add(self.rwbytes_per_sec, other.rwbytes_per_sec),
+            cost_usage_pct: opt_add(self.cost_usage_pct, other.cost_usage_pct),
+            cost_wait_pct: opt_add(self.cost_wait_pct, other.cost_wait_pct),
+            cost_indebt_pct: opt_add(self.cost_indebt_pct, other.cost_indebt_pct),
+            cost_indelay_pct: opt_add(self.cost_indelay_pct, other.cost_indelay_pct),
         }
     }
 }

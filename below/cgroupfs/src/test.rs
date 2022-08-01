@@ -292,7 +292,7 @@ fn test_cpu_stat_invalid_format() {
 #[test]
 fn test_io_stat_success() {
     let cgroup = TestCgroup::new();
-    cgroup.create_file_with_content("io.stat", b"253:0 rbytes=531 wbytes=162379 rios=61 wios=81 dbytes=0 dios=0\n13:0 rbytes=135 wbytes=162379 rios=61 wios=81 dbytes=0 dios=0\n");
+    cgroup.create_file_with_content("io.stat", b"253:0 rbytes=531 wbytes=162379 rios=61 wios=81 dbytes=0 dios=0\n13:0 rbytes=135 wbytes=162379 rios=61 wios=81 dbytes=0 dios=0 cost.usage=25 cost.wait=38 cost.indebt=64 cost.indelay=0\n");
 
     let cgroup_reader = cgroup.get_reader();
     let val = cgroup_reader
@@ -304,9 +304,16 @@ fn test_io_stat_success() {
             .expect("Failed to populate rbytes field"),
         531
     );
+    assert!(val["253:0"].cost_usage.is_none());
     assert_eq!(
         val["13:0"].rbytes.expect("Failed to populate rbytes field"),
         135
+    );
+    assert_eq!(
+        val["13:0"]
+            .cost_usage
+            .expect("Failed to populate cost_usage field"),
+        25
     );
 }
 

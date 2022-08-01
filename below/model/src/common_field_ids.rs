@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 307] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 315] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -184,6 +184,10 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 307] = [
     "cgroup.[path:/<cgroup_path>/.]io_details.<key>.dbytes_per_sec",
     "cgroup.[path:/<cgroup_path>/.]io_details.<key>.dios_per_sec",
     "cgroup.[path:/<cgroup_path>/.]io_details.<key>.rwbytes_per_sec",
+    "cgroup.[path:/<cgroup_path>/.]io_details.<key>.cost_usage_pct",
+    "cgroup.[path:/<cgroup_path>/.]io_details.<key>.cost_wait_pct",
+    "cgroup.[path:/<cgroup_path>/.]io_details.<key>.cost_indebt_pct",
+    "cgroup.[path:/<cgroup_path>/.]io_details.<key>.cost_indelay_pct",
     "cgroup.[path:/<cgroup_path>/.]io.rbytes_per_sec",
     "cgroup.[path:/<cgroup_path>/.]io.wbytes_per_sec",
     "cgroup.[path:/<cgroup_path>/.]io.rios_per_sec",
@@ -191,6 +195,10 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 307] = [
     "cgroup.[path:/<cgroup_path>/.]io.dbytes_per_sec",
     "cgroup.[path:/<cgroup_path>/.]io.dios_per_sec",
     "cgroup.[path:/<cgroup_path>/.]io.rwbytes_per_sec",
+    "cgroup.[path:/<cgroup_path>/.]io.cost_usage_pct",
+    "cgroup.[path:/<cgroup_path>/.]io.cost_wait_pct",
+    "cgroup.[path:/<cgroup_path>/.]io.cost_indebt_pct",
+    "cgroup.[path:/<cgroup_path>/.]io.cost_indelay_pct",
     "cgroup.[path:/<cgroup_path>/.]pressure.cpu_some_pct",
     "cgroup.[path:/<cgroup_path>/.]pressure.cpu_full_pct",
     "cgroup.[path:/<cgroup_path>/.]pressure.io_some_pct",

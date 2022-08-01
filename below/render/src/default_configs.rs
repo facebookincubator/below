@@ -67,6 +67,10 @@ impl HasRenderConfig for model::CgroupIoModel {
             DbytesPerSec => rc.title("Discards").suffix("/s").format(ReadableSize),
             DiosPerSec => rc.title("Discard IOPS").format(Precision(1)),
             RwbytesPerSec => rc.title("RW Total").suffix("/s").format(ReadableSize),
+            CostUsagePct => rc.title("Cost Usage").suffix("%").format(Precision(2)),
+            CostWaitPct => rc.title("Cost Wait").suffix("%").format(Precision(2)),
+            CostIndebtPct => rc.title("Cost Indebt").suffix("%").format(Precision(2)),
+            CostIndelayPct => rc.title("Cost Indelay").suffix("%").format(Precision(2)),
         }
     }
 }

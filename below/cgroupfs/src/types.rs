@@ -33,6 +33,10 @@ pub struct IoStat {
     pub wios: Option<u64>,
     pub dbytes: Option<u64>,
     pub dios: Option<u64>,
+    pub cost_usage: Option<u64>,
+    pub cost_wait: Option<u64>,
+    pub cost_indebt: Option<u64>,
+    pub cost_indelay: Option<u64>,
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]

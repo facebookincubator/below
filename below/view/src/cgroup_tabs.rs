@@ -208,6 +208,10 @@ pub mod default_tabs {
     use model::CgroupCpuModelFieldId::ThrottledPct;
     use model::CgroupCpuModelFieldId::UsagePct;
     use model::CgroupCpuModelFieldId::UserPct;
+    use model::CgroupIoModelFieldId::CostIndebtPct;
+    use model::CgroupIoModelFieldId::CostIndelayPct;
+    use model::CgroupIoModelFieldId::CostUsagePct;
+    use model::CgroupIoModelFieldId::CostWaitPct;
     use model::CgroupIoModelFieldId::DbytesPerSec;
     use model::CgroupIoModelFieldId::DiosPerSec;
     use model::CgroupIoModelFieldId::RbytesPerSec;
@@ -355,6 +359,10 @@ pub mod default_tabs {
             ViewItem::from_default(Io(WiosPerSec)),
             ViewItem::from_default(Io(DiosPerSec)),
             ViewItem::from_default(Io(RwbytesPerSec)),
+            ViewItem::from_default(Io(CostUsagePct)),
+            ViewItem::from_default(Io(CostWaitPct)),
+            ViewItem::from_default(Io(CostIndebtPct)),
+            ViewItem::from_default(Io(CostIndelayPct)),
         ])
     });
 
