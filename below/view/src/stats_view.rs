@@ -20,6 +20,8 @@ use std::rc::Rc;
 
 use ::cursive::view::Scrollable;
 use ::cursive::view::View;
+use common::logutil::get_last_log_to_display;
+use common::logutil::CPMsgRecord;
 use cursive::event::Event;
 use cursive::event::EventResult;
 use cursive::event::EventTrigger;
@@ -39,8 +41,6 @@ use cursive::Cursive;
 use crate::command_palette::CommandPalette;
 use crate::controllers::Controllers;
 use crate::tab_view::TabView;
-use common::logutil::get_last_log_to_display;
-use common::logutil::CPMsgRecord;
 
 pub struct ColumnTitles {
     pub titles: Vec<String>,

@@ -14,10 +14,9 @@
 use cursive::event::Event;
 use cursive::Cursive;
 
+use super::*;
 use crate::stats_view::StatsView;
 use crate::stats_view::ViewBridge;
-
-use super::*;
 
 make_event_controller!(
     URLPopup,

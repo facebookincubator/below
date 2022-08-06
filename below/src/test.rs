@@ -17,8 +17,6 @@ use std::time::Duration;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
-use tempdir::TempDir;
-
 use common::logutil::get_logger;
 use common::util::fold_string;
 use model::CgroupPressureModel;
@@ -30,6 +28,7 @@ use store::advance::new_advance_local;
 use store::ChunkSizePo2;
 use store::CompressionMode;
 use store::DataFrame;
+use tempdir::TempDir;
 
 #[test]
 fn record_replay_integration() {

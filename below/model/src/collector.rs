@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use super::*;
-use crate::collector_plugin;
 use regex::Regex;
 use slog::error;
-use std::path::Path;
-use std::path::PathBuf;
+
+use super::*;
+use crate::collector_plugin;
 
 pub struct CollectorOptions {
     pub cgroup_root: PathBuf,

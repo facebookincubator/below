@@ -22,16 +22,15 @@ use crate::ViewState;
 mod render_impl {
     use std::collections::BTreeMap;
 
-    use cursive::utils::markup::StyledString;
-    use once_cell::sync::Lazy;
-
-    use crate::render::ViewItem;
-
     use base_render::RenderConfigBuilder as Rc;
+    use cursive::utils::markup::StyledString;
     use model::Queriable;
     use model::SingleDiskModel;
     use model::SingleNetModel;
     use model::SystemModel;
+    use once_cell::sync::Lazy;
+
+    use crate::render::ViewItem;
 
     /// Renders corresponding Fields From SystemModel.
     type SystemViewItem = ViewItem<model::SystemModelFieldId>;

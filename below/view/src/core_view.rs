@@ -25,6 +25,12 @@ use cursive::views::NamedView;
 use cursive::views::SelectView;
 use cursive::views::ViewRef;
 use cursive::Cursive;
+use model::system::SystemModel;
+use model::BtrfsModelFieldId;
+use model::MemoryModelFieldId;
+use model::SingleCpuModelFieldId;
+use model::SingleDiskModelFieldId;
+use model::VmModelFieldId;
 
 use crate::core_tabs::*;
 use crate::stats_view::ColumnTitles;
@@ -32,13 +38,6 @@ use crate::stats_view::StateCommon;
 use crate::stats_view::StatsView;
 use crate::stats_view::ViewBridge;
 use crate::ViewState;
-
-use model::system::SystemModel;
-use model::BtrfsModelFieldId;
-use model::MemoryModelFieldId;
-use model::SingleCpuModelFieldId;
-use model::SingleDiskModelFieldId;
-use model::VmModelFieldId;
 
 pub type ViewType = StatsView<CoreView>;
 

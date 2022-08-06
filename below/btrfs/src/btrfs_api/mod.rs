@@ -30,10 +30,11 @@ mod test;
 mod sudotest;
 
 mod utils;
-pub use crate::btrfs_api::utils::*;
 use std::path::PathBuf;
 
 use thiserror::Error;
+
+pub use crate::btrfs_api::utils::*;
 
 #[derive(Error, Debug)]
 pub enum Error {

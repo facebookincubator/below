@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use serde::Deserialize;
-use serde::Serialize;
 use std::collections::BTreeMap;
 use std::fmt;
+
+use serde::Deserialize;
+use serde::Serialize;
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct CpuStat {

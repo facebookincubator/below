@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::*;
-
 use RenderFormat::MaxOrReadableSize;
 use RenderFormat::PageReadableSize;
 use RenderFormat::Precision;
 use RenderFormat::ReadableSize;
 use RenderFormat::SectorReadableSize;
+
+use super::*;
 
 impl HasRenderConfig for model::SingleCgroupModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {

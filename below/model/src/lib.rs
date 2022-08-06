@@ -23,10 +23,9 @@ use std::time::SystemTime;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use common::open_source_shim;
 use serde::Deserialize;
 use serde::Serialize;
-
-use common::open_source_shim;
 
 #[macro_use]
 pub mod collector;

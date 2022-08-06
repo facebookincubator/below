@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// This file contains various helpers
-use chrono::prelude::*;
 use std::time::Duration;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
+
+/// This file contains various helpers
+use chrono::prelude::*;
 
 const BELOW_RC: &str = "/.config/below/belowrc";
 

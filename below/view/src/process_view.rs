@@ -24,7 +24,6 @@ use cursive::views::NamedView;
 use cursive::views::SelectView;
 use cursive::views::ViewRef;
 use cursive::Cursive;
-
 use model::ProcessCpuModelFieldId;
 use model::ProcessIoModelFieldId;
 use model::ProcessMemoryModelFieldId;

@@ -86,25 +86,24 @@ mod view_controllers;
 #[cfg(test)]
 mod test;
 
+use common::open_source_shim;
+use content_controllers::*;
+use controller_infra::*;
+use sample_controllers::*;
+use view_controllers::*;
+
 use crate::refresh;
 use crate::stats_view::StateCommon;
 use crate::stats_view::StatsView;
 use crate::stats_view::ViewBridge;
 use crate::ViewState;
 
-use content_controllers::*;
-use controller_infra::*;
-use sample_controllers::*;
-use view_controllers::*;
-
-use common::open_source_shim;
-
 open_source_shim!();
+
+use std::collections::HashMap;
 
 pub use controller_infra::event_to_string;
 pub use controller_infra::str_to_event;
-
-use std::collections::HashMap;
 
 make_controllers!(
     CmdPalette: InvokeCmdPalette,

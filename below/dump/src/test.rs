@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use serde_json::Value;
-
-use super::*;
 use command::expand_fields;
 use command::GeneralOpt;
 use command::OutputFormat;
@@ -23,9 +20,11 @@ use model::Collector;
 use model::EnumIter;
 use model::Queriable;
 use print::HasRenderConfigForDump;
+use serde_json::Value;
+use tempdir::TempDir;
 use tmain::Dumper;
 
-use tempdir::TempDir;
+use super::*;
 
 #[test]
 // Test correctness of system decoration

@@ -14,12 +14,11 @@
 
 use base_render::HasRenderConfig;
 use base_render::RenderConfig;
+use cursive::utils::markup::StyledString;
 use model::Field;
 use model::FieldId;
 use model::Queriable;
 use model::Recursive;
-
-use cursive::utils::markup::StyledString;
 
 /// Details for generating StyledString from a Field.
 #[derive(Clone)]

@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use once_cell::sync::Lazy;
-use slog::Drain;
-use slog::Level;
-
 use std::cell::RefCell;
 use std::io;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::RwLock;
+
+use once_cell::sync::Lazy;
+use slog::Drain;
+use slog::Level;
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum TargetLog {

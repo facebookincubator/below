@@ -651,18 +651,20 @@ impl KeyedCursor<u64> for StoreCursor {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::OpenOptions;
+    use std::io::Write;
+
+    use common::util::get_unix_timestamp;
+    use slog::Drain;
+    use tempdir::TempDir;
+    use Direction::Forward;
+    use Direction::Reverse;
+
     use super::*;
     use crate::serialize_frame;
     use crate::ChunkSizePo2;
     use crate::CompressionMode;
     use crate::StoreWriter;
-    use common::util::get_unix_timestamp;
-    use slog::Drain;
-    use std::fs::OpenOptions;
-    use std::io::Write;
-    use tempdir::TempDir;
-    use Direction::Forward;
-    use Direction::Reverse;
 
     /// Simple cursor to illustrate implementation and test default methods.
     struct TestCursor<'a> {

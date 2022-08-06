@@ -12,8 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::CommonField;
-use crate::DumpField;
+use std::str::FromStr;
+
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
+use clap::Parser;
 use model::BtrfsModelFieldId;
 use model::EnumIter;
 use model::FieldId;
@@ -23,14 +27,11 @@ use model::SingleDiskModelFieldId;
 use model::SingleNetModelFieldId;
 use model::SingleProcessModelFieldId;
 use model::SystemModelFieldId;
-
-use anyhow::bail;
-use anyhow::Error;
-use anyhow::Result;
-use clap::Parser;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use std::str::FromStr;
+
+use crate::CommonField;
+use crate::DumpField;
 
 /// Field that represents a group of related FieldIds of a Queriable.
 /// Shorthand for specifying fields to dump.

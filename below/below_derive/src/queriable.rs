@@ -12,11 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::helper::get_metadata;
-use crate::helper::occurrence_error;
-use crate::helper::parse_option;
-use crate::helper::to_camelcase;
-
 use proc_macro2::Span;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -27,6 +22,11 @@ use syn::DeriveInput;
 use syn::Field;
 use syn::Ident;
 use syn::Token;
+
+use crate::helper::get_metadata;
+use crate::helper::occurrence_error;
+use crate::helper::parse_option;
+use crate::helper::to_camelcase;
 
 mod kw {
     use syn::custom_keyword;

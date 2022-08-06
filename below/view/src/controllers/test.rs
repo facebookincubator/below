@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::*;
-use crate::fake_view::FakeView;
-use crate::View;
-
 use std::io::prelude::*;
 
 use tempdir::TempDir;
+
+use super::*;
+use crate::fake_view::FakeView;
+use crate::View;
 
 #[test]
 fn test_event_controller_override() {

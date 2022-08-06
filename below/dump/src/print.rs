@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::*;
-
 use model::Field;
 use model::FieldId;
 use model::Queriable;
 use model::Recursive;
 use render::HasRenderConfig;
 use render::RenderConfig;
+
+use super::*;
 
 impl CommonField {
     /// Default RenderConfig for CommonField

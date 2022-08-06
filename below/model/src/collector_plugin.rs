@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::*;
-use async_trait::async_trait;
 use std::sync::Arc;
 use std::sync::Mutex;
+
+use async_trait::async_trait;
+
+use super::*;
 
 // For data collection that should be performed on a different thread
 #[async_trait]
@@ -114,11 +116,11 @@ pub fn collector_consumer<T, Plugin: AsyncCollectorPlugin<T = T>>(
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use std::sync::Arc;
     use std::sync::Barrier;
     use std::thread;
+
+    use super::*;
 
     struct TestCollector {
         counter: u64,

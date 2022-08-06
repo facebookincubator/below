@@ -25,6 +25,11 @@ use cursive::views::NamedView;
 use cursive::views::SelectView;
 use cursive::views::ViewRef;
 use cursive::Cursive;
+use model::CgroupCpuModelFieldId;
+use model::CgroupIoModelFieldId;
+use model::CgroupMemoryModelFieldId;
+use model::CgroupModel;
+use model::SingleCgroupModelFieldId;
 
 use crate::cgroup_tabs::default_tabs::CGROUP_CPU_TAB;
 use crate::cgroup_tabs::default_tabs::CGROUP_GENERAL_TAB;
@@ -37,11 +42,6 @@ use crate::stats_view::StateCommon;
 use crate::stats_view::StatsView;
 use crate::stats_view::ViewBridge;
 use crate::ViewState;
-use model::CgroupCpuModelFieldId;
-use model::CgroupIoModelFieldId;
-use model::CgroupMemoryModelFieldId;
-use model::CgroupModel;
-use model::SingleCgroupModelFieldId;
 
 pub type ViewType = StatsView<CgroupView>;
 

@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::*;
+use std::collections::BTreeMap;
 
 use lazy_static::lazy_static;
 use maplit::btreemap;
-use std::collections::BTreeMap;
+
+use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct PayloadValue {

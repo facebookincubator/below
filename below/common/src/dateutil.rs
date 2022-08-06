@@ -23,20 +23,20 @@
 //!
 //! See [`HgTime`] and [`HgTime::parse`] for main features.
 
-use chrono::prelude::*;
-use chrono::Duration;
-use regex::Regex;
 use std::ops::Add;
 use std::ops::Range;
 use std::ops::Sub;
 use std::sync::atomic::AtomicI32;
 use std::sync::atomic::Ordering;
+use std::time::SystemTime;
 
+use chrono::prelude::*;
+use chrono::Duration;
 use chrono::Local;
 use chrono::NaiveDateTime;
 use chrono::NaiveTime;
 use chrono::TimeZone;
-use std::time::SystemTime;
+use regex::Regex;
 
 /// A simple time structure that matches hg's time representation.
 ///

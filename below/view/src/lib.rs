@@ -57,6 +57,11 @@ use std::time::Duration;
 use std::time::SystemTime;
 
 use anyhow::Result;
+use common::logutil::get_last_log_to_display;
+use common::open_source_shim;
+use common::util::get_belowrc_cmd_section_key;
+use common::util::get_belowrc_filename;
+use common::util::get_belowrc_view_section_key;
 use crossterm::event::DisableMouseCapture;
 use crossterm::execute;
 use cursive::event::Event;
@@ -74,13 +79,6 @@ use cursive::views::ScreensView;
 use cursive::Cursive;
 use cursive::CursiveRunnable;
 use cursive::ScreenId;
-use toml::value::Value;
-
-use common::logutil::get_last_log_to_display;
-use common::open_source_shim;
-use common::util::get_belowrc_cmd_section_key;
-use common::util::get_belowrc_filename;
-use common::util::get_belowrc_view_section_key;
 use model::CgroupModel;
 #[cfg(fbcode_build)]
 use model::GpuModel;
@@ -89,6 +87,7 @@ use model::NetworkModel;
 use model::ProcessModel;
 use model::SystemModel;
 use store::Advance;
+use toml::value::Value;
 extern crate render as base_render;
 
 open_source_shim!();
@@ -469,8 +468,15 @@ impl View {
 
 #[cfg(test)]
 pub mod fake_view {
+    use std::cell::RefCell;
+    use std::path::PathBuf;
+    use std::rc::Rc;
+
+    use common::logutil::get_logger;
     use cursive::views::DummyView;
     use cursive::views::ViewRef;
+    use model::Collector;
+    use store::advance::new_advance_local;
 
     use super::*;
     use crate::cgroup_view::CgroupView;
@@ -479,13 +485,6 @@ pub mod fake_view {
     use crate::MainViewState;
     use crate::ViewMode;
     use crate::ViewState;
-    use common::logutil::get_logger;
-    use model::Collector;
-    use store::advance::new_advance_local;
-
-    use std::cell::RefCell;
-    use std::path::PathBuf;
-    use std::rc::Rc;
 
     pub struct FakeView {
         pub inner: CursiveRunnable,

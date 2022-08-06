@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::*;
+use cursive::views::OnEventView;
+use cursive::views::ResizedView;
 
+use super::*;
 use crate::set_active_screen;
 use crate::MainViewState;
 use crate::ProcessZoomState;
-use cursive::views::OnEventView;
-use cursive::views::ResizedView;
 
 // Invoke command palette
 make_event_controller!(

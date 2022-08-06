@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::*;
-
 use model::SingleProcessModelFieldId;
 use render::RenderConfig;
+
+use super::*;
 
 impl HasRenderConfigForDump for model::SingleProcessModel {
     fn get_render_config_for_dump(field_id: &SingleProcessModelFieldId) -> RenderConfig {

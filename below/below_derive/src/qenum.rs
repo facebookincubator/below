@@ -22,14 +22,14 @@
 //! sub-models, making the enum a mapping of the tree structure of its
 //! corresponding Queriable.
 
-use crate::helper::to_snakecase;
-
 use proc_macro2::Span;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::spanned::Spanned;
 use syn::DeriveInput;
 use syn::LitStr;
+
+use crate::helper::to_snakecase;
 
 fn get_variants(
     ast: &DeriveInput,

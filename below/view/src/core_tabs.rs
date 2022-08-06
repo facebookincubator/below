@@ -12,13 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::core_view::CoreState;
-use crate::render::ViewItem;
-use crate::stats_view::ColumnTitles;
-use crate::stats_view::StateCommon;
 use base_render::get_fixed_width;
 use base_render::RenderConfigBuilder as Rc;
 use common::util::get_prefix;
+use cursive::utils::markup::StyledString;
 use model::system::BtrfsModelFieldId;
 use model::system::MemoryModelFieldId;
 use model::system::SingleCpuModelFieldId;
@@ -27,9 +24,11 @@ use model::system::VmModelFieldId;
 use model::BtrfsModel;
 use model::EnumIter;
 
+use crate::core_view::CoreState;
 use crate::core_view::CoreStateFieldId;
-
-use cursive::utils::markup::StyledString;
+use crate::render::ViewItem;
+use crate::stats_view::ColumnTitles;
+use crate::stats_view::StateCommon;
 
 const FIELD_NAME_WIDTH: usize = 20;
 const FIELD_WIDTH: usize = 20;
@@ -272,13 +271,12 @@ impl CoreTab for CoreBtrfs {
 }
 
 pub mod default_tabs {
-    use super::*;
-
     use model::BtrfsModelFieldId::DiskBytes;
     use model::BtrfsModelFieldId::DiskFraction;
     use model::BtrfsModelFieldId::Name;
-
     use once_cell::sync::Lazy;
+
+    use super::*;
 
     pub static CORE_BTRFS_TAB: Lazy<CoreBtrfs> = Lazy::new(|| {
         CoreBtrfs::new(vec![

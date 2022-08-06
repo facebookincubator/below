@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use cursive::Cursive;
+use serde::Deserialize;
+
 use super::cgroup_view::CgroupView;
 use super::controllers::Controllers;
 use super::get_belowrc_filename;
 use super::get_belowrc_view_section_key;
-
-use cursive::Cursive;
-use serde::Deserialize;
 
 /// Enum of supported front view.
 // We didn't re-use the MainViewState because we don't want to
@@ -115,7 +115,6 @@ impl ViewRc {
 #[cfg(test)]
 mod test {
     use super::*;
-
     use crate::fake_view::FakeView;
     use crate::MainViewState;
     use crate::ProcessZoomState;

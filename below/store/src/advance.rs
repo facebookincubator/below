@@ -17,10 +17,9 @@ use std::time::Duration;
 use std::time::SystemTime;
 
 use anyhow::Result;
-use slog::error;
-
 use common::util;
 use model::Model;
+use slog::error;
 
 use crate::DataFrame;
 use crate::Direction;
@@ -386,8 +385,9 @@ pub fn new_advance_remote(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use anyhow::bail;
+
+    use super::*;
 
     fn get_logger() -> slog::Logger {
         slog::Logger::root(slog::Discard, slog::o!())

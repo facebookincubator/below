@@ -13,8 +13,6 @@
 // limitations under the License.
 
 #![deny(clippy::all)]
-use nix::sys;
-use openat::Dir;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fs::File;
@@ -29,6 +27,8 @@ use std::sync::mpsc::RecvTimeoutError;
 use std::time::Duration;
 
 use lazy_static::lazy_static;
+use nix::sys;
+use openat::Dir;
 use thiserror::Error;
 use threadpool::ThreadPool;
 

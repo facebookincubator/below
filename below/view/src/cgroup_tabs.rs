@@ -14,16 +14,15 @@
 
 use std::collections::HashSet;
 
-use crate::cgroup_view::CgroupState;
-use crate::render::ViewItem;
-use crate::stats_view::ColumnTitles;
-use crate::stats_view::StateCommon;
-
+use cursive::utils::markup::StyledString;
 use model::sort_queriables;
 use model::CgroupModel;
 use model::SingleCgroupModel;
 
-use cursive::utils::markup::StyledString;
+use crate::cgroup_view::CgroupState;
+use crate::render::ViewItem;
+use crate::stats_view::ColumnTitles;
+use crate::stats_view::StateCommon;
 
 /// Renders corresponding Fields From CgroupModel.
 type CgroupViewItem = ViewItem<model::SingleCgroupModelFieldId>;
@@ -198,8 +197,6 @@ pub fn calculate_filter_out_set(cgroup: &CgroupModel, filter: &str) -> HashSet<S
 }
 
 pub mod default_tabs {
-    use super::*;
-
     use base_render::RenderConfigBuilder as Rc;
     use common::util::get_prefix;
     use model::CgroupCpuModelFieldId::NrPeriodsPerSec;
@@ -271,8 +268,9 @@ pub mod default_tabs {
     use model::SingleCgroupModelFieldId::Mem;
     use model::SingleCgroupModelFieldId::Name;
     use model::SingleCgroupModelFieldId::Pressure;
-
     use once_cell::sync::Lazy;
+
+    use super::*;
 
     pub static CGROUP_NAME_ITEM: Lazy<CgroupViewItem> = Lazy::new(|| {
         ViewItem::from_default(Name).update(Rc::new().indented_prefix(get_prefix(false)))

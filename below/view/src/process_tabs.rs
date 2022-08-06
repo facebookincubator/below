@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use cursive::utils::markup::StyledString;
+use itertools::Itertools;
+use model::SingleProcessModel;
+
 use crate::process_view::ProcessState;
 use crate::render::ViewItem;
 use crate::stats_view::ColumnTitles;
 use crate::stats_view::StateCommon;
-use model::SingleProcessModel;
-
-use cursive::utils::markup::StyledString;
-use itertools::Itertools;
 
 /// Renders corresponding Fields From ProcessModel.
 type ProcessViewItem = ViewItem<model::SingleProcessModelFieldId>;
@@ -135,8 +135,6 @@ impl ProcessTab {
 }
 
 pub mod default_tabs {
-    use super::*;
-
     use model::ProcessCpuModelFieldId::NumThreads;
     use model::ProcessCpuModelFieldId::SystemPct;
     use model::ProcessCpuModelFieldId::UsagePct;
@@ -166,8 +164,9 @@ pub mod default_tabs {
     use model::SingleProcessModelFieldId::Ppid;
     use model::SingleProcessModelFieldId::State;
     use model::SingleProcessModelFieldId::UptimeSecs;
-
     use once_cell::sync::Lazy;
+
+    use super::*;
 
     pub static COMM_VIEW_ITEM: Lazy<ProcessViewItem> = Lazy::new(|| ViewItem::from_default(Comm));
     pub static CGROUP_VIEW_ITEM: Lazy<ProcessViewItem> =

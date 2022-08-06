@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::path::Path;
+
 use walkdir::WalkDir;
 
 // Get directory size recursively
@@ -27,12 +28,14 @@ pub fn get_dir_size<P: AsRef<Path>>(path: P) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fs;
     use std::fs::File;
     use std::io::BufWriter;
     use std::io::Write;
+
     use tempdir::TempDir;
+
+    use super::*;
 
     fn make_file<P: AsRef<Path>>(path: P, size: u64) {
         let file = File::create(&path).expect("Failed to create file");

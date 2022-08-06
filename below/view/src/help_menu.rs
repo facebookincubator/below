@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
+
 use cursive::event::Event;
 use cursive::view::Nameable;
 use cursive::view::Scrollable;
@@ -20,10 +24,6 @@ use cursive::views::LinearLayout;
 use cursive::views::Panel;
 use cursive::views::SelectView;
 use cursive::views::TextView;
-
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::rc::Rc;
 
 use crate::controllers::event_to_string;
 use crate::controllers::Controllers;

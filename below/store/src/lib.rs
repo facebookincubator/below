@@ -26,6 +26,10 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use bitflags::bitflags;
+use common::fileutil::get_dir_size;
+use common::open_source_shim;
+use common::util::get_unix_timestamp;
+use model::Model;
 use serde::Deserialize;
 use serde::Serialize;
 use slog::info;
@@ -35,12 +39,6 @@ use static_assertions::const_assert_eq;
 use crate::compression::Compressor;
 use crate::cursor::KeyedCursor;
 use crate::cursor::StoreCursor;
-
-use common::fileutil::get_dir_size;
-use common::open_source_shim;
-use common::util::get_unix_timestamp;
-
-use model::Model;
 
 pub mod advance;
 pub mod compression;
@@ -878,11 +876,13 @@ fn calculate_shard(timestamp: SystemTime) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::time::Duration;
+
     use paste::paste;
     use slog::Drain;
-    use std::time::Duration;
     use tempdir::TempDir;
+
+    use super::*;
 
     fn get_logger() -> slog::Logger {
         let plain = slog_term::PlainSyncDecorator::new(std::io::stderr());

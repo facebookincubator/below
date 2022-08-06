@@ -15,6 +15,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use common::dateutil;
 use cursive::event::Key;
 use cursive::view::Nameable;
 use cursive::view::View;
@@ -24,8 +25,6 @@ use cursive::views::LinearLayout;
 use cursive::views::OnEventView;
 use cursive::views::TextView;
 use cursive::Cursive;
-
-use common::dateutil;
 use store::Advance;
 use store::Direction;
 
