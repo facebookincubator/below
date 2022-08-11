@@ -33,7 +33,6 @@ fn setup_log<T: 'static + std::io::Write + std::marker::Send>(
 ) -> slog::Logger {
     let decorator = CompoundDecorator::new(file, std::io::stderr());
     let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    let drain = slog_async::Async::new(drain).build().fuse();
     let drain = CommandPaletteDrain::new(drain).fuse();
 
     let logger = slog::Logger::root(drain, o!());

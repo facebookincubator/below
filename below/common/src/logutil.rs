@@ -107,8 +107,8 @@ pub fn get_last_log_to_display() -> Option<String> {
 }
 
 pub struct CompoundDecorator<W: io::Write, T: io::Write> {
-    file: RefCell<W>,
-    term: RefCell<T>,
+    file: Arc<Mutex<W>>,
+    term: Arc<Mutex<T>>,
 }
 
 impl<W, T> CompoundDecorator<W, T>
@@ -118,8 +118,8 @@ where
 {
     pub fn new(file_io: W, term_io: T) -> Self {
         Self {
-            file: RefCell::new(file_io),
-            term: RefCell::new(term_io),
+            file: Arc::new(Mutex::new(file_io)),
+            term: Arc::new(Mutex::new(term_io)),
         }
     }
 }
@@ -139,8 +139,8 @@ where
         F: FnOnce(&mut dyn slog_term::RecordDecorator) -> io::Result<()>,
     {
         f(&mut CompoundRecordDecorator(
-            &self.file,
-            &self.term,
+            &*self.file,
+            &*self.term,
             *LOG_TARGET
                 .read()
                 .expect("Failed to acquire write lock on the LOG_TARGET"),
@@ -148,7 +148,7 @@ where
     }
 }
 
-pub struct CompoundRecordDecorator<'a, W: 'a, T: 'a>(&'a RefCell<W>, &'a RefCell<T>, TargetLog)
+pub struct CompoundRecordDecorator<'a, W: 'a, T: 'a>(&'a Mutex<W>, &'a Mutex<T>, TargetLog)
 where
     W: io::Write,
     T: io::Write;
@@ -161,22 +161,22 @@ where
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self.2 {
             TargetLog::All => {
-                let term_res = self.1.borrow_mut().write(buf);
-                let file_res = self.0.borrow_mut().write(buf);
+                let term_res = self.1.lock().unwrap().write(buf);
+                let file_res = self.0.lock().unwrap().write(buf);
                 if let Err(e) = term_res {
                     return Err(e);
                 }
 
                 file_res
             }
-            TargetLog::File => self.0.borrow_mut().write(buf),
-            TargetLog::Term => self.1.borrow_mut().write(buf),
+            TargetLog::File => self.0.lock().unwrap().write(buf),
+            TargetLog::Term => self.1.lock().unwrap().write(buf),
         }
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        let term_res = self.1.borrow_mut().flush();
-        let file_res = self.0.borrow_mut().flush();
+        let term_res = self.1.lock().unwrap().flush();
+        let file_res = self.0.lock().unwrap().flush();
         if let Err(e) = term_res {
             return Err(e);
         }
@@ -191,8 +191,8 @@ where
     T: io::Write,
 {
     fn drop(&mut self) {
-        let _ = self.1.borrow_mut().flush();
-        let _ = self.0.borrow_mut().flush();
+        let _ = self.1.lock().unwrap().flush();
+        let _ = self.0.lock().unwrap().flush();
     }
 }
 
