@@ -31,7 +31,6 @@ regex = "1.5.4"
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 signal-hook = "0.3"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-slog-async = "2.3"
 slog-term = "2.8"
 store = { package = "below-store", version = "0.5.0", path = "store" }
 tar = "0.4.38"
