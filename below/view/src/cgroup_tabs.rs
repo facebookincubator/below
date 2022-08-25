@@ -139,7 +139,7 @@ impl CgroupTab {
         state: &CgroupState,
         offset: Option<usize>,
     ) -> Vec<(StyledString, String)> {
-        let filter_out_set = if let Some(f) = &state.filter {
+        let filter_out_set = if let Some((_, f)) = &state.filter_info {
             Some(calculate_filter_out_set(&state.get_model(), &f))
         } else {
             None

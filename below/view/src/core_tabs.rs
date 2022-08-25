@@ -66,8 +66,9 @@ impl CoreTab for CoreCpu {
             .cpus
             .iter()
             .filter(|scm| {
-                if let Some(f) = &state.filter {
-                    scm.idx.to_string().starts_with(f)
+                if let Some(f) = &state.filter_info {
+                    let (_, filter) = f;
+                    scm.idx.to_string().starts_with(filter)
                 } else {
                     true
                 }
@@ -117,8 +118,9 @@ impl CoreTab for CoreMem {
                 line
             })
             .filter(|s| {
-                if let Some(f) = &state.filter {
-                    s.source().contains(f)
+                if let Some(f) = &state.filter_info {
+                    let (_, filter) = f;
+                    s.source().contains(filter)
                 } else {
                     true
                 }
@@ -146,8 +148,9 @@ impl CoreTab for CoreVm {
                 line
             })
             .filter(|s| {
-                if let Some(f) = &state.filter {
-                    s.source().contains(f)
+                if let Some(f) = &state.filter_info {
+                    let (_, filter) = f;
+                    s.source().contains(filter)
                 } else {
                     true
                 }
@@ -181,9 +184,9 @@ impl CoreTab for CoreDisk {
                 let idx = format!("{}.{}", sdm.major.unwrap_or(0), sdm.minor.unwrap_or(0));
                 let collapse = state.collapsed_disk.contains(&idx_major) && sdm.minor != Some(0);
                 if state
-                    .filter
+                    .filter_info
                     .as_ref()
-                    .map_or(!collapse, |f| dn.starts_with(f))
+                    .map_or(!collapse, |(_, f)| dn.starts_with(f))
                 {
                     Some((
                         std::iter::once(SingleDiskModelFieldId::Name)

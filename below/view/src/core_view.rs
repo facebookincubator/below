@@ -47,7 +47,7 @@ use crate::core_view::default_tabs::CORE_BTRFS_TAB;
 // Each core view tab really deserves its own view and state
 #[derive(Default)]
 pub struct CoreState {
-    pub filter: Option<String>,
+    pub filter_info: Option<(CoreStateFieldId, String)>,
     pub collapsed_disk: HashSet<String>,
     pub model: Rc<RefCell<SystemModel>>,
     pub sort_order: Option<CoreStateFieldId>,
@@ -69,8 +69,48 @@ impl StateCommon for CoreState {
     type TagType = CoreStateFieldId;
     type KeyType = String;
 
-    fn get_filter(&mut self) -> &mut Option<String> {
-        &mut self.filter
+    fn get_filter_info(&self) -> &Option<(Self::TagType, String)> {
+        &self.filter_info
+    }
+
+    fn get_tag_from_tab_idx(&self, tab: &str, idx: usize) -> Self::TagType {
+        match tab {
+            "Btrfs" => {
+                let core_tab = self
+                    .sort_tags
+                    .get(tab)
+                    .unwrap_or_else(|| panic!("Fail to find tab: {}", tab));
+                let default_tabs::CoreTabs::Btrfs(core_tab) = core_tab;
+                Self::TagType::Btrfs(
+                    core_tab
+                        .view_items
+                        .get(idx)
+                        .expect("Out of title scope")
+                        .field_id
+                        .to_owned(),
+                )
+            }
+            "CPU" => CoreStateFieldId::Cpu(SingleCpuModelFieldId::Idx),
+            "Disk" => CoreStateFieldId::Disk(SingleDiskModelFieldId::Name),
+            // tabs Mem and Vm have two columns 'Field' and 'Value'. 'Field' contains
+            // a list of all the FieldIds in MemoryModel and VmModel respectively.
+            // the field given to filter_info don't matter for these tabs because
+            // they don't use FieldId as column titles/selected col (it isn't used to filter)
+            "Mem" => CoreStateFieldId::Mem(MemoryModelFieldId::Total),
+            "Vm" => CoreStateFieldId::Vm(VmModelFieldId::PgpginPerSec),
+            _ => panic!("bug: got unsupported tab {}", tab),
+        }
+    }
+
+    fn set_filter_from_tab_idx(&mut self, tab: &str, idx: usize, filter: Option<String>) -> bool {
+        if let Some(filter_text) = filter {
+            let title = self.get_tag_from_tab_idx(tab, idx);
+            self.filter_info = Some((title, filter_text));
+            eprintln!("filter_info updated");
+        } else {
+            self.filter_info = None;
+        }
+        true
     }
 
     fn set_sort_tag(&mut self, sort_order: Self::TagType, reverse: &mut bool) -> bool {
@@ -88,22 +128,8 @@ impl StateCommon for CoreState {
     fn set_sort_tag_from_tab_idx(&mut self, tab: &str, idx: usize, reverse: &mut bool) -> bool {
         match tab {
             "Btrfs" => {
-                let sort_order = {
-                    let core_tab = self
-                        .sort_tags
-                        .get(tab)
-                        .unwrap_or_else(|| panic!("Fail to find tab: {}", tab));
-                    let default_tabs::CoreTabs::Btrfs(core_tab) = core_tab;
-
-                    core_tab
-                        .view_items
-                        .get(idx)
-                        .expect("Out of title scope")
-                        .field_id
-                        .to_owned()
-                };
-
-                self.set_sort_tag(CoreStateFieldId::Btrfs(sort_order), reverse)
+                let sort_order = self.get_tag_from_tab_idx(tab, idx);
+                self.set_sort_tag(sort_order, reverse)
             }
             // This is to notify that tab is not currently sortable
             _ => false,

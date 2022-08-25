@@ -102,9 +102,10 @@ impl ProcessTab {
                 }
             })
             .filter(|spm| {
-                // If we're filtering by name, only show processes who pass the filter
-                if let Some(f) = &state.filter {
-                    spm.comm.as_ref().unwrap_or(&unknown).contains(f)
+                // If we're filtering by selected field, only show processes who pass the filter
+                if let Some(f) = &state.filter_info {
+                    let (_, filter) = f;
+                    spm.comm.as_ref().unwrap_or(&unknown).contains(filter)
                 } else {
                     true
                 }

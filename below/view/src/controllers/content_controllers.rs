@@ -59,15 +59,30 @@ make_event_controller!(
     Event::Char('/'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, cmd_vec: &[&str]| {
+        let (state, title_idx, tab) = {
+            let mut view = StatsView::<T>::get_view(c);
+            (
+                view.state.clone(),
+                view.get_title_view().current_selected,
+                view.get_tab_view().get_cur_selected().clone(),
+            )
+        };
+
+        // set filter to cp
         if cmd_vec.len() > 1 {
-            let state = StatsView::<T>::get_view(c).state.clone();
             let text = cmd_vec[1..].join(" ");
-            *state.borrow_mut().get_filter() = Some(text.to_string());
+            state
+                .borrow_mut()
+                .set_filter_from_tab_idx(&tab, title_idx, Some(text.clone()));
             StatsView::<T>::cp_filter(c, Some(text));
             StatsView::<T>::refresh_myself(c);
         } else {
-            let state = StatsView::<T>::get_view(c).state.clone();
-            c.add_layer(filter_popup::new(state, StatsView::<T>::refresh_myself));
+            c.add_layer(filter_popup::new(
+                state,
+                StatsView::<T>::refresh_myself,
+                tab,
+                title_idx,
+            ));
         }
     }
 );
@@ -81,7 +96,7 @@ make_event_controller!(
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
         let state = StatsView::<T>::get_view(c).state.clone();
-        *state.borrow_mut().get_filter() = None;
+        state.borrow_mut().set_filter_from_tab_idx("", 0, None); // clear filter
         StatsView::<T>::cp_filter(c, None);
         StatsView::<T>::refresh_myself(c);
     }

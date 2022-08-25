@@ -45,12 +45,12 @@ pub type ViewType = StatsView<ProcessView>;
 
 #[derive(Default)]
 pub struct ProcessState {
-    pub filter: Option<String>,
+    pub filter_info: Option<(SingleProcessModelFieldId, String)>,
     pub cgroup_filter: Option<String>,
     pub pids_filter: Option<Vec<i32>>,
     // For zoomed view, we should save current filter to here and reset the
     // filter when go back to cgroup or process view.
-    pub filter_cache_for_zoom: Option<String>,
+    pub filter_cache_for_zoom: Option<(SingleProcessModelFieldId, String)>,
     pub current_selected_pid: Option<i32>,
     pub sort_order: Option<SingleProcessModelFieldId>,
     pub sort_tags: HashMap<String, &'static ProcessTab>,
@@ -64,8 +64,34 @@ impl StateCommon for ProcessState {
     type TagType = SingleProcessModelFieldId;
     type KeyType = i32;
 
-    fn get_filter(&mut self) -> &mut Option<String> {
-        &mut self.filter
+    fn get_filter_info(&self) -> &Option<(Self::TagType, String)> {
+        &self.filter_info
+    }
+
+    fn get_tag_from_tab_idx(&self, tab: &str, idx: usize) -> Self::TagType {
+        match idx {
+            0 => Self::TagType::Comm,
+            1 => Self::TagType::Cgroup,
+            _ => self
+                .sort_tags
+                .get(tab)
+                .unwrap_or_else(|| panic!("Fail to find tab: {}", tab))
+                .view_items
+                .get(idx - 2)
+                .expect("Out of title scope")
+                .field_id
+                .to_owned(),
+        }
+    }
+
+    fn set_filter_from_tab_idx(&mut self, tab: &str, idx: usize, filter: Option<String>) -> bool {
+        if let Some(filter_text) = filter {
+            let title = self.get_tag_from_tab_idx(tab, idx);
+            self.filter_info = Some((title, filter_text));
+        } else {
+            self.filter_info = None;
+        }
+        true
     }
 
     fn set_sort_tag(&mut self, sort_order: Self::TagType, reverse: &mut bool) -> bool {
@@ -81,20 +107,7 @@ impl StateCommon for ProcessState {
     }
 
     fn set_sort_tag_from_tab_idx(&mut self, tab: &str, idx: usize, reverse: &mut bool) -> bool {
-        let sort_order = match idx {
-            0 => Self::TagType::Comm,
-            1 => Self::TagType::Cgroup,
-            _ => self
-                .sort_tags
-                .get(tab)
-                .unwrap_or_else(|| panic!("Fail to find tab: {}", tab))
-                .view_items
-                .get(idx - 2)
-                .expect("Out of title scope")
-                .field_id
-                .to_owned(),
-        };
-
+        let sort_order = self.get_tag_from_tab_idx(tab, idx);
         self.set_sort_tag(sort_order, reverse)
     }
 
@@ -121,7 +134,7 @@ impl StateCommon for ProcessState {
         sort_tags.insert("Mem".into(), &*PROCESS_MEM_TAB);
         sort_tags.insert("I/O".into(), &*PROCESS_IO_TAB);
         Self {
-            filter: None,
+            filter_info: None,
             cgroup_filter: None,
             pids_filter: None,
             filter_cache_for_zoom: None,
@@ -150,13 +163,13 @@ impl ProcessState {
 
     pub fn handle_state_for_entering_zoom(&mut self, current_selection: String) {
         self.cgroup_filter = Some(current_selection);
-        std::mem::swap(&mut self.filter_cache_for_zoom, &mut self.filter);
-        self.filter = None;
+        std::mem::swap(&mut self.filter_cache_for_zoom, &mut self.filter_info);
+        self.filter_info = None;
         self.pids_filter = None;
     }
 
     pub fn reset_state_for_quiting_zoom(&mut self) {
-        std::mem::swap(&mut self.filter, &mut self.filter_cache_for_zoom);
+        std::mem::swap(&mut self.filter_cache_for_zoom, &mut self.filter_info);
         self.cgroup_filter = None;
         self.filter_cache_for_zoom = None;
         self.pids_filter = None;
@@ -164,8 +177,8 @@ impl ProcessState {
 
     pub fn handle_state_for_entering_pids_zoom(&mut self, current_selection: Vec<i32>) {
         self.pids_filter = Some(current_selection);
-        std::mem::swap(&mut self.filter, &mut self.filter_cache_for_zoom);
-        self.filter = None;
+        std::mem::swap(&mut self.filter_cache_for_zoom, &mut self.filter_info);
+        self.filter_info = None;
         self.cgroup_filter = None;
     }
 

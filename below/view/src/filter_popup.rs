@@ -42,32 +42,42 @@ fn set_cp_filter(c: &mut Cursive, text: Option<String>) {
     }
 }
 
-pub fn new<F>(state: Rc<RefCell<impl StateCommon + 'static>>, refresh: F) -> impl View
+pub fn new<F>(
+    state: Rc<RefCell<impl StateCommon + 'static>>,
+    refresh: F,
+    tab: String,
+    idx: usize,
+) -> impl View
 where
     F: 'static + Copy + Fn(&mut Cursive),
 {
+    // scope function vars
     let submit_state = state.clone();
+    let submit_tab = tab.clone();
     let mut editview = EditView::new()
         // Run cb and close popup when user presses "Enter"
         .on_submit(move |c, text| {
             if text.is_empty() {
-                *submit_state.borrow_mut().get_filter() = None;
+                submit_state
+                    .borrow_mut()
+                    .set_filter_from_tab_idx("", 0, None);
                 set_cp_filter(c, None);
             } else {
-                *submit_state.borrow_mut().get_filter() = Some(text.to_string());
+                submit_state.borrow_mut().set_filter_from_tab_idx(
+                    &submit_tab,
+                    idx,
+                    Some(text.to_string()),
+                );
                 set_cp_filter(c, Some(text.to_string()));
             }
             refresh(c);
             c.pop_layer();
         });
 
-    editview.set_content(
-        state
-            .borrow_mut()
-            .get_filter()
-            .as_ref()
-            .unwrap_or(&"".to_string()),
-    );
+    editview.set_content(match state.borrow_mut().get_filter_info().as_ref() {
+        None => String::new(),
+        Some((_, filter)) => filter.to_string(),
+    });
 
     OnEventView::new(
         Dialog::new()
@@ -81,10 +91,12 @@ where
                     .expect("Unable to find filter_popup");
 
                 if text.is_empty() {
-                    *state.borrow_mut().get_filter() = None;
+                    state.borrow_mut().set_filter_from_tab_idx("", 0, None);
                     set_cp_filter(c, None);
                 } else {
-                    *state.borrow_mut().get_filter() = Some(text.to_string());
+                    state
+                        .borrow_mut()
+                        .set_filter_from_tab_idx(&tab, idx, Some(text.to_string()));
                     set_cp_filter(c, Some(text.to_string()));
                 }
 
