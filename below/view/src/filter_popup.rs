@@ -27,18 +27,19 @@ use crate::stats_view::StateCommon;
 use crate::MainViewState;
 
 // Set command palette filter
-fn set_cp_filter(c: &mut Cursive, text: Option<String>) {
+// field_info includes the column title (string formatted for display) and filter
+fn set_cp_filter(c: &mut Cursive, field_info: Option<(String, String)>) {
     let state = c
         .user_data::<crate::ViewState>()
         .expect("No user data")
         .main_view_state
         .clone();
     match state {
-        MainViewState::Cgroup => crate::cgroup_view::ViewType::cp_filter(c, text),
-        MainViewState::Process(_) => crate::process_view::ViewType::cp_filter(c, text),
-        MainViewState::Core => crate::core_view::ViewType::cp_filter(c, text),
+        MainViewState::Cgroup => crate::cgroup_view::ViewType::cp_filter(c, field_info),
+        MainViewState::Process(_) => crate::process_view::ViewType::cp_filter(c, field_info),
+        MainViewState::Core => crate::core_view::ViewType::cp_filter(c, field_info),
         #[cfg(fbcode_build)]
-        MainViewState::Gpu => crate::gpu_view::ViewType::cp_filter(c, text),
+        MainViewState::Gpu => crate::gpu_view::ViewType::cp_filter(c, field_info),
     }
 }
 
@@ -47,29 +48,45 @@ pub fn new<F>(
     refresh: F,
     tab: String,
     idx: usize,
+    title_name: String,
 ) -> impl View
 where
     F: 'static + Copy + Fn(&mut Cursive),
 {
+    fn set_filter_state_and_cp(
+        c: &mut Cursive,
+        state: Rc<RefCell<impl StateCommon + 'static>>,
+        text: &str,
+        tab: &str,
+        idx: usize,
+        title_name: &String,
+    ) {
+        if text.is_empty() {
+            state.borrow_mut().set_filter_from_tab_idx("", 0, None);
+            set_cp_filter(c, None);
+        } else {
+            state
+                .borrow_mut()
+                .set_filter_from_tab_idx(tab, idx, Some(text.to_string()));
+            set_cp_filter(c, Some((title_name.to_string(), text.to_string())));
+        }
+    }
+
     // scope function vars
     let submit_state = state.clone();
     let submit_tab = tab.clone();
+    let submit_title_name = title_name.clone();
     let mut editview = EditView::new()
         // Run cb and close popup when user presses "Enter"
         .on_submit(move |c, text| {
-            if text.is_empty() {
-                submit_state
-                    .borrow_mut()
-                    .set_filter_from_tab_idx("", 0, None);
-                set_cp_filter(c, None);
-            } else {
-                submit_state.borrow_mut().set_filter_from_tab_idx(
-                    &submit_tab,
-                    idx,
-                    Some(text.to_string()),
-                );
-                set_cp_filter(c, Some(text.to_string()));
-            }
+            set_filter_state_and_cp(
+                c,
+                submit_state.clone(),
+                text,
+                &submit_tab,
+                idx,
+                &submit_title_name,
+            );
             refresh(c);
             c.pop_layer();
         });
@@ -81,7 +98,7 @@ where
 
     OnEventView::new(
         Dialog::new()
-            .title("Filter by name")
+            .title(format!("Filter by {}", title_name))
             .padding_lrtb(1, 1, 1, 0)
             .content(editview.with_name("filter_popup"))
             .dismiss_button("Close")
@@ -89,17 +106,7 @@ where
                 let text = c
                     .call_on_name("filter_popup", |view: &mut EditView| view.get_content())
                     .expect("Unable to find filter_popup");
-
-                if text.is_empty() {
-                    state.borrow_mut().set_filter_from_tab_idx("", 0, None);
-                    set_cp_filter(c, None);
-                } else {
-                    state
-                        .borrow_mut()
-                        .set_filter_from_tab_idx(&tab, idx, Some(text.to_string()));
-                    set_cp_filter(c, Some(text.to_string()));
-                }
-
+                set_filter_state_and_cp(c, state.clone(), &text, &tab, idx, &title_name);
                 refresh(c);
 
                 // Pop dialog

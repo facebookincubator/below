@@ -64,6 +64,18 @@ pub enum CoreStateFieldId {
     Vm(VmModelFieldId),
 }
 
+impl std::string::ToString for CoreStateFieldId {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Disk(field) => field.to_string(),
+            Self::Btrfs(field) => field.to_string(),
+            Self::Cpu(field) => field.to_string(),
+            Self::Mem(field) => field.to_string(),
+            Self::Vm(field) => field.to_string(),
+        }
+    }
+}
+
 impl StateCommon for CoreState {
     type ModelType = SystemModel;
     type TagType = CoreStateFieldId;
@@ -71,6 +83,14 @@ impl StateCommon for CoreState {
 
     fn get_filter_info(&self) -> &Option<(Self::TagType, String)> {
         &self.filter_info
+    }
+
+    fn is_filter_supported_from_tab_idx(&self, _tab: &str, idx: usize) -> bool {
+        // we only enable str filtering for first col for Core View
+        if idx == 0 {
+            return true;
+        }
+        false
     }
 
     fn get_tag_from_tab_idx(&self, tab: &str, idx: usize) -> Self::TagType {
@@ -103,10 +123,13 @@ impl StateCommon for CoreState {
     }
 
     fn set_filter_from_tab_idx(&mut self, tab: &str, idx: usize, filter: Option<String>) -> bool {
+        if !self.is_filter_supported_from_tab_idx(tab, idx) {
+            return false;
+        }
+
         if let Some(filter_text) = filter {
             let title = self.get_tag_from_tab_idx(tab, idx);
             self.filter_info = Some((title, filter_text));
-            eprintln!("filter_info updated");
         } else {
             self.filter_info = None;
         }

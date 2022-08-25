@@ -54,7 +54,7 @@ pub struct ColumnTitles {
 /// a view to have required data in order to fit itself inside the StatsView.
 pub trait StateCommon {
     type ModelType;
-    type TagType;
+    type TagType: ToString;
     type KeyType: Clone;
 
     /// Expose filter data for StatsView to set fields in filter popup
@@ -63,6 +63,10 @@ pub trait StateCommon {
     /// Gets the FieldId associated with given tab and column index
     fn get_tag_from_tab_idx(&self, tab: &str, idx: usize) -> Self::TagType;
 
+    /// Returns true iff filtering is supported for column
+    fn is_filter_supported_from_tab_idx(&self, _tab: &str, _idx: usize) -> bool {
+        false
+    }
     /// Set the filter (current column and filter string)
     /// Return true on success, false on failure
     fn set_filter_from_tab_idx(
@@ -482,7 +486,8 @@ impl<V: 'static + ViewBridge> StatsView<V> {
     }
 
     /// Convenience function to set filter to CommandPalette.
-    pub fn cp_filter(c: &mut Cursive, filter: Option<String>) {
-        Self::get_view(c).get_cmd_palette().set_filter(filter);
+    /// filter_info provides the column title (for the filtered field) and filter
+    pub fn cp_filter(c: &mut Cursive, filter_info: Option<(String, String)>) {
+        Self::get_view(c).get_cmd_palette().set_filter(filter_info);
     }
 }

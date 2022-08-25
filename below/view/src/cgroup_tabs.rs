@@ -17,7 +17,9 @@ use std::collections::HashSet;
 use cursive::utils::markup::StyledString;
 use model::sort_queriables;
 use model::CgroupModel;
+use model::Queriable;
 use model::SingleCgroupModel;
+use model::SingleCgroupModelFieldId;
 
 use crate::cgroup_view::CgroupState;
 use crate::render::ViewItem;
@@ -84,14 +86,14 @@ impl CgroupTab {
         &self,
         cgroup: &CgroupModel,
         state: &CgroupState,
-        filter_out_set: &Option<HashSet<String>>,
+        filtered_set: &Option<HashSet<String>>,
         output: &mut Vec<(StyledString, String)>,
         offset: Option<usize>,
     ) {
         let mut cgroup_stack = vec![cgroup];
         while let Some(cgroup) = cgroup_stack.pop() {
-            if let Some(set) = &filter_out_set {
-                if set.contains(&cgroup.data.full_path) {
+            if let Some(set) = &filtered_set {
+                if !set.contains(&cgroup.data.full_path) {
                     continue;
                 }
             }
@@ -139,60 +141,74 @@ impl CgroupTab {
         state: &CgroupState,
         offset: Option<usize>,
     ) -> Vec<(StyledString, String)> {
-        let filter_out_set = if let Some((_, f)) = &state.filter_info {
-            Some(calculate_filter_out_set(&state.get_model(), &f))
+        let filtered_set = if let Some((field_id, filter)) = &state.filter_info {
+            Some(calculate_filtered_set(&state.get_model(), field_id, filter))
         } else {
             None
         };
-
         let mut rows = Vec::new();
-        self.output_cgroup(
-            &state.get_model(),
-            state,
-            &filter_out_set,
-            &mut rows,
-            offset,
-        );
+        self.output_cgroup(&state.get_model(), state, &filtered_set, &mut rows, offset);
         rows
     }
 }
 
-/// Returns a set of full cgroup paths that should be filtered out.
+/// Returns a set of full cgroup paths that should be filtered by the filter string.
 ///
 /// Note that this algorithm recursively whitelists parents of cgroups that are
 /// whitelisted. The reason for this is because cgroups are inherently tree-like
 /// and displaying a lone cgroup without its ancestors doesn't make much sense.
-pub fn calculate_filter_out_set(cgroup: &CgroupModel, filter: &str) -> HashSet<String> {
-    fn should_filter_out(cgroup: &CgroupModel, filter: &str, set: &mut HashSet<String>) -> bool {
-        // No children
-        if cgroup.count == 1 {
-            if !cgroup.data.full_path.contains(filter) {
-                set.insert(cgroup.data.full_path.clone());
-                return true;
-            }
-            return false;
+pub fn calculate_filtered_set(
+    cgroup: &CgroupModel,
+    field_id: &SingleCgroupModelFieldId,
+    filter: &str,
+) -> HashSet<String> {
+    fn field_val_matches_filter(
+        cgroup: &CgroupModel,
+        field_id: &SingleCgroupModelFieldId,
+        filter: &str,
+    ) -> bool {
+        match cgroup.data.query(field_id) {
+            None => false,
+            Some(value) => value.to_string().contains(filter),
         }
-
-        let mut filter_cgroup = true;
-        for child in &cgroup.children {
-            if should_filter_out(&child, &filter, set) {
-                set.insert(child.data.full_path.clone());
-            } else {
-                // We found a child that's not filtered out. That means
-                // we have to keep this (the parent cgroup) too.
-                filter_cgroup = false;
-            }
-        }
-
-        if filter_cgroup {
-            set.insert(cgroup.data.full_path.clone());
-        }
-
-        filter_cgroup
     }
 
+    // insert all descendents of cgroup into set
+    fn insert_cgroup_and_descendents(set: &mut HashSet<String>, cgroup: &CgroupModel) {
+        set.insert(cgroup.data.full_path.clone());
+        for child in &cgroup.children {
+            insert_cgroup_and_descendents(set, child)
+        }
+    }
+
+    fn should_keep(
+        cgroup: &CgroupModel,
+        field_id: &SingleCgroupModelFieldId,
+        filter: &str,
+        set: &mut HashSet<String>,
+    ) -> bool {
+        let match_filter = field_val_matches_filter(cgroup, field_id, filter);
+        if match_filter {
+            insert_cgroup_and_descendents(set, cgroup);
+            return match_filter;
+        }
+
+        let mut keep_cgroup = false;
+        for child in &cgroup.children {
+            // keep children that match filter and children of cgroups that match filter
+            if should_keep(child, field_id, filter, set) {
+                // keep parent cgroup if child isn't filtered out
+                keep_cgroup = true;
+            }
+        }
+
+        if keep_cgroup {
+            set.insert(cgroup.data.full_path.clone());
+        }
+        keep_cgroup
+    }
     let mut set = HashSet::new();
-    should_filter_out(&cgroup, &filter, &mut set);
+    should_keep(cgroup, field_id, filter, &mut set);
     set
 }
 

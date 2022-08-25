@@ -59,30 +59,38 @@ make_event_controller!(
     Event::Char('/'),
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, cmd_vec: &[&str]| {
-        let (state, title_idx, tab) = {
+        let (state, title_idx, title_name, tab) = {
             let mut view = StatsView::<T>::get_view(c);
+            let title_view = view.get_title_view();
             (
                 view.state.clone(),
-                view.get_title_view().current_selected,
+                title_view.current_selected,
+                title_view.get_cur_selected().to_owned(),
                 view.get_tab_view().get_cur_selected().clone(),
             )
         };
-
-        // set filter to cp
-        if cmd_vec.len() > 1 {
-            let text = cmd_vec[1..].join(" ");
-            state
-                .borrow_mut()
-                .set_filter_from_tab_idx(&tab, title_idx, Some(text.clone()));
-            StatsView::<T>::cp_filter(c, Some(text));
-            StatsView::<T>::refresh_myself(c);
-        } else {
-            c.add_layer(filter_popup::new(
-                state,
-                StatsView::<T>::refresh_myself,
-                tab,
-                title_idx,
-            ));
+        // don't enable str filter for unsupported fields
+        if state
+            .borrow()
+            .is_filter_supported_from_tab_idx(&tab, title_idx)
+        {
+            // set filter to cp
+            if cmd_vec.len() > 1 {
+                let text = cmd_vec[1..].join(" ");
+                state
+                    .borrow_mut()
+                    .set_filter_from_tab_idx(&tab, title_idx, Some(text.clone()));
+                StatsView::<T>::cp_filter(c, Some((title_name, text)));
+                StatsView::<T>::refresh_myself(c);
+            } else {
+                c.add_layer(filter_popup::new(
+                    state,
+                    StatsView::<T>::refresh_myself,
+                    tab,
+                    title_idx,
+                    title_name,
+                ));
+            }
         }
     }
 );

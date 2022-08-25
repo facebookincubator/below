@@ -53,7 +53,7 @@ enum CPMode {
 /// that use for input operation command like search, filter, rearrange, apply config, etc.
 pub struct CommandPalette {
     content: String,
-    filter: Option<String>,
+    filter_info: Option<(String, String)>,
     fold: bool,
     mode: CPMode,
     cmd_view: RefCell<EditView>,
@@ -68,10 +68,13 @@ impl View for CommandPalette {
         let mut max_x = printer.size.x;
 
         printer.print_hline((0, 0), printer.size.x, "─");
-        if let Some(filter) = &self.filter {
-            let filter = format!("| Filter: {:>10.10} |", filter);
-            max_x -= filter.len();
-            printer.print((max_x, 0), &filter);
+        if let Some((field, filter)) = &self.filter_info {
+            let output = format!(
+                "|| Filtered Column: {:>10.10} | Filter: {:>10.10} ||",
+                field, filter
+            );
+            max_x -= output.len();
+            printer.print((max_x, 0), &output);
         }
 
         if self.fold {
@@ -131,7 +134,7 @@ impl CommandPalette {
     ) -> Self {
         Self {
             content: content.into(),
-            filter: None,
+            filter_info: None,
             fold: false,
             mode: CPMode::Info,
             cmd_view: RefCell::new(
@@ -262,8 +265,8 @@ impl CommandPalette {
         }
     }
 
-    pub fn set_filter(&mut self, filter: Option<String>) {
-        self.filter = filter;
+    pub fn set_filter(&mut self, filter_info: Option<(String, String)>) {
+        self.filter_info = filter_info;
     }
 
     pub fn toggle_fold(&mut self) {

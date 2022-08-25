@@ -72,6 +72,14 @@ impl StateCommon for CgroupState {
         &self.filter_info
     }
 
+    fn is_filter_supported_from_tab_idx(&self, _tab: &str, idx: usize) -> bool {
+        // we only enable str filtering for first col (the rest are numeric cols)
+        if idx == 0 {
+            return true;
+        }
+        false
+    }
+
     fn get_tag_from_tab_idx(&self, tab: &str, idx: usize) -> Self::TagType {
         match idx {
             0 => Self::TagType::Name,
@@ -88,6 +96,9 @@ impl StateCommon for CgroupState {
     }
 
     fn set_filter_from_tab_idx(&mut self, tab: &str, idx: usize, filter: Option<String>) -> bool {
+        if !self.is_filter_supported_from_tab_idx(tab, idx) {
+            return false;
+        }
         if let Some(filter_text) = filter {
             let title = self.get_tag_from_tab_idx(tab, idx);
             self.filter_info = Some((title, filter_text));

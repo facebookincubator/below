@@ -23,6 +23,7 @@ use model::system::SingleDiskModelFieldId;
 use model::system::VmModelFieldId;
 use model::BtrfsModel;
 use model::EnumIter;
+use model::Queriable;
 
 use crate::core_view::CoreState;
 use crate::core_view::CoreStateFieldId;
@@ -66,9 +67,11 @@ impl CoreTab for CoreCpu {
             .cpus
             .iter()
             .filter(|scm| {
-                if let Some(f) = &state.filter_info {
-                    let (_, filter) = f;
-                    scm.idx.to_string().starts_with(filter)
+                if let Some((CoreStateFieldId::Cpu(field), filter)) = &state.filter_info {
+                    match scm.query(field) {
+                        None => true,
+                        Some(value) => value.to_string().starts_with(filter),
+                    }
                 } else {
                     true
                 }
@@ -118,8 +121,7 @@ impl CoreTab for CoreMem {
                 line
             })
             .filter(|s| {
-                if let Some(f) = &state.filter_info {
-                    let (_, filter) = f;
+                if let Some((_, filter)) = &state.filter_info {
                     s.source().contains(filter)
                 } else {
                     true
@@ -148,8 +150,7 @@ impl CoreTab for CoreVm {
                 line
             })
             .filter(|s| {
-                if let Some(f) = &state.filter_info {
-                    let (_, filter) = f;
+                if let Some((_, filter)) = &state.filter_info {
                     s.source().contains(filter)
                 } else {
                     true
@@ -251,6 +252,16 @@ impl CoreTab for CoreBtrfs {
 
             subvolumes
                 .iter()
+                .filter(|bmodel| {
+                    if let Some((CoreStateFieldId::Btrfs(field), filter)) = &state.filter_info {
+                        match bmodel.query(field) {
+                            None => true,
+                            Some(value) => value.to_string().contains(filter),
+                        }
+                    } else {
+                        true
+                    }
+                })
                 .map(|bmodel| {
                     (
                         BtrfsModelFieldId::unit_variant_iter().fold(

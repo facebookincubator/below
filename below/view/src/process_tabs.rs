@@ -14,6 +14,7 @@
 
 use cursive::utils::markup::StyledString;
 use itertools::Itertools;
+use model::Queriable;
 use model::SingleProcessModel;
 
 use crate::process_view::ProcessState;
@@ -103,9 +104,11 @@ impl ProcessTab {
             })
             .filter(|spm| {
                 // If we're filtering by selected field, only show processes who pass the filter
-                if let Some(f) = &state.filter_info {
-                    let (_, filter) = f;
-                    spm.comm.as_ref().unwrap_or(&unknown).contains(filter)
+                if let Some((field_id, filter)) = &state.filter_info {
+                    match spm.query(field_id) {
+                        None => true,
+                        Some(value) => value.to_string().contains(filter),
+                    }
                 } else {
                     true
                 }

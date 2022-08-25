@@ -68,6 +68,17 @@ impl StateCommon for ProcessState {
         &self.filter_info
     }
 
+    fn is_filter_supported_from_tab_idx(&self, tab: &str, idx: usize) -> bool {
+        let title = self.get_tag_from_tab_idx(tab, idx);
+        // only enable str filtering for str columns
+        title == Self::TagType::Comm
+            || title == Self::TagType::Cgroup
+            || title == Self::TagType::State
+            || title == Self::TagType::Cmdline
+            || title == Self::TagType::Pid
+            || title == Self::TagType::Ppid
+    }
+
     fn get_tag_from_tab_idx(&self, tab: &str, idx: usize) -> Self::TagType {
         match idx {
             0 => Self::TagType::Comm,
@@ -85,6 +96,9 @@ impl StateCommon for ProcessState {
     }
 
     fn set_filter_from_tab_idx(&mut self, tab: &str, idx: usize, filter: Option<String>) -> bool {
+        if !self.is_filter_supported_from_tab_idx(tab, idx) {
+            return false;
+        }
         if let Some(filter_text) = filter {
             let title = self.get_tag_from_tab_idx(tab, idx);
             self.filter_info = Some((title, filter_text));
