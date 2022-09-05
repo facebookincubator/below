@@ -19,7 +19,7 @@ common = { package = "below-common", version = "0.5.0", path = "common" }
 config = { package = "below-config", version = "0.5.0", path = "config" }
 cursive = { version = "0.19.0", features = ["crossterm-backend", "termion-backend"], default-features = false }
 dump = { package = "below-dump", version = "0.5.0", path = "dump" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 indicatif = { version = "0.16", features = ["with_rayon"] }
 libbpf-rs = "0.16.0"
 libc = "0.2.121"

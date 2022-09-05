@@ -27,4 +27,4 @@ serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_dep
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 
 [dev-dependencies]
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
