@@ -199,11 +199,6 @@ enum Command {
         /// Flag to disable eBPF-based exitstats
         #[clap(long)]
         disable_exitstats: bool,
-        /// Deprecated: Use enable_gpu_stats in below config.
-        ///
-        /// Flag to enable GPU stats
-        #[structopt(long)]
-        enable_gpu_stats: bool,
         /// Options for compression
         #[clap(flatten)]
         compress_opts: CompressOpts,
@@ -682,7 +677,6 @@ fn real_main(init: init::InitToken) {
             ref skew_detection_threshold_ms,
             ref disable_disk_stat,
             ref disable_exitstats,
-            ref enable_gpu_stats,
             ref compress_opts,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);

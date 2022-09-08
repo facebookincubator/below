@@ -189,6 +189,7 @@ impl ProcessState {
         self.pids_filter = None;
     }
 
+    #[allow(dead_code)]
     pub fn handle_state_for_entering_pids_zoom(&mut self, current_selection: Vec<i32>) {
         self.pids_filter = Some(current_selection);
         std::mem::swap(&mut self.filter_cache_for_zoom, &mut self.filter_info);
