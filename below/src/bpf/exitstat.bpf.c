@@ -7,6 +7,7 @@
 #include <bpf/bpf_core_read.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
+#include <linux/version.h>
 
 #define TASK_COMM_LEN 16
 
@@ -59,7 +60,11 @@ int tracepoint__sched__sched_process_exit(
   data.meta.ppid = BPF_CORE_READ(task, real_parent, tgid);
   data.meta.pgrp = BPF_CORE_READ(task, group_leader, tgid);
   data.meta.sid = BPF_CORE_READ(task, sessionid);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0)
   data.meta.cpu = BPF_CORE_READ(task, cpu);
+#else
+  data.meta.cpu = BPF_CORE_READ(task, thread_info.cpu);
+#endif
   bpf_get_current_comm(&data.meta.comm, sizeof(data.meta.comm));
 
   /* read/calculate exitstats */
