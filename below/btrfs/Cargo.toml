@@ -12,7 +12,7 @@ license = "Apache-2.0"
 
 [dependencies]
 common = { package = "below-common", version = "0.6.1", path = "../common" }
-libc = "=0.2.125"
+libc = "0.2.132"
 nix = "0.23"
 openat = "0.1.21"
 rand = { version = "0.8", features = ["small_rng"] }
