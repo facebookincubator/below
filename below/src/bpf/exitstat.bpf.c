@@ -7,7 +7,6 @@
 #include <bpf/bpf_core_read.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
-#include <linux/version.h>
 
 #define TASK_COMM_LEN 16
 
@@ -43,6 +42,28 @@ struct event {
   struct exitstats stats;
 };
 
+struct task_struct___pre516 {
+  unsigned int cpu;
+} __attribute__((preserve_access_index));
+
+struct thread_info___post516 {
+  u32 cpu;
+} __attribute__((preserve_access_index));;
+
+struct task_struct___post516 {
+  struct thread_info___post516 thread_info;
+} __attribute__((preserve_access_index));
+
+u32 task_cpu(void *arg) {
+  if (bpf_core_field_exists(struct task_struct___pre516, cpu)) {
+    struct task_struct___pre516 *task = arg;
+    return BPF_CORE_READ(task, cpu);
+  } else {
+    struct task_struct___post516 *task = arg;
+    return BPF_CORE_READ(task, thread_info.cpu);
+  }
+}
+
 // sched:sched_process_exit is triggered right before process/thread exits. At
 // this point we capture last taskstats to account resource usage of short-lived
 // processes. We also check tas->signal.live counter to determine if this thread
@@ -60,11 +81,7 @@ int tracepoint__sched__sched_process_exit(
   data.meta.ppid = BPF_CORE_READ(task, real_parent, tgid);
   data.meta.pgrp = BPF_CORE_READ(task, group_leader, tgid);
   data.meta.sid = BPF_CORE_READ(task, sessionid);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0)
-  data.meta.cpu = BPF_CORE_READ(task, cpu);
-#else
-  data.meta.cpu = BPF_CORE_READ(task, thread_info.cpu);
-#endif
+  data.meta.cpu = task_cpu(task);
   bpf_get_current_comm(&data.meta.comm, sizeof(data.meta.comm));
 
   /* read/calculate exitstats */
