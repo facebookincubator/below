@@ -18,7 +18,7 @@ humantime = "2.1"
 maplit = "1.0"
 memmap = "0.7"
 model = { package = "below-model", version = "0.6.1", path = "../model" }
-nix = "0.23"
+nix = "0.25.0"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_cbor = "0.11"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
