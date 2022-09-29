@@ -16,6 +16,9 @@ fn main() {
     // all up.
     create_dir_all("./src/bpf/.output").unwrap();
     let skel = Path::new("./src/bpf/.output/exitstat.skel.rs");
-    SkeletonBuilder::new(SRC).generate(&skel).unwrap();
+    SkeletonBuilder::new()
+        .source(SRC)
+        .build_and_generate(&skel)
+        .unwrap();
     println!("cargo:rerun-if-changed={}", SRC);
 }
