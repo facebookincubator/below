@@ -23,7 +23,7 @@ serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_cbor = "0.11"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 static_assertions = "1.1.0"
-zstd-safe = "5.0.1+zstd.1.5.2"
+zstd-safe = { version = "5.0.1+zstd.1.5.2", features = ["std"] }
 
 [dev-dependencies]
 itertools = "0.10.3"
