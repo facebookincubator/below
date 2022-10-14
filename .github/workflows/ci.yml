@@ -8,21 +8,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  rustfmt:
-    # Only run clang-format on pull requests. We want to allow people to
-    # ignore rustfmt if they think it's not helpful.
-    if: "github.event_name == 'pull_request'"
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Run rustmt
-      # rustfmt tries to format the hidden facebook:: modules but chokes b/c
-      # those files aren't published to github. Instead, we'll do a git diff
-      # to see if anything was changed.
-      run: cargo fmt || true
-    - name: Check for diff
-      run: git diff --exit-code
-
   build_test:
     runs-on: ubuntu-20.04
     steps:
