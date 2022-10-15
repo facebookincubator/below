@@ -21,7 +21,7 @@ gpu-stats = { package = "below-gpu-stats", version = "0.6.2", path = "../gpu_sta
 hostname = "0.3"
 os_info = "3.0.7"
 procfs = { package = "fb_procfs", version = "0.6.2", path = "../procfs" }
-regex = "1.5.4"
+regex = { version = "1.5.4", default-features = false }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
