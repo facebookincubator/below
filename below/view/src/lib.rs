@@ -304,10 +304,9 @@ impl ViewState {
 impl View {
     pub fn new_with_advance(model: model::Model, mode: ViewMode) -> View {
         let mut inner = cursive::CursiveRunnable::new(|| {
-            let backend = cursive::backends::crossterm::Backend::init().map(|termion_backend| {
-                Box::new(cursive_buffered_backend::BufferedBackend::new(
-                    termion_backend,
-                )) as Box<(dyn cursive::backend::Backend)>
+            let backend = cursive::backends::crossterm::Backend::init().map(|backend| {
+                Box::new(cursive_buffered_backend::BufferedBackend::new(backend))
+                    as Box<(dyn cursive::backend::Backend)>
             });
             execute!(std::io::stdout(), DisableMouseCapture).expect("Failed to disable mouse.");
             backend
