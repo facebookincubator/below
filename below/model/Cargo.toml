@@ -11,7 +11,7 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "1.0.65"
-async-trait = "0.1.56"
+async-trait = "0.1.58"
 below_derive = { version = "0.6.2", path = "../below_derive" }
 btrfs = { package = "below-btrfs", version = "0.6.2", path = "../btrfs" }
 cgroupfs = { version = "0.6.2", path = "../cgroupfs" }
