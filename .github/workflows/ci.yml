@@ -23,6 +23,7 @@ jobs:
       run: >
         docker run below
         /root/.cargo/bin/cargo test
+        --locked
         --release
         --
         --skip test_dump
