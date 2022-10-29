@@ -2,7 +2,7 @@
 
 [package]
 name = "fb_procfs"
-version = "0.6.3"
+version = "0.6.2"
 authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
 edition = "2021"
 description = "A crate for reading procfs"
