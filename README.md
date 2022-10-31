@@ -41,6 +41,8 @@ of [atop](https://linux.die.net/man/1/atop)'s design and style decisions.
 
 ## Installing
 
+### Fedora
+
 `below` is packaged in Fedora as of Fedora 34, and can be installed with:
 
 ```shell
@@ -52,6 +54,23 @@ enabled with:
 
 ```shell
 sudo systemctl enable --now below
+```
+
+### Alpine Linux
+
+`below` is packaged in Alpine Linux - it's available in (upcoming) v3.17+ and
+Edge. It can be installed with:
+
+```shell
+sudo apk add below
+```
+
+Optionally, the OpenRC service for persistent data collection can also be
+enabled with:
+
+```shell
+sudo rc-service below start
+sudo rc-update add below
 ```
 
 ## Installing from source
