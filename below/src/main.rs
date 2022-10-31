@@ -873,7 +873,10 @@ fn replay(
                 Archive::new(fs::File::open(&snapshot).context("Failed to open snapshot file")?);
             let mut snapshot_dir = TempDir::new("snapshot_replay")?.into_path();
             tarball.unpack(&snapshot_dir)?;
-            snapshot_dir.push(snapshot);
+            // Find and append the name of the original snapshot directory
+            for path in fs::read_dir(&snapshot_dir)? {
+                snapshot_dir.push(path.unwrap().file_name());
+            }
             new_advance_local(logger.clone(), snapshot_dir, timestamp)
         }
         (Some(_), Some(_)) => {
