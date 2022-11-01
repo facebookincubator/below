@@ -12,7 +12,7 @@ license = "Apache-2.0"
 
 [dependencies]
 lazy_static = "1.4"
-libc = "0.2.135"
+libc = "0.2.137"
 nix = "0.25"
 openat = "0.1.21"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
