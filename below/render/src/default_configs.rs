@@ -36,6 +36,9 @@ impl HasRenderConfig for model::SingleCgroupModel {
             Mem(field_id) => model::CgroupMemoryModel::get_render_config_builder(field_id),
             Pressure(field_id) => model::CgroupPressureModel::get_render_config_builder(field_id),
             CgroupStat(field_id) => model::CgroupStatModel::get_render_config_builder(field_id),
+            MemNuma(field_id) => {
+                model::CgroupMemoryNumaModel::get_render_config_builder(&field_id.subquery_id)
+            }
         }
     }
 }
@@ -600,6 +603,63 @@ impl HasRenderConfig for model::CgroupStatModel {
         match field_id {
             NrDescendants => rc.title("Nr Descendants"),
             NrDyingDescendants => rc.title("Nr Dying Descendants"),
+        }
+    }
+}
+
+impl HasRenderConfig for model::CgroupMemoryNumaModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::CgroupMemoryNumaModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            Total => rc.title("Total").format(ReadableSize),
+            Anon => rc.title("Anon").format(ReadableSize),
+            File => rc.title("File").format(ReadableSize),
+            KernelStack => rc.title("KernelStack").format(ReadableSize),
+            Pagetables => rc.title("Pagetables").format(ReadableSize),
+            Shmem => rc.title("Shmem").format(ReadableSize),
+            FileMapped => rc.title("FileMapped").format(ReadableSize),
+            FileDirty => rc.title("FileDirty").format(ReadableSize),
+            FileWriteback => rc.title("FileWriteback").format(ReadableSize),
+            Swapcached => rc.title("Swapcached").format(ReadableSize),
+            AnonThp => rc.title("AnonThp").format(ReadableSize),
+            FileThp => rc.title("FileThp").format(ReadableSize),
+            ShmemThp => rc.title("ShmemThp").format(ReadableSize),
+            InactiveAnon => rc.title("InactiveAnon").format(ReadableSize),
+            ActiveAnon => rc.title("ActiveAnon").format(ReadableSize),
+            InactiveFile => rc.title("InactiveFile").format(ReadableSize),
+            ActiveFile => rc.title("ActiveFile").format(ReadableSize),
+            Unevictable => rc.title("Unevictable").format(ReadableSize),
+            SlabReclaimable => rc.title("SlabReclaimable").format(ReadableSize),
+            SlabUnreclaimable => rc.title("SlabUnreclaimable").format(ReadableSize),
+            WorkingsetRefaultAnon => rc
+                .title("Workingset Refaults Anon")
+                .suffix("/s")
+                .format(Precision(1)),
+            WorkingsetRefaultFile => rc
+                .title("Workingset Refaults File")
+                .suffix("/s")
+                .format(Precision(1)),
+            WorkingsetActivateAnon => rc
+                .title("Workingset Activates Anon")
+                .suffix("/s")
+                .format(Precision(1)),
+            WorkingsetActivateFile => rc
+                .title("Workingset Activates File")
+                .suffix("/s")
+                .format(Precision(1)),
+            WorkingsetRestoreAnon => rc
+                .title("Workingset Restores Anon")
+                .suffix("/s")
+                .format(Precision(1)),
+            WorkingsetRestoreFile => rc
+                .title("Workingset Restores File")
+                .suffix("/s")
+                .format(Precision(1)),
+            WorkingsetNodereclaim => rc
+                .title("Workingset Nodereclaims")
+                .suffix("/s")
+                .format(Precision(1)),
         }
     }
 }

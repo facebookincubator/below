@@ -38,6 +38,9 @@ pub struct SingleCgroupModel {
     pub pressure: Option<CgroupPressureModel>,
     #[queriable(subquery)]
     pub cgroup_stat: Option<CgroupStatModel>,
+    #[queriable(subquery)]
+    #[queriable(preferred_name = mem_numa)]
+    pub memory_numa_stat: Option<BTreeMap<u32, CgroupMemoryNumaModel>>,
 }
 
 /// A model that represents a cgroup subtree. Each instance is a node that uses
@@ -225,6 +228,24 @@ impl CgroupModel {
 
         let cgroup_stat = sample.cgroup_stat.as_ref().map(CgroupStatModel::new);
 
+        let memory_numa_stat = {
+            sample.memory_numa_stat.as_ref().map(|end_numa_nodes| {
+                let begin_numa_nodes = last_if_inode_matches.and_then(|(s, d)| {
+                    s.memory_numa_stat
+                        .as_ref()
+                        .map(|numa_nodes| (numa_nodes, d))
+                });
+                end_numa_nodes
+                    .iter()
+                    .map(|(node_id, stat)| {
+                        let begin_numa_stat = begin_numa_nodes
+                            .and_then(|(nodes, d)| nodes.get(node_id).map(|stat| (stat, d)));
+                        (*node_id, CgroupMemoryNumaModel::new(stat, begin_numa_stat))
+                    })
+                    .collect()
+            })
+        };
+
         // recursively calculate view of children
         // `children` is optional, but we treat it the same as an empty map
         let empty = BTreeMap::new();
@@ -262,6 +283,7 @@ impl CgroupModel {
                 pressure,
                 depth,
                 cgroup_stat,
+                memory_numa_stat,
             },
             children,
             count: nr_descendants + 1,
@@ -651,6 +673,119 @@ impl CgroupPressureModel {
             memory_some_pct: pressure.memory.some.avg10,
             memory_full_pct: pressure.memory.full.avg10,
         }
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
+pub struct CgroupMemoryNumaModel {
+    pub total: Option<u64>,
+    pub anon: Option<u64>,
+    pub file: Option<u64>,
+    pub kernel_stack: Option<u64>,
+    pub pagetables: Option<u64>,
+    pub shmem: Option<u64>,
+    pub file_mapped: Option<u64>,
+    pub file_dirty: Option<u64>,
+    pub file_writeback: Option<u64>,
+    pub swapcached: Option<u64>,
+    pub anon_thp: Option<u64>,
+    pub file_thp: Option<u64>,
+    pub shmem_thp: Option<u64>,
+    pub inactive_anon: Option<u64>,
+    pub active_anon: Option<u64>,
+    pub inactive_file: Option<u64>,
+    pub active_file: Option<u64>,
+    pub unevictable: Option<u64>,
+    pub slab_reclaimable: Option<u64>,
+    pub slab_unreclaimable: Option<u64>,
+    pub workingset_refault_anon: Option<f64>,
+    pub workingset_refault_file: Option<f64>,
+    pub workingset_activate_anon: Option<f64>,
+    pub workingset_activate_file: Option<f64>,
+    pub workingset_restore_anon: Option<f64>,
+    pub workingset_restore_file: Option<f64>,
+    pub workingset_nodereclaim: Option<f64>,
+}
+
+impl CgroupMemoryNumaModel {
+    pub fn new(
+        begin: &cgroupfs::MemoryNumaStat,
+        last: Option<(&cgroupfs::MemoryNumaStat, Duration)>,
+    ) -> CgroupMemoryNumaModel {
+        let mut model = CgroupMemoryNumaModel {
+            total: None,
+            anon: begin.anon,
+            file: begin.file,
+            kernel_stack: begin.kernel_stack,
+            pagetables: begin.pagetables,
+            shmem: begin.shmem,
+            file_mapped: begin.file_mapped,
+            file_dirty: begin.file_dirty,
+            file_writeback: begin.file_writeback,
+            swapcached: begin.swapcached,
+            anon_thp: begin.anon_thp,
+            file_thp: begin.file_thp,
+            shmem_thp: begin.shmem_thp,
+            inactive_anon: begin.inactive_anon,
+            active_anon: begin.active_anon,
+            inactive_file: begin.inactive_file,
+            active_file: begin.active_file,
+            unevictable: begin.unevictable,
+            slab_reclaimable: begin.slab_reclaimable,
+            slab_unreclaimable: begin.slab_unreclaimable,
+            ..Default::default()
+        };
+        if let (Some(anon), Some(file), Some(kernel_stack), Some(pagetables)) =
+            (model.anon, model.file, model.kernel_stack, model.pagetables)
+        {
+            model.total = Some(anon + file + kernel_stack + pagetables);
+        }
+
+        if let Some((l, delta)) = last {
+            model.workingset_refault_anon = count_per_sec!(
+                begin.workingset_refault_anon,
+                l.workingset_refault_anon,
+                delta
+            );
+            model.workingset_refault_file = count_per_sec!(
+                begin.workingset_refault_file,
+                l.workingset_refault_file,
+                delta
+            );
+            model.workingset_activate_anon = count_per_sec!(
+                begin.workingset_activate_anon,
+                l.workingset_activate_anon,
+                delta
+            );
+            model.workingset_activate_file = count_per_sec!(
+                begin.workingset_activate_file,
+                l.workingset_activate_file,
+                delta
+            );
+            model.workingset_restore_anon = count_per_sec!(
+                begin.workingset_restore_anon,
+                l.workingset_restore_anon,
+                delta
+            );
+            model.workingset_restore_file = count_per_sec!(
+                begin.workingset_restore_file,
+                l.workingset_restore_file,
+                delta
+            );
+            model.workingset_nodereclaim = count_per_sec!(
+                begin.workingset_nodereclaim,
+                l.workingset_nodereclaim,
+                delta
+            );
+        }
+        model
     }
 }
 
