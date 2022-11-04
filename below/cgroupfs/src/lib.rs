@@ -94,6 +94,15 @@ macro_rules! impl_read_pressure {
     }};
 }
 
+macro_rules! parse_and_set_fields {
+    ($struct:expr; $key:expr; $value:expr; [ $($field:ident,)+  ]) => (
+        match $key {
+            $(stringify!($field) => $struct.$field = Some($value),)*
+            _ => (),
+        }
+    )
+}
+
 impl CgroupReader {
     pub fn new(root: PathBuf) -> Result<CgroupReader> {
         CgroupReader::new_with_relative_path(root, PathBuf::from(OsStr::new("")))
@@ -246,6 +255,84 @@ impl CgroupReader {
             io: self.read_io_pressure()?,
             memory: self.read_memory_pressure()?,
         })
+    }
+
+    // Reads memory.numa_stat - the return value is a map from numa_node_id ->
+    // memory breakdown
+    pub fn read_memory_numa_stat(&self) -> Result<BTreeMap<u32, MemoryNumaStat>> {
+        let mut s: BTreeMap<u32, MemoryNumaStat> = BTreeMap::new();
+        let file_name = "memory.numa_stat";
+        let file = self
+            .dir
+            .open_file(file_name)
+            .map_err(|e| self.io_error(file_name, e))?;
+        let buf_reader = BufReader::new(file);
+        for line in buf_reader.lines() {
+            let line = line.map_err(|e| self.io_error(file_name, e))?;
+            let items = line.split_whitespace().collect::<Vec<_>>();
+            // Need to have at least the field name + at least one N0=val item
+            if items.len() < 2 {
+                return Err(self.unexpected_line(file_name, line));
+            }
+            let field = items[0];
+            for item in items.iter().skip(1) {
+                let kv = item.split('=').collect::<Vec<_>>();
+                if kv.len() != 2 || kv[0].len() < 2 || !kv[0].starts_with('N') {
+                    return Err(self.unexpected_line(file_name, line));
+                }
+                let mut kchars = kv[0].chars();
+                kchars.next();
+                let numa_node = kchars
+                    .as_str()
+                    .parse::<u32>()
+                    .map_err(|_| self.unexpected_line(file_name, line.clone()))?;
+                parse_and_set_fields!(
+                    s.entry(numa_node).or_default();
+                    field;
+                    kv[1].parse().map_err(|_| self.unexpected_line(file_name, line.clone()))?;
+                    [
+                        anon,
+                        file,
+                        kernel_stack,
+                        pagetables,
+                        shmem,
+                        file_mapped,
+                        file_dirty,
+                        file_writeback,
+                        swapcached,
+                        anon_thp,
+                        file_thp,
+                        shmem_thp,
+                        inactive_anon,
+                        active_anon,
+                        inactive_file,
+                        active_file,
+                        unevictable,
+                        slab_reclaimable,
+                        slab_unreclaimable,
+                        workingset_refault_anon,
+                        workingset_refault_file,
+                        workingset_activate_anon,
+                        workingset_activate_file,
+                        workingset_restore_anon,
+                        workingset_restore_file,
+                        workingset_nodereclaim,
+                    ]
+                );
+            }
+        }
+
+        if s.is_empty() {
+            return Err(self.invalid_file_format(file_name));
+        }
+
+        for (_node, memory_numa_stat) in s.iter() {
+            if *memory_numa_stat == MemoryNumaStat::default() {
+                return Err(self.invalid_file_format(file_name));
+            }
+        }
+
+        Ok(s)
     }
 
     /// Return an iterator over child cgroups
@@ -428,13 +515,13 @@ macro_rules! name_key_equal_value_format {
                         }
                         // Certain keys such as cost.usage can not be struct fields so must use cost_usage
                         let key = kv[0].replace(".", "_");
-                        match key.as_ref() {
-                            $(stringify!($field) => s.$field = Some(
-                                kv[1].parse().map_err(|_| r.unexpected_line(file_name.clone(), line.clone()))?
-                            ),)*
-                            _ => (),
-                        };
-                    }
+                        parse_and_set_fields!(
+                            s;
+                            key.as_ref();
+                            kv[1].parse().map_err(|_| r.unexpected_line(file_name.clone(), line.clone()))?;
+                            [ $($field,)* ]
+                        )
+                    };
                     if s == $struct::default() {
                         return Err(r.invalid_file_format(file_name))
                     }

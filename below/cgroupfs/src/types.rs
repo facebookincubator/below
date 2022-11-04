@@ -121,3 +121,33 @@ pub struct CgroupStat {
     pub nr_descendants: Option<u32>,
     pub nr_dying_descendants: Option<u32>,
 }
+
+#[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub struct MemoryNumaStat {
+    pub anon: Option<u64>,
+    pub file: Option<u64>,
+    pub kernel_stack: Option<u64>,
+    pub pagetables: Option<u64>,
+    pub shmem: Option<u64>,
+    pub file_mapped: Option<u64>,
+    pub file_dirty: Option<u64>,
+    pub file_writeback: Option<u64>,
+    pub swapcached: Option<u64>,
+    pub anon_thp: Option<u64>,
+    pub file_thp: Option<u64>,
+    pub shmem_thp: Option<u64>,
+    pub inactive_anon: Option<u64>,
+    pub active_anon: Option<u64>,
+    pub inactive_file: Option<u64>,
+    pub active_file: Option<u64>,
+    pub unevictable: Option<u64>,
+    pub slab_reclaimable: Option<u64>,
+    pub slab_unreclaimable: Option<u64>,
+    pub workingset_refault_anon: Option<u64>,
+    pub workingset_refault_file: Option<u64>,
+    pub workingset_activate_anon: Option<u64>,
+    pub workingset_activate_file: Option<u64>,
+    pub workingset_restore_anon: Option<u64>,
+    pub workingset_restore_file: Option<u64>,
+    pub workingset_nodereclaim: Option<u64>,
+}
