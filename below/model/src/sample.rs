@@ -37,6 +37,7 @@ pub struct CgroupSample {
     pub memory_events: Option<cgroupfs::MemoryEvents>,
     pub inode_number: Option<i64>,
     pub cgroup_stat: Option<cgroupfs::CgroupStat>,
+    pub memory_numa_stat: Option<BTreeMap<u32, cgroupfs::MemoryNumaStat>>,
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]

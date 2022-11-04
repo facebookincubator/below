@@ -393,6 +393,7 @@ fn collect_cgroup_sample(
             }
         },
         cgroup_stat: wrap(reader.read_cgroup_stat())?.map(Into::into),
+        memory_numa_stat: wrap(reader.read_memory_numa_stat())?.map(Into::into),
     })
 }
 
