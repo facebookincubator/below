@@ -15,7 +15,7 @@
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct CpuStat {
     pub usage_usec: Option<u64>,
     pub user_usec: Option<u64>,
@@ -25,7 +25,7 @@ pub struct CpuStat {
     pub throttled_usec: Option<u64>,
 }
 
-#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct IoStat {
     pub rbytes: Option<u64>,
     pub wbytes: Option<u64>,
@@ -39,7 +39,7 @@ pub struct IoStat {
     pub cost_indelay: Option<u64>,
 }
 
-#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct MemoryStat {
     pub anon: Option<u64>,
     pub file: Option<u64>,
@@ -107,7 +107,7 @@ pub struct Pressure {
     pub memory: MemoryPressure,
 }
 
-#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct MemoryEvents {
     pub low: Option<u64>,
     pub high: Option<u64>,
@@ -116,7 +116,7 @@ pub struct MemoryEvents {
     pub oom_kill: Option<u64>,
 }
 
-#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct CgroupStat {
     pub nr_descendants: Option<u32>,
     pub nr_dying_descendants: Option<u32>,
