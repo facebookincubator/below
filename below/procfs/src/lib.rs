@@ -560,6 +560,13 @@ impl ProcReader {
         self.read_pid_stat_from_path(self.path.join(pid.to_string()))
     }
 
+    pub fn read_tid_stat(&self, tid: u32) -> Result<PidStat> {
+        let mut p = self.path.join(tid.to_string());
+        p.push("task");
+        p.push(tid.to_string());
+        self.read_pid_stat_from_path(p)
+    }
+
     fn read_pid_mem_from_path<P: AsRef<Path>>(&self, path: P) -> Result<PidMem> {
         let path = path.as_ref().join("status");
 
