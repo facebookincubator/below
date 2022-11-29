@@ -6,6 +6,7 @@ Several dependencies need to be installed before we can build.
 * libelf (dynamically linked)
 * libncursesw (dynamically linked)
 * clang (for building BPF program at build time)
+* rustfmt (used by libbpf-cargo for bpf skeleton code generation)
 
 ## Install build dependencies
 
@@ -17,6 +18,13 @@ sudo apt install -y build-essential ca-certificates clang curl git \
   libelf-dev libncursesw5-dev libssl-dev m4 pkg-config python3 zlib1g-dev
 ```
 
+Also check that `rustfmt` is installed. If you are using rustup, it should be
+installed by default, but if not, install with:
+
+```
+rustup component add rustfmt
+```
+
 # Building
 
 Below's UI is quite laggy in debug builds. We recommend always building in
@@ -25,6 +33,6 @@ release mode.
 In the root of the repository:
 
 ```shell
-$ cargo build --release
-$ cargo test
+cargo build --release
+cargo test
 ```
