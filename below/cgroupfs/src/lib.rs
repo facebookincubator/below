@@ -14,6 +14,7 @@
 
 #![deny(clippy::all)]
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::ffi::OsStr;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -163,7 +164,25 @@ impl CgroupReader {
         Ok(meta.stat().st_ino as u64)
     }
 
-    /// Read a value from a file that has a single line
+    /// Read a value from a file that has a single line. If the file is empty,
+    /// the value will be derived from an empty string.
+    fn read_empty_or_singleline_file<T: FromStr>(&self, file_name: &str) -> Result<T> {
+        let file = self
+            .dir
+            .open_file(file_name)
+            .map_err(|e| self.io_error(file_name, e))?;
+        let buf_reader = BufReader::new(file);
+        let line = buf_reader
+            .lines()
+            .next()
+            .unwrap_or_else(|| Ok("".to_owned()));
+        let line = line.map_err(|e| self.io_error(file_name, e))?;
+        line.parse::<T>()
+            .map_err(move |_| self.unexpected_line(file_name, line))
+    }
+
+    /// Read a value from a file that has a single line. If the file is empty,
+    /// InvalidFileFormat is returned.
     fn read_singleline_file<T: FromStr>(&self, file_name: &str) -> Result<T> {
         let file = self
             .dir
@@ -187,6 +206,26 @@ impl CgroupReader {
             Err(Error::UnexpectedLine(_, line)) if line.starts_with("max") => Ok(-1),
             Err(e) => Err(e),
         }
+    }
+
+    /// Read a single line from a file representing a space separated list of
+    /// cgroup controllers.
+    fn read_singleline_controllers(&self, file_name: &str) -> Result<BTreeSet<String>> {
+        let s = self.read_empty_or_singleline_file::<String>(file_name)?;
+        if s.is_empty() {
+            return Ok(BTreeSet::new());
+        }
+        Ok(s.split(' ').map(String::from).collect())
+    }
+
+    /// Read cgroup.controllers
+    pub fn read_cgroup_controllers(&self) -> Result<BTreeSet<String>> {
+        self.read_singleline_controllers("cgroup.controllers")
+    }
+
+    /// Read cgroup.subtree_control
+    pub fn read_cgroup_subtree_control(&self) -> Result<BTreeSet<String>> {
+        self.read_singleline_controllers("cgroup.subtree_control")
     }
 
     /// Read memory.low - returning memory.low limit in bytes

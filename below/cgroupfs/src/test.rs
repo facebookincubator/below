@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::BTreeSet;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::Write;
@@ -135,6 +136,24 @@ singleline_integer_or_max_test!(read_memory_zswap_max, "memory.zswap.max");
 
 test_success!(read_cpu_weight, "cpu.weight", b"10000\n", 10000);
 test_failure!(read_cpu_weight, "cpu.weight", b"5000000000\n");
+test_success!(
+    read_cgroup_controllers,
+    "cgroup.controllers",
+    b"cpuset cpu io memory pids\n",
+    BTreeSet::from([
+        "cpuset".to_owned(),
+        "cpu".to_owned(),
+        "io".to_owned(),
+        "memory".to_owned(),
+        "pids".to_owned()
+    ])
+);
+test_success!(
+    read_cgroup_subtree_control,
+    "cgroup.subtree_control",
+    b"",
+    BTreeSet::new()
+);
 
 #[test]
 fn test_read_inode_number() {
