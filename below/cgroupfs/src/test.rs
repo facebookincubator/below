@@ -19,12 +19,15 @@ use std::io::Write;
 use std::os::linux::fs::MetadataExt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use paste::paste;
 use tempfile::TempDir;
 
 use crate::CgroupReader;
+use crate::Cpuset;
 use crate::Error;
+use crate::MemNodes;
 use crate::MemoryNumaStat;
 
 struct TestCgroup {
@@ -136,6 +139,7 @@ singleline_integer_or_max_test!(read_memory_zswap_max, "memory.zswap.max");
 
 test_success!(read_cpu_weight, "cpu.weight", b"10000\n", 10000);
 test_failure!(read_cpu_weight, "cpu.weight", b"5000000000\n");
+
 test_success!(
     read_cgroup_controllers,
     "cgroup.controllers",
@@ -154,6 +158,62 @@ test_success!(
     b"",
     BTreeSet::new()
 );
+
+test_success!(
+    read_cpuset_cpus,
+    "cpuset.cpus",
+    b"",
+    Cpuset {
+        cpus: BTreeSet::new()
+    }
+);
+test_failure!(read_cpuset_cpus, "cpuset.cpus", b"-1\n");
+test_success!(
+    read_cpuset_cpus_effective,
+    "cpuset.cpus.effective",
+    b"1,3-4,6-8\n",
+    Cpuset {
+        cpus: BTreeSet::from([1, 3, 4, 6, 7, 8])
+    }
+);
+test_failure!(read_cpuset_cpus_effective, "cpuset.cpus.effective", b"-1\n");
+test_success!(
+    read_cpuset_mems,
+    "cpuset.mems",
+    b"1,3\n",
+    MemNodes {
+        nodes: BTreeSet::from([1, 3])
+    }
+);
+test_failure!(read_cpuset_mems, "cpuset.mems", b"-1\n");
+test_success!(
+    read_cpuset_mems_effective,
+    "cpuset.mems.effective",
+    b"\n",
+    MemNodes {
+        nodes: BTreeSet::new()
+    }
+);
+test_failure!(read_cpuset_mems_effective, "cpuset.mems.effective", b"-1\n");
+
+#[test]
+fn cpuset_format_test() {
+    for s in [
+        "",
+        "0",
+        "13",
+        "0-12",
+        "0-1,3-4",
+        "0,2-3,5-9999",
+        "0-1,3,5-7,9,11-12",
+    ] {
+        assert_eq!(Cpuset::from_str(s).unwrap().to_string(), s)
+    }
+
+    for s in ["a", "-1", "-1-2", "0--2", "0-2-", "0,2-"] {
+        assert!(Cpuset::from_str(s).is_err(), "{}", s);
+    }
+}
 
 #[test]
 fn test_read_inode_number() {

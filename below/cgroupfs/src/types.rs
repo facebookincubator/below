@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::BTreeSet;
+
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -150,4 +152,16 @@ pub struct MemoryNumaStat {
     pub workingset_restore_anon: Option<u64>,
     pub workingset_restore_file: Option<u64>,
     pub workingset_nodereclaim: Option<u64>,
+}
+
+// We could make this a tuple struct but it'd be better is a regular struct to
+// play well with serde serialization.
+#[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub struct Cpuset {
+    pub cpus: BTreeSet<u32>,
+}
+
+#[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub struct MemNodes {
+    pub nodes: BTreeSet<u32>,
 }
