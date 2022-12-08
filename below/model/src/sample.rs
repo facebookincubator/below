@@ -33,11 +33,22 @@ pub struct CgroupSample {
     pub children: Option<BTreeMap<String, CgroupSample>>,
     pub memory_swap_current: Option<i64>,
     pub memory_zswap_current: Option<i64>,
+    pub memory_low: Option<i64>,
     pub memory_high: Option<i64>,
+    pub memory_max: Option<i64>,
+    pub memory_swap_max: Option<i64>,
+    pub memory_zswap_max: Option<i64>,
     pub memory_events: Option<cgroupfs::MemoryEvents>,
     pub inode_number: Option<i64>,
     pub cgroup_stat: Option<cgroupfs::CgroupStat>,
     pub memory_numa_stat: Option<BTreeMap<u32, cgroupfs::MemoryNumaStat>>,
+    pub cpuset_cpus: Option<cgroupfs::Cpuset>,
+    pub cpuset_cpus_effective: Option<cgroupfs::Cpuset>,
+    pub cpuset_mems: Option<cgroupfs::MemNodes>,
+    pub cpuset_mems_effective: Option<cgroupfs::MemNodes>,
+    pub cpu_weight: Option<u32>,
+    pub cgroup_controllers: Option<BTreeSet<String>>,
+    pub cgroup_subtree_control: Option<BTreeSet<String>>,
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]

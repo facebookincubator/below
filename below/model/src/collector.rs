@@ -383,7 +383,11 @@ fn collect_cgroup_sample(
             .transpose()?,
         memory_swap_current: wrap(reader.read_memory_swap_current().map(|v| v as i64))?,
         memory_zswap_current: wrap(reader.read_memory_zswap_current().map(|v| v as i64))?,
-        memory_high: wrap(reader.read_memory_high())?.map(Into::into),
+        memory_low: wrap(reader.read_memory_low())?,
+        memory_high: wrap(reader.read_memory_high())?,
+        memory_max: wrap(reader.read_memory_max())?,
+        memory_swap_max: wrap(reader.read_memory_swap_max())?,
+        memory_zswap_max: wrap(reader.read_memory_zswap_max())?,
         memory_events: wrap(reader.read_memory_events())?.map(Into::into),
         inode_number: match reader.read_inode_number() {
             Ok(st_ino) => Some(st_ino as i64),
@@ -394,6 +398,13 @@ fn collect_cgroup_sample(
         },
         cgroup_stat: wrap(reader.read_cgroup_stat())?.map(Into::into),
         memory_numa_stat: wrap(reader.read_memory_numa_stat())?.map(Into::into),
+        cpuset_cpus: wrap(reader.read_cpuset_cpus())?,
+        cpuset_cpus_effective: wrap(reader.read_cpuset_cpus_effective())?,
+        cpuset_mems: wrap(reader.read_cpuset_mems())?,
+        cpuset_mems_effective: wrap(reader.read_cpuset_mems_effective())?,
+        cpu_weight: wrap(reader.read_cpu_weight())?,
+        cgroup_controllers: wrap(reader.read_cgroup_controllers())?,
+        cgroup_subtree_control: wrap(reader.read_cgroup_subtree_control())?,
     })
 }
 
