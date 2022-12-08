@@ -261,6 +261,11 @@ impl CgroupReader {
         CgroupStat::read(self)
     }
 
+    /// Read cpu.weight
+    pub fn read_cpu_weight(&self) -> Result<u32> {
+        self.read_singleline_file::<u32>("cpu.weight")
+    }
+
     impl_read_pressure!(
         read_cpu_pressure,
         "cpu",

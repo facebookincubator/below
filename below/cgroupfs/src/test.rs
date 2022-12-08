@@ -133,6 +133,9 @@ singleline_integer_or_max_test!(read_memory_max, "memory.max");
 singleline_integer_or_max_test!(read_memory_swap_max, "memory.swap.max");
 singleline_integer_or_max_test!(read_memory_zswap_max, "memory.zswap.max");
 
+test_success!(read_cpu_weight, "cpu.weight", b"10000\n", 10000);
+test_failure!(read_cpu_weight, "cpu.weight", b"5000000000\n");
+
 #[test]
 fn test_read_inode_number() {
     let cgroup = TestCgroup::new();
