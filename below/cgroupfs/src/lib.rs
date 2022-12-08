@@ -20,6 +20,7 @@ use std::io::BufReader;
 use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use nix::sys::statfs::fstatfs;
 use nix::sys::statfs::CGROUP2_SUPER_MAGIC;
@@ -162,50 +163,54 @@ impl CgroupReader {
         Ok(meta.stat().st_ino as u64)
     }
 
-    /// Read a stat from a file that has a single line
-    fn read_singleline_stat_file(&self, file_name: &str) -> Result<u64> {
+    /// Read a value from a file that has a single line
+    fn read_singleline_file<T: FromStr>(&self, file_name: &str) -> Result<T> {
         let file = self
             .dir
             .open_file(file_name)
             .map_err(|e| self.io_error(file_name, e))?;
         let buf_reader = BufReader::new(file);
-        for line in buf_reader.lines() {
+        if let Some(line) = buf_reader.lines().next() {
             let line = line.map_err(|e| self.io_error(file_name, e))?;
             return line
-                .parse::<u64>()
+                .parse::<T>()
                 .map_err(move |_| self.unexpected_line(file_name, line));
         }
         Err(self.invalid_file_format(file_name))
     }
 
+    /// Read a stat from a file that has a single non-negative integer or "max"
+    /// line. Will return -1 if the context is "max".
+    fn read_singleline_integer_or_max_stat_file(&self, file_name: &str) -> Result<i64> {
+        match self.read_singleline_file::<u64>(file_name) {
+            Ok(v) => Ok(v as i64),
+            Err(Error::UnexpectedLine(_, line)) if line.starts_with("max") => Ok(-1),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Read memory.high - returning memory.high limit in bytes
+    /// Will return -1 if the content is max
+    pub fn read_memory_high(&self) -> Result<i64> {
+        self.read_singleline_integer_or_max_stat_file("memory.high")
+    }
+
     /// Read memory.current - returning current cgroup memory
     /// consumption in bytes
     pub fn read_memory_current(&self) -> Result<u64> {
-        self.read_singleline_stat_file("memory.current")
-    }
-
-    /// Read memory.high - returning memory.high consumption in bytes
-    /// Will return -1 if the content is max
-    /// Will return None if the file is missing
-    pub fn read_memory_high(&self) -> Result<Option<i64>> {
-        match self.read_singleline_stat_file("memory.high") {
-            Ok(v) => Ok(Some(v as i64)),
-            Err(Error::IoError(_, e)) if e.kind() == ErrorKind::NotFound => Ok(None),
-            Err(Error::UnexpectedLine(_, line)) if line.starts_with("max") => Ok(Some(-1)),
-            Err(e) => Err(e),
-        }
+        self.read_singleline_file("memory.current")
     }
 
     /// Read memory.swap.current - returning current cgroup memory
     /// swap consumption in bytes
     pub fn read_memory_swap_current(&self) -> Result<u64> {
-        self.read_singleline_stat_file("memory.swap.current")
+        self.read_singleline_file("memory.swap.current")
     }
 
     /// Read memory.zswap.current - returning current cgroup memory
     /// zswap consumption in bytes
     pub fn read_memory_zswap_current(&self) -> Result<u64> {
-        self.read_singleline_stat_file("memory.zswap.current")
+        self.read_singleline_file("memory.zswap.current")
     }
 
     /// Read cpu.stat - returning assorted cpu consumption statistics

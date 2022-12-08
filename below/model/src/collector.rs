@@ -383,7 +383,7 @@ fn collect_cgroup_sample(
             .transpose()?,
         memory_swap_current: wrap(reader.read_memory_swap_current().map(|v| v as i64))?,
         memory_zswap_current: wrap(reader.read_memory_zswap_current().map(|v| v as i64))?,
-        memory_high: reader.read_memory_high()?.map(Into::into),
+        memory_high: wrap(reader.read_memory_high())?.map(Into::into),
         memory_events: wrap(reader.read_memory_events())?.map(Into::into),
         inode_number: match reader.read_inode_number() {
             Ok(st_ino) => Some(st_ino as i64),
