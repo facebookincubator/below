@@ -39,6 +39,7 @@ impl HasRenderConfig for model::SingleCgroupModel {
             MemNuma(field_id) => {
                 model::CgroupMemoryNumaModel::get_render_config_builder(&field_id.subquery_id)
             }
+            Props(field_id) => model::CgroupProperties::get_render_config_builder(field_id),
         }
     }
 }
@@ -660,6 +661,27 @@ impl HasRenderConfig for model::CgroupMemoryNumaModel {
                 .title("Workingset Nodereclaims")
                 .suffix("/s")
                 .format(Precision(1)),
+        }
+    }
+}
+
+impl HasRenderConfig for model::CgroupProperties {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::CgroupPropertiesFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            CgroupControllers => rc.title("Controllers"),
+            CgroupSubtreeControl => rc.title("SubtreeControl"),
+            MemoryLow => rc.title("Memory Low").format(ReadableSize),
+            MemoryHigh => rc.title("Memory High").format(ReadableSize),
+            MemoryMax => rc.title("Memory Max").format(ReadableSize),
+            MemorySwapMax => rc.title("Memory Swap Max").format(ReadableSize),
+            MemoryZswapMax => rc.title("Memory Zswap Max").format(ReadableSize),
+            CpuWeight => rc.title("CPU Weight").format(ReadableSize),
+            CpusetCpus => rc.title("Allowed CPUs"),
+            CpusetCpusEffective => rc.title("Effective CPUs"),
+            CpusetMems => rc.title("Allowed Mem Nodes"),
+            CpusetMemsEffective => rc.title("Effective Mem Nodes"),
         }
     }
 }

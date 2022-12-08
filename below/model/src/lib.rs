@@ -61,6 +61,9 @@ pub enum Field {
     Str(String),
     PidState(procfs::PidState),
     VecU32(Vec<u32>),
+    StrSet(BTreeSet<String>),
+    Cpuset(cgroupfs::Cpuset),
+    MemNodes(cgroupfs::MemNodes),
 }
 
 impl From<Field> for u64 {
@@ -167,6 +170,24 @@ impl From<Vec<u32>> for Field {
     }
 }
 
+impl From<BTreeSet<String>> for Field {
+    fn from(v: BTreeSet<String>) -> Self {
+        Field::StrSet(v)
+    }
+}
+
+impl From<cgroupfs::Cpuset> for Field {
+    fn from(v: cgroupfs::Cpuset) -> Self {
+        Field::Cpuset(v)
+    }
+}
+
+impl From<cgroupfs::MemNodes> for Field {
+    fn from(v: cgroupfs::MemNodes) -> Self {
+        Field::MemNodes(v)
+    }
+}
+
 impl<T: Into<Field> + Clone> From<&T> for Field {
     fn from(v: &T) -> Self {
         v.clone().into()
@@ -236,6 +257,16 @@ impl fmt::Display for Field {
             Field::Str(v) => v.fmt(f),
             Field::PidState(v) => v.fmt(f),
             Field::VecU32(v) => f.write_fmt(format_args!("{:?}", v)),
+            Field::StrSet(v) => f.write_fmt(format_args!(
+                "{}",
+                v.iter()
+                    .cloned()
+                    .collect::<Vec<String>>()
+                    .as_slice()
+                    .join(" ")
+            )),
+            Field::Cpuset(v) => v.fmt(f),
+            Field::MemNodes(v) => v.fmt(f),
         }
     }
 }

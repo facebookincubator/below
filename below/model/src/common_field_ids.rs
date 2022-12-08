@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 342] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 354] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -131,6 +131,18 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 342] = [
     "cgroup.[path:/<cgroup_path>/.]name",
     "cgroup.[path:/<cgroup_path>/.]full_path",
     "cgroup.[path:/<cgroup_path>/.]inode_number",
+    "cgroup.[path:/<cgroup_path>/.]props.cgroup_controllers",
+    "cgroup.[path:/<cgroup_path>/.]props.cgroup_subtree_control",
+    "cgroup.[path:/<cgroup_path>/.]props.cpu_weight",
+    "cgroup.[path:/<cgroup_path>/.]props.cpuset_cpus",
+    "cgroup.[path:/<cgroup_path>/.]props.cpuset_cpus_effective",
+    "cgroup.[path:/<cgroup_path>/.]props.cpuset_mems",
+    "cgroup.[path:/<cgroup_path>/.]props.cpuset_mems_effective",
+    "cgroup.[path:/<cgroup_path>/.]props.memory_high",
+    "cgroup.[path:/<cgroup_path>/.]props.memory_low",
+    "cgroup.[path:/<cgroup_path>/.]props.memory_max",
+    "cgroup.[path:/<cgroup_path>/.]props.memory_swap_max",
+    "cgroup.[path:/<cgroup_path>/.]props.memory_zswap_max",
     "cgroup.[path:/<cgroup_path>/.]cpu.usage_pct",
     "cgroup.[path:/<cgroup_path>/.]cpu.user_pct",
     "cgroup.[path:/<cgroup_path>/.]cpu.system_pct",

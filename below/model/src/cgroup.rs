@@ -24,6 +24,9 @@ pub struct SingleCgroupModel {
     #[queriable(ignore)]
     pub depth: u32,
     #[queriable(subquery)]
+    #[queriable(preferred_name = props)]
+    pub properties: Option<CgroupProperties>,
+    #[queriable(subquery)]
     pub cpu: Option<CgroupCpuModel>,
     #[queriable(subquery)]
     #[queriable(preferred_name = mem)]
@@ -185,6 +188,7 @@ impl CgroupModel {
                 (None, None) => Some((s, d)),
                 _ => None,
             });
+        let properties = Some(CgroupProperties::new(sample));
         let (cpu, io, io_total, recreate_flag) = if let Some((last, delta)) = last_if_inode_matches
         {
             // We have cumulative data, create cpu, io models
@@ -276,6 +280,7 @@ impl CgroupModel {
                 name,
                 full_path,
                 inode_number: sample.inode_number.map(|ino| ino as u64),
+                properties,
                 cpu,
                 memory,
                 io,
@@ -786,6 +791,51 @@ impl CgroupMemoryNumaModel {
             );
         }
         model
+    }
+}
+
+/// Cgroup properties. Without any cgroup configuration changes, these should
+/// typically be static.
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
+pub struct CgroupProperties {
+    pub cgroup_controllers: Option<BTreeSet<String>>,
+    pub cgroup_subtree_control: Option<BTreeSet<String>>,
+    pub memory_low: Option<i64>,
+    pub memory_high: Option<i64>,
+    pub memory_max: Option<i64>,
+    pub memory_swap_max: Option<i64>,
+    pub memory_zswap_max: Option<i64>,
+    pub cpu_weight: Option<u32>,
+    pub cpuset_cpus: Option<cgroupfs::Cpuset>,
+    pub cpuset_cpus_effective: Option<cgroupfs::Cpuset>,
+    pub cpuset_mems: Option<cgroupfs::MemNodes>,
+    pub cpuset_mems_effective: Option<cgroupfs::MemNodes>,
+}
+
+impl CgroupProperties {
+    pub fn new(sample: &CgroupSample) -> Self {
+        Self {
+            cgroup_controllers: sample.cgroup_controllers.clone(),
+            cgroup_subtree_control: sample.cgroup_subtree_control.clone(),
+            memory_low: sample.memory_low,
+            memory_high: sample.memory_high,
+            memory_max: sample.memory_max,
+            memory_swap_max: sample.memory_swap_max,
+            memory_zswap_max: sample.memory_zswap_max,
+            cpu_weight: sample.cpu_weight,
+            cpuset_cpus: sample.cpuset_cpus.clone(),
+            cpuset_cpus_effective: sample.cpuset_cpus_effective.clone(),
+            cpuset_mems: sample.cpuset_mems.clone(),
+            cpuset_mems_effective: sample.cpuset_mems_effective.clone(),
+        }
     }
 }
 
