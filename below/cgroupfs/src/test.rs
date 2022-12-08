@@ -19,6 +19,7 @@ use std::os::linux::fs::MetadataExt;
 use std::path::Path;
 use std::path::PathBuf;
 
+use paste::paste;
 use tempfile::TempDir;
 
 use crate::CgroupReader;
@@ -67,6 +68,71 @@ impl TestCgroup {
     }
 }
 
+macro_rules! test_success {
+    ($name:ident, $filename:literal, $contents:literal, $expected_val:stmt) => {
+        paste! {
+            #[test]
+            fn [<test_ $name _success>]() {
+                let cgroup = TestCgroup::new();
+                cgroup.create_file_with_content($filename, $contents);
+                let cgroup_reader = cgroup.get_reader();
+                let val = cgroup_reader
+                    .$name()
+                    .expect(concat!("Failed to read ", $filename));
+                assert_eq!(val, {$expected_val});
+            }
+        }
+    };
+}
+
+macro_rules! test_failure {
+    ($name:ident, $filename:literal, $err_contents:literal) => {
+        paste! {
+            #[test]
+            fn [<test_ $name _failure>]() {
+                let cgroup = TestCgroup::new();
+                let cgroup_reader = cgroup.get_reader();
+                let err = cgroup_reader.$name().expect_err(
+                    concat!("Did not fail to read ", $filename));
+                match err {
+                    Error::IoError(_, e)
+                        if e.kind() == std::io::ErrorKind::NotFound => (),
+                    _ => panic!("Got unexpected error type {}", err),
+                };
+                cgroup.create_file_with_content($filename, $err_contents);
+                let val = cgroup_reader.$name();
+                assert!(val.is_err());
+            }
+        }
+    };
+}
+
+macro_rules! singleline_integer_or_max_test {
+    ($name:ident, $filename:literal) => {
+        test_success!($name, $filename, b"1234\n", 1234);
+        test_failure!($name, $filename, b"-1\n");
+
+        paste! {
+            #[test]
+            fn [<test_ $name _max_success>]() {
+                let cgroup = TestCgroup::new();
+                cgroup.create_file_with_content($filename, b"max\n");
+                let cgroup_reader = cgroup.get_reader();
+                let val = cgroup_reader
+                    .$name()
+                    .expect(concat!("Failed to read ", $filename));
+                assert_eq!(val, -1); // -1 means "max"
+            }
+        }
+    };
+}
+
+singleline_integer_or_max_test!(read_memory_low, "memory.low");
+singleline_integer_or_max_test!(read_memory_high, "memory.high");
+singleline_integer_or_max_test!(read_memory_max, "memory.max");
+singleline_integer_or_max_test!(read_memory_swap_max, "memory.swap.max");
+singleline_integer_or_max_test!(read_memory_zswap_max, "memory.zswap.max");
+
 #[test]
 fn test_read_inode_number() {
     let cgroup = TestCgroup::new();
@@ -109,6 +175,7 @@ fn test_memory_current_parse_failure() {
     }
 }
 
+// TODO(brianc118): don't dup test names
 #[test]
 fn test_memory_current_invalid_format() {
     let cgroup = TestCgroup::new();
@@ -146,41 +213,6 @@ fn test_memory_zswap_current_success() {
         .read_memory_zswap_current()
         .expect("Failed to read memory.zswap.current");
     assert_eq!(val, 1234);
-}
-
-#[test]
-fn test_memory_high_success() {
-    let cgroup = TestCgroup::new();
-    cgroup.create_file_with_content("memory.high", b"1234\n");
-
-    let cgroup_reader = cgroup.get_reader();
-    let val = cgroup_reader
-        .read_memory_high()
-        .expect("Failed to read memory.high");
-    assert_eq!(val, 1234);
-}
-
-#[test]
-fn test_memory_high_max_success() {
-    let cgroup = TestCgroup::new();
-    cgroup.create_file_with_content("memory.high", b"max\n");
-
-    let cgroup_reader = cgroup.get_reader();
-    let val = cgroup_reader
-        .read_memory_high()
-        .expect("Failed to read memory.high");
-    assert_eq!(val, -1);
-}
-
-#[test]
-fn test_memory_high_failure() {
-    let cgroup = TestCgroup::new();
-    let cgroup_reader = cgroup.get_reader();
-    assert!(cgroup_reader.read_memory_high().is_err());
-
-    cgroup.create_file_with_content("memory.high", b"-1\n");
-    let val = cgroup_reader.read_memory_high();
-    assert!(val.is_err());
 }
 
 #[test]

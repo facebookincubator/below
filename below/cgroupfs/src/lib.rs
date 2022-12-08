@@ -189,10 +189,34 @@ impl CgroupReader {
         }
     }
 
+    /// Read memory.low - returning memory.low limit in bytes
+    /// Will return -1 if the content is max
+    pub fn read_memory_low(&self) -> Result<i64> {
+        self.read_singleline_integer_or_max_stat_file("memory.low")
+    }
+
     /// Read memory.high - returning memory.high limit in bytes
     /// Will return -1 if the content is max
     pub fn read_memory_high(&self) -> Result<i64> {
         self.read_singleline_integer_or_max_stat_file("memory.high")
+    }
+
+    /// Read memory.max - returning memory.max max in bytes
+    /// Will return -1 if the content is max
+    pub fn read_memory_max(&self) -> Result<i64> {
+        self.read_singleline_integer_or_max_stat_file("memory.max")
+    }
+
+    /// Read memory.swap.max - returning memory.swap.max max in bytes
+    /// Will return -1 if the content is max
+    pub fn read_memory_swap_max(&self) -> Result<i64> {
+        self.read_singleline_integer_or_max_stat_file("memory.swap.max")
+    }
+
+    /// Read memory.zswap.max - returning memory.zswap.max max in bytes
+    /// Will return -1 if the content is max
+    pub fn read_memory_zswap_max(&self) -> Result<i64> {
+        self.read_singleline_integer_or_max_stat_file("memory.zswap.max")
     }
 
     /// Read memory.current - returning current cgroup memory
