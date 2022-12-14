@@ -73,6 +73,15 @@ sudo rc-service below start
 sudo rc-update add below
 ```
 
+### Gentoo Linux
+`below` is available in the
+[`sys-process/below`](https://packages.gentoo.org/packages/sys-process/below)
+package and can be installed with `emerge`:
+
+```shell
+sudo emerge sys-process/below
+```
+
 ## Installing from source
 
 First, install dependencies listed in [building.md](docs/building.md).
