@@ -705,8 +705,9 @@ impl ProcReader {
         let path = path.as_ref().to_owned();
         let (tx, rx) = channel();
         self.threadpool.execute(move || {
-            tx.send(Self::read_pid_cmdline_from_path_blocking(path))
-                .expect("cmdline receiver hung up");
+            // This is OK to ignore. cmdline receiver hanging up is expected
+            // after timeout.
+            let _ = tx.send(Self::read_pid_cmdline_from_path_blocking(path));
         });
 
         // 20ms should be more than enough for an in-memory procfs read and also high enough for a
