@@ -670,14 +670,15 @@ impl HasRenderConfig for model::CgroupProperties {
         use model::CgroupPropertiesFieldId::*;
         let rc = RenderConfigBuilder::new();
         match field_id {
-            CgroupControllers => rc.title("Controllers"),
-            CgroupSubtreeControl => rc.title("SubtreeControl"),
-            MemoryLow => rc.title("Memory Low").format(ReadableSize),
-            MemoryHigh => rc.title("Memory High").format(ReadableSize),
-            MemoryMax => rc.title("Memory Max").format(ReadableSize),
-            MemorySwapMax => rc.title("Memory Swap Max").format(ReadableSize),
-            MemoryZswapMax => rc.title("Memory Zswap Max").format(ReadableSize),
-            CpuWeight => rc.title("CPU Weight").format(ReadableSize),
+            // "cpu cpuset hugetlb io memory pids" is 33 chars
+            CgroupControllers => rc.title("Controllers").width(35),
+            CgroupSubtreeControl => rc.title("SubtreeControl").width(35),
+            MemoryLow => rc.title("Mem Low").format(MaxOrReadableSize),
+            MemoryHigh => rc.title("Mem High").format(MaxOrReadableSize),
+            MemoryMax => rc.title("Mem Max").format(MaxOrReadableSize),
+            MemorySwapMax => rc.title("Swap Max").format(MaxOrReadableSize),
+            MemoryZswapMax => rc.title("Zswap Max").format(MaxOrReadableSize),
+            CpuWeight => rc.title("CPU Weight"),
             CpusetCpus => rc.title("Allowed CPUs"),
             CpusetCpusEffective => rc.title("Effective CPUs"),
             CpusetMems => rc.title("Allowed Mem Nodes"),

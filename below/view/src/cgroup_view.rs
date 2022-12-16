@@ -36,6 +36,7 @@ use crate::cgroup_tabs::default_tabs::CGROUP_GENERAL_TAB;
 use crate::cgroup_tabs::default_tabs::CGROUP_IO_TAB;
 use crate::cgroup_tabs::default_tabs::CGROUP_MEM_TAB;
 use crate::cgroup_tabs::default_tabs::CGROUP_PRESSURE_TAB;
+use crate::cgroup_tabs::default_tabs::CGROUP_PROPERTIES_TAB;
 use crate::cgroup_tabs::CgroupTab;
 use crate::stats_view::ColumnTitles;
 use crate::stats_view::StateCommon;
@@ -148,6 +149,7 @@ impl StateCommon for CgroupState {
         sort_tags.insert("Mem".into(), &*CGROUP_MEM_TAB);
         sort_tags.insert("I/O".into(), &*CGROUP_IO_TAB);
         sort_tags.insert("Pressure".into(), &*CGROUP_PRESSURE_TAB);
+        sort_tags.insert("Properties".into(), &*CGROUP_PROPERTIES_TAB);
         Self {
             collapsed_cgroups: Rc::new(RefCell::new(HashSet::new())),
             current_selected_cgroup: "<root>".into(),
@@ -248,6 +250,7 @@ impl CgroupView {
             "Mem".into(),
             "I/O".into(),
             "Pressure".into(),
+            "Properties".into(),
         ];
         let mut tabs_map: HashMap<String, CgroupView> = HashMap::new();
         tabs_map.insert(
@@ -278,6 +281,12 @@ impl CgroupView {
             "Pressure".into(),
             CgroupView {
                 tab: &*CGROUP_PRESSURE_TAB,
+            },
+        );
+        tabs_map.insert(
+            "Properties".into(),
+            CgroupView {
+                tab: &*CGROUP_PROPERTIES_TAB,
             },
         );
         let user_data = c

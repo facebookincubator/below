@@ -276,6 +276,15 @@ pub mod default_tabs {
     use model::CgroupPressureModelFieldId::IoSomePct;
     use model::CgroupPressureModelFieldId::MemoryFullPct;
     use model::CgroupPressureModelFieldId::MemorySomePct;
+    use model::CgroupPropertiesFieldId::CgroupControllers;
+    use model::CgroupPropertiesFieldId::CpuWeight;
+    use model::CgroupPropertiesFieldId::CpusetCpus;
+    use model::CgroupPropertiesFieldId::CpusetCpusEffective;
+    use model::CgroupPropertiesFieldId::MemoryHigh;
+    use model::CgroupPropertiesFieldId::MemoryLow;
+    use model::CgroupPropertiesFieldId::MemoryMax;
+    use model::CgroupPropertiesFieldId::MemorySwapMax;
+    use model::CgroupPropertiesFieldId::MemoryZswapMax;
     use model::CgroupStatModelFieldId::NrDescendants;
     use model::CgroupStatModelFieldId::NrDyingDescendants;
     use model::SingleCgroupModelFieldId::CgroupStat;
@@ -284,6 +293,7 @@ pub mod default_tabs {
     use model::SingleCgroupModelFieldId::Mem;
     use model::SingleCgroupModelFieldId::Name;
     use model::SingleCgroupModelFieldId::Pressure;
+    use model::SingleCgroupModelFieldId::Props;
     use once_cell::sync::Lazy;
 
     use super::*;
@@ -388,6 +398,20 @@ pub mod default_tabs {
             ViewItem::from_default(Pressure(MemoryFullPct)),
             ViewItem::from_default(Pressure(IoSomePct)),
             ViewItem::from_default(Pressure(IoFullPct)),
+        ])
+    });
+
+    pub static CGROUP_PROPERTIES_TAB: Lazy<CgroupTab> = Lazy::new(|| {
+        CgroupTab::new(vec![
+            ViewItem::from_default(Props(MemoryLow)),
+            ViewItem::from_default(Props(MemoryHigh)),
+            ViewItem::from_default(Props(MemoryMax)),
+            ViewItem::from_default(Props(MemorySwapMax)),
+            ViewItem::from_default(Props(MemoryZswapMax)),
+            ViewItem::from_default(Props(CpuWeight)),
+            ViewItem::from_default(Props(CpusetCpus)),
+            ViewItem::from_default(Props(CpusetCpusEffective)),
+            ViewItem::from_default(Props(CgroupControllers)),
         ])
     });
 }
