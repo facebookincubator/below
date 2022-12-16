@@ -84,10 +84,10 @@ impl HasRenderConfig for model::CgroupMemoryModel {
         use model::CgroupMemoryModelFieldId::*;
         let rc = RenderConfigBuilder::new();
         match field_id {
-            Total => rc.title("Memory").format(ReadableSize),
-            Swap => rc.title("Memory Swap").format(ReadableSize),
-            Zswap => rc.title("Memory Zswap").format(ReadableSize),
-            MemoryHigh => rc.title("Memory High").format(MaxOrReadableSize),
+            Total => rc.title("Mem").format(ReadableSize),
+            Swap => rc.title("Mem Swap").format(ReadableSize),
+            Zswap => rc.title("Mem Zswap").format(ReadableSize),
+            MemoryHigh => rc.title("Mem High").format(MaxOrReadableSize),
             EventsLow => rc.title("Events Low"),
             EventsHigh => rc.title("Events High"),
             EventsMax => rc.title("Events Max"),

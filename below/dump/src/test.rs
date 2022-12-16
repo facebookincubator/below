@@ -511,7 +511,7 @@ fn test_dump_cgroup_titles() {
         "Pglazyfreed",
         "THP Fault Alloc",
         "THP Collapse Alloc",
-        "Memory High",
+        "Mem High",
         "Events Low",
         "Events High",
         "Events Max",
@@ -532,8 +532,8 @@ fn test_dump_cgroup_titles() {
         "CPU Pressure",
         "I/O Some Pressure",
         "I/O Pressure",
-        "Memory Some Pressure",
-        "Memory Pressure",
+        "Mem Some Pressure",
+        "Mem Pressure",
     ];
     assert_eq!(titles, expected_titles);
 }

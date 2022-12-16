@@ -100,8 +100,8 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
             Mem(Pglazyfreed) => rc.title("Pglazyfreed"),
             Mem(ThpFaultAlloc) => rc.title("THP Fault Alloc"),
             Mem(ThpCollapseAlloc) => rc.title("THP Collapse Alloc"),
-            Pressure(MemorySomePct) => rc.title("Memory Some Pressure"),
-            Pressure(MemoryFullPct) => rc.title("Memory Pressure"),
+            Pressure(MemorySomePct) => rc.title("Mem Some Pressure"),
+            Pressure(MemoryFullPct) => rc.title("Mem Pressure"),
             _ => rc,
         }
         .get()
