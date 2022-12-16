@@ -67,7 +67,7 @@ fn get_description(controller: &Controllers) -> &'static str {
         Controllers::SortCol => {
             "Sort by the selected title, reverse the result by hitting 'S' again(cgroup view and process view only)."
         }
-        Controllers::Filter => "Filter by name.",
+        Controllers::Filter => "Filter by selected column.",
         Controllers::CFilter => "Clear the current filter.",
         Controllers::JForward => {
             "Jump time by a specific amount forward or to a specific timestamp (replay and live-paused mode)."
@@ -102,7 +102,7 @@ fn get_description(controller: &Controllers) -> &'static str {
 fn get_args(controller: &Controllers) -> &'static str {
     match controller {
         Controllers::SortCol => "SortKey",
-        Controllers::Filter => "Name",
+        Controllers::Filter => "Substring",
         Controllers::JForward => "Time",
         Controllers::JBackward => "Time",
         _ => "-",
