@@ -399,3 +399,33 @@ make_event_controller!(
         StatsView::<T>::refresh_myself(c);
     }
 );
+
+make_event_controller!(
+    NextSelectionImpl,
+    "next_selection",
+    "ns",
+    Event::CtrlChar('n'),
+    |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        {
+            let mut view = StatsView::<T>::get_view(c);
+            view.get_detail_view().select_down(1)(c);
+        }
+        StatsView::<T>::refresh_myself(c);
+    }
+);
+
+make_event_controller!(
+    PrevSelectionImpl,
+    "prev_selection",
+    "ps",
+    Event::CtrlChar('p'),
+    |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        {
+            let mut view = StatsView::<T>::get_view(c);
+            view.get_detail_view().select_up(1)(c);
+        }
+        StatsView::<T>::refresh_myself(c);
+    }
+);

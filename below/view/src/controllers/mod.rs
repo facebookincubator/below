@@ -133,5 +133,7 @@ make_controllers!(
     Fold: FoldProcessView,
     NextPage: NextPageImpl,
     PrevPage: PrevPageImpl,
+    NextSelection: NextSelectionImpl,
+    PrevSelection: PrevSelectionImpl,
     Url: URLPopup,
 );
