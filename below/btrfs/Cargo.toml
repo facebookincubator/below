@@ -2,7 +2,7 @@
 
 [package]
 name = "below-btrfs"
-version = "0.6.2"
+version = "0.6.3"
 authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
 edition = "2021"
 description = "A crate for reading btrfs"
@@ -11,7 +11,7 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
-common = { package = "below-common", version = "0.6.2", path = "../common" }
+common = { package = "below-common", version = "0.6.3", path = "../common" }
 libc = "0.2.137"
 nix = "0.25"
 openat = "0.1.21"
