@@ -22,6 +22,8 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /rustup.sh
 RUN chmod +x /rustup.sh
 RUN bash /rustup.sh -y
 
+ENV PATH=$PATH:/root/.cargo/bin
+
 ADD . /below
 # Build below
 WORKDIR below
