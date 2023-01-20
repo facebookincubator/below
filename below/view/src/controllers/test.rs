@@ -91,7 +91,7 @@ url = 'n'
     );
     assert_eq!(
         event_controllers.get(&Event::Char('u')),
-        Some(&Controllers::Filter)
+        Some(&Controllers::Url)
     );
     assert_eq!(
         event_controllers.get(&Event::Char('v')),
@@ -151,7 +151,7 @@ url = 'n'
     );
     assert_eq!(
         event_controllers.get(&Event::Char('n')),
-        Some(&Controllers::Url)
+        None
     );
 }
 
