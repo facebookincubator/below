@@ -225,7 +225,8 @@ pub fn set_active_screen(c: &mut Cursive, name: &str) {
                 .get_mut()
                 .screen_mut()
                 .unwrap()
-                .take_focus(cursive::direction::Direction::none());
+                .take_focus(cursive::direction::Direction::none())
+                .ok();
         },
     )
     .expect("failed to find main_view_screens");
