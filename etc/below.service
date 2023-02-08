@@ -3,7 +3,7 @@ Description=below system monitor recording daemon
 After=time-sync.target
 
 [Service]
-ExecStart=/bin/below record --retain-for-s 604800 --compress
+ExecStart=/usr/bin/below record --retain-for-s 604800 --compress
 # Enable backtraces in errors
 Environment=RUST_LIB_BACKTRACE=1
 Restart=always
