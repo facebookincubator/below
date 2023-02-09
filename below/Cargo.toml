@@ -48,7 +48,3 @@ libbpf-cargo = "0.13.1"
 [features]
 enable_backtrace = []
 no-vendor = ["libbpf-cargo/novendor", "libbpf-rs/novendor", "store/no-vendor"]
-
-[package.metadata.deb]
-depends = "libelf1, libncursesw5, zlib1g"
-systemd-units = { unit-name = "below", unit-scripts = "../etc" }
