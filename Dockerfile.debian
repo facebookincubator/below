@@ -1,0 +1,41 @@
+ARG RELEASE=18.04
+FROM ubuntu:${RELEASE} AS build
+
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y \
+  build-essential \
+  ca-certificates \
+  curl \
+  git \
+  libelf-dev \
+  libncursesw5-dev \
+  libssl-dev \
+  m4 \
+  pkg-config \
+  python3 \
+  zlib1g-dev
+
+WORKDIR /
+
+# Install rustup
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /rustup.sh
+RUN chmod +x /rustup.sh
+RUN bash /rustup.sh -y
+
+# Install cargo-deb to do packaging
+RUN /root/.cargo/bin/cargo install cargo-deb
+
+# Install newer LLVM
+RUN apt-get install -y software-properties-common wget
+RUN echo | add-apt-repository ppa:ubuntu-toolchain-r/test      && \
+  wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh            && \
+  chmod +x /tmp/llvm.sh                                        && \
+  /tmp/llvm.sh 14
+
+# Add new llvm to $PATH
+ENV PATH="$PATH:/usr/lib/llvm-14/bin"
+
+ADD . /below
+# Build below
+WORKDIR below/below
+RUN /root/.cargo/bin/cargo deb
