@@ -9,12 +9,14 @@ Below is expecting a `toml` configuration file to define its `log` and `store` p
 log_dir = "/var/log/below"
 store_dir = "/var/log/below/store"
 cgroup_filter_out = "user.slice.*"
+cgroup_root = "/sys/fs/cgroup/unified"
 ```
 
 ## Attributes
 * `log_dir` -- Takes a string path and uses as the logging directory, default to `/var/log/below`.
 * `store_dir` -- Takes a string path and uses as the store directory, default to `/var/log/below/store`.
 * `cgroup_filter_out` -- Takes a regex string and below will no longer collect cgroup data if cgroup full path match the regex.
+* `cgroup_root` -- Path to cgroup2 mountpoint, defaults to `/sys/fs/cgroup`.
 
 ## To override the default value
 1. Edit `/etc/below/below.conf` with desired value.
