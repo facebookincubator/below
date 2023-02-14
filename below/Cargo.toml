@@ -17,7 +17,7 @@ clap = { version = "3.2.23", features = ["derive", "env", "regex", "unicode", "w
 clap_complete = "3.0.4"
 common = { package = "below-common", version = "0.6.3", path = "common" }
 config = { package = "below-config", version = "0.6.3", path = "config" }
-cursive = { version = "0.19.0", features = ["crossterm-backend"], default-features = false }
+cursive = { version = "0.20.0", features = ["crossterm-backend"], default-features = false }
 dump = { package = "below-dump", version = "0.6.3", path = "dump" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 indicatif = { version = "0.17.1", features = ["improved_unicode", "rayon", "tokio"] }
