@@ -83,6 +83,8 @@ mod render_impl {
     /// Need 10 chars for each field b/c each value has up to 4 significant digits
     /// with a dot, a space, 4 chars for units
     const ROW_FIELD_WIDTH_HALVED: usize = 10;
+    /// Maximum number of I/O devices to display
+    const MAX_IO_DEVICES: usize = 5;
 
     pub fn render_row<T: Queriable>(
         name: &'static str,
@@ -105,16 +107,24 @@ mod render_impl {
         read_item: ViewItem<T::FieldId>,
         write_item: ViewItem<T::FieldId>,
     ) -> StyledString {
+        let mut count = 0;
         let read_item = read_item.update(Rc::new().width(ROW_FIELD_WIDTH_HALVED));
         let write_item = write_item.update(Rc::new().width(ROW_FIELD_WIDTH_HALVED));
 
         let mut row = StyledString::new();
         row.append(base_render::get_fixed_width(name, ROW_NAME_WIDTH));
         for (name, model) in models {
+            if count >= MAX_IO_DEVICES {
+                row.append(base_render::get_fixed_width(name, ROW_FIELD_NAME_WIDTH));
+                row.append_plain("[...]");
+                break;
+            }
+
             row.append(base_render::get_fixed_width(name, ROW_FIELD_NAME_WIDTH));
             row.append(read_item.render(model));
             row.append_plain("|");
             row.append(write_item.render(model));
+            count += 1;
         }
         row
     }
