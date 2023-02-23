@@ -1456,7 +1456,7 @@ fn snapshot(
         .with_context(|| format!("Failed to create snapshot file {:?}", &tarball_name))?;
     // Create a new tarball with the snapshot dir name
     let mut tar = TarBuilder::new(file);
-    tar.append_dir_all(tarball_name, snapshot_store_path.as_path())
+    tar.append_dir_all("store", snapshot_store_path.as_path())
         .context("Failed to add snapshot store to tar builder")?;
     tar.finish()
         .context("Failed to build compressed snapshot file.")?;
