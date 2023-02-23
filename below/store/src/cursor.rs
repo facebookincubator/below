@@ -22,8 +22,8 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
-use memmap::Mmap;
-use memmap::MmapOptions;
+use memmap2::Mmap;
+use memmap2::MmapOptions;
 use slog::warn;
 use slog::Logger;
 
