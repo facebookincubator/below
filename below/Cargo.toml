@@ -10,6 +10,15 @@ readme = "../README.md"
 repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
+[package.metadata]
+
+[package.metadata.deb]
+depends = "libelf1, libncursesw5, zlib1g"
+
+[package.metadata.deb.systemd-units]
+unit-name = "below"
+unit-scripts = "../etc"
+
 [dependencies]
 anyhow = "1.0.65"
 cgroupfs = { version = "0.6.3", path = "cgroupfs" }
