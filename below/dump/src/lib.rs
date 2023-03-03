@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::fs;
 use std::fs::File;
 use std::io;
 use std::io::Write;
@@ -20,9 +21,7 @@ use std::str::FromStr;
 use std::sync::mpsc::Receiver;
 use std::time::SystemTime;
 
-use anyhow::bail;
-use anyhow::Error;
-use anyhow::Result;
+use anyhow::{bail, Context, Error, Result};
 use common::cliutil;
 use common::util::get_belowrc_dump_section_key;
 use common::util::get_belowrc_filename;
@@ -37,6 +36,8 @@ use store::advance::new_advance_local;
 use store::advance::new_advance_remote;
 use store::Advance;
 use store::Direction;
+use tar::Archive;
+use tempdir::TempDir;
 use toml::value::Value as TValue;
 
 pub mod btrfs;
@@ -117,6 +118,7 @@ fn get_advance(
     dir: PathBuf,
     host: Option<String>,
     port: Option<u16>,
+    snapshot: Option<String>,
     opts: &command::GeneralOpt,
 ) -> Result<(SystemTime, SystemTime, Advance)> {
     let (time_begin, time_end) = cliutil::system_time_range_from_date_and_adjuster(
@@ -126,10 +128,23 @@ fn get_advance(
         opts.yesterdays.as_deref(),
     )?;
 
-    let mut advance = if let Some(host) = host {
-        new_advance_remote(logger.clone(), host, port, time_begin)?
-    } else {
-        new_advance_local(logger.clone(), dir, time_begin)
+    let mut advance = match (host, snapshot) {
+        (None, None) => new_advance_local(logger.clone(), dir, time_begin),
+        (Some(host), None) => new_advance_remote(logger.clone(), host, port, time_begin)?,
+        (None, Some(snapshot)) => {
+            let mut tarball =
+                Archive::new(fs::File::open(&snapshot).context("Failed to open snapshot file")?);
+            let mut snapshot_dir = TempDir::new("snapshot_replay")?.into_path();
+            tarball.unpack(&snapshot_dir)?;
+            // Find and append the name of the original snapshot directory
+            for path in fs::read_dir(&snapshot_dir)? {
+                snapshot_dir.push(path.unwrap().file_name());
+            }
+            new_advance_local(logger.clone(), snapshot_dir, time_begin)
+        }
+        (Some(_), Some(_)) => {
+            bail!("--host and --snapshot are incompatible options")
+        }
     };
 
     advance.initialize();
@@ -195,6 +210,7 @@ pub fn run(
     dir: PathBuf,
     host: Option<String>,
     port: Option<u16>,
+    snapshot: Option<String>,
     cmd: DumpCommand,
 ) -> Result<()> {
     let filename = get_belowrc_filename();
@@ -205,7 +221,8 @@ pub fn run(
             opts,
             pattern,
         } => {
-            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) =
+                get_advance(logger, dir, host, port, snapshot, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
@@ -242,7 +259,8 @@ pub fn run(
             select,
             pattern,
         } => {
-            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) =
+                get_advance(logger, dir, host, port, snapshot, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
@@ -279,7 +297,8 @@ pub fn run(
             select,
             pattern,
         } => {
-            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) =
+                get_advance(logger, dir, host, port, snapshot, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
@@ -316,7 +335,8 @@ pub fn run(
             select,
             pattern,
         } => {
-            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) =
+                get_advance(logger, dir, host, port, snapshot, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
@@ -353,7 +373,8 @@ pub fn run(
             select,
             pattern,
         } => {
-            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) =
+                get_advance(logger, dir, host, port, snapshot, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
@@ -390,7 +411,8 @@ pub fn run(
             select,
             pattern,
         } => {
-            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) =
+                get_advance(logger, dir, host, port, snapshot, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
@@ -426,7 +448,8 @@ pub fn run(
             opts,
             pattern,
         } => {
-            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) =
+                get_advance(logger, dir, host, port, snapshot, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
@@ -462,7 +485,8 @@ pub fn run(
             opts,
             pattern,
         } => {
-            let (time_begin, time_end, advance) = get_advance(logger, dir, host, port, &opts)?;
+            let (time_begin, time_end, advance) =
+                get_advance(logger, dir, host, port, snapshot, &opts)?;
             let default = opts.everything || opts.default;
             let detail = opts.everything || opts.detail;
             let fields = if let Some(pattern_key) = pattern {
