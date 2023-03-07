@@ -58,6 +58,7 @@ impl ProcessModel {
 pub struct SingleProcessModel {
     pub pid: Option<i32>,
     pub ppid: Option<i32>,
+    pub ns_tgid: Option<Vec<u32>>,
     pub comm: Option<String>,
     pub state: Option<procfs::PidState>,
     pub uptime_secs: Option<u64>,
@@ -80,6 +81,12 @@ impl SingleProcessModel {
         SingleProcessModel {
             pid: sample.stat.pid,
             ppid: sample.stat.ppid,
+            ns_tgid: sample
+                .status
+                .ns_tgid
+                .as_ref()
+                // Skip the first item as it is always the same as pid
+                .map(|v| v.iter().skip(1).cloned().collect()),
             comm: sample.stat.comm.clone(),
             state: sample.stat.state.clone(),
             uptime_secs: sample.stat.running_secs.map(|s| s as u64),
@@ -102,6 +109,7 @@ impl SingleProcessModel {
         SingleProcessModel {
             pid: None,
             ppid: None,
+            ns_tgid: None,
             comm: None,
             state: None,
             // 80% sure it should be None here. Don't know what someone can infer from summed uptime

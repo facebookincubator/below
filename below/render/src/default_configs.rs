@@ -355,6 +355,7 @@ impl HasRenderConfig for model::SingleProcessModel {
         match field_id {
             Pid => rc.title("Pid"),
             Ppid => rc.title("Ppid"),
+            NsTgid => rc.title("NStgid").width(12),
             Comm => rc.title("Comm").width(30),
             State => rc.title("State"),
             UptimeSecs => rc.title("Uptime(sec)"),

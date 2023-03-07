@@ -164,6 +164,7 @@ pub mod default_tabs {
     use model::SingleProcessModelFieldId::Cpu;
     use model::SingleProcessModelFieldId::Io;
     use model::SingleProcessModelFieldId::Mem;
+    use model::SingleProcessModelFieldId::NsTgid;
     use model::SingleProcessModelFieldId::Pid;
     use model::SingleProcessModelFieldId::Ppid;
     use model::SingleProcessModelFieldId::State;
@@ -180,6 +181,7 @@ pub mod default_tabs {
         ProcessTab::new(vec![
             ViewItem::from_default(Pid),
             ViewItem::from_default(Ppid),
+            ViewItem::from_default(NsTgid),
             ViewItem::from_default(State),
             ViewItem::from_default(Cpu(UsagePct)),
             ViewItem::from_default(Cpu(UserPct)),

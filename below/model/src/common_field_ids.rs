@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 354] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 355] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -248,6 +248,7 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 354] = [
     "cgroup.[path:/<cgroup_path>/.]mem_numa.<key>.workingset_nodereclaim",
     "process.processes.<key>.pid",
     "process.processes.<key>.ppid",
+    "process.processes.<key>.ns_tgid",
     "process.processes.<key>.comm",
     "process.processes.<key>.state",
     "process.processes.<key>.uptime_secs",
