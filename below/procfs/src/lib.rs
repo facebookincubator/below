@@ -567,38 +567,42 @@ impl ProcReader {
         self.read_pid_stat_from_path(p)
     }
 
-    fn read_pid_mem_from_path<P: AsRef<Path>>(&self, path: P) -> Result<PidMem> {
+    fn read_pid_status_from_path<P: AsRef<Path>>(&self, path: P) -> Result<PidStatus> {
         let path = path.as_ref().join("status");
 
         let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
         let buf_reader = BufReader::new(file);
-        let mut pidmem: PidMem = Default::default();
+        let mut pidstatus: PidStatus = Default::default();
 
         for line in buf_reader.lines() {
             let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
 
-            let mut items = line.split_whitespace();
+            let mut items = line.split(':');
             if let Some(item) = items.next() {
+                let mut values = items.flat_map(|s| s.split_whitespace());
                 match item {
-                    "VmSize:" => pidmem.vm_size = parse_kb!(path, items.next(), line)?,
-                    "VmLck:" => pidmem.lock = parse_kb!(path, items.next(), line)?,
-                    "VmPin:" => pidmem.pin = parse_kb!(path, items.next(), line)?,
-                    "RssAnon:" => pidmem.anon = parse_kb!(path, items.next(), line)?,
-                    "RssFile:" => pidmem.file = parse_kb!(path, items.next(), line)?,
-                    "RssShmem:" => pidmem.shmem = parse_kb!(path, items.next(), line)?,
-                    "VmPTE:" => pidmem.pte = parse_kb!(path, items.next(), line)?,
-                    "VmSwap:" => pidmem.swap = parse_kb!(path, items.next(), line)?,
-                    "HugetlbPages:" => pidmem.huge_tlb = parse_kb!(path, items.next(), line)?,
+                    "NStgid" => {
+                        pidstatus.ns_tgid = Some(values.filter_map(|s| s.parse().ok()).collect());
+                    }
+                    "VmSize" => pidstatus.vm_size = parse_kb!(path, values.next(), line)?,
+                    "VmLck" => pidstatus.lock = parse_kb!(path, values.next(), line)?,
+                    "VmPin" => pidstatus.pin = parse_kb!(path, values.next(), line)?,
+                    "RssAnon" => pidstatus.anon = parse_kb!(path, values.next(), line)?,
+                    "RssFile" => pidstatus.file = parse_kb!(path, values.next(), line)?,
+                    "RssShmem" => pidstatus.shmem = parse_kb!(path, values.next(), line)?,
+                    "VmPTE" => pidstatus.pte = parse_kb!(path, values.next(), line)?,
+                    "VmSwap" => pidstatus.swap = parse_kb!(path, values.next(), line)?,
+                    "HugetlbPages" => pidstatus.huge_tlb = parse_kb!(path, values.next(), line)?,
                     _ => {}
                 }
             }
         }
 
-        Ok(pidmem)
+        Ok(pidstatus)
     }
 
-    pub fn read_pid_mem(&self, pid: u32) -> Result<PidMem> {
-        self.read_pid_mem_from_path(self.path.join(pid.to_string()))
+    pub fn read_pid_mem(&self, pid: u32) -> Result<PidStatus> {
+        self.read_pid_status_from_path(self.path.join(pid.to_string()))
     }
 
     fn read_pid_io_from_path<P: AsRef<Path>>(path: P) -> Result<PidIo> {
@@ -772,14 +776,14 @@ impl ProcReader {
                 res => pidinfo.stat = res?,
             }
 
-            match self.read_pid_mem_from_path(entry.path()) {
+            match self.read_pid_status_from_path(entry.path()) {
                 Err(Error::IoError(_, ref e))
                     if e.raw_os_error()
                         .map_or(false, |ec| ec == 2 || ec == 3 /* ENOENT or ESRCH */) =>
                 {
                     continue;
                 }
-                res => pidinfo.mem = res?,
+                res => pidinfo.status = res?,
             }
 
             match Self::read_pid_io_from_path(entry.path()) {

@@ -200,16 +200,16 @@ impl ProcessMemoryModel {
         ProcessMemoryModel {
             minorfaults_per_sec: count_per_sec!(begin.stat.minflt, end.stat.minflt, delta),
             majorfaults_per_sec: count_per_sec!(begin.stat.majflt, end.stat.majflt, delta),
-            rss_bytes: end.stat.rss_bytes.map(|i| i as u64),
-            vm_size: end.mem.vm_size.map(|i| i as u64),
-            lock: end.mem.lock.map(|i| i as u64),
-            pin: end.mem.pin.map(|i| i as u64),
-            anon: end.mem.anon.map(|i| i as u64),
-            file: end.mem.file.map(|i| i as u64),
-            shmem: end.mem.shmem.map(|i| i as u64),
-            pte: end.mem.pte.map(|i| i as u64),
-            swap: end.mem.swap.map(|i| i as u64),
-            huge_tlb: end.mem.huge_tlb.map(|i| i as u64),
+            rss_bytes: end.stat.rss_bytes,
+            vm_size: end.status.vm_size,
+            lock: end.status.lock,
+            pin: end.status.pin,
+            anon: end.status.anon,
+            file: end.status.file,
+            shmem: end.status.shmem,
+            pte: end.status.pte,
+            swap: end.status.swap,
+            huge_tlb: end.status.huge_tlb,
         }
     }
 

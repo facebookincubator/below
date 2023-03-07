@@ -338,7 +338,8 @@ pub struct PidStat {
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct PidMem {
+pub struct PidStatus {
+    pub ns_tgid: Option<Vec<u32>>,
     pub vm_size: Option<u64>,
     pub lock: Option<u64>,
     pub pin: Option<u64>,
@@ -364,7 +365,10 @@ pub struct PidInfo {
     // Optional b/c cmdline may be sanitized or redacted based on security policy
     pub cmdline_vec: Option<Vec<String>>,
     pub exe_path: Option<String>,
-    pub mem: PidMem,
+    // TODO: Remove alias
+    // This field was previously called "mem"
+    #[serde(alias = "mem")]
+    pub status: PidStatus,
 }
 
 pub type PidMap = BTreeMap<i32, PidInfo>;

@@ -705,7 +705,7 @@ fn test_pid_stat() {
 }
 
 #[test]
-fn test_pid_mem() {
+fn test_pid_status() {
     let status = b"Name:	below
 Umask:	0022
 State:	S (sleeping)
@@ -769,6 +769,7 @@ nonvoluntary_ctxt_switches:	37733";
         .read_pid_mem(93041)
         .expect("Failed to read pid status file");
 
+    assert_eq!(pidmem.ns_tgid, Some(vec![93041]));
     assert_eq!(pidmem.vm_size, Some(1_381_532 * 1024));
     assert_eq!(pidmem.lock, Some(4 * 1024));
     assert_eq!(pidmem.pin, Some(6240 * 1024));
