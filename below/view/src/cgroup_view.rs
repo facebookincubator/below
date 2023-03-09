@@ -29,6 +29,7 @@ use model::CgroupCpuModelFieldId;
 use model::CgroupIoModelFieldId;
 use model::CgroupMemoryModelFieldId;
 use model::CgroupModel;
+use model::Queriable;
 use model::SingleCgroupModelFieldId;
 
 use crate::cgroup_tabs::default_tabs::CGROUP_CPU_TAB;
@@ -379,7 +380,27 @@ impl ViewBridge for CgroupView {
         state.current_selected_cgroup = selected_key.cloned().unwrap_or_default();
     }
 
-    fn on_select_update_cmd_palette(_view: &Self::StateType, selected_key: &String) -> String {
-        selected_key.clone()
+    fn on_select_update_cmd_palette(
+        view: &Self::StateType,
+        selected_key: &String,
+        current_tab: &str,
+        selected_column: usize,
+    ) -> String {
+        let tag = if selected_column == 0 {
+            SingleCgroupModelFieldId::FullPath
+        } else {
+            view.get_tag_from_tab_idx(current_tab, selected_column)
+        };
+        let field_str = selected_key
+            .split('/')
+            // Ignore leading slash
+            .skip(1)
+            // Traverse cgroup model tree to find matching model, or None
+            .try_fold(view.model.borrow(), |model, cgroup_name| {
+                Ref::filter_map(model, |model| model.children.get(cgroup_name)).ok()
+            })
+            .and_then(|model| model.data.query(&tag))
+            .map_or("?".to_string(), |field| field.to_string());
+        format!(" {} : {} ", tag.to_string(), field_str)
     }
 }

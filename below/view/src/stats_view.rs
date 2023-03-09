@@ -133,6 +133,8 @@ pub trait ViewBridge {
     fn on_select_update_cmd_palette(
         _state: &Self::StateType,
         _selected_key: &<<Self as ViewBridge>::StateType as StateCommon>::KeyType,
+        _current_tab: &str,
+        _selected_column: usize,
     ) -> String {
         "".to_owned()
     }
@@ -237,18 +239,6 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             .get(&default_tab)
             .expect("Failed to query default tab");
 
-        let select_view_with_cb =
-            select_view.on_select(|c, selected_key: &<V::StateType as StateCommon>::KeyType| {
-                c.call_on_name(V::get_view_name(), |view: &mut StatsView<V>| {
-                    V::on_select_update_state(&mut view.state.borrow_mut(), Some(selected_key));
-                    let mut cmd_palette = view.get_cmd_palette();
-                    cmd_palette.set_info(V::on_select_update_cmd_palette(
-                        &view.state.borrow(),
-                        selected_key,
-                    ));
-                });
-            });
-
         let detailed_view = OnEventView::new(Panel::new(
             LinearLayout::vertical()
                 .child(
@@ -268,7 +258,7 @@ impl<V: 'static + ViewBridge> StatsView<V> {
                             .with_name(format!("{}_title", &name)),
                         )
                         .child(ResizedView::with_full_screen(
-                            select_view_with_cb
+                            select_view
                                 .with_name(format!("{}_detail", &name))
                                 .scrollable(),
                         ))
@@ -442,13 +432,18 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             }
 
             let selection = select_view.selection().map(|rc| rc.as_ref().clone());
+            let selected_column = self.get_title_view().current_selected;
             V::on_select_update_state(&mut self.state.borrow_mut(), selection.as_ref());
             // We should not override alert on refresh. Only selection should
             // override alert.
             match (cmd_palette.is_alerting(), selection) {
                 (false, Some(selection)) => {
-                    let info_msg =
-                        V::on_select_update_cmd_palette(&self.state.borrow(), &selection);
+                    let info_msg = V::on_select_update_cmd_palette(
+                        &self.state.borrow(),
+                        &selection,
+                        &cur_tab,
+                        selected_column,
+                    );
                     cmd_palette.set_info(info_msg);
                 }
                 _ => {}

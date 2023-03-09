@@ -284,7 +284,12 @@ impl ViewBridge for CoreView {
         self.get_inner().get_rows(state, offset)
     }
 
-    fn on_select_update_cmd_palette(_view: &Self::StateType, selected_key: &String) -> String {
+    fn on_select_update_cmd_palette(
+        _view: &Self::StateType,
+        selected_key: &String,
+        _current_tab: &str,
+        _selected_column: usize,
+    ) -> String {
         selected_key.clone()
     }
 }

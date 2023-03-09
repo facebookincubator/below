@@ -138,14 +138,14 @@ impl Queriable for CgroupModel {
     fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
         let mut model = self;
         for part in field_id.path.as_ref()?.iter() {
-            model = model.children.get(part)?;
+            model = model.children.get(part.as_str())?;
         }
         model.data.query(&field_id.subquery_id)
     }
 }
 
-impl core::borrow::Borrow<String> for CgroupModel {
-    fn borrow(&self) -> &String {
+impl core::borrow::Borrow<str> for CgroupModel {
+    fn borrow(&self) -> &str {
         &self.data.name
     }
 }

@@ -28,6 +28,7 @@ use model::ProcessCpuModelFieldId;
 use model::ProcessIoModelFieldId;
 use model::ProcessMemoryModelFieldId;
 use model::ProcessModel;
+use model::Queriable;
 use model::SingleProcessModelFieldId;
 
 use crate::process_tabs::default_tabs::PROCESS_CPU_TAB;
@@ -331,13 +332,23 @@ impl ViewBridge for ProcessView {
         state.current_selected_pid = selected_key.cloned();
     }
 
-    fn on_select_update_cmd_palette(state: &Self::StateType, selected_key: &i32) -> String {
-        state
+    fn on_select_update_cmd_palette(
+        state: &Self::StateType,
+        selected_key: &i32,
+        current_tab: &str,
+        selected_column: usize,
+    ) -> String {
+        let tag = if selected_column == 0 {
+            SingleProcessModelFieldId::Cmdline
+        } else {
+            state.get_tag_from_tab_idx(current_tab, selected_column)
+        };
+        let field_str = state
             .get_model()
             .processes
             .get(selected_key /* pid */)
-            .map_or("?".to_string(), |spm| {
-                spm.cmdline.clone().unwrap_or_else(|| "?".to_string())
-            })
+            .and_then(|spm| spm.query(&tag))
+            .map_or("?".to_string(), |field| field.to_string());
+        format!(" {} : {} ", tag.to_string(), field_str)
     }
 }
