@@ -154,7 +154,7 @@ enum Command {
         #[clap(short, long, default_value = "5")]
         interval_s: u64,
         /// Supply hostname to activate remote viewing
-        #[clap(long)]
+        #[clap(short = 's', long)]
         host: Option<String>,
         /// Override default port to connect remote viewing to
         #[clap(long, requires("host"))]
@@ -220,7 +220,7 @@ enum Command {
         #[clap(short, long, verbatim_doc_comment)]
         time: String,
         /// Supply hostname to activate remote viewing
-        #[clap(long)]
+        #[clap(short = 's', long)]
         host: Option<String>,
         /// Override default port to connect remote viewing to
         #[clap(long, requires("host"))]
@@ -245,7 +245,7 @@ enum Command {
     /// Dump historical data into parseable text format
     Dump {
         /// Supply hostname to activate remote dumping
-        #[clap(long)]
+        #[clap(short = 's', long)]
         host: Option<String>,
         /// Override default port to connect remote dumping to
         #[clap(long, requires("host"))]
@@ -268,7 +268,7 @@ enum Command {
         #[clap(long, verbatim_doc_comment, group = "time")]
         duration: Option<String>,
         /// Supply hostname to take snapshot from remote
-        #[clap(long)]
+        #[clap(short = 's', long)]
         host: Option<String>,
         /// Override default port to connect to remote
         #[clap(long, requires("host"))]
@@ -300,16 +300,16 @@ enum DebugCommand {
     /// This can be used to test compression/serialization formats.
     ConvertStore {
         #[clap(short, long, verbatim_doc_comment)]
-        start_time: String,
+        begin: String,
         #[clap(short, long, verbatim_doc_comment, group = "time")]
-        end_time: Option<String>,
+        end: Option<String>,
         #[clap(long, verbatim_doc_comment, group = "time")]
         duration: Option<String>,
         #[clap(long)]
         from_store_dir: Option<PathBuf>,
         #[clap(long)]
         to_store_dir: PathBuf,
-        #[clap(long)]
+        #[clap(short = 's', long)]
         host: Option<String>,
         #[clap(long, requires("host"))]
         port: Option<u16>,
@@ -782,8 +782,8 @@ fn real_main(init: init::InitToken) {
                 )
             }
             DebugCommand::ConvertStore {
-                ref start_time,
-                ref end_time,
+                ref begin,
+                ref end,
                 ref duration,
                 ref from_store_dir,
                 ref to_store_dir,
@@ -791,8 +791,8 @@ fn real_main(init: init::InitToken) {
                 ref port,
                 ref compress_opts,
             } => {
-                let start_time = start_time.clone();
-                let end_time = end_time.clone();
+                let begin = begin.clone();
+                let end = end.clone();
                 let duration = duration.clone();
                 let from_store_dir = from_store_dir.clone();
                 let to_store_dir = to_store_dir.clone();
@@ -808,8 +808,8 @@ fn real_main(init: init::InitToken) {
                         convert_store(
                             logger,
                             below_config,
-                            start_time,
-                            end_time,
+                            begin,
+                            end,
                             duration,
                             from_store_dir,
                             to_store_dir,
@@ -1321,8 +1321,8 @@ fn generate_completions(shell: Shell, output: Option<PathBuf>) -> Result<()> {
 fn convert_store(
     logger: slog::Logger,
     below_config: &BelowConfig,
-    start_time: String,
-    end_time: Option<String>,
+    begin: String,
+    end: Option<String>,
     duration: Option<String>,
     from_store_dir: Option<PathBuf>,
     to_store_dir: PathBuf,
@@ -1331,8 +1331,8 @@ fn convert_store(
     compress_opts: &CompressOpts,
 ) -> Result<()> {
     let (time_begin, time_end) = cliutil::system_time_range_from_date_and_adjuster(
-        start_time.as_str(),
-        end_time.as_deref(),
+        begin.as_str(),
+        end.as_deref(),
         duration.as_deref(),
         /* days_adjuster */ None,
     )?;
