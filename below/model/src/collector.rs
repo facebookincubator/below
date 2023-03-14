@@ -403,6 +403,7 @@ fn collect_cgroup_sample(
         cpuset_mems: wrap(reader.read_cpuset_mems())?,
         cpuset_mems_effective: wrap(reader.read_cpuset_mems_effective())?,
         cpu_weight: wrap(reader.read_cpu_weight())?,
+        cpu_max: wrap(reader.read_cpu_max())?,
         cgroup_controllers: wrap(reader.read_cgroup_controllers())?,
         cgroup_subtree_control: wrap(reader.read_cgroup_subtree_control())?,
     })

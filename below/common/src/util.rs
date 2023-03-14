@@ -78,6 +78,12 @@ pub fn convert_freq(val: u64) -> String {
     convert(val_f64, 1000_f64, UNITS)
 }
 
+/// Convert `val` microseconds into a human friendly string. Largest unit used is seconds.
+pub fn convert_duration(val: u64) -> String {
+    const UNITS: &[&str] = &["us", "ms", "s"];
+    convert(val as f64, 1000_f64, UNITS)
+}
+
 pub fn get_prefix(collapsed: bool) -> &'static str {
     if collapsed { "└+ " } else { "└─ " }
 }

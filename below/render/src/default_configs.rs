@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use RenderFormat::Duration;
+use RenderFormat::MaxOrDuration;
 use RenderFormat::MaxOrReadableSize;
 use RenderFormat::PageReadableSize;
 use RenderFormat::Precision;
@@ -684,6 +686,8 @@ impl HasRenderConfig for model::CgroupProperties {
             CpusetCpusEffective => rc.title("Effective CPUs"),
             CpusetMems => rc.title("Allowed Mem Nodes"),
             CpusetMemsEffective => rc.title("Effective Mem Nodes"),
+            CpuMaxUsec => rc.title("CPU Max").format(MaxOrDuration),
+            CpuMaxPeriodUsec => rc.title("CPU Max Period").format(Duration),
         }
     }
 }

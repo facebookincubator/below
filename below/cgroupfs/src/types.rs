@@ -28,6 +28,13 @@ pub struct CpuStat {
 }
 
 #[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub struct CpuMax {
+    /// -1 indicates "max"
+    pub max_usec: i64,
+    pub period_usec: u64,
+}
+
+#[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct IoStat {
     pub rbytes: Option<u64>,
     pub wbytes: Option<u64>,

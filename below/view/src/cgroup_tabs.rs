@@ -277,6 +277,8 @@ pub mod default_tabs {
     use model::CgroupPressureModelFieldId::MemoryFullPct;
     use model::CgroupPressureModelFieldId::MemorySomePct;
     use model::CgroupPropertiesFieldId::CgroupControllers;
+    use model::CgroupPropertiesFieldId::CpuMaxPeriodUsec;
+    use model::CgroupPropertiesFieldId::CpuMaxUsec;
     use model::CgroupPropertiesFieldId::CpuWeight;
     use model::CgroupPropertiesFieldId::CpusetCpus;
     use model::CgroupPropertiesFieldId::CpusetCpusEffective;
@@ -408,6 +410,8 @@ pub mod default_tabs {
             ViewItem::from_default(Props(MemoryMax)),
             ViewItem::from_default(Props(MemorySwapMax)),
             ViewItem::from_default(Props(MemoryZswapMax)),
+            ViewItem::from_default(Props(CpuMaxUsec)),
+            ViewItem::from_default(Props(CpuMaxPeriodUsec)),
             ViewItem::from_default(Props(CpuWeight)),
             ViewItem::from_default(Props(CpusetCpus)),
             ViewItem::from_default(Props(CpusetCpusEffective)),

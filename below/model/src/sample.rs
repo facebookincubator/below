@@ -47,6 +47,7 @@ pub struct CgroupSample {
     pub cpuset_mems: Option<cgroupfs::MemNodes>,
     pub cpuset_mems_effective: Option<cgroupfs::MemNodes>,
     pub cpu_weight: Option<u32>,
+    pub cpu_max: Option<cgroupfs::CpuMax>,
     pub cgroup_controllers: Option<BTreeSet<String>>,
     pub cgroup_subtree_control: Option<BTreeSet<String>>,
 }

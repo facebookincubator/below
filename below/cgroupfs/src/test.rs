@@ -25,6 +25,7 @@ use paste::paste;
 use tempfile::TempDir;
 
 use crate::CgroupReader;
+use crate::CpuMax;
 use crate::Cpuset;
 use crate::Error;
 use crate::MemNodes;
@@ -73,10 +74,10 @@ impl TestCgroup {
 }
 
 macro_rules! test_success {
-    ($name:ident, $filename:literal, $contents:literal, $expected_val:stmt) => {
+    ($name:ident, $filename:literal, $contents:literal, $expected_val:stmt, $suffix:literal) => {
         paste! {
             #[test]
-            fn [<test_ $name _success>]() {
+            fn [<test_ $name _success $suffix>]() {
                 let cgroup = TestCgroup::new();
                 cgroup.create_file_with_content($filename, $contents);
                 let cgroup_reader = cgroup.get_reader();
@@ -87,13 +88,16 @@ macro_rules! test_success {
             }
         }
     };
+    ($name:ident, $filename:literal, $contents:literal, $expected_val:stmt) => {
+        test_success!($name, $filename, $contents, $expected_val, "");
+    };
 }
 
 macro_rules! test_failure {
-    ($name:ident, $filename:literal, $err_contents:literal) => {
+    ($name:ident, $filename:literal, $err_contents:literal, $suffix:literal) => {
         paste! {
             #[test]
-            fn [<test_ $name _failure>]() {
+            fn [<test_ $name _failure $suffix>]() {
                 let cgroup = TestCgroup::new();
                 let cgroup_reader = cgroup.get_reader();
                 let err = cgroup_reader.$name().expect_err(
@@ -108,6 +112,9 @@ macro_rules! test_failure {
                 assert!(val.is_err());
             }
         }
+    };
+    ($name:ident, $filename:literal, $err_contents:literal) => {
+        test_failure!($name, $filename, $err_contents, "");
     };
 }
 
@@ -139,6 +146,29 @@ singleline_integer_or_max_test!(read_memory_zswap_max, "memory.zswap.max");
 
 test_success!(read_cpu_weight, "cpu.weight", b"10000\n", 10000);
 test_failure!(read_cpu_weight, "cpu.weight", b"5000000000\n");
+test_success!(
+    read_cpu_max,
+    "cpu.max",
+    b"99 888\n",
+    CpuMax {
+        max_usec: 99,
+        period_usec: 888
+    },
+    1
+);
+test_success!(
+    read_cpu_max,
+    "cpu.max",
+    b"max 777\n",
+    CpuMax {
+        max_usec: -1,
+        period_usec: 777
+    },
+    2
+);
+test_failure!(read_cpu_max, "cpu.max", b"99\n", 1);
+test_failure!(read_cpu_max, "cpu.max", b"-1 888\n", 2);
+test_failure!(read_cpu_max, "cpu.max", b"99 -1\n", 3);
 
 test_success!(
     read_cgroup_controllers,

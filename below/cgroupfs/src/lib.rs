@@ -59,6 +59,15 @@ pub struct CgroupReader {
     dir: Dir,
 }
 
+fn parse_integer_or_max(s: &str) -> std::result::Result<i64, String> {
+    if s == "max" {
+        return Ok(-1);
+    }
+    s.parse::<u64>()
+        .map_err(|e| format!("Invalid integer or max value {}", e))
+        .map(|v| v as i64)
+}
+
 fn parse_node_range(s: &str) -> std::result::Result<BTreeSet<u32>, String> {
     fn parse_node(s: &str) -> std::result::Result<u32, String> {
         s.parse()
@@ -118,6 +127,22 @@ fn fmt_nodes(f: &mut std::fmt::Formatter<'_>, nodes: &BTreeSet<u32>) -> std::fmt
         print_range(f, range_start, range_end)?;
     }
     Ok(())
+}
+
+impl FromStr for CpuMax {
+    type Err = String;
+    fn from_str(s: &str) -> std::result::Result<Self, String> {
+        let nums: Vec<&str> = s.split(' ').collect();
+        if nums.len() != 2 {
+            return Err(format!("Invalid cpu.max {}", s));
+        }
+        Ok(CpuMax {
+            max_usec: parse_integer_or_max(nums[0])?,
+            period_usec: nums[1]
+                .parse()
+                .map_err(|e| format!("Invalid non-negative integer {}", e))?,
+        })
+    }
 }
 
 impl FromStr for Cpuset {
@@ -394,6 +419,11 @@ impl CgroupReader {
     /// Read cpu.weight
     pub fn read_cpu_weight(&self) -> Result<u32> {
         self.read_singleline_file::<u32>("cpu.weight")
+    }
+
+    /// Read cpu.max
+    pub fn read_cpu_max(&self) -> Result<CpuMax> {
+        self.read_singleline_file::<CpuMax>("cpu.max")
     }
 
     /// Read cpuset.cpus

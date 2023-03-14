@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 355] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 357] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -133,6 +133,8 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 355] = [
     "cgroup.[path:/<cgroup_path>/.]inode_number",
     "cgroup.[path:/<cgroup_path>/.]props.cgroup_controllers",
     "cgroup.[path:/<cgroup_path>/.]props.cgroup_subtree_control",
+    "cgroup.[path:/<cgroup_path>/.]props.cpu_max_period_usec",
+    "cgroup.[path:/<cgroup_path>/.]props.cpu_max_usec",
     "cgroup.[path:/<cgroup_path>/.]props.cpu_weight",
     "cgroup.[path:/<cgroup_path>/.]props.cpuset_cpus",
     "cgroup.[path:/<cgroup_path>/.]props.cpuset_cpus_effective",
