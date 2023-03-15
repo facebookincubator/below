@@ -271,6 +271,10 @@ enum Command {
         /// _
         #[clap(long, verbatim_doc_comment, group = "time")]
         duration: Option<String>,
+        /// Output file path.
+        /// Randomized name in current directory if unspecified.
+        #[clap(short, long, parse(from_os_str))]
+        output: Option<PathBuf>,
         /// Supply hostname to take snapshot from remote
         #[clap(short = 's', long)]
         host: Option<String>,
@@ -753,12 +757,14 @@ fn real_main(init: init::InitToken) {
             ref begin,
             ref end,
             ref duration,
+            ref output,
             ref host,
             ref port,
         } => {
             let begin = begin.clone();
             let end = end.clone();
             let duration = duration.clone();
+            let output = output.clone();
             let host = host.clone();
             let port = port.clone();
             run(
@@ -768,7 +774,16 @@ fn real_main(init: init::InitToken) {
                 Service::Off,
                 RedirectLogOnFail::Off,
                 |_, below_config, logger, _errs| {
-                    snapshot(logger, below_config, begin, end, duration, host, port)
+                    snapshot(
+                        logger,
+                        below_config,
+                        begin,
+                        end,
+                        duration,
+                        output,
+                        host,
+                        port,
+                    )
                 },
             )
         }
@@ -1412,6 +1427,7 @@ fn snapshot(
     begin: String,
     end: Option<String>,
     duration: Option<String>,
+    output: Option<PathBuf>,
     host: Option<String>,
     port: Option<u16>,
 ) -> Result<()> {
@@ -1456,22 +1472,25 @@ fn snapshot(
 
     // The temp dir path will be something like "/tmp/snapshot_<timestamp_begin>_<timestamp_end>.XXXX".
     // We will use the dir name as name of the tarball.
-    let tarball_name = snapshot_store_path
-        .as_path()
-        .file_name()
-        .unwrap()
-        .to_str()
-        .unwrap();
-    let file = fs::File::create(&tarball_name)
-        .with_context(|| format!("Failed to create snapshot file {:?}", &tarball_name))?;
+    let tarball = if let Some(output) = output {
+        output
+    } else {
+        snapshot_store_path
+            .as_path()
+            .file_name()
+            .with_context(|| "path has no filename")?
+            .into()
+    };
+    let file = fs::File::create(&tarball)
+        .with_context(|| format!("Failed to create snapshot file {}", tarball.display()))?;
     // Create a new tarball with the snapshot dir name
     let mut tar = TarBuilder::new(file);
-    tar.append_dir_all(tarball_name, snapshot_store_path.as_path())
+    tar.append_dir_all("store", snapshot_store_path.as_path())
         .context("Failed to add snapshot store to tar builder")?;
     tar.finish()
         .context("Failed to build compressed snapshot file.")?;
 
-    println!("Snapshot has been created at {}", tarball_name);
+    println!("Snapshot has been created at {}", tarball.display());
     Ok(())
 }
 
