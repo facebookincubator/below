@@ -21,7 +21,6 @@ render = { package = "below-render", version = "0.6.3", path = "../render" }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 store = { package = "below-store", version = "0.6.3", path = "../store" }
-toml = "=0.5.8"
-
-[dev-dependencies]
+tar = "0.4.38"
 tempdir = "0.3"
+toml = "=0.5.8"
