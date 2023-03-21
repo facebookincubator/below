@@ -20,4 +20,4 @@ thiserror = "1.0.36"
 threadpool = "1.8.1"
 
 [dev-dependencies]
-tempfile = "3.3"
+tempfile = "3.4"
