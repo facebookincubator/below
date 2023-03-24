@@ -201,12 +201,6 @@ enum Command {
         /// Options for compression
         #[clap(flatten)]
         compress_opts: CompressOpts,
-        /// Optional service identity for remote service ACL
-        #[clap(long)]
-        service_identity: Option<String>,
-        /// Whether to check crypto auth tokens
-        #[clap(long)]
-        check_crypto_auth_tokens: bool,
     },
     /// Replay historical data (interactive)
     Replay {
@@ -330,7 +324,7 @@ enum DebugCommand {
 // Whether or not to start a service to respond to network request
 // (e.g. for stats collection or otherwise)
 pub enum Service {
-    On(Option<u16>, Option<String>, bool),
+    On(Option<u16>),
     Off,
 }
 
@@ -691,16 +685,13 @@ fn real_main(init: init::InitToken) {
             ref disable_disk_stat,
             ref disable_exitstats,
             ref compress_opts,
-            ref service_identity,
-            ref check_crypto_auth_tokens,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
-            let service_identity = service_identity.clone();
             run(
                 init,
                 debug,
                 below_config,
-                Service::On(*port, service_identity, *check_crypto_auth_tokens),
+                Service::On(*port),
                 RedirectLogOnFail::Off,
                 |init, below_config, logger, errs| {
                     record(
