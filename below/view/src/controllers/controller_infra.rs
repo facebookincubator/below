@@ -165,7 +165,7 @@ pub trait EventController {
     fn cmd_shortcut() -> &'static str;
 
     /// Return the Event trigger for this controller
-    fn default_event() -> Event;
+    fn default_events() -> Vec<Event>;
 
     /// Handler for event, for event that don't need a cursive object
     fn handle<T: 'static + ViewBridge>(_view: &mut StatsView<T>, _cmd_vec: &[&str]) {}
@@ -179,7 +179,7 @@ pub trait EventController {
 /// * name - Struct name
 /// * cmd - command string
 /// * cmd_short - command shortcut string, empty string "" means no need for short cut
-/// * event - event trigger. Will be replaced with custom command from cmdrc
+/// * event - event trigger. Custom values in eventrc will be added to command map
 /// * handle - handler closure for view level processing
 /// * callback - callback closure for cursive level processing
 macro_rules! make_event_controller {
@@ -195,7 +195,7 @@ macro_rules! make_event_controller {
                 $cmd_short
             }
 
-            fn default_event() -> Event {
+            fn default_events() -> Vec<Event> {
                 $event
             }
 
@@ -217,7 +217,7 @@ macro_rules! make_event_controller {
                 $cmd_short
             }
 
-            fn default_event() -> Event {
+            fn default_events() -> Vec<Event> {
                 $event
             }
 
@@ -267,12 +267,12 @@ macro_rules! make_controllers {
                 }
             }
 
-            pub fn default_event(&self) -> Event {
+            pub fn default_events(&self) -> Vec<Event> {
                 match self {
-                    Controllers::Unknown => Event::Unknown(vec![]),
+                    Controllers::Unknown => vec![Event::Unknown(vec![])],
                     $(
                         $(#[$attr])*
-                        Controllers::$enum_item => $struct_item::default_event(),
+                        Controllers::$enum_item => $struct_item::default_events(),
                     )*
                 }
             }
@@ -298,17 +298,45 @@ macro_rules! make_controllers {
             }
         }
 
+        fn insert_event_string(c: &mut Cursive, res: &mut HashMap<Event, Controllers>, table: &toml::value::Table,
+            event_str: &str, controller: &Controllers) {
+            match (str_to_event(event_str)) {
+                Some(event) => {
+                    match res.get(&event) {
+                        // If we are replacing the keybinding for a pre-existing command, don't replace the key binding
+                        // unless the belowrc also remaps the command to a new key.
+                        Some(existing_controller) if !table.contains_key(existing_controller.command()) => {
+                            view_warn!(
+                                c,
+                                "Event {} has been used by: {}",
+                                event_str,
+                                existing_controller.command()
+                            );
+                        }
+                        _ => {
+                            res.insert(event, controller.clone());
+                        }
+                    }
+                },
+                None => {
+                    view_warn!(c, "Fail to parse command from cmdrc: {} --> {}", controller.command(), event_str);
+                }
+            }
+        }
+
         /// Map the controller enum to event trigger
         pub fn make_event_controller_map(c: &mut Cursive, cmdrc: &Option<Value>) -> HashMap<Event, Controllers> {
             let mut res: HashMap<Event, Controllers> = HashMap::new();
 
             // Generate default hashmap
             $(
-                $(#[$attr])*
-                res.insert(
-                    $struct_item::default_event(),
-                    Controllers::$enum_item
-                );
+                for event in $struct_item::default_events() {
+                    $(#[$attr])*
+                    res.insert(
+                        event,
+                        Controllers::$enum_item
+                    );
+                }
             )*
 
             // Replace value with cmdrc
@@ -320,41 +348,36 @@ macro_rules! make_controllers {
                     .clone();
 
                 value.as_table().map(|table| table.iter().for_each(|(k, v)| {
-                    if let Some(v_str) = v.as_str() {
-                        match (cmd_controllers.borrow().get::<str>(k), str_to_event(v_str)) {
-                            (Some(controller), Some(event)) => {
-                                match res.get(&event) {
-                                    // If the controller which using such event will not be replaced,
-                                    // we raise warning
-                                    Some(ctrller) if !table.contains_key(ctrller.command()) => {
-                                        view_warn!(
+                    match (cmd_controllers.borrow().get::<str>(k), v.as_array()) {
+                        (Some(controller), Some(key_array)) => {
+                            for event_item in key_array.iter() {
+                                match event_item.as_str() {
+                                    Some(event_str) => insert_event_string(
                                             c,
-                                            "Event {} has been used by: {}",
-                                            v_str,
-                                            ctrller.command()
-                                        );
-                                    }
-                                    _ => {
-                                        res.insert(event, controller.clone());
-                                    }
+                                            &mut
+                                            res,
+                                            table,
+                                            event_str,
+                                            controller
+                                        ),
+                                    None => view_warn!(c, "Unknown entry in event list {}", event_item),
                                 }
-                            },
-                            (None, _) => {
-                                view_warn!(c, "Unrecogonized command: {}", k);
-                            },
-                            (_, None) => {
-                                view_warn!(
-                                    c,
-                                    "Fail to parse command from cmdrc: {} --> {}",
-                                    k,
-                                    v_str
-                                );
                             }
+                        },
+                        (Some(controller), None) => {
+                            // Single item key bindings are not arrays but strings, try it as a String
+                            match (v.as_str()) {
+                                Some(event_str) => insert_event_string(c, &mut res, table, event_str, controller),
+                                None => {
+                                    view_warn!(c, "Could not parse key binding {} for command {}", k, v);
+                                }
+                            }
+                        },
+                        (None, _) => {
+                            view_warn!(c, "Unrecogonized command: {}", k);
                         }
-                    } else {
-                        view_warn!(c, "Failed to parse the value of {} in str", k);
                     }
-                }))
+                }));
             });
 
             res

@@ -26,7 +26,7 @@
 //! ## EventController
 //! An EventController is the handler of a "Command". Each EventController will have the following 4 pieces:
 //! * command: The command of this EventController
-//! * default_event: The event trigger of this EventController by default.
+//! * default_events: An array of default event triggers for this EventController
 //! * handle: How should below handle such event given the currst StatsView<T>
 //! * callback: How should below handle such event with a cursive object.
 //! EventController is a interface ONLY struct.

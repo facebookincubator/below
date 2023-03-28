@@ -25,7 +25,7 @@ make_event_controller!(
     InvokeCmdPalette,
     "invoke_cmd_palette",
     "",
-    Event::Char(':'),
+    vec![Event::Char(':')],
     |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
         view.get_cmd_palette().invoke_cmd();
     }
@@ -36,7 +36,7 @@ make_event_controller!(
     NextTabImpl,
     "next_tab",
     "nt",
-    Event::Key(Key::Tab),
+    vec![Event::Key(Key::Tab)],
     |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
         view.get_tab_view().on_tab();
         view.update_title();
@@ -51,7 +51,7 @@ make_event_controller!(
     PrevTabImpl,
     "prev_tab",
     "pt",
-    Event::Shift(Key::Tab),
+    vec![Event::Shift(Key::Tab)],
     |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
         view.get_tab_view().on_shift_tab();
         view.update_title();
@@ -66,7 +66,7 @@ make_event_controller!(
     NextColImpl,
     "next_col",
     "nc",
-    Event::Char('.'),
+    vec![Event::Char('.')],
     |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
         let x = view.get_title_view().on_tab();
         view.set_horizontal_offset(x);
@@ -81,7 +81,7 @@ make_event_controller!(
     PrevColImpl,
     "prev_col",
     "pc",
-    Event::Char(','),
+    vec![Event::Char(',')],
     |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
         let x = view.get_title_view().on_shift_tab();
         view.set_horizontal_offset(x);
@@ -96,7 +96,7 @@ make_event_controller!(
     RightImpl,
     "right",
     "",
-    Event::Key(Key::Right),
+    vec![Event::Key(Key::Right)],
     |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
         let screen_width = view.get_screen_width();
         view.get_title_view().on_right(screen_width);
@@ -111,7 +111,7 @@ make_event_controller!(
     LeftImpl,
     "left",
     "",
-    Event::Key(Key::Left),
+    vec![Event::Key(Key::Left)],
     |view: &mut StatsView<T>, _cmd_vec: &[&str]| {
         view.get_title_view().on_left();
     },
@@ -125,7 +125,7 @@ make_event_controller!(
     QuitImpl,
     "quit",
     "q",
-    Event::Char('q'),
+    vec![Event::Char('q')],
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
         c.quit();
@@ -137,7 +137,7 @@ make_event_controller!(
     HelpMenu,
     "help",
     "h",
-    Event::Char('?'),
+    vec![Event::Char('?'), Event::Char('h')],
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
         let event_map = c
@@ -161,7 +161,7 @@ make_event_controller!(
     ProcessView,
     "process",
     "",
-    Event::Char('p'),
+    vec![Event::Char('p')],
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
         set_active_screen(c, "process_view_panel");
@@ -190,7 +190,7 @@ make_event_controller!(
     CgroupView,
     "cgroup",
     "",
-    Event::Char('c'),
+    vec![Event::Char('c')],
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
         set_active_screen(c, "cgroup_view_panel");
@@ -219,7 +219,7 @@ make_event_controller!(
     SystemView,
     "system",
     "",
-    Event::Char('s'),
+    vec![Event::Char('s')],
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
         set_active_screen(c, "core_view_panel");
@@ -248,7 +248,7 @@ make_event_controller!(
     ZoomView,
     "zoom",
     "",
-    Event::Char('z'),
+    vec![Event::Char('z')],
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
         let current_state = c
@@ -327,7 +327,7 @@ make_event_controller!(
     FoldProcessView,
     "fold",
     "",
-    Event::Char('f'),
+    vec![Event::Char('f')],
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
         let current_state = c
@@ -367,7 +367,7 @@ make_event_controller!(
     NextPageImpl,
     "next_page",
     "np",
-    Event::CtrlChar('f'),
+    vec![Event::CtrlChar('f')],
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, cmd_vec: &[&str]| {
         match parse_page_length(cmd_vec) {
@@ -386,7 +386,7 @@ make_event_controller!(
     PrevPageImpl,
     "prev_page",
     "pp",
-    Event::CtrlChar('b'),
+    vec![Event::CtrlChar('b')],
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, cmd_vec: &[&str]| {
         match parse_page_length(cmd_vec) {
@@ -404,7 +404,7 @@ make_event_controller!(
     NextSelectionImpl,
     "next_selection",
     "ns",
-    Event::CtrlChar('n'),
+    vec![Event::CtrlChar('n')],
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
         {
@@ -419,7 +419,7 @@ make_event_controller!(
     PrevSelectionImpl,
     "prev_selection",
     "ps",
-    Event::CtrlChar('p'),
+    vec![Event::CtrlChar('p')],
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
         {

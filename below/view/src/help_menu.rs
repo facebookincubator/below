@@ -30,7 +30,7 @@ use crate::controllers::Controllers;
 use crate::tab_view::TabView;
 
 pub struct ControllerHelper {
-    event: Event,
+    events: Vec<Event>,
     description: &'static str,
     cmd: &'static str,
     cmd_short: &'static str,
@@ -48,11 +48,19 @@ impl std::fmt::Display for ControllerHelper {
             } else {
                 self.cmd_short
             },
-            &event_to_string(&self.event),
+            &gen_hotkey_string(&self.events),
             self.args,
             self.description
         )
     }
+}
+
+fn gen_hotkey_string(events: &[Event]) -> String {
+    return events
+        .iter()
+        .map(event_to_string)
+        .collect::<Vec<String>>()
+        .join(",");
 }
 
 fn get_description(controller: &Controllers) -> &'static str {
@@ -127,22 +135,23 @@ fn fill_controllers(
     // event_controllers can generate helper messages in completely random order base on
     // user's customization. Instead of using it directly, we will generate a cmd-msg map
     // to ensure the order.
-    let cmd_map: HashMap<Controllers, ControllerHelper> = event_controllers
-        .borrow()
-        .iter()
-        .map(|(event, controller)| {
-            (
+    //
+    let mut cmd_map: HashMap<Controllers, ControllerHelper> = HashMap::new();
+    for (event, controller) in event_controllers.borrow().iter() {
+        match cmd_map.get_mut(controller) {
+            Some(ref mut item) => item.events.push(event.clone()),
+            None => drop(cmd_map.insert(
                 controller.clone(),
                 ControllerHelper {
-                    event: event.clone(),
+                    events: vec![event.clone()],
                     cmd: controller.command(),
                     cmd_short: controller.cmd_shortcut(),
                     description: get_description(controller),
                     args: get_args(controller),
                 },
-            )
-        })
-        .collect();
+            )),
+        }
+    }
 
     // Unwrap in this vec! must be success, otherwise we may have lost
     // controller(s) and should be detected by unit test.

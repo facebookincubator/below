@@ -20,7 +20,7 @@ make_event_controller!(
     SortByColumn,
     "sort",
     "s",
-    Event::Char('S'),
+    vec![Event::Char('S')],
     |view: &mut StatsView<T>, cmd_vec: &[&str]| {
         let (sort_res, title) = if cmd_vec.len() > 1 {
             let mut state = view.state.borrow_mut();
@@ -56,7 +56,7 @@ make_event_controller!(
     FilterPopup,
     "filter",
     "f",
-    Event::Char('/'),
+    vec![Event::Char('/')],
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, cmd_vec: &[&str]| {
         let (state, title_idx, title_name, tab) = {
@@ -100,7 +100,7 @@ make_event_controller!(
     ClearFilter,
     "clear_filter",
     "cf",
-    Event::CtrlChar('l'),
+    vec![Event::CtrlChar('l')],
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
         let state = StatsView::<T>::get_view(c).state.clone();
