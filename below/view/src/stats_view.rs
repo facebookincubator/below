@@ -18,8 +18,6 @@ use std::cell::RefMut;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use ::cursive::view::Scrollable;
-use ::cursive::view::View;
 use common::logutil::get_last_log_to_display;
 use common::logutil::CPMsgRecord;
 use cursive::event::Event;
@@ -27,6 +25,8 @@ use cursive::event::EventResult;
 use cursive::event::EventTrigger;
 use cursive::utils::markup::StyledString;
 use cursive::view::Nameable;
+use cursive::view::Scrollable;
+use cursive::view::View;
 use cursive::view::ViewWrapper;
 use cursive::views::LinearLayout;
 use cursive::views::NamedView;
@@ -239,6 +239,22 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             .get(&default_tab)
             .expect("Failed to query default tab");
 
+        let select_view_with_cb =
+            select_view.on_select(|c, selected_key: &<V::StateType as StateCommon>::KeyType| {
+                c.call_on_name(V::get_view_name(), |view: &mut StatsView<V>| {
+                    V::on_select_update_state(&mut view.state.borrow_mut(), Some(selected_key));
+                    let mut cmd_palette = view.get_cmd_palette();
+                    let cur_tab = view.get_tab_view().get_cur_selected().to_string();
+                    let selected_column = view.get_title_view().current_selected;
+                    cmd_palette.set_info(V::on_select_update_cmd_palette(
+                        &view.state.borrow(),
+                        selected_key,
+                        &cur_tab,
+                        selected_column,
+                    ));
+                });
+            });
+
         let detailed_view = OnEventView::new(Panel::new(
             LinearLayout::vertical()
                 .child(
@@ -258,7 +274,7 @@ impl<V: 'static + ViewBridge> StatsView<V> {
                             .with_name(format!("{}_title", &name)),
                         )
                         .child(ResizedView::with_full_screen(
-                            select_view
+                            select_view_with_cb
                                 .with_name(format!("{}_detail", &name))
                                 .scrollable(),
                         ))
