@@ -11,5 +11,5 @@ license = "Apache-2.0"
 
 [dependencies]
 common = { package = "below-common", version = "0.6.3", path = "../common" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
