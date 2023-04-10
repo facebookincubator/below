@@ -22,7 +22,7 @@ make_event_controller!(
     URLPopup,
     "__unused_url",
     "",
-    Event::Char('u'),
+    vec![Event::Char('u')],
     |_, _| {},
     |_, _| {}
 );
@@ -30,7 +30,7 @@ make_event_controller!(
     GpuView,
     "__unused_gpu",
     "",
-    Event::Char('g'),
+    vec![Event::Char('g')],
     |_, _| {},
     |_, _| {}
 );
@@ -39,7 +39,7 @@ make_event_controller!(
     GpuProcessView,
     "__unused_gpu_process",
     "",
-    Event::Char('G'),
+    vec![Event::Char('G')],
     |_, _| {},
     |_, _| {}
 );
@@ -48,7 +48,7 @@ make_event_controller!(
     GpuZoomView,
     "__unused_gpu_zoom",
     "",
-    Event::Char('x'),
+    vec![Event::Char('x')],
     |_, _| {},
     |_, _| {}
 );
