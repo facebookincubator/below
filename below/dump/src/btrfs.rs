@@ -133,6 +133,11 @@ impl Dumper for Btrfs {
                                     self.opts.raw
                                 )
                             )?,
+                            Some(OutputFormat::OpenMetrics) => write!(
+                                output,
+                                "{}",
+                                print::dump_openmetrics(&self.fields, ctx, model)
+                            )?,
                         }
                         *round += 1;
                         Ok(())

@@ -90,6 +90,11 @@ impl Dumper for System {
                     write!(output, "{}", par.to_string())?;
                 }
             }
+            Some(OutputFormat::OpenMetrics) => write!(
+                output,
+                "{}",
+                print::dump_openmetrics(&self.fields, ctx, &model.system)
+            )?,
         };
 
         *round += 1;

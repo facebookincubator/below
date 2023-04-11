@@ -133,6 +133,11 @@ impl Dumper for Disk {
                         let par = print::dump_json(&self.fields, ctx, model, self.opts.raw);
                         json_output.as_array_mut().unwrap().push(par);
                     }
+                    Some(OutputFormat::OpenMetrics) => write!(
+                        output,
+                        "{}",
+                        print::dump_openmetrics(&self.fields, ctx, model)
+                    )?,
                 }
                 *round += 1;
                 Ok(())

@@ -213,6 +213,11 @@ impl Dumper for Cgroup {
                         *jval = print::dump_json(&handle.fields, ctx, cgroup, handle.opts.raw);
                         jval["children"] = json!([]);
                     }
+                    Some(OutputFormat::OpenMetrics) => write!(
+                        output,
+                        "{}",
+                        print::dump_openmetrics(&handle.fields, ctx, cgroup)
+                    )?,
                 };
                 *round += 1;
             }

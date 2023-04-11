@@ -91,6 +91,11 @@ impl Dumper for Network {
                     write!(output, "{}", json_output)?;
                 }
             }
+            Some(OutputFormat::OpenMetrics) => write!(
+                output,
+                "{}",
+                print::dump_openmetrics(&self.fields, ctx, &model.network)
+            )?,
         };
         *round += 1;
 

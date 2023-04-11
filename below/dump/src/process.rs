@@ -156,6 +156,11 @@ impl Dumper for Process {
                         let par = print::dump_json(&self.fields, ctx, spm, self.opts.raw);
                         json_output.as_array_mut().unwrap().push(par);
                     }
+                    Some(OutputFormat::OpenMetrics) => write!(
+                        output,
+                        "{}",
+                        print::dump_openmetrics(&self.fields, ctx, spm)
+                    )?,
                 }
                 *round += 1;
                 Ok(())

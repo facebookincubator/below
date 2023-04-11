@@ -63,6 +63,7 @@ pub fn dump_timeseries(
 
     let json = output_format == Some(OutputFormat::Json);
     let csv = output_format == Some(OutputFormat::Csv);
+    let openmetrics = output_format == Some(OutputFormat::OpenMetrics);
 
     let mut round = 0;
 
@@ -120,6 +121,8 @@ pub fn dump_timeseries(
 
     if json {
         write!(output, "]")?;
+    } else if openmetrics {
+        writeln!(output, "# EOF")?;
     }
 
     cliutil::check_final_sample_time_with_requested_time(model.timestamp, time_end);

@@ -16,7 +16,9 @@ use model::Field;
 use model::FieldId;
 use model::Queriable;
 use model::Recursive;
-use render::{HasRenderConfig, RenderConfig, RenderOpenMetricsConfigBuilder};
+use render::{
+    HasRenderConfig, RenderConfig, RenderOpenMetricsConfig, RenderOpenMetricsConfigBuilder,
+};
 
 use super::*;
 
@@ -54,12 +56,38 @@ pub trait HasRenderConfigForDump: HasRenderConfig {
 impl<F> DumpField<F>
 where
     F: FieldId,
+    <<F as FieldId>::Queriable as Queriable>::FieldId: ToString,
+{
+    fn get_field_id_str(&self) -> String {
+        match self {
+            Self::Common(common) => common.to_string(),
+            Self::FieldId(field_id) => field_id.to_string(),
+        }
+    }
+}
+
+impl<F> DumpField<F>
+where
+    F: FieldId,
     F::Queriable: HasRenderConfigForDump,
 {
     pub fn get_render_config(&self) -> RenderConfig {
         match self {
             Self::Common(common) => common.get_render_config(),
             Self::FieldId(field_id) => F::Queriable::get_render_config_for_dump(field_id),
+        }
+    }
+
+    pub fn get_openmetrics_render_config(
+        &self,
+        model: &F::Queriable,
+    ) -> Option<RenderOpenMetricsConfig> {
+        match self {
+            // Common fields (eg timestamp) are already encoded into metric
+            Self::Common(_) => None,
+            Self::FieldId(field_id) => model
+                .get_openmetrics_config_for_dump(field_id)
+                .map(|b| b.build()),
         }
     }
 
@@ -83,6 +111,20 @@ where
             config.suffix = None;
         }
         config.render(self.get_field(ctx, model), fixed_width)
+    }
+
+    pub fn dump_field_openmetrics(
+        &self,
+        key: &str,
+        ctx: &CommonFieldContext,
+        model: &F::Queriable,
+    ) -> Option<String> {
+        match self.get_field(ctx, model) {
+            Some(f) => self
+                .get_openmetrics_render_config(model)
+                .map(|c| c.render(key, f, ctx.timestamp)),
+            None => None,
+        }
     }
 }
 
@@ -236,4 +278,24 @@ pub fn dump_tsv<T: HasRenderConfigForDump>(
     }
     res.push('\n');
     res
+}
+
+pub fn dump_openmetrics<T>(
+    fields: &[DumpField<T::FieldId>],
+    ctx: &CommonFieldContext,
+    model: &T,
+) -> String
+where
+    T: HasRenderConfigForDump,
+    T::FieldId: ToString,
+{
+    fields
+        .iter()
+        .filter_map(|field| {
+            // OpenMetrics forbids `.` in metric name
+            let key = field.get_field_id_str().replace(".", "_");
+            field.dump_field_openmetrics(&key, ctx, model)
+        })
+        .flat_map(|s| s.chars().collect::<Vec<_>>().into_iter())
+        .collect::<String>()
 }

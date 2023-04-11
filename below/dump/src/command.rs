@@ -979,6 +979,7 @@ make_option! (OutputFormat {
     "tsv": Tsv,
     "json": Json,
     "kv": KeyVal,
+    "openmetrics": OpenMetrics,
 });
 
 #[derive(Debug, Parser, Default, Clone)]
@@ -1019,7 +1020,7 @@ pub struct GeneralOpt {
     /// Repeat title, for each N line, it will render a line of title. Only for raw output format.
     #[clap(long = "repeat-title")]
     pub repeat_title: Option<usize>,
-    /// Output format. Choose from raw, csv, tsv, kv, json. Default to raw
+    /// Output format. Choose from raw, csv, tsv, kv, json, openmetrics. Default to raw
     #[clap(long, short = 'O')]
     pub output_format: Option<OutputFormat>,
     /// Output destination, default to stdout.
