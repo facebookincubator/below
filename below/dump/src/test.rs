@@ -19,7 +19,7 @@ use common::logutil::get_logger;
 use model::Collector;
 use model::EnumIter;
 use model::Queriable;
-use print::HasRenderConfigForDump;
+use render::HasRenderConfigForDump;
 use serde_json::Value;
 use tempdir::TempDir;
 use tmain::Dumper;

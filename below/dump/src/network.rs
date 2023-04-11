@@ -14,8 +14,6 @@
 
 use super::*;
 
-impl HasRenderConfigForDump for model::NetworkModel {}
-
 pub struct Network {
     opts: GeneralOpt,
     fields: Vec<NetworkField>,

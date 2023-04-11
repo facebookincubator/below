@@ -16,8 +16,6 @@ use model::BtrfsModelFieldId;
 
 use super::*;
 
-impl HasRenderConfigForDump for model::BtrfsModel {}
-
 pub struct Btrfs {
     opts: GeneralOpt,
     select: Option<BtrfsModelFieldId>,

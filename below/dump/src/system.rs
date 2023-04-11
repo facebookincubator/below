@@ -14,8 +14,6 @@
 
 use super::*;
 
-impl HasRenderConfigForDump for model::SystemModel {}
-
 pub struct System {
     opts: GeneralOpt,
     fields: Vec<SystemField>,

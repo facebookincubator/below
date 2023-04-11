@@ -17,7 +17,7 @@ use model::FieldId;
 use model::Nameable;
 use model::Queriable;
 use model::Recursive;
-use render::{HasRenderConfig, RenderConfig, RenderOpenMetricsConfigBuilder};
+use render::{RenderConfig, RenderOpenMetricsConfigBuilder};
 
 use super::*;
 
@@ -30,25 +30,6 @@ impl CommonField {
             Self::Datetime => rc.title("Datetime").width(19),
         }
         .get()
-    }
-}
-
-pub trait HasRenderConfigForDump: HasRenderConfig {
-    fn get_render_config_for_dump(field_id: &Self::FieldId) -> RenderConfig {
-        Self::get_render_config(field_id)
-    }
-
-    /// Configures how to dump model fields in OpenMetrics format
-    ///
-    /// Some fields cannot be dumped in openmetrics format, for example strings. For those,
-    /// return None.
-    fn get_openmetrics_config_for_dump(
-        &self,
-        _field_id: &Self::FieldId,
-    ) -> Option<RenderOpenMetricsConfigBuilder> {
-        // XXX: the default implementation will be deleted in the final commit. We add one
-        // here to make each commit compilable.
-        None
     }
 }
 

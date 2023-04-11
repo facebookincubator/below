@@ -16,8 +16,6 @@ use model::SingleDiskModelFieldId;
 
 use super::*;
 
-impl HasRenderConfigForDump for model::SingleDiskModel {}
-
 pub struct Disk {
     opts: GeneralOpt,
     select: Option<SingleDiskModelFieldId>,

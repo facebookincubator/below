@@ -62,7 +62,7 @@ use command::expand_fields;
 pub use command::DumpCommand;
 use command::GeneralOpt;
 use command::OutputFormat;
-use print::HasRenderConfigForDump;
+use render::HasRenderConfigForDump;
 use tmain::dump_timeseries;
 use tmain::Dumper;
 use tmain::IterExecResult;

@@ -16,8 +16,6 @@ use model::SingleNetModelFieldId;
 
 use super::*;
 
-impl HasRenderConfigForDump for model::SingleNetModel {}
-
 pub struct Iface {
     opts: GeneralOpt,
     select: Option<SingleNetModelFieldId>,

@@ -13,29 +13,8 @@
 // limitations under the License.
 
 use model::SingleProcessModelFieldId;
-use render::RenderConfig;
 
 use super::*;
-
-impl HasRenderConfigForDump for model::SingleProcessModel {
-    fn get_render_config_for_dump(field_id: &SingleProcessModelFieldId) -> RenderConfig {
-        use model::ProcessCpuModelFieldId::SystemPct;
-        use model::ProcessCpuModelFieldId::UserPct;
-        use model::ProcessIoModelFieldId::RwbytesPerSec;
-        use model::SingleProcessModelFieldId::Cpu;
-        use model::SingleProcessModelFieldId::Io;
-        use render::HasRenderConfig;
-
-        let rc = model::SingleProcessModel::get_render_config_builder(field_id);
-        match field_id {
-            Cpu(UserPct) => rc.title("User CPU"),
-            Cpu(SystemPct) => rc.title("Sys CPU"),
-            Io(RwbytesPerSec) => rc.title("RW"),
-            _ => rc,
-        }
-        .get()
-    }
-}
 
 pub struct Process {
     opts: GeneralOpt,

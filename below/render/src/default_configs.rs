@@ -21,6 +21,7 @@ use RenderFormat::ReadableSize;
 use RenderFormat::SectorReadableSize;
 
 use super::*;
+use model::{SingleCgroupModelFieldId, SingleProcessModelFieldId};
 
 impl HasRenderConfig for model::SingleCgroupModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
@@ -43,6 +44,104 @@ impl HasRenderConfig for model::SingleCgroupModel {
             }
             Props(field_id) => model::CgroupProperties::get_render_config_builder(field_id),
         }
+    }
+}
+
+impl HasRenderConfigForDump for model::SingleCgroupModel {
+    fn get_render_config_for_dump(field_id: &SingleCgroupModelFieldId) -> RenderConfig {
+        use common::util::get_prefix;
+        use model::CgroupCpuModelFieldId::ThrottledPct;
+        use model::CgroupIoModelFieldId::CostIndebtPct;
+        use model::CgroupIoModelFieldId::CostIndelayPct;
+        use model::CgroupIoModelFieldId::CostUsagePct;
+        use model::CgroupIoModelFieldId::CostWaitPct;
+        use model::CgroupIoModelFieldId::DbytesPerSec;
+        use model::CgroupIoModelFieldId::DiosPerSec;
+        use model::CgroupIoModelFieldId::RbytesPerSec;
+        use model::CgroupIoModelFieldId::RiosPerSec;
+        use model::CgroupIoModelFieldId::RwbytesPerSec;
+        use model::CgroupIoModelFieldId::WbytesPerSec;
+        use model::CgroupIoModelFieldId::WiosPerSec;
+        use model::CgroupMemoryModelFieldId::Anon;
+        use model::CgroupMemoryModelFieldId::File;
+        use model::CgroupMemoryModelFieldId::Pgactivate;
+        use model::CgroupMemoryModelFieldId::Pgdeactivate;
+        use model::CgroupMemoryModelFieldId::Pgfault;
+        use model::CgroupMemoryModelFieldId::Pglazyfree;
+        use model::CgroupMemoryModelFieldId::Pglazyfreed;
+        use model::CgroupMemoryModelFieldId::Pgmajfault;
+        use model::CgroupMemoryModelFieldId::Pgrefill;
+        use model::CgroupMemoryModelFieldId::Pgscan;
+        use model::CgroupMemoryModelFieldId::Pgsteal;
+        use model::CgroupMemoryModelFieldId::Shmem;
+        use model::CgroupMemoryModelFieldId::Slab;
+        use model::CgroupMemoryModelFieldId::Sock;
+        use model::CgroupMemoryModelFieldId::Swap;
+        use model::CgroupMemoryModelFieldId::ThpCollapseAlloc;
+        use model::CgroupMemoryModelFieldId::ThpFaultAlloc;
+        use model::CgroupMemoryModelFieldId::Total;
+        use model::CgroupMemoryModelFieldId::WorkingsetActivateAnon;
+        use model::CgroupMemoryModelFieldId::WorkingsetActivateFile;
+        use model::CgroupMemoryModelFieldId::WorkingsetNodereclaim;
+        use model::CgroupMemoryModelFieldId::WorkingsetRefaultAnon;
+        use model::CgroupMemoryModelFieldId::WorkingsetRefaultFile;
+        use model::CgroupMemoryModelFieldId::WorkingsetRestoreAnon;
+        use model::CgroupMemoryModelFieldId::WorkingsetRestoreFile;
+        use model::CgroupMemoryModelFieldId::Zswap;
+        use model::CgroupPressureModelFieldId::MemoryFullPct;
+        use model::CgroupPressureModelFieldId::MemorySomePct;
+        use model::SingleCgroupModelFieldId::Cpu;
+        use model::SingleCgroupModelFieldId::Io;
+        use model::SingleCgroupModelFieldId::Mem;
+        use model::SingleCgroupModelFieldId::Name;
+        use model::SingleCgroupModelFieldId::Pressure;
+
+        let rc = model::SingleCgroupModel::get_render_config_builder(field_id);
+        match field_id {
+            Name => rc.indented_prefix(get_prefix(false)),
+            Cpu(ThrottledPct) => rc.title("Throttled Pct"),
+            Io(RbytesPerSec) => rc.title("RBytes"),
+            Io(WbytesPerSec) => rc.title("WBytes"),
+            Io(DbytesPerSec) => rc.title("DBytes"),
+            Io(RiosPerSec) => rc.title("R I/O"),
+            Io(WiosPerSec) => rc.title("W I/O"),
+            Io(DiosPerSec) => rc.title("D I/O"),
+            Io(RwbytesPerSec) => rc.title("RW Total"),
+            Io(CostUsagePct) => rc.title("Cost Usage"),
+            Io(CostWaitPct) => rc.title("Cost Wait"),
+            Io(CostIndebtPct) => rc.title("Cost Indebt"),
+            Io(CostIndelayPct) => rc.title("Cost Indelay"),
+            Mem(Total) => rc.title("Mem Total"),
+            Mem(Swap) => rc.title("Mem Swap"),
+            Mem(Zswap) => rc.title("Mem Zswap"),
+            Mem(Anon) => rc.title("Mem Anon"),
+            Mem(File) => rc.title("Mem File"),
+            Mem(Slab) => rc.title("Mem Slab"),
+            Mem(Sock) => rc.title("Mem Sock"),
+            Mem(Shmem) => rc.title("Mem Shmem"),
+            Mem(Pgfault) => rc.title("Pgfault"),
+            Mem(Pgmajfault) => rc.title("Pgmajfault"),
+            Mem(WorkingsetRefaultAnon) => rc.title("Workingset Refault Anon"),
+            Mem(WorkingsetRefaultFile) => rc.title("Workingset Refault File"),
+            Mem(WorkingsetActivateAnon) => rc.title("Workingset Activate Anon"),
+            Mem(WorkingsetActivateFile) => rc.title("Workingset Activate File"),
+            Mem(WorkingsetRestoreAnon) => rc.title("Workingset Restore Anon"),
+            Mem(WorkingsetRestoreFile) => rc.title("Workingset Restore File"),
+            Mem(WorkingsetNodereclaim) => rc.title("Workingset Nodereclaim"),
+            Mem(Pgrefill) => rc.title("Pgrefill"),
+            Mem(Pgscan) => rc.title("Pgscan"),
+            Mem(Pgsteal) => rc.title("Pgsteal"),
+            Mem(Pgactivate) => rc.title("Pgactivate"),
+            Mem(Pgdeactivate) => rc.title("Pgdeactivate"),
+            Mem(Pglazyfree) => rc.title("Pglazyfree"),
+            Mem(Pglazyfreed) => rc.title("Pglazyfreed"),
+            Mem(ThpFaultAlloc) => rc.title("THP Fault Alloc"),
+            Mem(ThpCollapseAlloc) => rc.title("THP Collapse Alloc"),
+            Pressure(MemorySomePct) => rc.title("Mem Some Pressure"),
+            Pressure(MemoryFullPct) => rc.title("Mem Pressure"),
+            _ => rc,
+        }
+        .get()
     }
 }
 
@@ -175,6 +274,8 @@ impl HasRenderConfig for model::NetworkModel {
         }
     }
 }
+
+impl HasRenderConfigForDump for model::NetworkModel {}
 
 impl HasRenderConfig for model::TcpModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
@@ -354,6 +455,8 @@ impl HasRenderConfig for model::SingleNetModel {
     }
 }
 
+impl HasRenderConfigForDump for model::SingleNetModel {}
+
 impl HasRenderConfig for model::SingleProcessModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         use model::SingleProcessModelFieldId::*;
@@ -372,6 +475,25 @@ impl HasRenderConfig for model::SingleProcessModel {
             Cmdline => rc.title("Cmdline").width(50),
             ExePath => rc.title("Exe Path"),
         }
+    }
+}
+
+impl HasRenderConfigForDump for model::SingleProcessModel {
+    fn get_render_config_for_dump(field_id: &SingleProcessModelFieldId) -> RenderConfig {
+        use model::ProcessCpuModelFieldId::SystemPct;
+        use model::ProcessCpuModelFieldId::UserPct;
+        use model::ProcessIoModelFieldId::RwbytesPerSec;
+        use model::SingleProcessModelFieldId::Cpu;
+        use model::SingleProcessModelFieldId::Io;
+
+        let rc = model::SingleProcessModel::get_render_config_builder(field_id);
+        match field_id {
+            Cpu(UserPct) => rc.title("User CPU"),
+            Cpu(SystemPct) => rc.title("Sys CPU"),
+            Io(RwbytesPerSec) => rc.title("RW"),
+            _ => rc,
+        }
+        .get()
     }
 }
 
@@ -441,6 +563,8 @@ impl HasRenderConfig for model::SystemModel {
         }
     }
 }
+
+impl HasRenderConfigForDump for model::SystemModel {}
 
 impl HasRenderConfig for model::ProcStatModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
@@ -589,6 +713,8 @@ impl HasRenderConfig for model::SingleDiskModel {
     }
 }
 
+impl HasRenderConfigForDump for model::SingleDiskModel {}
+
 impl HasRenderConfig for model::BtrfsModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         use model::BtrfsModelFieldId::*;
@@ -603,6 +729,8 @@ impl HasRenderConfig for model::BtrfsModel {
         }
     }
 }
+
+impl HasRenderConfigForDump for model::BtrfsModel {}
 
 impl HasRenderConfig for model::CgroupStatModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
