@@ -275,7 +275,27 @@ impl HasRenderConfig for model::NetworkModel {
     }
 }
 
-impl HasRenderConfigForDump for model::NetworkModel {}
+impl HasRenderConfigForDump for model::NetworkModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::NetworkModelFieldId::*;
+        match field_id {
+            // Do not dump interfaces from network model b/c there is already the `iface` category.
+            // It is also hard to figure out exactly which interface is being queried from here.
+            // Meaning we cannot label the metric with the proper interface.
+            Interfaces(_) => None,
+            Tcp(field_id) => self.tcp.get_openmetrics_config_for_dump(field_id),
+            Ip(field_id) => self.ip.get_openmetrics_config_for_dump(field_id),
+            Ip6(field_id) => self.ip6.get_openmetrics_config_for_dump(field_id),
+            Icmp(field_id) => self.icmp.get_openmetrics_config_for_dump(field_id),
+            Icmp6(field_id) => self.icmp6.get_openmetrics_config_for_dump(field_id),
+            Udp(field_id) => self.udp.get_openmetrics_config_for_dump(field_id),
+            Udp6(field_id) => self.udp6.get_openmetrics_config_for_dump(field_id),
+        }
+    }
+}
 
 impl HasRenderConfig for model::TcpModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
@@ -294,6 +314,29 @@ impl HasRenderConfig for model::TcpModel {
             InErrs => rc.title("TcpInErrors"),
             OutRstsPerSec => rc.title("TcpOutRsts/s"),
             InCsumErrors => rc.title("TcpInCsumErrors"),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::TcpModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::TcpModelFieldId::*;
+        match field_id {
+            ActiveOpensPerSec => Some(gauge().help("Active opens per second")),
+            PassiveOpensPerSec => Some(gauge().help("Passive opens per second")),
+            AttemptFailsPerSec => Some(gauge().help("Failed attemps per second")),
+            EstabResetsPerSec => Some(gauge()),
+            CurrEstabConn => Some(gauge().help("Current established connections")),
+            InSegsPerSec => Some(gauge()),
+            OutSegsPerSec => Some(gauge()),
+            RetransSegsPerSec => Some(gauge()),
+            RetransSegs => Some(gauge()),
+            InErrs => Some(counter()),
+            OutRstsPerSec => Some(gauge()),
+            InCsumErrors => Some(counter().help("Ingress checksum errors")),
         }
     }
 }
@@ -327,6 +370,36 @@ impl HasRenderConfig for model::IpModel {
     }
 }
 
+impl HasRenderConfigForDump for model::IpModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::IpModelFieldId::*;
+        match field_id {
+            ForwardingPktsPerSec => Some(gauge().help("Forwarded packets per second")),
+            InReceivesPktsPerSec => Some(gauge()),
+            ForwDatagramsPerSec => Some(gauge().help("Forwarded datagrams per second")),
+            InDiscardsPktsPerSec => Some(gauge()),
+            InDeliversPktsPerSec => Some(gauge().help("Locally devliered packets per second")),
+            OutRequestsPerSec => Some(gauge()),
+            OutDiscardsPktsPerSec => Some(gauge()),
+            OutNoRoutesPktsPerSec => Some(gauge()),
+            InMcastPktsPerSec => Some(gauge()),
+            OutMcastPktsPerSec => Some(gauge()),
+            InBcastPktsPerSec => Some(gauge()),
+            OutBcastPktsPerSec => Some(gauge()),
+            InOctetsPerSec => Some(gauge()),
+            OutOctetsPerSec => Some(gauge()),
+            InMcastOctetsPerSec => Some(gauge()),
+            OutMcastOctetsPerSec => Some(gauge()),
+            InBcastOctetsPerSec => Some(gauge()),
+            OutBcastOctetsPerSec => Some(gauge()),
+            InNoEctPktsPerSec => Some(gauge()),
+        }
+    }
+}
+
 impl HasRenderConfig for model::Ip6Model {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         use model::Ip6ModelFieldId::*;
@@ -353,6 +426,34 @@ impl HasRenderConfig for model::Ip6Model {
     }
 }
 
+impl HasRenderConfigForDump for model::Ip6Model {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::Ip6ModelFieldId::*;
+        match field_id {
+            InReceivesPktsPerSec => Some(gauge()),
+            InHdrErrors => Some(counter()),
+            InNoRoutesPktsPerSec => Some(gauge()),
+            InAddrErrors => Some(counter()),
+            InDiscardsPktsPerSec => Some(gauge()),
+            InDeliversPktsPerSec => Some(gauge()),
+            OutForwDatagramsPerSec => Some(gauge()),
+            OutRequestsPerSec => Some(gauge()),
+            OutNoRoutesPktsPerSec => Some(gauge()),
+            InMcastPktsPerSec => Some(gauge()),
+            OutMcastPktsPerSec => Some(gauge()),
+            InOctetsPerSec => Some(gauge()),
+            OutOctetsPerSec => Some(gauge()),
+            InMcastOctetsPerSec => Some(gauge()),
+            OutMcastOctetsPerSec => Some(gauge()),
+            InBcastOctetsPerSec => Some(gauge()),
+            OutBcastOctetsPerSec => Some(gauge()),
+        }
+    }
+}
+
 impl HasRenderConfig for model::IcmpModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         use model::IcmpModelFieldId::*;
@@ -368,6 +469,23 @@ impl HasRenderConfig for model::IcmpModel {
     }
 }
 
+impl HasRenderConfigForDump for model::IcmpModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::IcmpModelFieldId::*;
+        match field_id {
+            InMsgsPerSec => Some(gauge()),
+            InErrors => Some(counter()),
+            InDestUnreachs => Some(counter()),
+            OutMsgsPerSec => Some(gauge()),
+            OutErrors => Some(counter()),
+            OutDestUnreachs => Some(counter()),
+        }
+    }
+}
+
 impl HasRenderConfig for model::Icmp6Model {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         use model::Icmp6ModelFieldId::*;
@@ -379,6 +497,23 @@ impl HasRenderConfig for model::Icmp6Model {
             OutMsgsPerSec => rc.title("Icmp6OutMsg/s").suffix(" msgs"),
             OutErrors => rc.title("Icmp6OutErrs"),
             OutDestUnreachs => rc.title("Icmp6OutDestUnreachs"),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::Icmp6Model {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::Icmp6ModelFieldId::*;
+        match field_id {
+            InMsgsPerSec => Some(gauge()),
+            InErrors => Some(counter()),
+            InDestUnreachs => Some(counter()),
+            OutMsgsPerSec => Some(gauge()),
+            OutErrors => Some(counter()),
+            OutDestUnreachs => Some(counter()),
         }
     }
 }
@@ -399,6 +534,24 @@ impl HasRenderConfig for model::UdpModel {
     }
 }
 
+impl HasRenderConfigForDump for model::UdpModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::UdpModelFieldId::*;
+        match field_id {
+            InDatagramsPktsPerSec => Some(gauge()),
+            NoPorts => Some(counter()),
+            InErrors => Some(counter()),
+            OutDatagramsPktsPerSec => Some(gauge()),
+            RcvbufErrors => Some(counter()),
+            SndbufErrors => Some(counter()),
+            IgnoredMulti => Some(counter()),
+        }
+    }
+}
+
 impl HasRenderConfig for model::Udp6Model {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         use model::Udp6ModelFieldId::*;
@@ -412,6 +565,25 @@ impl HasRenderConfig for model::Udp6Model {
             SndbufErrors => rc.title("Udp6SndBufErrs"),
             InCsumErrors => rc.title("Udp6InCsumErrs"),
             IgnoredMulti => rc.title("Udp6IgnoredMulti"),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::Udp6Model {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::Udp6ModelFieldId::*;
+        match field_id {
+            InDatagramsPktsPerSec => Some(gauge()),
+            NoPorts => Some(counter()),
+            InErrors => Some(counter()),
+            OutDatagramsPktsPerSec => Some(gauge()),
+            RcvbufErrors => Some(counter()),
+            SndbufErrors => Some(counter()),
+            InCsumErrors => Some(counter()),
+            IgnoredMulti => Some(counter()),
         }
     }
 }
@@ -455,7 +627,49 @@ impl HasRenderConfig for model::SingleNetModel {
     }
 }
 
-impl HasRenderConfigForDump for model::SingleNetModel {}
+impl HasRenderConfigForDump for model::SingleNetModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::SingleNetModelFieldId::*;
+        let counter = counter().label("interface", &self.interface);
+        let gauge = gauge().label("interface", &self.interface);
+        match field_id {
+            // We label all the other metrics with the interface name
+            Interface => None,
+            RxBytesPerSec => Some(gauge),
+            TxBytesPerSec => Some(gauge),
+            ThroughputPerSec => Some(gauge),
+            RxPacketsPerSec => Some(gauge),
+            TxPacketsPerSec => Some(gauge),
+            Collisions => Some(counter),
+            Multicast => Some(counter),
+            RxBytes => Some(counter),
+            RxCompressed => Some(counter),
+            RxCrcErrors => Some(counter),
+            RxDropped => Some(counter),
+            RxErrors => Some(counter),
+            RxFifoErrors => Some(counter),
+            RxFrameErrors => Some(counter),
+            RxLengthErrors => Some(counter),
+            RxMissedErrors => Some(counter),
+            RxNohandler => Some(counter),
+            RxOverErrors => Some(counter),
+            RxPackets => Some(counter),
+            TxAbortedErrors => Some(counter),
+            TxBytes => Some(counter),
+            TxCarrierErrors => Some(counter),
+            TxCompressed => Some(counter),
+            TxDropped => Some(counter),
+            TxErrors => Some(counter),
+            TxFifoErrors => Some(counter),
+            TxHeartbeatErrors => Some(counter),
+            TxPackets => Some(counter),
+            TxWindowErrors => Some(counter),
+        }
+    }
+}
 
 impl HasRenderConfig for model::SingleProcessModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {

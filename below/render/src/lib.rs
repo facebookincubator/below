@@ -168,6 +168,14 @@ impl RenderOpenMetricsConfigBuilder {
     }
 }
 
+fn gauge() -> RenderOpenMetricsConfigBuilder {
+    RenderOpenMetricsConfigBuilder::new(OpenMetricsType::Gauge)
+}
+
+fn counter() -> RenderOpenMetricsConfigBuilder {
+    RenderOpenMetricsConfigBuilder::new(OpenMetricsType::Counter)
+}
+
 impl RenderOpenMetricsConfig {
     /// Returns the normalized key name for this metric
     fn normalize_key(&self, key: &str) -> String {
