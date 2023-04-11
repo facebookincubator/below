@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::fmt::{Display, Formatter, Write};
+
 mod default_configs;
 
 use common::open_source_shim;
@@ -87,6 +89,77 @@ pub struct RenderConfig {
 #[derive(Default, Clone)]
 pub struct RenderConfigBuilder {
     rc: RenderConfig,
+}
+
+#[derive(Clone)]
+pub enum OpenMetricsType {
+    /// Gauges are current measurements, such as bytes of memory currently used or the number of
+    /// items in a queue. For gauges the absolute value is what is of interest to a user.
+    Counter,
+    /// Counters measure discrete events. Common examples are the number of HTTP requests received,
+    /// CPU seconds spent, or bytes sent. For counters how quickly they are increasing over time is
+    /// what is of interest to a user.
+    Gauge,
+}
+
+/// Configuration for rendering fields in OpenMetrics format.
+///
+/// See the OpenMetrics spec for more details:
+/// https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md
+#[derive(Clone)]
+pub struct RenderOpenMetricsConfig {
+    ty: OpenMetricsType,
+    help: Option<String>,
+}
+
+#[derive(Clone)]
+pub struct RenderOpenMetricsConfigBuilder {
+    config: RenderOpenMetricsConfig,
+}
+
+impl Display for OpenMetricsType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OpenMetricsType::Counter => write!(f, "counter"),
+            OpenMetricsType::Gauge => write!(f, "gauge"),
+        }
+    }
+}
+
+impl RenderOpenMetricsConfigBuilder {
+    pub fn new(ty: OpenMetricsType) -> Self {
+        Self {
+            config: RenderOpenMetricsConfig { ty, help: None },
+        }
+    }
+
+    /// Help text for the metric
+    pub fn help(mut self, help: &str) -> Self {
+        self.config.help = Some(help.to_owned());
+        self
+    }
+
+    /// Build the config
+    pub fn build(self) -> RenderOpenMetricsConfig {
+        self.config
+    }
+}
+
+impl RenderOpenMetricsConfig {
+    /// Render the field as an openmetrics field in string form
+    pub fn render(&self, key: &str, field: Field, timestamp: i64) -> String {
+        let mut res = String::new();
+        let metric_type = self.ty.to_string();
+
+        // Appending to a string can never fail so unwrap() is safe here
+        writeln!(&mut res, "# TYPE {key} {metric_type}").unwrap();
+        if let Some(help) = &self.help {
+            writeln!(&mut res, "# HELP {key} {help}").unwrap();
+        }
+        writeln!(&mut res, "{key} {field} {timestamp}").unwrap();
+
+        res
+    }
 }
 
 impl RenderConfigBuilder {
@@ -271,4 +344,30 @@ pub trait HasRenderConfig: Queriable {
     fn get_render_config(field_id: &Self::FieldId) -> RenderConfig {
         Self::get_render_config_builder(field_id).get()
     }
+}
+
+#[test]
+fn test_openmetrics_gauge() {
+    let config = RenderOpenMetricsConfigBuilder::new(OpenMetricsType::Gauge)
+        .help("gauge help")
+        .build();
+    let text = config.render("my_key", Field::U64(123), 1234);
+    let expected = r#"# TYPE my_key gauge
+# HELP my_key gauge help
+my_key 123 1234
+"#;
+    assert_eq!(text, expected);
+}
+
+#[test]
+fn test_openmetrics_counter() {
+    let config = RenderOpenMetricsConfigBuilder::new(OpenMetricsType::Counter)
+        .help("counter help")
+        .build();
+    let text = config.render("my_key", Field::F32(1.23), 1234);
+    let expected = r#"# TYPE my_key counter
+# HELP my_key counter help
+my_key 1.23 1234
+"#;
+    assert_eq!(text, expected);
 }
