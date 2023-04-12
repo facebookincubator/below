@@ -50,9 +50,13 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
         use model::CgroupMemoryModelFieldId::ThpCollapseAlloc;
         use model::CgroupMemoryModelFieldId::ThpFaultAlloc;
         use model::CgroupMemoryModelFieldId::Total;
-        use model::CgroupMemoryModelFieldId::WorkingsetActivate;
+        use model::CgroupMemoryModelFieldId::WorkingsetActivateAnon;
+        use model::CgroupMemoryModelFieldId::WorkingsetActivateFile;
         use model::CgroupMemoryModelFieldId::WorkingsetNodereclaim;
-        use model::CgroupMemoryModelFieldId::WorkingsetRefault;
+        use model::CgroupMemoryModelFieldId::WorkingsetRefaultAnon;
+        use model::CgroupMemoryModelFieldId::WorkingsetRefaultFile;
+        use model::CgroupMemoryModelFieldId::WorkingsetRestoreAnon;
+        use model::CgroupMemoryModelFieldId::WorkingsetRestoreFile;
         use model::CgroupMemoryModelFieldId::Zswap;
         use model::CgroupPressureModelFieldId::MemoryFullPct;
         use model::CgroupPressureModelFieldId::MemorySomePct;
@@ -88,8 +92,12 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
             Mem(Shmem) => rc.title("Mem Shmem"),
             Mem(Pgfault) => rc.title("Pgfault"),
             Mem(Pgmajfault) => rc.title("Pgmajfault"),
-            Mem(WorkingsetRefault) => rc.title("Workingset Refault"),
-            Mem(WorkingsetActivate) => rc.title("Workingset Activate"),
+            Mem(WorkingsetRefaultAnon) => rc.title("Workingset Refault Anon"),
+            Mem(WorkingsetRefaultFile) => rc.title("Workingset Refault File"),
+            Mem(WorkingsetActivateAnon) => rc.title("Workingset Activate Anon"),
+            Mem(WorkingsetActivateFile) => rc.title("Workingset Activate File"),
+            Mem(WorkingsetRestoreAnon) => rc.title("Workingset Restore Anon"),
+            Mem(WorkingsetRestoreFile) => rc.title("Workingset Restore File"),
             Mem(WorkingsetNodereclaim) => rc.title("Workingset Nodereclaim"),
             Mem(Pgrefill) => rc.title("Pgrefill"),
             Mem(Pgscan) => rc.title("Pgscan"),

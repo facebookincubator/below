@@ -267,9 +267,13 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::ThpFaultAlloc;
     use model::CgroupMemoryModelFieldId::Total;
     use model::CgroupMemoryModelFieldId::Unevictable;
-    use model::CgroupMemoryModelFieldId::WorkingsetActivate;
+    use model::CgroupMemoryModelFieldId::WorkingsetActivateAnon;
+    use model::CgroupMemoryModelFieldId::WorkingsetActivateFile;
     use model::CgroupMemoryModelFieldId::WorkingsetNodereclaim;
-    use model::CgroupMemoryModelFieldId::WorkingsetRefault;
+    use model::CgroupMemoryModelFieldId::WorkingsetRefaultAnon;
+    use model::CgroupMemoryModelFieldId::WorkingsetRefaultFile;
+    use model::CgroupMemoryModelFieldId::WorkingsetRestoreAnon;
+    use model::CgroupMemoryModelFieldId::WorkingsetRestoreFile;
     use model::CgroupPressureModelFieldId::CpuFullPct;
     use model::CgroupPressureModelFieldId::CpuSomePct;
     use model::CgroupPressureModelFieldId::IoFullPct;
@@ -356,8 +360,12 @@ pub mod default_tabs {
             ViewItem::from_default(Mem(SlabUnreclaimable)),
             ViewItem::from_default(Mem(Pgfault)),
             ViewItem::from_default(Mem(Pgmajfault)),
-            ViewItem::from_default(Mem(WorkingsetRefault)),
-            ViewItem::from_default(Mem(WorkingsetActivate)),
+            ViewItem::from_default(Mem(WorkingsetRefaultAnon)),
+            ViewItem::from_default(Mem(WorkingsetRefaultFile)),
+            ViewItem::from_default(Mem(WorkingsetActivateAnon)),
+            ViewItem::from_default(Mem(WorkingsetActivateFile)),
+            ViewItem::from_default(Mem(WorkingsetRestoreAnon)),
+            ViewItem::from_default(Mem(WorkingsetRestoreFile)),
             ViewItem::from_default(Mem(WorkingsetNodereclaim)),
             ViewItem::from_default(Mem(Pgrefill)),
             ViewItem::from_default(Mem(Pgscan)),

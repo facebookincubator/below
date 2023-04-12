@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 357] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 361] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -173,8 +173,12 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 357] = [
     "cgroup.[path:/<cgroup_path>/.]mem.slab_unreclaimable",
     "cgroup.[path:/<cgroup_path>/.]mem.pgfault",
     "cgroup.[path:/<cgroup_path>/.]mem.pgmajfault",
-    "cgroup.[path:/<cgroup_path>/.]mem.workingset_refault",
-    "cgroup.[path:/<cgroup_path>/.]mem.workingset_activate",
+    "cgroup.[path:/<cgroup_path>/.]mem.workingset_refault_anon",
+    "cgroup.[path:/<cgroup_path>/.]mem.workingset_refault_file",
+    "cgroup.[path:/<cgroup_path>/.]mem.workingset_activate_anon",
+    "cgroup.[path:/<cgroup_path>/.]mem.workingset_activate_file",
+    "cgroup.[path:/<cgroup_path>/.]mem.workingset_restore_anon",
+    "cgroup.[path:/<cgroup_path>/.]mem.workingset_restore_file",
     "cgroup.[path:/<cgroup_path>/.]mem.workingset_nodereclaim",
     "cgroup.[path:/<cgroup_path>/.]mem.pgrefill",
     "cgroup.[path:/<cgroup_path>/.]mem.pgscan",

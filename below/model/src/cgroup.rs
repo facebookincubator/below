@@ -482,8 +482,12 @@ pub struct CgroupMemoryModel {
     pub slab_unreclaimable: Option<u64>,
     pub pgfault: Option<u64>,
     pub pgmajfault: Option<u64>,
-    pub workingset_refault: Option<u64>,
-    pub workingset_activate: Option<u64>,
+    pub workingset_refault_anon: Option<u64>,
+    pub workingset_refault_file: Option<u64>,
+    pub workingset_activate_anon: Option<u64>,
+    pub workingset_activate_file: Option<u64>,
+    pub workingset_restore_anon: Option<u64>,
+    pub workingset_restore_file: Option<u64>,
     pub workingset_nodereclaim: Option<u64>,
     pub pgrefill: Option<u64>,
     pub pgscan: Option<u64>,
@@ -529,8 +533,30 @@ impl std::ops::Add for CgroupMemoryModel {
             slab_unreclaimable: opt_add(self.slab_unreclaimable, other.slab_unreclaimable),
             pgfault: opt_add(self.pgfault, other.pgfault),
             pgmajfault: opt_add(self.pgmajfault, other.pgmajfault),
-            workingset_refault: opt_add(self.workingset_refault, other.workingset_refault),
-            workingset_activate: opt_add(self.workingset_activate, other.workingset_activate),
+            workingset_refault_anon: opt_add(
+                self.workingset_refault_anon,
+                other.workingset_refault_anon,
+            ),
+            workingset_refault_file: opt_add(
+                self.workingset_refault_file,
+                other.workingset_refault_file,
+            ),
+            workingset_activate_anon: opt_add(
+                self.workingset_activate_anon,
+                other.workingset_activate_anon,
+            ),
+            workingset_activate_file: opt_add(
+                self.workingset_activate_file,
+                other.workingset_activate_file,
+            ),
+            workingset_restore_anon: opt_add(
+                self.workingset_restore_anon,
+                other.workingset_restore_anon,
+            ),
+            workingset_restore_file: opt_add(
+                self.workingset_restore_file,
+                other.workingset_restore_file,
+            ),
             workingset_nodereclaim: opt_add(
                 self.workingset_nodereclaim,
                 other.workingset_nodereclaim,
@@ -603,15 +629,39 @@ impl CgroupMemoryModel {
                 model.pgfault = count_per_sec!(last_stat.pgfault, stat.pgfault, delta, u64);
                 model.pgmajfault =
                     count_per_sec!(last_stat.pgmajfault, stat.pgmajfault, delta, u64);
-                model.workingset_refault = count_per_sec!(
-                    last_stat.workingset_refault,
-                    stat.workingset_refault,
+                model.workingset_refault_anon = count_per_sec!(
+                    last_stat.workingset_refault_anon,
+                    stat.workingset_refault_anon,
                     delta,
                     u64
                 );
-                model.workingset_activate = count_per_sec!(
-                    last_stat.workingset_activate,
-                    stat.workingset_activate,
+                model.workingset_refault_file = count_per_sec!(
+                    last_stat.workingset_refault_file,
+                    stat.workingset_refault_file,
+                    delta,
+                    u64
+                );
+                model.workingset_activate_anon = count_per_sec!(
+                    last_stat.workingset_activate_anon,
+                    stat.workingset_activate_anon,
+                    delta,
+                    u64
+                );
+                model.workingset_activate_file = count_per_sec!(
+                    last_stat.workingset_activate_file,
+                    stat.workingset_activate_file,
+                    delta,
+                    u64
+                );
+                model.workingset_restore_anon = count_per_sec!(
+                    last_stat.workingset_restore_anon,
+                    stat.workingset_restore_anon,
+                    delta,
+                    u64
+                );
+                model.workingset_restore_file = count_per_sec!(
+                    last_stat.workingset_restore_file,
+                    stat.workingset_restore_file,
                     delta,
                     u64
                 );
