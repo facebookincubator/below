@@ -1143,7 +1143,15 @@ impl HasRenderConfig for model::BtrfsModel {
     }
 }
 
-impl HasRenderConfigForDump for model::BtrfsModel {}
+impl HasRenderConfigForDump for model::BtrfsModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        _field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        // Btrfs not supported in open source
+        None
+    }
+}
 
 impl HasRenderConfig for model::CgroupStatModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
