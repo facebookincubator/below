@@ -91,6 +91,12 @@ impl NetworkModel {
     }
 }
 
+impl Nameable for NetworkModel {
+    fn name() -> &'static str {
+        "network"
+    }
+}
+
 #[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
 pub struct TcpModel {
     pub active_opens_per_sec: Option<u64>,
@@ -447,6 +453,12 @@ impl SingleNetModel {
             tx_packets: sample.tx_packets.map(|s| s as u64),
             tx_window_errors: sample.tx_window_errors.map(|s| s as u64),
         }
+    }
+}
+
+impl Nameable for SingleNetModel {
+    fn name() -> &'static str {
+        "network"
     }
 }
 

@@ -118,6 +118,12 @@ impl SystemModel {
     }
 }
 
+impl Nameable for SystemModel {
+    fn name() -> &'static str {
+        "system"
+    }
+}
+
 #[derive(
     Clone,
     Debug,
@@ -452,6 +458,12 @@ impl SingleDiskModel {
     }
 }
 
+impl Nameable for SingleDiskModel {
+    fn name() -> &'static str {
+        "disk"
+    }
+}
+
 #[derive(
     Clone,
     Debug,
@@ -474,6 +486,12 @@ impl BtrfsModel {
             disk_fraction: end.disk_fraction.map(|v| v as f64),
             disk_bytes: end.disk_bytes.map(|v| v as u64),
         }
+    }
+}
+
+impl Nameable for BtrfsModel {
+    fn name() -> &'static str {
+        "btrfs"
     }
 }
 

@@ -14,6 +14,7 @@
 
 use model::Field;
 use model::FieldId;
+use model::Nameable;
 use model::Queriable;
 use model::Recursive;
 use render::{
@@ -287,13 +288,18 @@ pub fn dump_openmetrics<T>(
 ) -> String
 where
     T: HasRenderConfigForDump,
+    T: Nameable,
     T::FieldId: ToString,
 {
     fields
         .iter()
         .filter_map(|field| {
             // OpenMetrics forbids `.` in metric name
-            let key = field.get_field_id_str().replace(".", "_");
+            let key = format!(
+                "{}_{}",
+                T::name(),
+                field.get_field_id_str().replace(".", "_")
+            );
             field.dump_field_openmetrics(&key, ctx, model)
         })
         .flat_map(|s| s.chars().collect::<Vec<_>>().into_iter())
