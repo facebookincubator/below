@@ -709,6 +709,70 @@ impl HasRenderConfigForDump for model::SingleProcessModel {
         }
         .get()
     }
+
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::ProcessCpuModelFieldId::*;
+        use model::ProcessIoModelFieldId::*;
+        use model::ProcessMemoryModelFieldId::*;
+        use model::SingleProcessModelFieldId::*;
+        let counter = if let Some(pid) = &self.pid {
+            counter().label("pid", &pid.to_string())
+        } else {
+            counter()
+        };
+        let gauge = if let Some(pid) = &self.pid {
+            gauge().label("pid", &pid.to_string())
+        } else {
+            gauge()
+        };
+        match field_id {
+            // We will label all the other metrics with the pid
+            Pid => None,
+            // Not sure what to do about static values like ppid. Omitting for now.
+            Ppid => None,
+            // Same as ppid
+            NsTgid => None,
+            // OpenMetrics does not support strings
+            Comm => None,
+            // OpenMetrics does not support strings
+            State => None,
+            UptimeSecs => Some(counter),
+            // OpenMetrics does not support strings
+            Cgroup => None,
+            Io(field_id) => match field_id {
+                RbytesPerSec => Some(gauge),
+                WbytesPerSec => Some(gauge),
+                RwbytesPerSec => Some(gauge),
+            },
+            Mem(field_id) => match field_id {
+                MinorfaultsPerSec => Some(gauge),
+                MajorfaultsPerSec => Some(gauge),
+                RssBytes => Some(gauge.unit("bytes")),
+                VmSize => Some(gauge.unit("bytes")),
+                Lock => Some(gauge.unit("bytes")),
+                Pin => Some(gauge.unit("bytes")),
+                Anon => Some(gauge.unit("bytes")),
+                File => Some(gauge.unit("bytes")),
+                Shmem => Some(gauge.unit("bytes")),
+                Pte => Some(gauge.unit("bytes")),
+                Swap => Some(gauge.unit("bytes")),
+                HugeTlb => Some(gauge.unit("bytes")),
+            },
+            Cpu(field_id) => match field_id {
+                UsagePct => Some(gauge.unit("percent")),
+                UserPct => Some(gauge.unit("percent")),
+                SystemPct => Some(gauge.unit("percent")),
+                NumThreads => Some(counter),
+            },
+            // OpenMetrics does not support strings
+            Cmdline => None,
+            // OpenMetrics does not support strings
+            ExePath => None,
+        }
+    }
 }
 
 impl HasRenderConfig for model::ProcessIoModel {
