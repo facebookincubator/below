@@ -54,7 +54,10 @@ fn test_dump_sys_content() {
         .expect("Fail to get model");
     let mut system_content: Vec<u8> = Vec::new();
     let mut round = 0;
-    let ctx = CommonFieldContext { timestamp: 0 };
+    let ctx = CommonFieldContext {
+        timestamp: 0,
+        hostname: "h".to_string(),
+    };
     system_dumper
         .dump_model(&ctx, &model, &mut system_content, &mut round, false)
         .expect("Failed to dump system model");
@@ -210,7 +213,10 @@ fn test_dump_process_content() {
         .expect("Fail to get model");
     let mut process_content: Vec<u8> = Vec::new();
     let mut round = 0;
-    let ctx = CommonFieldContext { timestamp: 0 };
+    let ctx = CommonFieldContext {
+        timestamp: 0,
+        hostname: "h".to_string(),
+    };
     process_dumper
         .dump_model(&ctx, &model, &mut process_content, &mut round, false)
         .expect("Failed to dump process model");
@@ -329,7 +335,10 @@ fn test_dump_proc_select() {
 
     let mut process_content: Vec<u8> = Vec::new();
     let mut round = 0;
-    let ctx = CommonFieldContext { timestamp: 0 };
+    let ctx = CommonFieldContext {
+        timestamp: 0,
+        hostname: "h".to_string(),
+    };
     process_dumper
         .dump_model(&ctx, &model, &mut process_content, &mut round, false)
         .expect("Failed to dump process model");
@@ -444,7 +453,10 @@ fn test_dump_cgroup_content() {
         .expect("Fail to get model");
     let mut cgroup_content: Vec<u8> = Vec::new();
     let mut round = 0;
-    let ctx = CommonFieldContext { timestamp: 0 };
+    let ctx = CommonFieldContext {
+        timestamp: 0,
+        hostname: "h".to_string(),
+    };
     cgroup_dumper
         .dump_model(&ctx, &model, &mut cgroup_content, &mut round, false)
         .expect("Failed to dump cgroup model");
@@ -563,7 +575,10 @@ fn test_dump_iface_content() {
         .expect("Fail to get model");
     let mut iface_content: Vec<u8> = Vec::new();
     let mut round = 0;
-    let ctx = CommonFieldContext { timestamp: 0 };
+    let ctx = CommonFieldContext {
+        timestamp: 0,
+        hostname: "h".to_string(),
+    };
     iface_dumper
         .dump_model(&ctx, &model, &mut iface_content, &mut round, false)
         .expect("Failed to dump iface model");
@@ -678,7 +693,10 @@ fn test_dump_network_content() {
         .expect("Fail to get model");
     let mut network_content: Vec<u8> = Vec::new();
     let mut round = 0;
-    let ctx = CommonFieldContext { timestamp: 0 };
+    let ctx = CommonFieldContext {
+        timestamp: 0,
+        hostname: "h".to_string(),
+    };
     network_dumper
         .dump_model(&ctx, &model, &mut network_content, &mut round, false)
         .expect("Failed to dump network model");
@@ -796,7 +814,10 @@ fn test_dump_transport_content() {
         .expect("Fail to get model");
     let mut transport_content: Vec<u8> = Vec::new();
     let mut round = 0;
-    let ctx = CommonFieldContext { timestamp: 0 };
+    let ctx = CommonFieldContext {
+        timestamp: 0,
+        hostname: "h".to_string(),
+    };
     transport_dumper
         .dump_model(&ctx, &model, &mut transport_content, &mut round, false)
         .expect("Failed to dump transport model");
@@ -893,7 +914,10 @@ fn test_dump_disk_content() {
         .expect("Fail to get model");
     let mut disk_content: Vec<u8> = Vec::new();
     let mut round = 0;
-    let ctx = CommonFieldContext { timestamp: 0 };
+    let ctx = CommonFieldContext {
+        timestamp: 0,
+        hostname: "h".to_string(),
+    };
     disk_dumper
         .dump_model(&ctx, &model, &mut disk_content, &mut round, false)
         .expect("Failed to dump disk model");

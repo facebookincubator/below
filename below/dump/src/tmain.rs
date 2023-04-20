@@ -81,6 +81,7 @@ pub fn dump_timeseries(
                 .timestamp
                 .duration_since(SystemTime::UNIX_EPOCH)?
                 .as_secs() as i64,
+            hostname: model.system.hostname.clone(),
         };
         // Base on the exec result, we will determine if we need to generate the line breaker, etc
         let comma_flag = round != 0;

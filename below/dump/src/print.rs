@@ -17,9 +17,7 @@ use model::FieldId;
 use model::Nameable;
 use model::Queriable;
 use model::Recursive;
-use render::{
-    HasRenderConfig, RenderConfig, RenderOpenMetricsConfig, RenderOpenMetricsConfigBuilder,
-};
+use render::{HasRenderConfig, RenderConfig, RenderOpenMetricsConfigBuilder};
 
 use super::*;
 
@@ -82,13 +80,11 @@ where
     pub fn get_openmetrics_render_config(
         &self,
         model: &F::Queriable,
-    ) -> Option<RenderOpenMetricsConfig> {
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
         match self {
             // Common fields (eg timestamp) are already encoded into metric
             Self::Common(_) => None,
-            Self::FieldId(field_id) => model
-                .get_openmetrics_config_for_dump(field_id)
-                .map(|b| b.build()),
+            Self::FieldId(field_id) => model.get_openmetrics_config_for_dump(field_id),
         }
     }
 
@@ -121,9 +117,11 @@ where
         model: &F::Queriable,
     ) -> Option<String> {
         match self.get_field(ctx, model) {
-            Some(f) => self
-                .get_openmetrics_render_config(model)
-                .map(|c| c.render(key, f, ctx.timestamp)),
+            Some(f) => self.get_openmetrics_render_config(model).map(|b| {
+                b.label("hostname", &ctx.hostname)
+                    .build()
+                    .render(key, f, ctx.timestamp)
+            }),
             None => None,
         }
     }

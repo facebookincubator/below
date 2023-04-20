@@ -85,6 +85,7 @@ pub enum CommonField {
 /// Context for initializing CommonFields.
 pub struct CommonFieldContext {
     pub timestamp: i64,
+    pub hostname: String,
 }
 
 impl CommonField {
