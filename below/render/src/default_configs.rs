@@ -143,6 +143,118 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
         }
         .get()
     }
+
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::CgroupCpuModelFieldId::*;
+        use model::CgroupIoModelFieldId::*;
+        use model::CgroupMemoryModelFieldId::*;
+        use model::CgroupPressureModelFieldId::*;
+        use model::CgroupStatModelFieldId::*;
+        use model::SingleCgroupModelFieldId::*;
+
+        let counter = counter().label("cgroup", &self.full_path);
+        let gauge = gauge().label("cgroup", &self.full_path);
+        match field_id {
+            // We only use full path for the label to avoid ambiguity
+            Name => None,
+            // We will label each metric with the full path
+            FullPath => None,
+            // Not sure what to do with static fields like inode number so leave out for now
+            InodeNumber => None,
+            Cpu(field_id) => match field_id {
+                UsagePct => Some(gauge.unit("percent")),
+                UserPct => Some(gauge.unit("percent")),
+                SystemPct => Some(gauge.unit("percent")),
+                NrPeriodsPerSec => Some(gauge),
+                NrThrottledPerSec => Some(gauge),
+                ThrottledPct => Some(gauge.unit("percent")),
+            },
+            Io(field_id) => match field_id {
+                RbytesPerSec => Some(gauge.unit("bytes")),
+                WbytesPerSec => Some(gauge.unit("bytes")),
+                RiosPerSec => Some(gauge),
+                WiosPerSec => Some(gauge),
+                DbytesPerSec => Some(gauge.unit("bytes")),
+                DiosPerSec => Some(gauge),
+                RwbytesPerSec => Some(gauge.unit("bytes")),
+                CostUsagePct => Some(gauge.unit("percent")),
+                CostWaitPct => Some(gauge.unit("percent")),
+                CostIndebtPct => Some(gauge.unit("percent")),
+                CostIndelayPct => Some(gauge.unit("percent")),
+            },
+            Mem(field_id) => match field_id {
+                Total => Some(counter.unit("bytes")),
+                Swap => Some(counter.unit("bytes")),
+                Zswap => Some(counter.unit("bytes")),
+                // Not sure what to do about min/low/high/max values b/c they're neither
+                // counters nor gauges. So leave out for now.
+                MemoryHigh => None,
+                EventsLow => None,
+                EventsHigh => None,
+                EventsMax => None,
+                EventsOom => Some(counter),
+                EventsOomKill => Some(counter),
+                Anon => Some(gauge.unit("bytes")),
+                File => Some(gauge.unit("bytes")),
+                KernelStack => Some(gauge.unit("bytes")),
+                Slab => Some(gauge.unit("bytes")),
+                Sock => Some(gauge.unit("bytes")),
+                Shmem => Some(gauge.unit("bytes")),
+                FileMapped => Some(gauge.unit("bytes")),
+                FileDirty => Some(gauge.unit("bytes")),
+                FileWriteback => Some(gauge.unit("bytes")),
+                AnonThp => Some(gauge.unit("bytes")),
+                InactiveAnon => Some(gauge.unit("bytes")),
+                ActiveAnon => Some(gauge.unit("bytes")),
+                InactiveFile => Some(gauge.unit("bytes")),
+                ActiveFile => Some(gauge.unit("bytes")),
+                Unevictable => Some(gauge.unit("bytes")),
+                SlabReclaimable => Some(gauge.unit("bytes")),
+                SlabUnreclaimable => Some(gauge.unit("bytes")),
+                Pgfault => Some(gauge.help("Page faults per second")),
+                Pgmajfault => Some(gauge.help("Major page faults per second")),
+                WorkingsetRefaultAnon => Some(gauge.help("Workingset refault anon per second")),
+                WorkingsetRefaultFile => Some(gauge.help("Workingset refault file per second")),
+                WorkingsetActivateAnon => Some(gauge.help("Workingset activate anon per second")),
+                WorkingsetActivateFile => Some(gauge.help("Workingset activate file per second")),
+                WorkingsetRestoreAnon => Some(gauge.help("Workingset restore anon per second")),
+                WorkingsetRestoreFile => Some(gauge.help("Workingset restore file per second")),
+                WorkingsetNodereclaim => Some(gauge.help("Workingset nodereclaim per second")),
+                Pgrefill => Some(gauge.help("Pgrefill per second")),
+                Pgscan => Some(gauge.help("Pgscan per second")),
+                Pgsteal => Some(gauge.help("Pgsteal per second")),
+                Pgactivate => Some(gauge.help("Pgactivate per second")),
+                Pgdeactivate => Some(gauge.help("Pgdeactivate per second")),
+                Pglazyfree => Some(gauge.help("Pglazyfree per second")),
+                Pglazyfreed => Some(gauge.help("Pglazyfreed per second")),
+                ThpFaultAlloc => Some(gauge.help("THP Fault Alloc per second")),
+                ThpCollapseAlloc => Some(gauge.help("THP Collapse Alloc per second")),
+            },
+            Pressure(field_id) => match field_id {
+                CpuSomePct => Some(gauge.unit("percent")),
+                CpuFullPct => Some(gauge.unit("percent")),
+                IoSomePct => Some(gauge.unit("percent")),
+                IoFullPct => Some(gauge.unit("percent")),
+                MemorySomePct => Some(gauge.unit("percent")),
+                MemoryFullPct => Some(gauge.unit("percent")),
+            },
+            CgroupStat(field_id) => match field_id {
+                NrDescendants => Some(counter),
+                NrDyingDescendants => Some(counter),
+            },
+            // Unclear how to represent numa nodes. Doesn't seem super useful so leave out for now.
+            MemNuma(_) => None,
+            // These are all settings rather than counters/gauges, so not sure how to represent
+            // these. Leave out for now.
+            Props(_) => None,
+            // Looks like these represent child IO data. Not sure it's necessary to report this
+            // as dump does not even pretend to form a hierarchy.
+            IoDetails(_) => None,
+        }
+    }
 }
 
 impl HasRenderConfig for model::CgroupCpuModel {
