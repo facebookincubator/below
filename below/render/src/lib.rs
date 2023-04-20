@@ -111,6 +111,7 @@ pub enum OpenMetricsType {
 pub struct RenderOpenMetricsConfig {
     ty: OpenMetricsType,
     help: Option<String>,
+    unit: Option<String>,
     labels: BTreeMap<String, String>,
 }
 
@@ -134,6 +135,7 @@ impl RenderOpenMetricsConfigBuilder {
             config: RenderOpenMetricsConfig {
                 ty,
                 help: None,
+                unit: None,
                 labels: BTreeMap::new(),
             },
         }
@@ -142,6 +144,12 @@ impl RenderOpenMetricsConfigBuilder {
     /// Help text for the metric
     pub fn help(mut self, help: &str) -> Self {
         self.config.help = Some(help.to_owned());
+        self
+    }
+
+    /// Unit for the metric
+    pub fn unit(mut self, unit: &str) -> Self {
+        self.config.unit = Some(unit.to_owned());
         self
     }
 
@@ -161,9 +169,23 @@ impl RenderOpenMetricsConfigBuilder {
 }
 
 impl RenderOpenMetricsConfig {
+    /// Returns the normalized key name for this metric
+    fn normalize_key(&self, key: &str) -> String {
+        let mut ret = key.to_owned();
+        if let Some(unit) = &self.unit {
+            // If a unit is provided, it _must_ be suffixed on the key separated
+            // by an underscore. The spec requires it.
+            if !key.ends_with(unit) {
+                ret = format!("{}_{}", key, unit);
+            }
+        }
+        ret
+    }
+
     /// Render the field as an openmetrics field in string form
     pub fn render(&self, key: &str, field: Field, timestamp: i64) -> String {
         let mut res = String::new();
+        let key = self.normalize_key(key);
         let metric_type = self.ty.to_string();
         let labels = if self.labels.is_empty() {
             "".to_owned()
@@ -181,6 +203,9 @@ impl RenderOpenMetricsConfig {
         writeln!(&mut res, "# TYPE {key} {metric_type}").unwrap();
         if let Some(help) = &self.help {
             writeln!(&mut res, "# HELP {key} {help}").unwrap();
+        }
+        if let Some(unit) = &self.unit {
+            writeln!(&mut res, "# UNIT {key} {unit}").unwrap();
         }
         writeln!(&mut res, "{key}{labels} {field} {timestamp}").unwrap();
 
@@ -394,6 +419,34 @@ fn test_openmetrics_counter() {
     let expected = r#"# TYPE my_key counter
 # HELP my_key counter help
 my_key 1.23 1234
+"#;
+    assert_eq!(text, expected);
+}
+
+// Unit suffix should be appended
+#[test]
+fn test_openmetrics_unit() {
+    let config = RenderOpenMetricsConfigBuilder::new(OpenMetricsType::Counter)
+        .unit("foobars")
+        .build();
+    let text = config.render("my_key", Field::F32(1.23), 1234);
+    let expected = r#"# TYPE my_key_foobars counter
+# UNIT my_key_foobars foobars
+my_key_foobars 1.23 1234
+"#;
+    assert_eq!(text, expected);
+}
+
+// Unit suffix already present, so should not be doubled
+#[test]
+fn test_openmetrics_unit_exists() {
+    let config = RenderOpenMetricsConfigBuilder::new(OpenMetricsType::Counter)
+        .unit("foobars")
+        .build();
+    let text = config.render("my_key_foobars", Field::F32(1.23), 1234);
+    let expected = r#"# TYPE my_key_foobars counter
+# UNIT my_key_foobars foobars
+my_key_foobars 1.23 1234
 "#;
     assert_eq!(text, expected);
 }
