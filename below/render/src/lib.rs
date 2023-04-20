@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter, Write};
 
 mod default_configs;
@@ -110,6 +111,7 @@ pub enum OpenMetricsType {
 pub struct RenderOpenMetricsConfig {
     ty: OpenMetricsType,
     help: Option<String>,
+    labels: BTreeMap<String, String>,
 }
 
 #[derive(Clone)]
@@ -129,13 +131,26 @@ impl Display for OpenMetricsType {
 impl RenderOpenMetricsConfigBuilder {
     pub fn new(ty: OpenMetricsType) -> Self {
         Self {
-            config: RenderOpenMetricsConfig { ty, help: None },
+            config: RenderOpenMetricsConfig {
+                ty,
+                help: None,
+                labels: BTreeMap::new(),
+            },
         }
     }
 
     /// Help text for the metric
     pub fn help(mut self, help: &str) -> Self {
         self.config.help = Some(help.to_owned());
+        self
+    }
+
+    /// Add a label to the metric
+    ///
+    /// Note multiple labels for a single metric is supported
+    pub fn label(mut self, key: &str, value: &str) -> Self {
+        let value_escaped = value.replace("\"", "\\\"");
+        self.config.labels.insert(key.to_owned(), value_escaped);
         self
     }
 
@@ -150,13 +165,24 @@ impl RenderOpenMetricsConfig {
     pub fn render(&self, key: &str, field: Field, timestamp: i64) -> String {
         let mut res = String::new();
         let metric_type = self.ty.to_string();
+        let labels = if self.labels.is_empty() {
+            "".to_owned()
+        } else {
+            let body = self
+                .labels
+                .iter()
+                .map(|(k, v)| format!("{}=\"{}\"", k, v))
+                .collect::<Vec<_>>()
+                .join(",");
+            format!("{{{}}}", body)
+        };
 
         // Appending to a string can never fail so unwrap() is safe here
         writeln!(&mut res, "# TYPE {key} {metric_type}").unwrap();
         if let Some(help) = &self.help {
             writeln!(&mut res, "# HELP {key} {help}").unwrap();
         }
-        writeln!(&mut res, "{key} {field} {timestamp}").unwrap();
+        writeln!(&mut res, "{key}{labels} {field} {timestamp}").unwrap();
 
         res
     }
@@ -368,6 +394,50 @@ fn test_openmetrics_counter() {
     let expected = r#"# TYPE my_key counter
 # HELP my_key counter help
 my_key 1.23 1234
+"#;
+    assert_eq!(text, expected);
+}
+
+#[test]
+fn test_openmetrics_label() {
+    let config = RenderOpenMetricsConfigBuilder::new(OpenMetricsType::Counter)
+        .help("counter help")
+        .label("label1", "value1")
+        .build();
+    let text = config.render("my_key", Field::F32(1.23), 1234);
+    let expected = r#"# TYPE my_key counter
+# HELP my_key counter help
+my_key{label1="value1"} 1.23 1234
+"#;
+    assert_eq!(text, expected);
+}
+
+#[test]
+fn test_openmetrics_label_escaped_quotes() {
+    let config = RenderOpenMetricsConfigBuilder::new(OpenMetricsType::Counter)
+        .help("counter help")
+        .label("label1", r#"quotes""between"#)
+        .build();
+    let text = config.render("my_key", Field::F32(1.23), 1234);
+    let expected = r#"# TYPE my_key counter
+# HELP my_key counter help
+my_key{label1="quotes\"\"between"} 1.23 1234
+"#;
+    assert_eq!(text, expected);
+}
+
+#[test]
+fn test_openmetrics_labels() {
+    let config = RenderOpenMetricsConfigBuilder::new(OpenMetricsType::Counter)
+        .help("counter help")
+        .label("label1", "value1")
+        .label("label2", "value2")
+        .label("label3", "zzz")
+        .build();
+    let text = config.render("my_key", Field::F32(1.23), 1234);
+    let expected = r#"# TYPE my_key counter
+# HELP my_key counter help
+my_key{label1="value1",label2="value2",label3="zzz"} 1.23 1234
 "#;
     assert_eq!(text, expected);
 }
