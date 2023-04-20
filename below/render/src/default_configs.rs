@@ -1126,7 +1126,50 @@ impl HasRenderConfig for model::SingleDiskModel {
     }
 }
 
-impl HasRenderConfigForDump for model::SingleDiskModel {}
+impl HasRenderConfigForDump for model::SingleDiskModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::SingleDiskModelFieldId::*;
+        let counter = if let Some(name) = &self.name {
+            counter().label("disk", name)
+        } else {
+            counter()
+        };
+        let gauge = if let Some(name) = &self.name {
+            gauge().label("disk", name)
+        } else {
+            gauge()
+        };
+        match field_id {
+            // We label the other metrics with the disk name
+            Name => None,
+            ReadBytesPerSec => Some(gauge.unit("bytes")),
+            WriteBytesPerSec => Some(gauge.unit("bytes")),
+            DiscardBytesPerSec => Some(gauge.unit("bytes")),
+            DiskTotalBytesPerSec => Some(gauge.unit("bytes")),
+            ReadCompleted => Some(counter),
+            ReadMerged => Some(counter),
+            ReadSectors => Some(counter),
+            TimeSpendReadMs => Some(counter.unit("milliseconds")),
+            WriteCompleted => Some(counter),
+            WriteMerged => Some(counter),
+            WriteSectors => Some(counter),
+            TimeSpendWriteMs => Some(counter.unit("milliseconds")),
+            DiscardCompleted => Some(counter),
+            DiscardMerged => Some(counter),
+            DiscardSectors => Some(counter),
+            TimeSpendDiscardMs => Some(counter.unit("milliseconds")),
+            // Not sure what to do about static values like major/minor so leave them out for now
+            Major => None,
+            Minor => None,
+            DiskUsage => Some(gauge.unit("percent")),
+            PartitionSize => Some(gauge.unit("bytes")),
+            FilesystemType => None,
+        }
+    }
+}
 
 impl HasRenderConfig for model::BtrfsModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
