@@ -778,7 +778,32 @@ impl HasRenderConfig for model::SystemModel {
     }
 }
 
-impl HasRenderConfigForDump for model::SystemModel {}
+impl HasRenderConfigForDump for model::SystemModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::SystemModelFieldId::*;
+        match field_id {
+            // We tag all metrics with the hostname already
+            Hostname => None,
+            // OpenMetrics does not support strings
+            KernelVersion => None,
+            // OpenMetrics does not support strings
+            OsRelease => None,
+            Stat(field_id) => self.stat.get_openmetrics_config_for_dump(field_id),
+            Cpu(field_id) => self.total_cpu.get_openmetrics_config_for_dump(field_id),
+            // `system` dump does not support individual CPU metrics
+            Cpus(_) => None,
+            Mem(field_id) => self.mem.get_openmetrics_config_for_dump(field_id),
+            Vm(field_id) => self.vm.get_openmetrics_config_for_dump(field_id),
+            // Same as with NetworkModel, we leave disk dumping to `disk` category
+            Disks(_) => None,
+            // Same as with above, we leave btrfs dumping to `btrfs` category
+            Btrfs(_) => None,
+        }
+    }
+}
 
 impl HasRenderConfig for model::ProcStatModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
@@ -791,6 +816,23 @@ impl HasRenderConfig for model::ProcStatModel {
             TotalProcesses => rc.title("Total Procs"),
             RunningProcesses => rc.title("Running Procs"),
             BlockedProcesses => rc.title("Blocked Procs"),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::ProcStatModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::ProcStatModelFieldId::*;
+        match field_id {
+            TotalInterruptCt => Some(counter()),
+            ContextSwitches => Some(counter()),
+            BootTimeEpochSecs => Some(counter()),
+            TotalProcesses => Some(gauge()),
+            RunningProcesses => Some(gauge()),
+            BlockedProcesses => Some(gauge()),
         }
     }
 }
@@ -812,6 +854,31 @@ impl HasRenderConfig for model::SingleCpuModel {
             StolenPct => rc.title("Stolen").suffix("%").format(Precision(2)),
             GuestPct => rc.title("Guest").suffix("%").format(Precision(2)),
             GuestNicePct => rc.title("Guest Nice").suffix("%").format(Precision(2)),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::SingleCpuModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::SingleCpuModelFieldId::*;
+        let gauge = gauge().label("cpu", &self.idx.to_string());
+        match field_id {
+            // We label each metric with the CPU index
+            Idx => None,
+            UsagePct => Some(gauge),
+            UserPct => Some(gauge),
+            IdlePct => Some(gauge),
+            SystemPct => Some(gauge),
+            NicePct => Some(gauge),
+            IowaitPct => Some(gauge),
+            IrqPct => Some(gauge),
+            SoftirqPct => Some(gauge),
+            StolenPct => Some(gauge),
+            GuestPct => Some(gauge),
+            GuestNicePct => Some(gauge),
         }
     }
 }
@@ -878,6 +945,54 @@ impl HasRenderConfig for model::MemoryModel {
     }
 }
 
+impl HasRenderConfigForDump for model::MemoryModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::MemoryModelFieldId::*;
+        match field_id {
+            Total => Some(gauge().unit("bytes")),
+            Free => Some(gauge().unit("bytes")),
+            Available => Some(gauge().unit("bytes")),
+            Buffers => Some(gauge().unit("bytes")),
+            Cached => Some(gauge().unit("bytes")),
+            SwapCached => Some(gauge().unit("bytes")),
+            Active => Some(gauge().unit("bytes")),
+            Inactive => Some(gauge().unit("bytes")),
+            Anon => Some(gauge().unit("bytes")),
+            File => Some(gauge().unit("bytes")),
+            Unevictable => Some(gauge().unit("bytes")),
+            Mlocked => Some(gauge().unit("bytes")),
+            SwapTotal => Some(gauge().unit("bytes")),
+            SwapFree => Some(gauge().unit("bytes")),
+            Dirty => Some(gauge().unit("bytes")),
+            Writeback => Some(gauge().unit("bytes")),
+            AnonPages => Some(gauge().unit("bytes")),
+            Mapped => Some(gauge().unit("bytes")),
+            Shmem => Some(gauge().unit("bytes")),
+            Kreclaimable => Some(gauge().unit("bytes")),
+            Slab => Some(gauge().unit("bytes")),
+            SlabReclaimable => Some(gauge().unit("bytes")),
+            SlabUnreclaimable => Some(gauge().unit("bytes")),
+            KernelStack => Some(gauge().unit("bytes")),
+            PageTables => Some(gauge().unit("bytes")),
+            AnonHugePagesBytes => Some(gauge().unit("bytes")),
+            ShmemHugePagesBytes => Some(gauge().unit("bytes")),
+            FileHugePagesBytes => Some(gauge().unit("bytes")),
+            Hugetlb => Some(gauge().unit("bytes")),
+            CmaTotal => Some(gauge().unit("bytes")),
+            CmaFree => Some(gauge().unit("bytes")),
+            VmallocTotal => Some(gauge().unit("bytes")),
+            VmallocUsed => Some(gauge().unit("bytes")),
+            VmallocChunk => Some(gauge().unit("bytes")),
+            DirectMap4k => Some(gauge().unit("bytes")),
+            DirectMap2m => Some(gauge().unit("bytes")),
+            DirectMap1g => Some(gauge().unit("bytes")),
+        }
+    }
+}
+
 impl HasRenderConfig for model::VmModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         use model::VmModelFieldId::*;
@@ -892,6 +1007,26 @@ impl HasRenderConfig for model::VmModel {
             PgscanKswapd => rc.title("Pgscan Kswapd").suffix(" pages/s"),
             PgscanDirect => rc.title("Pgscan Direct").suffix(" pages/s"),
             OomKill => rc.title("OOM Kills"),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::VmModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::VmModelFieldId::*;
+        match field_id {
+            PgpginPerSec => Some(gauge()),
+            PgpgoutPerSec => Some(gauge()),
+            PswpinPerSec => Some(gauge()),
+            PswpoutPerSec => Some(gauge()),
+            PgstealKswapd => Some(counter()),
+            PgstealDirect => Some(counter()),
+            PgscanKswapd => Some(counter()),
+            PgscanDirect => Some(counter()),
+            OomKill => Some(counter()),
         }
     }
 }
