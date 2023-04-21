@@ -47,7 +47,6 @@ impl Dumper for Iface {
         round: &mut usize,
         comma_flag: bool,
     ) -> Result<IterExecResult> {
-        let json = self.opts.output_format == Some(OutputFormat::Json);
         let mut json_output = json!([]);
 
         model
@@ -127,9 +126,10 @@ impl Dumper for Iface {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        match (json, comma_flag) {
-            (true, true) => write!(output, ",{}", json_output)?,
-            (true, false) => write!(output, "{}", json_output)?,
+        match (self.opts.output_format, comma_flag) {
+            (Some(OutputFormat::Json), true) => write!(output, ",{}", json_output)?,
+            (Some(OutputFormat::Json), false) => write!(output, "{}", json_output)?,
+            (Some(OutputFormat::OpenMetrics), _) => (),
             _ => write!(output, "\n")?,
         };
 

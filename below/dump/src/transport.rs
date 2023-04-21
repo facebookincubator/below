@@ -97,8 +97,9 @@ impl Dumper for Transport {
         };
         *round += 1;
 
-        if self.opts.output_format != Some(OutputFormat::Json) {
-            write!(output, "\n")?;
+        match &self.opts.output_format {
+            Some(OutputFormat::Json) | Some(OutputFormat::OpenMetrics) => (),
+            _ => write!(output, "\n")?,
         }
 
         Ok(IterExecResult::Success)

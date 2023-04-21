@@ -80,7 +80,6 @@ impl Dumper for Btrfs {
                         btrfs_items.truncate(self.opts.top as usize);
                     }
                 }
-                let json = self.opts.output_format == Some(OutputFormat::Json);
                 let mut json_output = json!([]);
 
                 btrfs_items
@@ -144,9 +143,10 @@ impl Dumper for Btrfs {
                     })
                     .collect::<Result<Vec<_>>>()?;
 
-                match (json, comma_flag) {
-                    (true, true) => write!(output, ",{}", json_output)?,
-                    (true, false) => write!(output, "{}", json_output)?,
+                match (self.opts.output_format, comma_flag) {
+                    (Some(OutputFormat::Json), true) => write!(output, ",{}", json_output)?,
+                    (Some(OutputFormat::Json), false) => write!(output, "{}", json_output)?,
+                    (Some(OutputFormat::OpenMetrics), _) => (),
                     _ => write!(output, "\n")?,
                 };
 
