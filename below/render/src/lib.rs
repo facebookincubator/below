@@ -417,11 +417,7 @@ pub trait HasRenderConfigForDump: HasRenderConfig {
     fn get_openmetrics_config_for_dump(
         &self,
         _field_id: &Self::FieldId,
-    ) -> Option<RenderOpenMetricsConfigBuilder> {
-        // XXX: the default implementation will be deleted in the final commit. We add one
-        // here to make each commit compilable.
-        None
-    }
+    ) -> Option<RenderOpenMetricsConfigBuilder>;
 }
 
 #[test]
