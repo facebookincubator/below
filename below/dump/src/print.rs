@@ -277,7 +277,7 @@ where
             let key = format!(
                 "{}_{}",
                 T::name(),
-                field.get_field_id_str().replace(".", "_")
+                field.get_field_id_str().replace('.', "_")
             );
             field.dump_field_openmetrics(&key, ctx, model)
         })
