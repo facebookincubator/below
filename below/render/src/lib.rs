@@ -94,12 +94,12 @@ pub struct RenderConfigBuilder {
 
 #[derive(Clone)]
 pub enum OpenMetricsType {
-    /// Gauges are current measurements, such as bytes of memory currently used or the number of
-    /// items in a queue. For gauges the absolute value is what is of interest to a user.
-    Counter,
     /// Counters measure discrete events. Common examples are the number of HTTP requests received,
     /// CPU seconds spent, or bytes sent. For counters how quickly they are increasing over time is
     /// what is of interest to a user.
+    Counter,
+    /// Gauges are current measurements, such as bytes of memory currently used or the number of
+    /// items in a queue. For gauges the absolute value is what is of interest to a user.
     Gauge,
 }
 
