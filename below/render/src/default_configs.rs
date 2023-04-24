@@ -1257,10 +1257,10 @@ impl HasRenderConfigForDump for model::SingleDiskModel {
         match field_id {
             // We label the other metrics with the disk name
             Name => None,
-            ReadBytesPerSec => Some(gauge.unit("bytes")),
-            WriteBytesPerSec => Some(gauge.unit("bytes")),
-            DiscardBytesPerSec => Some(gauge.unit("bytes")),
-            DiskTotalBytesPerSec => Some(gauge.unit("bytes")),
+            ReadBytesPerSec => Some(gauge.unit("bytes_per_second")),
+            WriteBytesPerSec => Some(gauge.unit("bytes_per_second")),
+            DiscardBytesPerSec => Some(gauge.unit("bytes_per_second")),
+            DiskTotalBytesPerSec => Some(gauge.unit("bytes_per_second")),
             ReadCompleted => Some(counter),
             ReadMerged => Some(counter),
             ReadSectors => Some(counter),
