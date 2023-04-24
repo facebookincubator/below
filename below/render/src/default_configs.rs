@@ -969,8 +969,7 @@ impl HasRenderConfigForDump for model::SystemModel {
             OsRelease => None,
             Stat(field_id) => self.stat.get_openmetrics_config_for_dump(field_id),
             Cpu(field_id) => self.total_cpu.get_openmetrics_config_for_dump(field_id),
-            // `system` dump does not support individual CPU metrics
-            Cpus(_) => None,
+            Cpus(field_id) => self.cpus.get_openmetrics_config_for_dump(field_id),
             Mem(field_id) => self.mem.get_openmetrics_config_for_dump(field_id),
             Vm(field_id) => self.vm.get_openmetrics_config_for_dump(field_id),
             // Same as with NetworkModel, we leave disk dumping to `disk` category
@@ -1072,6 +1071,19 @@ impl HasRenderConfig for Vec<model::SingleCpuModel> {
             )
         });
         rc.into()
+    }
+}
+
+impl HasRenderConfigForDump for Vec<model::SingleCpuModel> {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        let idx = field_id
+            .idx
+            .expect("VecFieldId without idx should not have render config");
+        self.get(idx)
+            .map(|cpu| cpu.get_openmetrics_config_for_dump(&field_id.subquery_id))?
     }
 }
 
