@@ -439,7 +439,7 @@ impl HasRenderConfigForDump for model::TcpModel {
         match field_id {
             ActiveOpensPerSec => Some(gauge().help("Active opens per second")),
             PassiveOpensPerSec => Some(gauge().help("Passive opens per second")),
-            AttemptFailsPerSec => Some(gauge().help("Failed attemps per second")),
+            AttemptFailsPerSec => Some(gauge().help("Failed attempts per second")),
             EstabResetsPerSec => Some(gauge()),
             CurrEstabConn => Some(gauge().help("Current established connections")),
             InSegsPerSec => Some(gauge()),
@@ -493,7 +493,7 @@ impl HasRenderConfigForDump for model::IpModel {
             InReceivesPktsPerSec => Some(gauge()),
             ForwDatagramsPerSec => Some(gauge().help("Forwarded datagrams per second")),
             InDiscardsPktsPerSec => Some(gauge()),
-            InDeliversPktsPerSec => Some(gauge().help("Locally devliered packets per second")),
+            InDeliversPktsPerSec => Some(gauge().help("Locally delivered packets per second")),
             OutRequestsPerSec => Some(gauge()),
             OutDiscardsPktsPerSec => Some(gauge()),
             OutNoRoutesPktsPerSec => Some(gauge()),
