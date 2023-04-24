@@ -157,7 +157,18 @@ impl RenderOpenMetricsConfigBuilder {
     ///
     /// Note multiple labels for a single metric is supported
     pub fn label(mut self, key: &str, value: &str) -> Self {
-        let value_escaped = value.replace("\"", "\\\"");
+        // Escape value according to spec:
+        // https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#escaping
+        let mut value_escaped = String::with_capacity(value.len());
+        for c in value.chars() {
+            match c {
+                '\\' => value_escaped.push_str("\\\\"),
+                '\"' => value_escaped.push_str("\\\""),
+                '\n' => value_escaped.push_str("\\n"),
+                _ => value_escaped.push(c),
+            }
+        }
+
         self.config.labels.insert(key.to_owned(), value_escaped);
         self
     }
@@ -498,6 +509,48 @@ fn test_openmetrics_label_escaped_quotes() {
     let expected = r#"# TYPE my_key counter
 # HELP my_key counter help
 my_key{label1="quotes\"\"between"} 1.23 1234
+"#;
+    assert_eq!(text, expected);
+}
+
+#[test]
+fn test_openmetrics_label_escaped_newline() {
+    let config = RenderOpenMetricsConfigBuilder::new(OpenMetricsType::Counter)
+        .help("counter help")
+        .label("label1", "newline\nbetween")
+        .build();
+    let text = config.render("my_key", Field::F32(1.23), 1234);
+    let expected = r#"# TYPE my_key counter
+# HELP my_key counter help
+my_key{label1="newline\nbetween"} 1.23 1234
+"#;
+    assert_eq!(text, expected);
+}
+
+#[test]
+fn test_openmetrics_label_escaped_backslash() {
+    let config = RenderOpenMetricsConfigBuilder::new(OpenMetricsType::Counter)
+        .help("counter help")
+        .label("label1", r#"newline\between"#)
+        .build();
+    let text = config.render("my_key", Field::F32(1.23), 1234);
+    let expected = r#"# TYPE my_key counter
+# HELP my_key counter help
+my_key{label1="newline\\between"} 1.23 1234
+"#;
+    assert_eq!(text, expected);
+}
+
+#[test]
+fn test_openmetrics_label_escaped_newline_and_backslash() {
+    let config = RenderOpenMetricsConfigBuilder::new(OpenMetricsType::Counter)
+        .help("counter help")
+        .label("label1", "newline\\\nbetween")
+        .build();
+    let text = config.render("my_key", Field::F32(1.23), 1234);
+    let expected = r#"# TYPE my_key counter
+# HELP my_key counter help
+my_key{label1="newline\\\nbetween"} 1.23 1234
 "#;
     assert_eq!(text, expected);
 }
