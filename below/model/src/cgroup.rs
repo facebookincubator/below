@@ -304,9 +304,21 @@ impl CgroupModel {
     }
 }
 
+impl Nameable for CgroupModel {
+    fn name() -> &'static str {
+        "cgroup"
+    }
+}
+
 impl Recursive for SingleCgroupModel {
     fn get_depth(&self) -> usize {
         self.depth as usize
+    }
+}
+
+impl Nameable for SingleCgroupModel {
+    fn name() -> &'static str {
+        "cgroup"
     }
 }
 

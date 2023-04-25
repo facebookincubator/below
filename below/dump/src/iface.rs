@@ -16,8 +16,6 @@ use model::SingleNetModelFieldId;
 
 use super::*;
 
-impl HasRenderConfigForDump for model::SingleNetModel {}
-
 pub struct Iface {
     opts: GeneralOpt,
     select: Option<SingleNetModelFieldId>,
@@ -47,7 +45,6 @@ impl Dumper for Iface {
         round: &mut usize,
         comma_flag: bool,
     ) -> Result<IterExecResult> {
-        let json = self.opts.output_format == Some(OutputFormat::Json);
         let mut json_output = json!([]);
 
         model
@@ -116,15 +113,21 @@ impl Dumper for Iface {
                         let par = print::dump_json(&self.fields, ctx, model, self.opts.raw);
                         json_output.as_array_mut().unwrap().push(par);
                     }
+                    Some(OutputFormat::OpenMetrics) => write!(
+                        output,
+                        "{}",
+                        print::dump_openmetrics(&self.fields, ctx, model)
+                    )?,
                 }
                 *round += 1;
                 Ok(())
             })
             .collect::<Result<Vec<_>>>()?;
 
-        match (json, comma_flag) {
-            (true, true) => write!(output, ",{}", json_output)?,
-            (true, false) => write!(output, "{}", json_output)?,
+        match (self.opts.output_format, comma_flag) {
+            (Some(OutputFormat::Json), true) => write!(output, ",{}", json_output)?,
+            (Some(OutputFormat::Json), false) => write!(output, "{}", json_output)?,
+            (Some(OutputFormat::OpenMetrics), _) => (),
             _ => write!(output, "\n")?,
         };
 

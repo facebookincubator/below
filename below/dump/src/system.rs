@@ -14,8 +14,6 @@
 
 use super::*;
 
-impl HasRenderConfigForDump for model::SystemModel {}
-
 pub struct System {
     opts: GeneralOpt,
     fields: Vec<SystemField>,
@@ -90,6 +88,11 @@ impl Dumper for System {
                     write!(output, "{}", par.to_string())?;
                 }
             }
+            Some(OutputFormat::OpenMetrics) => write!(
+                output,
+                "{}",
+                print::dump_openmetrics(&self.fields, ctx, &model.system)
+            )?,
         };
 
         *round += 1;

@@ -54,6 +54,12 @@ impl ProcessModel {
     }
 }
 
+impl Nameable for ProcessModel {
+    fn name() -> &'static str {
+        "process"
+    }
+}
+
 #[derive(Default, Clone, Serialize, Deserialize, below_derive::Queriable)]
 pub struct SingleProcessModel {
     pub pid: Option<i32>,
@@ -121,6 +127,12 @@ impl SingleProcessModel {
             cmdline: None,
             exe_path: None,
         }
+    }
+}
+
+impl Nameable for SingleProcessModel {
+    fn name() -> &'static str {
+        "process"
     }
 }
 

@@ -315,6 +315,12 @@ pub trait Recursive {
     fn get_depth(&self) -> usize;
 }
 
+/// A `Model` that can be named
+pub trait Nameable {
+    /// The name of the model (for example "cgroup" or "system")
+    fn name() -> &'static str;
+}
+
 /// Type that makes Vec Queriable if Vec's inner type is Queriable. Uses `idx`
 /// to query into a Vec. Uses `subquery_id` to query into the selected item.
 #[derive(Clone, Debug, PartialEq)]

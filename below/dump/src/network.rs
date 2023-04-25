@@ -14,8 +14,6 @@
 
 use super::*;
 
-impl HasRenderConfigForDump for model::NetworkModel {}
-
 pub struct Network {
     opts: GeneralOpt,
     fields: Vec<NetworkField>,
@@ -91,12 +89,19 @@ impl Dumper for Network {
                     write!(output, "{}", json_output)?;
                 }
             }
+            Some(OutputFormat::OpenMetrics) => write!(
+                output,
+                "{}",
+                print::dump_openmetrics(&self.fields, ctx, &model.network)
+            )?,
         };
         *round += 1;
 
-        if self.opts.output_format != Some(OutputFormat::Json) {
-            write!(output, "\n")?;
+        match &self.opts.output_format {
+            Some(OutputFormat::Json) | Some(OutputFormat::OpenMetrics) => (),
+            _ => write!(output, "\n")?,
         }
+
         Ok(IterExecResult::Success)
     }
 }

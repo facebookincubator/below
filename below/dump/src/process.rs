@@ -13,29 +13,8 @@
 // limitations under the License.
 
 use model::SingleProcessModelFieldId;
-use render::RenderConfig;
 
 use super::*;
-
-impl HasRenderConfigForDump for model::SingleProcessModel {
-    fn get_render_config_for_dump(field_id: &SingleProcessModelFieldId) -> RenderConfig {
-        use model::ProcessCpuModelFieldId::SystemPct;
-        use model::ProcessCpuModelFieldId::UserPct;
-        use model::ProcessIoModelFieldId::RwbytesPerSec;
-        use model::SingleProcessModelFieldId::Cpu;
-        use model::SingleProcessModelFieldId::Io;
-        use render::HasRenderConfig;
-
-        let rc = model::SingleProcessModel::get_render_config_builder(field_id);
-        match field_id {
-            Cpu(UserPct) => rc.title("User CPU"),
-            Cpu(SystemPct) => rc.title("Sys CPU"),
-            Io(RwbytesPerSec) => rc.title("RW"),
-            _ => rc,
-        }
-        .get()
-    }
-}
 
 pub struct Process {
     opts: GeneralOpt,
@@ -103,7 +82,6 @@ impl Dumper for Process {
                 processes.truncate(self.opts.top as usize);
             }
         }
-        let json = self.opts.output_format == Some(OutputFormat::Json);
         let mut json_output = json!([]);
 
         processes
@@ -156,15 +134,21 @@ impl Dumper for Process {
                         let par = print::dump_json(&self.fields, ctx, spm, self.opts.raw);
                         json_output.as_array_mut().unwrap().push(par);
                     }
+                    Some(OutputFormat::OpenMetrics) => write!(
+                        output,
+                        "{}",
+                        print::dump_openmetrics(&self.fields, ctx, spm)
+                    )?,
                 }
                 *round += 1;
                 Ok(())
             })
             .collect::<Result<Vec<_>>>()?;
 
-        match (json, comma_flag) {
-            (true, true) => write!(output, ",{}", json_output)?,
-            (true, false) => write!(output, "{}", json_output)?,
+        match (self.opts.output_format, comma_flag) {
+            (Some(OutputFormat::Json), true) => write!(output, ",{}", json_output)?,
+            (Some(OutputFormat::Json), false) => write!(output, "{}", json_output)?,
+            (Some(OutputFormat::OpenMetrics), _) => (),
             _ => write!(output, "\n")?,
         };
 
