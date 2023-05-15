@@ -25,7 +25,7 @@ has support for:
 * `record` mode to record system data
 * `replay` mode to replay historical system data
 * `live` mode to view live system data
-* `dump` subcommand to report script-friendly information (eg JSON and CSV)
+* `dump` subcommand to report script-friendly information (eg JSON, CSV, OpenMetrics, etc.)
 * `snapshot` subcommand to create a replayable snapshot file of historical system data
 
 below does **not** have support for cgroup1.
@@ -117,6 +117,12 @@ Replay historical data:
 ```shell
 $ below replay -t "3m ago"
 ```
+
+## Integration with Prometheus/Grafana
+
+`below` has basic support for Prometheus/Grafana through the `dump` interface.
+
+See https://github.com/danobi/below-grafana for more details.
 
 ## Comparison with alternative tools
 
