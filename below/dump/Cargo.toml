@@ -23,4 +23,4 @@ slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 store = { package = "below-store", version = "0.6.3", path = "../store" }
 tar = "0.4.38"
 tempdir = "0.3"
-toml = "=0.5.8"
+toml = "0.7.3"
