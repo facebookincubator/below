@@ -22,8 +22,8 @@ unit-scripts = "../etc"
 [dependencies]
 anyhow = "1.0.65"
 cgroupfs = { version = "0.6.3", path = "cgroupfs" }
-clap = { version = "3.2.23", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
-clap_complete = "3.0.4"
+clap = { version = "3.2.25", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
+clap_complete = "3.2.5"
 common = { package = "below-common", version = "0.6.3", path = "common" }
 config = { package = "below-config", version = "0.6.3", path = "config" }
 cursive = { version = "0.20.0", features = ["crossterm-backend"], default-features = false }
