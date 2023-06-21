@@ -11,6 +11,13 @@
 ```bash
 $ below dump system -b "10:00" -e "10:10" --output-format json
 ```
+
+* Dump the system stats from 10:00AM to 10:10AM in OpenMetrics format (to be ingested by [Prometheus](https://prometheus.io/))
+
+```bash
+$ below dump system -b "10:00" -e "10:10" --output-format openmetrics
+```
+
 * Dump the system stats from 10 minutes and 20 second ago to 10minutes ago in JSON format.
 
 ```bash
