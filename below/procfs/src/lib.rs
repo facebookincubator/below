@@ -181,7 +181,7 @@ impl ProcReader {
     }
 
     fn process_cpu_stat(path: &PathBuf, line: &String) -> Result<CpuStat> {
-        //Format is like "cpu9 6124418 452468 3062529 230073290 216237 0 45647 0 0 0"
+        // Format is like "cpu9 6124418 452468 3062529 230073290 216237 0 45647 0 0 0"
         let mut items = line.split_whitespace();
         let mut cpu: CpuStat = Default::default();
 
@@ -215,7 +215,7 @@ impl ProcReader {
         let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
         let buf_reader = BufReader::new(file);
         let mut stat: Stat = Default::default();
-        let mut cpus = Vec::new();
+        let mut cpus_map = BTreeMap::new();
         for line in buf_reader.lines() {
             let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
 
@@ -241,15 +241,23 @@ impl ProcReader {
                     x => {
                         if x == "cpu" {
                             stat.total_cpu = Some(Self::process_cpu_stat(&path, &line)?);
-                        } else if x.starts_with("cpu") {
-                            cpus.push(Self::process_cpu_stat(&path, &line)?);
+                        } else if let Some(cpu_suffix) = x.strip_prefix("cpu") {
+                            let cpu_id =
+                                parse_item!(&path, Some(cpu_suffix.to_owned()), u32, line)?
+                                    .unwrap();
+                            let existing =
+                                cpus_map.insert(cpu_id, Self::process_cpu_stat(&path, &line)?);
+                            if existing.is_some() {
+                                return Err(Error::UnexpectedLine(path, line));
+                            }
                         }
                     }
                 }
             }
         }
-        if !cpus.is_empty() {
-            stat.cpus = Some(cpus);
+        if !cpus_map.is_empty() {
+            stat.cpus = Some(cpus_map.values().cloned().collect());
+            stat.cpus_map = Some(cpus_map);
         }
 
         if stat == Default::default() {
