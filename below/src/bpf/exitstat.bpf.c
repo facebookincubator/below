@@ -15,7 +15,7 @@
 #ifdef FBCODE_BUILD
 #include <bpf/vmlinux/vmlinux.h>
 #else
-#include "../open_source/vmlinux.h"
+#include "../open_source/vmlinux/vmlinux.h"
 #endif // FBCODE_BUILD
 
 #include <bpf/bpf_core_read.h>
