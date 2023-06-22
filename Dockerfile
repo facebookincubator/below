@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:20.04 AS build
+FROM ubuntu:22.04 AS build
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
   build-essential \
   ca-certificates \
-  clang \
+  clang-15 \
   curl \
   git \
   libelf-dev \
@@ -39,12 +39,13 @@ RUN bash /rustup.sh -y
 ADD . /below
 # Build below
 WORKDIR below
+ENV CLANG=clang-15
 RUN /root/.cargo/bin/cargo build --release --all-targets
 
 # Now create stage 2 image. We drop all the build dependencies and only install
 # runtime dependencies. This will create a smaller image suitable for
 # distribution.
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 # Default locale is "POSIX" which doesn't seem to play well with UTF-8. Cursive
 # uses UTF-8 to draw lines so we need to set this locale otherwise our lines

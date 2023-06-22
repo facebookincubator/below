@@ -30,9 +30,11 @@ fn main() {
     // all up.
     create_dir_all("./src/bpf/.output").unwrap();
     let skel = Path::new("./src/bpf/.output/exitstat.skel.rs");
-    SkeletonBuilder::new()
-        .source(SRC)
-        .build_and_generate(&skel)
-        .unwrap();
+    let mut builder = SkeletonBuilder::new();
+    builder.source(SRC);
+    if let Some(clang) = option_env!("CLANG") {
+        builder.clang(clang);
+    }
+    builder.build_and_generate(&skel).unwrap();
     println!("cargo:rerun-if-changed={}", SRC);
 }
