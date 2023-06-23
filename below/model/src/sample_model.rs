@@ -51,8 +51,8 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
             "guest_pct": 0.0,
             "guest_nice_pct": 0.0
         },
-        "cpus": [
-            {
+        "cpus": {
+            "0": {
                 "idx": 0,
                 "usage_pct": 20.0,
                 "user_pct": 10.0,
@@ -66,7 +66,7 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                 "guest_pct": 0.0,
                 "guest_nice_pct": 0.0
             },
-            {
+            "1": {
                 "idx": 1,
                 "usage_pct": 20.0,
                 "user_pct": 10.0,
@@ -80,7 +80,7 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                 "guest_pct": 0.0,
                 "guest_nice_pct": 0.0
             }
-        ],
+        },
         "mem": {
             "total": 8000000000,
             "free": 4000000000,

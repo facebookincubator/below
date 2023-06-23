@@ -33,7 +33,7 @@ pub struct SystemModel {
     #[queriable(preferred_name = cpu)]
     pub total_cpu: SingleCpuModel,
     #[queriable(subquery)]
-    pub cpus: Vec<SingleCpuModel>,
+    pub cpus: BTreeMap<u32, SingleCpuModel>,
     #[queriable(subquery)]
     pub mem: MemoryModel,
     #[queriable(subquery)]
@@ -54,17 +54,43 @@ impl SystemModel {
             (Some(prev), Some(curr)) => SingleCpuModel::new(-1, &prev, &curr),
             _ => Default::default(),
         };
-        let cpus = match (
-            last.and_then(|(last, _)| last.stat.cpus.as_ref()),
-            sample.stat.cpus.as_ref(),
+
+        let mut cpus: BTreeMap<u32, SingleCpuModel> = match (
+            last.and_then(|(last, _)| last.stat.cpus_map.as_ref()),
+            sample.stat.cpus_map.as_ref(),
         ) {
-            (Some(prev), Some(curr)) => std::iter::successors(Some(0), |idx| Some(idx + 1))
-                .zip(prev.iter().zip(curr.iter()))
-                .map(|(idx, (prev, curr))| SingleCpuModel::new(idx, prev, curr))
+            (Some(prev), Some(curr)) => curr
+                .iter()
+                .map(|(idx, curr)| {
+                    (
+                        *idx,
+                        prev.get(idx).map_or_else(Default::default, |prev| {
+                            SingleCpuModel::new(*idx as i32, prev, curr)
+                        }),
+                    )
+                })
                 .collect(),
-            (_, Some(curr)) => curr.iter().map(|_| Default::default()).collect(),
+            (_, Some(curr)) => curr.keys().map(|idx| (*idx, Default::default())).collect(),
             _ => Default::default(),
         };
+
+        if cpus.is_empty() {
+            cpus = match (
+                last.and_then(|(last, _)| last.stat.cpus.as_ref()),
+                sample.stat.cpus.as_ref(),
+            ) {
+                (Some(prev), Some(curr)) => std::iter::successors(Some(0), |idx| Some(idx + 1))
+                    .zip(prev.iter().zip(curr.iter()))
+                    .map(|(idx, (prev, curr))| (idx as u32, SingleCpuModel::new(idx, prev, curr)))
+                    .collect(),
+                (_, Some(curr)) => std::iter::successors(Some(0), |idx| Some(idx + 1))
+                    .zip(curr.iter())
+                    .map(|(idx, _curr)| (idx, Default::default()))
+                    .collect(),
+                _ => Default::default(),
+            };
+        }
+
         let mem = Some(MemoryModel::new(&sample.meminfo)).unwrap_or_default();
         let vm = last
             .map(|(last, duration)| VmModel::new(&last.vmstat, &sample.vmstat, duration))
@@ -508,7 +534,7 @@ mod test {
             "total_cpu": {
                 "idx": -1
             },
-            "cpus": [],
+            "cpus": {},
             "mem": {},
             "vm": {},
             "disks": {

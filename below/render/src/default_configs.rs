@@ -944,7 +944,9 @@ impl HasRenderConfig for model::SystemModel {
             OsRelease => rc.title("OS Release").width(50),
             Stat(field_id) => model::ProcStatModel::get_render_config_builder(field_id),
             Cpu(field_id) => model::SingleCpuModel::get_render_config_builder(field_id),
-            Cpus(field_id) => Vec::<model::SingleCpuModel>::get_render_config_builder(field_id),
+            Cpus(field_id) => {
+                BTreeMap::<u32, model::SingleCpuModel>::get_render_config_builder(field_id)
+            }
             Mem(field_id) => model::MemoryModel::get_render_config_builder(field_id),
             Vm(field_id) => model::VmModel::get_render_config_builder(field_id),
             Disks(field_id) => {
@@ -1059,15 +1061,15 @@ impl HasRenderConfigForDump for model::SingleCpuModel {
     }
 }
 
-impl HasRenderConfig for Vec<model::SingleCpuModel> {
+impl HasRenderConfig for BTreeMap<u32, model::SingleCpuModel> {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         let mut rc = model::SingleCpuModel::get_render_config_builder(&field_id.subquery_id).get();
         rc.title = rc.title.map(|title| {
             format!(
                 "CPU {} {}",
                 field_id
-                    .idx
-                    .expect("VecFieldId without idx should not have render config"),
+                    .key
+                    .expect("BTreeMapFieldId without key should not have render config"),
                 title
             )
         });
@@ -1075,15 +1077,15 @@ impl HasRenderConfig for Vec<model::SingleCpuModel> {
     }
 }
 
-impl HasRenderConfigForDump for Vec<model::SingleCpuModel> {
+impl HasRenderConfigForDump for BTreeMap<u32, model::SingleCpuModel> {
     fn get_openmetrics_config_for_dump(
         &self,
         field_id: &Self::FieldId,
     ) -> Option<RenderOpenMetricsConfigBuilder> {
-        let idx = field_id
-            .idx
-            .expect("VecFieldId without idx should not have render config");
-        self.get(idx)
+        let key = field_id
+            .key
+            .expect("BTreeMapFieldId without key should not have render config");
+        self.get(&key)
             .map(|cpu| cpu.get_openmetrics_config_for_dump(&field_id.subquery_id))?
     }
 }

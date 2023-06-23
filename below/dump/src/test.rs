@@ -39,8 +39,8 @@ fn test_dump_sys_content() {
     let mut fields = command::expand_fields(command::DEFAULT_SYSTEM_FIELDS, true);
     for subquery_id in model::SingleCpuModelFieldId::unit_variant_iter() {
         fields.push(DumpField::FieldId(model::SystemModelFieldId::Cpus(
-            model::VecFieldId {
-                idx: Some(31),
+            model::BTreeMapFieldId {
+                key: Some(31),
                 subquery_id,
             },
         )));
@@ -95,8 +95,8 @@ fn test_dump_sys_titles() {
         .into_iter()
         .chain(
             model::SingleCpuModelFieldId::unit_variant_iter().map(|subquery_id| {
-                DumpField::FieldId(model::SystemModelFieldId::Cpus(model::VecFieldId {
-                    idx: Some(31),
+                DumpField::FieldId(model::SystemModelFieldId::Cpus(model::BTreeMapFieldId {
+                    key: Some(31),
                     subquery_id,
                 }))
             }),

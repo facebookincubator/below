@@ -65,7 +65,7 @@ impl CoreTab for CoreCpu {
         let model = state.get_model();
         model
             .cpus
-            .iter()
+            .values()
             .filter(|scm| {
                 if let Some((CoreStateFieldId::Cpu(field), filter)) = &state.filter_info {
                     match scm.query(field) {
