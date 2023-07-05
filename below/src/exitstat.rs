@@ -19,6 +19,9 @@ use std::sync::Mutex;
 
 use anyhow::Context;
 use anyhow::Result;
+use libbpf_rs::skel::OpenSkel as _;
+use libbpf_rs::skel::Skel as _;
+use libbpf_rs::skel::SkelBuilder as _;
 use once_cell::sync::Lazy;
 use plain::Plain;
 use slog::warn;
