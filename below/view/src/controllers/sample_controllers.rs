@@ -129,7 +129,7 @@ make_event_controller!(
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
         {
-            let mut view_state = c.user_data::<ViewState>().expect("user data not set");
+            let view_state = c.user_data::<ViewState>().expect("user data not set");
 
             match &view_state.mode {
                 ViewMode::Pause(adv) => {
