@@ -55,7 +55,7 @@ impl SystemModel {
             _ => Default::default(),
         };
 
-        let mut cpus: BTreeMap<u32, SingleCpuModel> = match (
+        let cpus: BTreeMap<u32, SingleCpuModel> = match (
             last.and_then(|(last, _)| last.stat.cpus_map.as_ref()),
             sample.stat.cpus_map.as_ref(),
         ) {
@@ -73,23 +73,6 @@ impl SystemModel {
             (_, Some(curr)) => curr.keys().map(|idx| (*idx, Default::default())).collect(),
             _ => Default::default(),
         };
-
-        if cpus.is_empty() {
-            cpus = match (
-                last.and_then(|(last, _)| last.stat.cpus.as_ref()),
-                sample.stat.cpus.as_ref(),
-            ) {
-                (Some(prev), Some(curr)) => std::iter::successors(Some(0), |idx| Some(idx + 1))
-                    .zip(prev.iter().zip(curr.iter()))
-                    .map(|(idx, (prev, curr))| (idx as u32, SingleCpuModel::new(idx, prev, curr)))
-                    .collect(),
-                (_, Some(curr)) => std::iter::successors(Some(0), |idx| Some(idx + 1))
-                    .zip(curr.iter())
-                    .map(|(idx, _curr)| (idx, Default::default()))
-                    .collect(),
-                _ => Default::default(),
-            };
-        }
 
         let mem = Some(MemoryModel::new(&sample.meminfo)).unwrap_or_default();
         let vm = last
