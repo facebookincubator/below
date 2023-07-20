@@ -101,9 +101,9 @@ pub fn enum_from_str_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream> 
                     let nested_type = &unnamed.unnamed[0].ty;
                     Ok(quote! {
                         _ if s.starts_with(concat!(#snake_str, ".")) => {
-                            <#nested_type>::from_str(unsafe {
-                                s.get_unchecked(concat!(#snake_str, ".").len()..)
-                            }).map(Self::#variant_name)
+                            <#nested_type>::from_str(
+                                s.get(concat!(#snake_str, ".").len()..).unwrap()
+                            ).map(Self::#variant_name)
                         }
                     })
                 }
