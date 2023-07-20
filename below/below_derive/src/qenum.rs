@@ -141,9 +141,8 @@ pub fn enum_iter_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream> {
         _ => false,
     });
 
-    // Iterate over all enums by chaining them together. Unit variants are
-    // wrapped in std::iter::once. Basically a DFS over the enum tree.
-    let all_variant_iter_chain = variants
+    // Collect all enums by doing a DFS over the enum tree and appending to Vec.
+    let build_all_variants = variants
         .iter()
         .map(|variant| {
             let variant_name = &variant.ident;
@@ -151,11 +150,13 @@ pub fn enum_iter_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream> {
                 syn::Fields::Unnamed(unnamed) if unnamed.unnamed.len() == 1 => {
                     let nested_type = &unnamed.unnamed[0].ty;
                     Ok(quote! {
-                        .chain(<#nested_type>::all_variant_iter().map(Self::#variant_name))
+                        res.extend(
+                            <#nested_type>::all_variant_iter().map(Self::#variant_name)
+                        );
                     })
                 }
                 syn::Fields::Unit => Ok(quote! {
-                    .chain(::std::iter::once(Self::#variant_name))
+                    res.push(Self::#variant_name);
                 }),
                 _ => Err(variant_constraint_error(variant.span())),
             }
@@ -170,9 +171,10 @@ pub fn enum_iter_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream> {
             }
 
             fn all_variant_iter() -> Box<dyn Iterator<Item = Self>> {
+                let mut res = Vec::new();
+                #(#build_all_variants)*
                 Box::new(
-                    ::std::iter::empty()
-                    #(#all_variant_iter_chain)*
+                    res.into_iter()
                 )
             }
         }
