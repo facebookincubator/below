@@ -107,7 +107,7 @@ Run recording daemon:
 
 ```shell
 $ sudo cp ~/.cargo/bin/below /bin/below  # if using cargo-install
-$ sudo cp etc/below.service /etc/systemd/system  # from below directory
+$ sudo cp etc/below.service /etc/systemd/system
 $ sudo systemctl daemon-reload
 $ sudo systemctl start below
 ```
