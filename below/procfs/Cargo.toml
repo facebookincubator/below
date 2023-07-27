@@ -15,7 +15,7 @@ lazy_static = "1.4"
 libc = "0.2.139"
 nix = "0.25"
 openat = "0.1.21"
-serde = { version = "1.0.167", features = ["derive", "rc"] }
+serde = { version = "1.0.176", features = ["derive", "rc"] }
 thiserror = "1.0.43"
 threadpool = "1.8.1"
 
