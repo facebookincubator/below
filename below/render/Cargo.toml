@@ -2,7 +2,7 @@
 
 [package]
 name = "below-render"
-version = "0.7.0"
+version = "0.7.1"
 authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
 edition = "2021"
 description = "Render crate for below"
@@ -10,5 +10,5 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
-common = { package = "below-common", version = "0.7.0", path = "../common" }
-model = { package = "below-model", version = "0.7.0", path = "../model" }
+common = { package = "below-common", version = "0.7.1", path = "../common" }
+model = { package = "below-model", version = "0.7.1", path = "../model" }
