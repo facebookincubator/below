@@ -77,7 +77,7 @@ static LIVE_REMOTE_MAX_LATENCY_SEC: u64 = 10;
 
 #[derive(Debug, Parser)]
 struct Opt {
-    #[clap(long, parse(from_os_str), default_value = config::BELOW_DEFAULT_CONF)]
+    #[clap(long, value_parser, default_value = config::BELOW_DEFAULT_CONF)]
     config: PathBuf,
     #[clap(short, long)]
     debug: bool,
@@ -104,7 +104,7 @@ struct CompressOpts {
     ///
     /// With --dict-compress-chunk-size 16, you can expect around
     /// 20-30x smaller data files.
-    #[clap(long, requires("compress"), parse(try_from_str = parse_chunk_size))]
+    #[clap(long, requires("compress"), value_parser = parse_chunk_size)]
     dict_compress_chunk_size: Option<u32>,
 }
 
@@ -267,7 +267,7 @@ enum Command {
         duration: Option<String>,
         /// Output file path.
         /// Randomized name in current directory if unspecified.
-        #[clap(short, long, parse(from_os_str))]
+        #[clap(short, long, value_parser)]
         output: Option<PathBuf>,
         /// Supply hostname to take snapshot from remote
         #[clap(short = 's', long)]
@@ -283,7 +283,7 @@ enum Command {
         #[clap(short, long, default_value = "bash")]
         shell: Shell,
         /// Output file, stdout if not present
-        #[clap(short, long, parse(from_os_str))]
+        #[clap(short, long, value_parser)]
         output: Option<PathBuf>,
     },
 }

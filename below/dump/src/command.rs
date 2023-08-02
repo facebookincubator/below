@@ -1045,7 +1045,7 @@ pub enum DumpCommand {
     #[clap(about = SYSTEM_ABOUT, long_about = SYSTEM_LONG_ABOUT.as_str())]
     System {
         /// Select which fields to display and in what order.
-        #[clap(short, long, multiple_values = true)]
+        #[clap(short, long, num_args = 1..)]
         fields: Option<Vec<SystemOptionField>>,
         #[clap(flatten)]
         opts: GeneralOpt,
@@ -1056,7 +1056,7 @@ pub enum DumpCommand {
     #[clap(about = DISK_ABOUT, long_about = DISK_LONG_ABOUT.as_str())]
     Disk {
         /// Select which fields to display and in what order.
-        #[clap(short, long, multiple_values = true)]
+        #[clap(short, long, num_args = 1..)]
         fields: Option<Vec<DiskOptionField>>,
         #[clap(flatten)]
         opts: GeneralOpt,
@@ -1084,7 +1084,7 @@ pub enum DumpCommand {
     #[clap(about = PROCESS_ABOUT, long_about = PROCESS_LONG_ABOUT.as_str())]
     Process {
         /// Select which fields to display and in what order.
-        #[clap(short, long, multiple_values = true)]
+        #[clap(short, long, num_args = 1..)]
         fields: Option<Vec<ProcessOptionField>>,
         #[clap(flatten)]
         opts: GeneralOpt,
@@ -1098,7 +1098,7 @@ pub enum DumpCommand {
     #[clap(about = CGROUP_ABOUT, long_about = CGROUP_LONG_ABOUT.as_str())]
     Cgroup {
         /// Select which fields to display and in what order.
-        #[clap(short, long, multiple_values = true)]
+        #[clap(short, long, num_args = 1..)]
         fields: Option<Vec<CgroupOptionField>>,
         #[clap(flatten)]
         opts: GeneralOpt,
@@ -1112,7 +1112,7 @@ pub enum DumpCommand {
     #[clap(about = IFACE_ABOUT, long_about = IFACE_LONG_ABOUT.as_str())]
     Iface {
         /// Select which fields to display and in what order.
-        #[clap(short, long, multiple_values = true)]
+        #[clap(short, long, num_args = 1..)]
         fields: Option<Vec<IfaceOptionField>>,
         #[clap(flatten)]
         opts: GeneralOpt,
@@ -1126,7 +1126,7 @@ pub enum DumpCommand {
     #[clap(about = NETWORK_ABOUT, long_about = NETWORK_LONG_ABOUT.as_str())]
     Network {
         /// Select which fields to display and in what order.
-        #[clap(short, long, multiple_values = true)]
+        #[clap(short, long, num_args = 1..)]
         fields: Option<Vec<NetworkOptionField>>,
         #[clap(flatten)]
         opts: GeneralOpt,
@@ -1137,7 +1137,7 @@ pub enum DumpCommand {
     #[clap(about = TRANSPORT_ABOUT, long_about = TRANSPORT_LONG_ABOUT.as_str())]
     Transport {
         /// Select which fields to display and in what order.
-        #[clap(short, long, multiple_values = true)]
+        #[clap(short, long, num_args = 1..)]
         fields: Option<Vec<TransportOptionField>>,
         #[clap(flatten)]
         opts: GeneralOpt,
