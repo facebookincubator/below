@@ -13,7 +13,7 @@ license = "Apache-2.0"
 anyhow = "1.0.71"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 common = { package = "below-common", version = "0.7.1", path = "../common" }
-crossterm = { version = "0.23.1", features = ["event-stream"] }
+crossterm = { version = "0.27.0", features = ["event-stream"] }
 cursive = { version = "0.20.0", features = ["crossterm-backend"], default-features = false }
 cursive_buffered_backend = "0.6.1"
 humantime = "2.1"
