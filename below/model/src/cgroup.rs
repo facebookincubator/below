@@ -79,7 +79,7 @@ pub struct CgroupModelFieldId {
 impl From<SingleCgroupModelFieldId> for CgroupModelFieldId {
     fn from(v: SingleCgroupModelFieldId) -> Self {
         Self {
-            path: Some(vec![]),
+            path: None,
             subquery_id: v,
         }
     }
@@ -89,15 +89,19 @@ impl FieldId for CgroupModelFieldId {
     type Queriable = CgroupModel;
 }
 
-impl EnumIter for CgroupModelFieldId {
-    fn all_variant_iter() -> Box<dyn Iterator<Item = Self>> {
-        Box::new(
-            SingleCgroupModelFieldId::all_variant_iter().map(|v| CgroupModelFieldId {
-                // Dynamic parameter is irrelevant to variant listing
-                path: None,
-                subquery_id: v,
-            }),
-        )
+impl Sequence for CgroupModelFieldId {
+    const CARDINALITY: usize = SingleCgroupModelFieldId::CARDINALITY;
+    fn next(&self) -> Option<Self> {
+        self.subquery_id.next().map(Self::from)
+    }
+    fn previous(&self) -> Option<Self> {
+        self.subquery_id.previous().map(Self::from)
+    }
+    fn first() -> Option<Self> {
+        SingleCgroupModelFieldId::first().map(Self::from)
+    }
+    fn last() -> Option<Self> {
+        SingleCgroupModelFieldId::last().map(Self::from)
     }
 }
 

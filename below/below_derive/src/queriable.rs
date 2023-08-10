@@ -255,9 +255,9 @@ pub fn queriable_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream> {
             Clone,
             Debug,
             PartialEq,
-            ::below_derive::EnumIter,
             ::below_derive::EnumFromStr,
-            ::below_derive::EnumToString
+            ::below_derive::EnumToString,
+            ::enum_iterator::Sequence
         )]
         pub enum #field_id_ident {
             #(#field_id_variants)*

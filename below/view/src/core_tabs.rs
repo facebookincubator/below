@@ -22,7 +22,6 @@ use model::system::SingleCpuModelFieldId;
 use model::system::SingleDiskModelFieldId;
 use model::system::VmModelFieldId;
 use model::BtrfsModel;
-use model::EnumIter;
 use model::Queriable;
 
 use crate::core_view::CoreState;
@@ -54,7 +53,7 @@ pub struct CoreCpu;
 impl CoreTab for CoreCpu {
     fn get_titles(&self) -> ColumnTitles {
         ColumnTitles {
-            titles: SingleCpuModelFieldId::unit_variant_iter()
+            titles: enum_iterator::all::<SingleCpuModelFieldId>()
                 .map(|field_id| ViewItem::from_default(field_id).config.render_title())
                 .collect(),
             pinned_titles: 1,
@@ -81,7 +80,7 @@ impl CoreTab for CoreCpu {
                 (
                     std::iter::once(SingleCpuModelFieldId::Idx)
                         .chain(
-                            SingleCpuModelFieldId::unit_variant_iter()
+                            enum_iterator::all::<SingleCpuModelFieldId>()
                                 .skip(offset.unwrap_or(0) + 1),
                         )
                         .fold(StyledString::new(), |mut line, field_id| {
@@ -110,7 +109,7 @@ impl CoreTab for CoreMem {
     fn get_rows(&self, state: &CoreState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
         let model = state.get_model();
 
-        MemoryModelFieldId::unit_variant_iter()
+        enum_iterator::all::<MemoryModelFieldId>()
             .map(|field_id| {
                 let mut line = StyledString::new();
                 let item =
@@ -139,7 +138,7 @@ impl CoreTab for CoreVm {
     fn get_rows(&self, state: &CoreState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
         let model = state.get_model();
 
-        VmModelFieldId::unit_variant_iter()
+        enum_iterator::all::<VmModelFieldId>()
             .map(|field_id| {
                 let mut line = StyledString::new();
                 let item =
@@ -167,7 +166,7 @@ pub struct CoreDisk;
 impl CoreTab for CoreDisk {
     fn get_titles(&self) -> ColumnTitles {
         ColumnTitles {
-            titles: SingleDiskModelFieldId::unit_variant_iter()
+            titles: enum_iterator::all::<SingleDiskModelFieldId>()
                 .map(|field_id| ViewItem::from_default(field_id).config.render_title())
                 .collect(),
             pinned_titles: 1,
@@ -192,7 +191,7 @@ impl CoreTab for CoreDisk {
                     Some((
                         std::iter::once(SingleDiskModelFieldId::Name)
                             .chain(
-                                SingleDiskModelFieldId::unit_variant_iter()
+                                enum_iterator::all::<SingleDiskModelFieldId>()
                                     .skip(offset.unwrap_or(0) + 1),
                             )
                             .fold(StyledString::new(), |mut line, field_id| {
@@ -235,7 +234,7 @@ impl CoreBtrfs {
 impl CoreTab for CoreBtrfs {
     fn get_titles(&self) -> ColumnTitles {
         ColumnTitles {
-            titles: BtrfsModelFieldId::unit_variant_iter()
+            titles: enum_iterator::all::<BtrfsModelFieldId>()
                 .map(|field_id| ViewItem::from_default(field_id).config.render_title())
                 .collect(),
             pinned_titles: 0,
@@ -264,7 +263,7 @@ impl CoreTab for CoreBtrfs {
                 })
                 .map(|bmodel| {
                     (
-                        BtrfsModelFieldId::unit_variant_iter().fold(
+                        enum_iterator::all::<BtrfsModelFieldId>().fold(
                             StyledString::new(),
                             |mut line, field_id| {
                                 let view_item = ViewItem::from_default(field_id);

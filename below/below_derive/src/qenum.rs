@@ -15,8 +15,8 @@
 //! Macros for implementing Queriable FieldId enum methods (thus named qenum).
 //!
 //! This mod is mostly inspired by the strum_macros crate, particularly
-//! EnumString (for EnumFromStr), strum_macros:ToString (for EnumToString), and
-//! EnumIter (for EnumIter). However, this mod extends those macros by defining
+//! EnumString (for EnumFromStr) and strum_macros:ToString (for EnumToString).
+//! However, this mod extends those macros by defining
 //! special behaviors with enum variants that contains a single unnamed field.
 //! These variants are mainly used by Queriable::FieldId to access fields of
 //! sub-models, making the enum a mapping of the tree structure of its
@@ -129,54 +129,5 @@ pub fn enum_from_str_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream> 
             }
         }
 
-    })
-}
-
-pub fn enum_iter_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream> {
-    let enum_name = &ast.ident;
-    let variants = get_variants(ast)?;
-
-    let unit_variants = variants.iter().filter(|variant| match &variant.fields {
-        syn::Fields::Unit => true,
-        _ => false,
-    });
-
-    // Collect all enums by doing a DFS over the enum tree and appending to Vec.
-    let build_all_variants = variants
-        .iter()
-        .map(|variant| {
-            let variant_name = &variant.ident;
-            match &variant.fields {
-                syn::Fields::Unnamed(unnamed) if unnamed.unnamed.len() == 1 => {
-                    let nested_type = &unnamed.unnamed[0].ty;
-                    Ok(quote! {
-                        res.extend(
-                            <#nested_type>::all_variant_iter().map(Self::#variant_name)
-                        );
-                    })
-                }
-                syn::Fields::Unit => Ok(quote! {
-                    res.push(Self::#variant_name);
-                }),
-                _ => Err(variant_constraint_error(variant.span())),
-            }
-        })
-        .collect::<syn::Result<Vec<_>>>()?;
-
-    Ok(quote! {
-        impl EnumIter for #enum_name {
-            fn unit_variant_iter() -> Box<dyn Iterator<Item = Self>> {
-                const UNIT_VARIANTS: &[#enum_name] = &[#(#enum_name::#unit_variants),*];
-                Box::new(UNIT_VARIANTS.iter().cloned())
-            }
-
-            fn all_variant_iter() -> Box<dyn Iterator<Item = Self>> {
-                let mut res = Vec::new();
-                #(#build_all_variants)*
-                Box::new(
-                    res.into_iter()
-                )
-            }
-        }
     })
 }

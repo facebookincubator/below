@@ -19,7 +19,6 @@ use anyhow::Error;
 use anyhow::Result;
 use clap::Parser;
 use model::BtrfsModelFieldId;
-use model::EnumIter;
 use model::FieldId;
 use model::NetworkModelFieldId;
 use model::SingleCgroupModelFieldId;
@@ -163,14 +162,14 @@ impl AggField<SystemModelFieldId> for SystemAggField {
 
         if detail {
             match self {
-                Self::Cpu => Cpu::unit_variant_iter()
+                Self::Cpu => enum_iterator::all::<Cpu>()
                     // The Idx field is always -1 (we aggregate all CPUs)
                     .filter(|v| v != &Cpu::Idx)
                     .map(FieldId::Cpu)
                     .collect(),
-                Self::Mem => Mem::unit_variant_iter().map(FieldId::Mem).collect(),
-                Self::Vm => Vm::unit_variant_iter().map(FieldId::Vm).collect(),
-                Self::Stat => Stat::unit_variant_iter().map(FieldId::Stat).collect(),
+                Self::Mem => enum_iterator::all::<Mem>().map(FieldId::Mem).collect(),
+                Self::Vm => enum_iterator::all::<Vm>().map(FieldId::Vm).collect(),
+                Self::Stat => enum_iterator::all::<Stat>().map(FieldId::Stat).collect(),
             }
         } else {
             // Default fields for each group
@@ -183,8 +182,8 @@ impl AggField<SystemModelFieldId> for SystemAggField {
                     .into_iter()
                     .map(FieldId::Mem)
                     .collect(),
-                Self::Vm => Vm::unit_variant_iter().map(FieldId::Vm).collect(),
-                Self::Stat => Stat::unit_variant_iter().map(FieldId::Stat).collect(),
+                Self::Vm => enum_iterator::all::<Vm>().map(FieldId::Vm).collect(),
+                Self::Stat => enum_iterator::all::<Stat>().map(FieldId::Stat).collect(),
             }
         }
     }
@@ -215,17 +214,6 @@ static SYSTEM_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 {common_fields}, {system_fields}
 
-{all_cpu_fields}
-
-cpus.N.<cpu_field> for individual CPU data. N is individual CPU index and
-<cpu_field> is same as cpu fields above with `cpu.` prefix stripped.
-
-{all_memory_fields}
-
-{all_vm_fields}
-
-{all_stat_fields}
-
 ********************** Aggregated fields **********************
 
 * cpu: includes [{agg_cpu_fields}].
@@ -248,12 +236,8 @@ $ below dump system -b "08:30:00" -e "08:30:30" -f datetime vm hostname -O csv
 
 "#,
         about = SYSTEM_ABOUT,
-        common_fields = join(CommonField::unit_variant_iter()),
-        system_fields = join(SystemModelFieldId::unit_variant_iter()),
-        all_cpu_fields = join(SystemAggField::Cpu.expand(true)),
-        all_memory_fields = join(SystemAggField::Mem.expand(true)),
-        all_vm_fields = join(SystemAggField::Vm.expand(true)),
-        all_stat_fields = join(SystemAggField::Stat.expand(true)),
+        common_fields = join(enum_iterator::all::<CommonField>()),
+        system_fields = join(enum_iterator::all::<SystemModelFieldId>()),
         agg_cpu_fields = join(SystemAggField::Cpu.expand(false)),
         agg_memory_fields = join(SystemAggField::Mem.expand(false)),
         agg_vm_fields = join(SystemAggField::Vm.expand(false)),
@@ -333,7 +317,7 @@ static DISK_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 ********************** Available fields **********************
 
-{common_fields}, and expanded fields below.
+{common_fields}, {disk_fields}
 
 ********************** Aggregated fields **********************
 
@@ -367,7 +351,8 @@ $ below dump disk -b "08:30:00" -e "08:30:30" -s read_bytes_per_sec --rsort --to
 
 "#,
         about = DISK_ABOUT,
-        common_fields = join(CommonField::unit_variant_iter()),
+        common_fields = join(enum_iterator::all::<CommonField>()),
+        disk_fields = join(enum_iterator::all::<SingleDiskModelFieldId>()),
         agg_read_fields = join(DiskAggField::Read.expand(false)),
         agg_write_fields = join(DiskAggField::Write.expand(false)),
         agg_discard_fields = join(DiskAggField::Discard.expand(false)),
@@ -414,7 +399,7 @@ static BTRFS_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 ********************** Available fields **********************
 
-{common_fields}, and expanded fields below.
+{common_fields}, {btrfs_fields}
 
 ********************** Aggregated fields **********************
 
@@ -438,7 +423,8 @@ $ below dump btrfs -b "08:30:00" -e "08:30:30" -s disk_bytes --rsort --top 5
 
 "#,
         about = BTRFS_ABOUT,
-        common_fields = join(CommonField::unit_variant_iter()),
+        common_fields = join(enum_iterator::all::<CommonField>()),
+        btrfs_fields = join(enum_iterator::all::<BtrfsModelFieldId>()),
         agg_disk_usage_fields = join(BtrfsAggField::DiskUsage.expand(false)),
         default_fields = join(DEFAULT_BTRFS_FIELDS.to_owned()),
     )
@@ -467,9 +453,9 @@ impl AggField<SingleProcessModelFieldId> for ProcessAggField {
 
         if detail {
             match self {
-                Self::Cpu => Cpu::unit_variant_iter().map(FieldId::Cpu).collect(),
-                Self::Mem => Mem::unit_variant_iter().map(FieldId::Mem).collect(),
-                Self::Io => Io::unit_variant_iter().map(FieldId::Io).collect(),
+                Self::Cpu => enum_iterator::all::<Cpu>().map(FieldId::Cpu).collect(),
+                Self::Mem => enum_iterator::all::<Mem>().map(FieldId::Mem).collect(),
+                Self::Io => enum_iterator::all::<Io>().map(FieldId::Io).collect(),
             }
         } else {
             // Default fields for each group
@@ -511,12 +497,6 @@ static PROCESS_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 {common_fields}, {process_fields}
 
-{all_cpu_fields}
-
-{all_memory_fields}
-
-{all_io_fields}
-
 ********************** Aggregated fields **********************
 
 * cpu: includes [{agg_cpu_fields}].
@@ -547,11 +527,8 @@ $ below dump process -b "08:30:00" -e "08:30:30" -s cpu.usage_pct --rsort --top 
 
 "#,
         about = PROCESS_ABOUT,
-        common_fields = join(CommonField::unit_variant_iter()),
-        process_fields = join(SingleProcessModelFieldId::unit_variant_iter()),
-        all_cpu_fields = join(ProcessAggField::Cpu.expand(true)),
-        all_memory_fields = join(ProcessAggField::Mem.expand(true)),
-        all_io_fields = join(ProcessAggField::Io.expand(true)),
+        common_fields = join(enum_iterator::all::<CommonField>()),
+        process_fields = join(enum_iterator::all::<SingleProcessModelFieldId>()),
         agg_cpu_fields = join(ProcessAggField::Cpu.expand(false)),
         agg_memory_fields = join(ProcessAggField::Mem.expand(false)),
         agg_io_fields = join(ProcessAggField::Io.expand(false)),
@@ -584,10 +561,10 @@ impl AggField<SingleCgroupModelFieldId> for CgroupAggField {
 
         if detail {
             match self {
-                Self::Cpu => Cpu::unit_variant_iter().map(FieldId::Cpu).collect(),
-                Self::Mem => Mem::unit_variant_iter().map(FieldId::Mem).collect(),
-                Self::Io => Io::unit_variant_iter().map(FieldId::Io).collect(),
-                Self::Pressure => Pressure::unit_variant_iter()
+                Self::Cpu => enum_iterator::all::<Cpu>().map(FieldId::Cpu).collect(),
+                Self::Mem => enum_iterator::all::<Mem>().map(FieldId::Mem).collect(),
+                Self::Io => enum_iterator::all::<Io>().map(FieldId::Io).collect(),
+                Self::Pressure => enum_iterator::all::<Pressure>()
                     .map(FieldId::Pressure)
                     .collect(),
             }
@@ -631,14 +608,6 @@ static CGROUP_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 {common_fields}, {cgroup_fields}
 
-{all_cpu_fields}
-
-{all_memory_fields}
-
-{all_io_fields}
-
-{all_pressure_fields}
-
 ********************** Aggregated fields **********************
 
 * cpu: includes [{agg_cpu_fields}].
@@ -673,12 +642,8 @@ $ below dump cgroup -b "08:30:00" -e "08:30:30" -s cpu.usage_pct --rsort --top 5
 
 "#,
         about = CGROUP_ABOUT,
-        common_fields = join(CommonField::unit_variant_iter()),
-        cgroup_fields = join(SingleCgroupModelFieldId::unit_variant_iter()),
-        all_cpu_fields = join(CgroupAggField::Cpu.expand(true)),
-        all_memory_fields = join(CgroupAggField::Mem.expand(true)),
-        all_io_fields = join(CgroupAggField::Io.expand(true)),
-        all_pressure_fields = join(CgroupAggField::Pressure.expand(true)),
+        common_fields = join(enum_iterator::all::<CommonField>()),
+        cgroup_fields = join(enum_iterator::all::<SingleCgroupModelFieldId>()),
         agg_cpu_fields = join(CgroupAggField::Cpu.expand(false)),
         agg_memory_fields = join(CgroupAggField::Mem.expand(false)),
         agg_io_fields = join(CgroupAggField::Io.expand(false)),
@@ -764,7 +729,7 @@ static IFACE_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 ********************** Available fields **********************
 
-{common_fields}, and expanded fields below.
+{common_fields}, {iface_fields}
 
 ********************** Aggregated fields **********************
 
@@ -793,7 +758,8 @@ $ below dump iface -b "08:30:00" -e "08:30:30" -s interface -F eth* -O json
 
 "#,
         about = IFACE_ABOUT,
-        common_fields = join(CommonField::unit_variant_iter()),
+        common_fields = join(enum_iterator::all::<CommonField>()),
+        iface_fields = join(enum_iterator::all::<SingleNetModelFieldId>()),
         agg_rate_fields = join(IfaceAggField::Rate.expand(false)),
         agg_rx_fields = join(IfaceAggField::Rx.expand(false)),
         agg_tx_fields = join(IfaceAggField::Tx.expand(false)),
@@ -820,16 +786,16 @@ impl AggField<NetworkModelFieldId> for NetworkAggField {
     fn expand(&self, _detail: bool) -> Vec<NetworkModelFieldId> {
         use model::NetworkModelFieldId as FieldId;
         match self {
-            Self::Ip => model::IpModelFieldId::unit_variant_iter()
+            Self::Ip => enum_iterator::all::<model::IpModelFieldId>()
                 .map(FieldId::Ip)
                 .collect(),
-            Self::Ip6 => model::Ip6ModelFieldId::unit_variant_iter()
+            Self::Ip6 => enum_iterator::all::<model::Ip6ModelFieldId>()
                 .map(FieldId::Ip6)
                 .collect(),
-            Self::Icmp => model::IcmpModelFieldId::unit_variant_iter()
+            Self::Icmp => enum_iterator::all::<model::IcmpModelFieldId>()
                 .map(FieldId::Icmp)
                 .collect(),
-            Self::Icmp6 => model::Icmp6ModelFieldId::unit_variant_iter()
+            Self::Icmp6 => enum_iterator::all::<model::Icmp6ModelFieldId>()
                 .map(FieldId::Icmp6)
                 .collect(),
         }
@@ -856,7 +822,7 @@ static NETWORK_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 ********************** Available fields **********************
 
-{common_fields}, and expanded fields below.
+{common_fields}, {network_fields}
 
 ********************** Aggregated fields **********************
 
@@ -882,7 +848,8 @@ $ below dump network -b "08:30:00" -e "08:30:30" -f ip ip6 -O json
 
 "#,
         about = NETWORK_ABOUT,
-        common_fields = join(CommonField::unit_variant_iter()),
+        common_fields = join(enum_iterator::all::<CommonField>()),
+        network_fields = join(enum_iterator::all::<NetworkModelFieldId>()),
         agg_ip_fields = join(NetworkAggField::Ip.expand(false)),
         agg_ip6_fields = join(NetworkAggField::Ip6.expand(false)),
         agg_icmp_fields = join(NetworkAggField::Icmp.expand(false)),
@@ -909,13 +876,13 @@ impl AggField<NetworkModelFieldId> for TransportAggField {
     fn expand(&self, _detail: bool) -> Vec<NetworkModelFieldId> {
         use model::NetworkModelFieldId as FieldId;
         match self {
-            Self::Tcp => model::TcpModelFieldId::unit_variant_iter()
+            Self::Tcp => enum_iterator::all::<model::TcpModelFieldId>()
                 .map(FieldId::Tcp)
                 .collect(),
-            Self::Udp => model::UdpModelFieldId::unit_variant_iter()
+            Self::Udp => enum_iterator::all::<model::UdpModelFieldId>()
                 .map(FieldId::Udp)
                 .collect(),
-            Self::Udp6 => model::Udp6ModelFieldId::unit_variant_iter()
+            Self::Udp6 => enum_iterator::all::<model::Udp6ModelFieldId>()
                 .map(FieldId::Udp6)
                 .collect(),
         }
@@ -941,7 +908,7 @@ static TRANSPORT_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 ********************** Available fields **********************
 
-{common_fields}, and expanded fields below.
+{common_fields}, {network_fields}.
 
 ********************** Aggregated fields **********************
 
@@ -965,7 +932,8 @@ $ below dump transport -b "08:30:00" -e "08:30:30" -f tcp udp -O json
 
 "#,
         about = TRANSPORT_ABOUT,
-        common_fields = join(CommonField::unit_variant_iter()),
+        common_fields = join(enum_iterator::all::<CommonField>()),
+        network_fields = join(enum_iterator::all::<NetworkModelFieldId>()),
         agg_tcp_fields = join(TransportAggField::Tcp.expand(false)),
         agg_udp_fields = join(TransportAggField::Udp.expand(false)),
         agg_udp6_fields = join(TransportAggField::Udp6.expand(false)),

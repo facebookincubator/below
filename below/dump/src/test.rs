@@ -17,7 +17,6 @@ use command::GeneralOpt;
 use command::OutputFormat;
 use common::logutil::get_logger;
 use model::Collector;
-use model::EnumIter;
 use model::Queriable;
 use render::HasRenderConfigForDump;
 use serde_json::Value;
@@ -37,7 +36,7 @@ fn test_dump_sys_content() {
 
     let mut opts: GeneralOpt = Default::default();
     let mut fields = command::expand_fields(command::DEFAULT_SYSTEM_FIELDS, true);
-    for subquery_id in model::SingleCpuModelFieldId::unit_variant_iter() {
+    for subquery_id in enum_iterator::all::<model::SingleCpuModelFieldId>() {
         fields.push(DumpField::FieldId(model::SystemModelFieldId::Cpus(
             model::BTreeMapFieldId {
                 key: Some(31),
@@ -94,7 +93,7 @@ fn test_dump_sys_titles() {
     let titles = expand_fields(command::DEFAULT_SYSTEM_FIELDS, true)
         .into_iter()
         .chain(
-            model::SingleCpuModelFieldId::unit_variant_iter().map(|subquery_id| {
+            enum_iterator::all::<model::SingleCpuModelFieldId>().map(|subquery_id| {
                 DumpField::FieldId(model::SystemModelFieldId::Cpus(model::BTreeMapFieldId {
                     key: Some(31),
                     subquery_id,

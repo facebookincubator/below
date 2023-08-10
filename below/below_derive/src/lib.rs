@@ -44,24 +44,10 @@ pub fn enum_from_str_derive(input: TokenStream) -> TokenStream {
         .into()
 }
 
-/// Implements unit_variant_iter() and all_variant_iter(), both of which return
-/// impl Iterator<Item = Self>. The unit version iters over unit variants, while
-/// the all version iters over both unit variants and expanded nested variants,
-/// effectively doing a DFS over the enum tree. The nested variant field type
-/// must also have all_variant_iter() defined. Currently no trait is defined to
-/// capture the two methods.
-#[proc_macro_derive(EnumIter)]
-pub fn enum_iter_derive(input: TokenStream) -> TokenStream {
-    let ast = syn::parse_macro_input!(input as DeriveInput);
-    qenum::enum_iter_derive_impl(&ast)
-        .unwrap_or_else(|err| err.to_compile_error())
-        .into()
-}
-
 /// Implements the Queriable trait for a model. An enum with variants that map
-/// to its fields are created with auto derive above: EnumToString, EnumFromStr
-/// and EnumIter. That enum is used as Queriable::FieldId. Subquery fields are
-/// accessed by delegating the subquery field_id to the corresponding sub-models.
+/// to its fields are created with auto derive above: EnumToString, EnumFromStr.
+/// That enum is used as Queriable::FieldId. Subquery fields are accessed by
+/// delegating the subquery field_id to the corresponding sub-models.
 ///
 /// Struct attributes:
 ///
@@ -104,9 +90,9 @@ pub fn enum_iter_derive(input: TokenStream) -> TokenStream {
 ///     Clone,
 ///     Debug,
 ///     PartialEq,
-///     ::below_derive::EnumIter,
 ///     ::below_derive::EnumFromStr,
 ///     ::below_derive::EnumToString
+///     ::enum_iterator::Sequence
 /// )]
 /// enum MyFooFieldId {
 ///     A,

@@ -29,7 +29,6 @@ use common::cliutil;
 use common::util::get_belowrc_dump_section_key;
 use common::util::get_belowrc_filename;
 use common::util::timestamp_to_datetime;
-use model::EnumIter;
 use model::Field;
 use model::FieldId;
 use model::Queriable;
@@ -73,9 +72,9 @@ use tmain::IterExecResult;
     Clone,
     Debug,
     PartialEq,
-    below_derive::EnumIter,
     below_derive::EnumFromStr,
-    below_derive::EnumToString
+    below_derive::EnumToString,
+    enum_iterator::Sequence
 )]
 pub enum CommonField {
     Timestamp,

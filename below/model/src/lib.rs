@@ -24,6 +24,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use common::open_source_shim;
+use enum_iterator::Sequence;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -294,21 +295,6 @@ pub fn sort_queriables<T: Queriable>(queriables: &mut [&T], field_id: &T::FieldI
     });
 }
 
-/// An enum that can iterate its variants. Ones without parameters are unit
-/// variants. Ones with exactly one parameter that is also IterEnum are nested
-/// variants. Can be auto derived with below_derive::EnumIter.
-/// Use this trait to programmatically list available variants in a FieldId.
-pub trait EnumIter: Sized + 'static {
-    /// Return iterator for unit variants only.
-    fn unit_variant_iter() -> Box<dyn Iterator<Item = Self>> {
-        Box::new(std::iter::empty())
-    }
-    /// Return iterator for unit variants as well as nested variants.
-    fn all_variant_iter() -> Box<dyn Iterator<Item = Self>> {
-        Box::new(std::iter::empty())
-    }
-}
-
 /// Models containing sub-Models with its own type, similar to a node in a tree.
 /// Such Model has a depth value for illustrating the tree hierarchy.
 pub trait Recursive {
@@ -330,6 +316,15 @@ pub struct VecFieldId<F: FieldId> {
     pub subquery_id: F,
 }
 
+impl<F: FieldId> From<F> for VecFieldId<F> {
+    fn from(subquery_id: F) -> Self {
+        Self {
+            idx: None,
+            subquery_id,
+        }
+    }
+}
+
 impl<F: FieldId> FieldId for VecFieldId<F>
 where
     <F as FieldId>::Queriable: Sized,
@@ -337,13 +332,19 @@ where
     type Queriable = Vec<F::Queriable>;
 }
 
-impl<F: FieldId + EnumIter> EnumIter for VecFieldId<F> {
-    fn all_variant_iter() -> Box<dyn Iterator<Item = Self>> {
-        Box::new(F::all_variant_iter().map(|v| VecFieldId {
-            // Dynamic parameter is irrelevant to variant listing
-            idx: None,
-            subquery_id: v,
-        }))
+impl<F: FieldId + Sequence> Sequence for VecFieldId<F> {
+    const CARDINALITY: usize = <F as Sequence>::CARDINALITY;
+    fn next(&self) -> Option<Self> {
+        self.subquery_id.next().map(Self::from)
+    }
+    fn previous(&self) -> Option<Self> {
+        self.subquery_id.previous().map(Self::from)
+    }
+    fn first() -> Option<Self> {
+        <F as Sequence>::first().map(Self::from)
+    }
+    fn last() -> Option<Self> {
+        <F as Sequence>::last().map(Self::from)
     }
 }
 
@@ -393,6 +394,15 @@ pub struct BTreeMapFieldId<K, F: FieldId> {
     pub subquery_id: F,
 }
 
+impl<K, F: FieldId> From<F> for BTreeMapFieldId<K, F> {
+    fn from(subquery_id: F) -> Self {
+        Self {
+            key: None,
+            subquery_id,
+        }
+    }
+}
+
 impl<K: Ord, F: FieldId> FieldId for BTreeMapFieldId<K, F>
 where
     <F as FieldId>::Queriable: Sized,
@@ -400,13 +410,19 @@ where
     type Queriable = BTreeMap<K, F::Queriable>;
 }
 
-impl<K: Ord + 'static, F: FieldId + EnumIter> EnumIter for BTreeMapFieldId<K, F> {
-    fn all_variant_iter() -> Box<dyn Iterator<Item = Self>> {
-        Box::new(F::all_variant_iter().map(|v| BTreeMapFieldId {
-            // Dynamic parameter is irrelevant to variant listing
-            key: None,
-            subquery_id: v,
-        }))
+impl<K, F: FieldId + Sequence> Sequence for BTreeMapFieldId<K, F> {
+    const CARDINALITY: usize = <F as Sequence>::CARDINALITY;
+    fn next(&self) -> Option<Self> {
+        self.subquery_id.next().map(Self::from)
+    }
+    fn previous(&self) -> Option<Self> {
+        self.subquery_id.previous().map(Self::from)
+    }
+    fn first() -> Option<Self> {
+        <F as Sequence>::first().map(Self::from)
+    }
+    fn last() -> Option<Self> {
+        <F as Sequence>::last().map(Self::from)
     }
 }
 
@@ -513,7 +529,7 @@ mod tests {
     #[test]
     fn test_model_field_ids() {
         // Ensure COMMON_MODEL_FIELD_IDS is update to date.
-        let all_variants: BTreeSet<String> = ModelFieldId::all_variant_iter()
+        let all_variants: BTreeSet<String> = enum_iterator::all::<ModelFieldId>()
             .map(|v| v.to_string())
             .collect();
         let expected_field_ids: BTreeSet<String> = field_ids::MODEL_FIELD_IDS
