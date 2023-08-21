@@ -22,7 +22,7 @@ hostname = "0.3"
 os_info = "3.0.7"
 procfs = { package = "fb_procfs", version = "0.7.1", path = "../procfs" }
 regex = "1.9.2"
-serde = { version = "1.0.176", features = ["derive", "rc"] }
+serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 
