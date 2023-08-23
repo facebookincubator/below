@@ -421,7 +421,11 @@ pub struct SingleDiskModel {
 
 impl Recursive for SingleDiskModel {
     fn get_depth(&self) -> usize {
-        if self.minor == Some(0) { 0 } else { 1 }
+        if self.minor == Some(0) {
+            0
+        } else {
+            1
+        }
     }
 }
 

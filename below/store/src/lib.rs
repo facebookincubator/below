@@ -1192,20 +1192,16 @@ mod tests {
             frame.sample.cgroup.memory_current = Some(222);
 
             // No new shard
-            assert!(
-                !writer
-                    .put(ts + Duration::from_secs(1), &frame)
-                    .expect("Failed to store data")
-            );
+            assert!(!writer
+                .put(ts + Duration::from_secs(1), &frame)
+                .expect("Failed to store data"));
 
             frame.sample.cgroup.memory_current = Some(333);
 
             // New shard
-            assert!(
-                writer
-                    .put(ts + Duration::from_secs(SHARD_TIME), &frame)
-                    .expect("Failed to store data")
-            );
+            assert!(writer
+                .put(ts + Duration::from_secs(SHARD_TIME), &frame)
+                .expect("Failed to store data"));
         }
 
         {
@@ -1221,11 +1217,9 @@ mod tests {
             frame.sample.cgroup.memory_current = Some(444);
 
             // New StoreWriter but writing to existing shard
-            assert!(
-                !writer
-                    .put(ts + Duration::from_secs(SHARD_TIME + 1), &frame,)
-                    .expect("Failed to store data")
-            );
+            assert!(!writer
+                .put(ts + Duration::from_secs(SHARD_TIME + 1), &frame,)
+                .expect("Failed to store data"));
         }
 
         let mut store_cursor = StoreCursor::new(get_logger(), dir.path().to_path_buf());
@@ -1541,11 +1535,9 @@ mod tests {
         {
             // Nothing is discarded
             let target_size = total_size;
-            assert!(
-                writer
-                    .try_discard_until_size(target_size)
-                    .expect("Failed to discard data")
-            );
+            assert!(writer
+                .try_discard_until_size(target_size)
+                .expect("Failed to discard data"));
             let frame = StoreCursor::new(get_logger(), dir.path().to_path_buf())
                 .get_next(&get_unix_timestamp(ts), Direction::Forward)
                 .expect("Failed to read sample")
@@ -1557,11 +1549,9 @@ mod tests {
         {
             // Delete first shard
             let target_size = total_size - 1;
-            assert!(
-                writer
-                    .try_discard_until_size(target_size)
-                    .expect("Failed to discard data")
-            );
+            assert!(writer
+                .try_discard_until_size(target_size)
+                .expect("Failed to discard data"));
             let frame = StoreCursor::new(get_logger(), dir.path().to_path_buf())
                 .get_next(&get_unix_timestamp(ts), Direction::Forward)
                 .expect("Failed to read sample")
@@ -1573,11 +1563,9 @@ mod tests {
         {
             // Delete second and third shards
             let target_size = total_size - (shard_sizes[0] + shard_sizes[1] + shard_sizes[2]);
-            assert!(
-                writer
-                    .try_discard_until_size(target_size)
-                    .expect("Failed to discard data")
-            );
+            assert!(writer
+                .try_discard_until_size(target_size)
+                .expect("Failed to discard data"));
             let frame = StoreCursor::new(get_logger(), dir.path().to_path_buf())
                 .get_next(&get_unix_timestamp(ts), Direction::Forward)
                 .expect("Failed to read sample")
@@ -1592,11 +1580,9 @@ mod tests {
             let target_size = total_size - (shard_sizes[0] + shard_sizes[1] + shard_sizes[2] +
                 shard_sizes[3] + shard_sizes[4])
             + /* smaller than a shard */ 1;
-            assert!(
-                writer
-                    .try_discard_until_size(target_size)
-                    .expect("Failed to discard data")
-            );
+            assert!(writer
+                .try_discard_until_size(target_size)
+                .expect("Failed to discard data"));
             let frame = StoreCursor::new(get_logger(), dir.path().to_path_buf())
                 .get_next(&get_unix_timestamp(ts), Direction::Forward)
                 .expect("Failed to read sample")
@@ -1608,11 +1594,9 @@ mod tests {
         {
             // Delete until size is 1. Verify that the current shard remains
             // (i.e. size > 1).
-            assert!(
-                !writer
-                    .try_discard_until_size(1)
-                    .expect("Failed to discard data"),
-            );
+            assert!(!writer
+                .try_discard_until_size(1)
+                .expect("Failed to discard data"),);
             let frame = StoreCursor::new(get_logger(), dir.path().to_path_buf())
                 .get_next(&get_unix_timestamp(ts), Direction::Forward)
                 .expect("Failed to read sample")
