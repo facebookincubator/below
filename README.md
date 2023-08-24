@@ -39,13 +39,6 @@ of [atop](https://linux.die.net/man/1/atop)'s design and style decisions.
 <img src="https://asciinema.org/a/355506.svg" width="500">
 </a>
 
-## Prerequisite
-
-* `below` requires clang-15+. Make sure it is installed and exported.
-```shell
-export CLANG=clang-15
-```
-
 ## Installing
 
 ### Fedora
