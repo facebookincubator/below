@@ -75,34 +75,25 @@ pub struct CgroupModelFieldId {
     pub subquery_id: SingleCgroupModelFieldId,
 }
 
-// For sorting CgroupModel with SingleCgroupModelFieldId
-impl From<SingleCgroupModelFieldId> for CgroupModelFieldId {
-    fn from(v: SingleCgroupModelFieldId) -> Self {
-        Self {
-            path: None,
-            subquery_id: v,
-        }
-    }
-}
-
 impl FieldId for CgroupModelFieldId {
     type Queriable = CgroupModel;
 }
 
+impl DelegatedSequence for CgroupModelFieldId {
+    type Delegate = SingleCgroupModelFieldId;
+    fn get_delegate(&self) -> &Self::Delegate {
+        &self.subquery_id
+    }
+    fn from_delegate(delegate: Self::Delegate) -> Self {
+        Self {
+            path: None,
+            subquery_id: delegate,
+        }
+    }
+}
+
 impl Sequence for CgroupModelFieldId {
-    const CARDINALITY: usize = SingleCgroupModelFieldId::CARDINALITY;
-    fn next(&self) -> Option<Self> {
-        self.subquery_id.next().map(Self::from)
-    }
-    fn previous(&self) -> Option<Self> {
-        self.subquery_id.previous().map(Self::from)
-    }
-    fn first() -> Option<Self> {
-        SingleCgroupModelFieldId::first().map(Self::from)
-    }
-    fn last() -> Option<Self> {
-        SingleCgroupModelFieldId::last().map(Self::from)
-    }
+    impl_sequence_for_delegated_sequence!();
 }
 
 impl std::string::ToString for CgroupModelFieldId {

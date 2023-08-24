@@ -17,6 +17,7 @@ use std::collections::HashSet;
 use cursive::utils::markup::StyledString;
 use model::sort_queriables;
 use model::CgroupModel;
+use model::CgroupModelFieldId;
 use model::Queriable;
 use model::SingleCgroupModel;
 use model::SingleCgroupModelFieldId;
@@ -117,7 +118,12 @@ impl CgroupTab {
 
             let mut children = Vec::from_iter(&cgroup.children);
             if let Some(sort_order) = state.sort_order.as_ref() {
-                sort_queriables(&mut children, &sort_order.to_owned().into(), state.reverse);
+                // field_id that query its own data
+                let field_id = CgroupModelFieldId {
+                    path: Some(vec![]),
+                    subquery_id: sort_order.clone(),
+                };
+                sort_queriables(&mut children, &field_id, state.reverse);
             }
 
             // Stop at next level (one below <root>)

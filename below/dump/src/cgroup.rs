@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use model::CgroupModelFieldId;
 use model::SingleCgroupModelFieldId;
 
 use super::*;
@@ -125,12 +126,17 @@ impl Dumper for Cgroup {
             let mut children = Vec::from_iter(&model.children);
             //sort
             if let Some(field_id) = &handle.select {
+                // field_id that queries its own data
+                let field_id = CgroupModelFieldId {
+                    path: Some(vec![]),
+                    subquery_id: field_id.to_owned(),
+                };
                 if handle.opts.sort {
-                    model::sort_queriables(&mut children, &field_id.to_owned().into(), false);
+                    model::sort_queriables(&mut children, &field_id, false);
                 }
 
                 if handle.opts.rsort {
-                    model::sort_queriables(&mut children, &field_id.to_owned().into(), true);
+                    model::sort_queriables(&mut children, &field_id, false);
                 }
 
                 if (handle.opts.sort || handle.opts.rsort) && handle.opts.top != 0 {

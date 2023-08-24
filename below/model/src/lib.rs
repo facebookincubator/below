@@ -307,6 +307,35 @@ pub trait Nameable {
     fn name() -> &'static str;
 }
 
+/// Sequence that wraps a delegate sequence and owns no variants.
+trait DelegatedSequence {
+    type Delegate: Sequence;
+    fn get_delegate(&self) -> &Self::Delegate;
+    // Not using From trait as conversion should only be used for Sequence
+    fn from_delegate(delegate: Self::Delegate) -> Self;
+}
+
+/// Implements Sequence for DelegatedSequence. Must be a macro due to orphan
+/// rule. See https://github.com/rust-lang/rfcs/issues/1124
+macro_rules! impl_sequence_for_delegated_sequence {
+    () => {
+        const CARDINALITY: usize = <Self as DelegatedSequence>::Delegate::CARDINALITY;
+        fn next(&self) -> Option<Self> {
+            self.get_delegate().next().map(Self::from_delegate)
+        }
+        fn previous(&self) -> Option<Self> {
+            self.get_delegate().previous().map(Self::from_delegate)
+        }
+        fn first() -> Option<Self> {
+            <Self as DelegatedSequence>::Delegate::first().map(Self::from_delegate)
+        }
+        fn last() -> Option<Self> {
+            <Self as DelegatedSequence>::Delegate::last().map(Self::from_delegate)
+        }
+    };
+}
+pub(crate) use impl_sequence_for_delegated_sequence;
+
 /// Type that makes Vec Queriable if Vec's inner type is Queriable. Uses `idx`
 /// to query into a Vec. Uses `subquery_id` to query into the selected item.
 #[derive(Clone, Debug, PartialEq)]
@@ -316,15 +345,6 @@ pub struct VecFieldId<F: FieldId> {
     pub subquery_id: F,
 }
 
-impl<F: FieldId> From<F> for VecFieldId<F> {
-    fn from(subquery_id: F) -> Self {
-        Self {
-            idx: None,
-            subquery_id,
-        }
-    }
-}
-
 impl<F: FieldId> FieldId for VecFieldId<F>
 where
     <F as FieldId>::Queriable: Sized,
@@ -332,20 +352,21 @@ where
     type Queriable = Vec<F::Queriable>;
 }
 
+impl<F: FieldId + Sequence> DelegatedSequence for VecFieldId<F> {
+    type Delegate = F;
+    fn get_delegate(&self) -> &Self::Delegate {
+        &self.subquery_id
+    }
+    fn from_delegate(delegate: Self::Delegate) -> Self {
+        Self {
+            idx: None,
+            subquery_id: delegate,
+        }
+    }
+}
+
 impl<F: FieldId + Sequence> Sequence for VecFieldId<F> {
-    const CARDINALITY: usize = <F as Sequence>::CARDINALITY;
-    fn next(&self) -> Option<Self> {
-        self.subquery_id.next().map(Self::from)
-    }
-    fn previous(&self) -> Option<Self> {
-        self.subquery_id.previous().map(Self::from)
-    }
-    fn first() -> Option<Self> {
-        <F as Sequence>::first().map(Self::from)
-    }
-    fn last() -> Option<Self> {
-        <F as Sequence>::last().map(Self::from)
-    }
+    impl_sequence_for_delegated_sequence!();
 }
 
 impl<F: FieldId + ToString> ToString for VecFieldId<F> {
@@ -394,15 +415,6 @@ pub struct BTreeMapFieldId<K, F: FieldId> {
     pub subquery_id: F,
 }
 
-impl<K, F: FieldId> From<F> for BTreeMapFieldId<K, F> {
-    fn from(subquery_id: F) -> Self {
-        Self {
-            key: None,
-            subquery_id,
-        }
-    }
-}
-
 impl<K: Ord, F: FieldId> FieldId for BTreeMapFieldId<K, F>
 where
     <F as FieldId>::Queriable: Sized,
@@ -410,20 +422,21 @@ where
     type Queriable = BTreeMap<K, F::Queriable>;
 }
 
+impl<K, F: FieldId + Sequence> DelegatedSequence for BTreeMapFieldId<K, F> {
+    type Delegate = F;
+    fn get_delegate(&self) -> &Self::Delegate {
+        &self.subquery_id
+    }
+    fn from_delegate(delegate: Self::Delegate) -> Self {
+        Self {
+            key: None,
+            subquery_id: delegate,
+        }
+    }
+}
+
 impl<K, F: FieldId + Sequence> Sequence for BTreeMapFieldId<K, F> {
-    const CARDINALITY: usize = <F as Sequence>::CARDINALITY;
-    fn next(&self) -> Option<Self> {
-        self.subquery_id.next().map(Self::from)
-    }
-    fn previous(&self) -> Option<Self> {
-        self.subquery_id.previous().map(Self::from)
-    }
-    fn first() -> Option<Self> {
-        <F as Sequence>::first().map(Self::from)
-    }
-    fn last() -> Option<Self> {
-        <F as Sequence>::last().map(Self::from)
-    }
+    impl_sequence_for_delegated_sequence!();
 }
 
 impl<K: ToString, F: FieldId + ToString> ToString for BTreeMapFieldId<K, F> {
