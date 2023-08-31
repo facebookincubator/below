@@ -1,0 +1,41 @@
+# This job listens for newly pushed tags and will build + upload a dynamically
+# linked below binary to release assets.
+#
+# Note that any consumers of this binary must be compatible with the base image
+# in `Dockerfile`.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*-avx"
+
+permissions:
+  contents: write
+
+jobs:
+  build-upload:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build docker image
+      run: docker build -t below --target build .
+
+    - name: Extract binary
+      run: |
+        mkdir -p output
+        docker run -v $(pwd)/output:/output --entrypoint /bin/bash below -c "cp /below /output"
+
+    - name: Create release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Release ${{ github.ref_name }}
+        body: |
+          Note the binary artifact is dynamically linked.
+          Please check the base image used in the `Dockerfile` for compability with your system.
+        generate_release_notes: true
+        files: ./output/below
