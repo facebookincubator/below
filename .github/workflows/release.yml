@@ -23,7 +23,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Build docker image
-      run: docker build -t below --target build .
+      run: docker build -t below .
 
     - name: Extract binary
       run: |
