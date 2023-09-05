@@ -63,6 +63,7 @@ pub enum Field {
     PidState(procfs::PidState),
     VecU32(Vec<u32>),
     StrSet(BTreeSet<String>),
+    StrU64Map(BTreeMap<String, u64>),
     Cpuset(cgroupfs::Cpuset),
     MemNodes(cgroupfs::MemNodes),
 }
@@ -177,6 +178,12 @@ impl From<BTreeSet<String>> for Field {
     }
 }
 
+impl From<BTreeMap<String, u64>> for Field {
+    fn from(v: BTreeMap<String, u64>) -> Self {
+        Field::StrU64Map(v)
+    }
+}
+
 impl From<cgroupfs::Cpuset> for Field {
     fn from(v: cgroupfs::Cpuset) -> Self {
         Field::Cpuset(v)
@@ -224,6 +231,7 @@ impl PartialEq for Field {
             (Field::Str(s), Field::Str(o)) => s == o,
             (Field::PidState(s), Field::PidState(o)) => s == o,
             (Field::VecU32(s), Field::VecU32(o)) => s == o,
+            (Field::StrU64Map(s), Field::StrU64Map(o)) => s == o,
             _ => false,
         }
     }
@@ -265,6 +273,14 @@ impl fmt::Display for Field {
                     .collect::<Vec<String>>()
                     .as_slice()
                     .join(" ")
+            )),
+            Field::StrU64Map(v) => f.write_fmt(format_args!(
+                "{}",
+                v.iter()
+                    .map(|(k, v)| format!("{}={}", k, v))
+                    .collect::<Vec<String>>()
+                    .as_slice()
+                    .join(", ")
             )),
             Field::Cpuset(v) => v.fmt(f),
             Field::MemNodes(v) => v.fmt(f),
@@ -478,6 +494,11 @@ impl<K: Ord, Q: Queriable> Queriable for BTreeMap<K, Q> {
     }
 }
 
+pub struct NetworkStats<'a> {
+    net: &'a procfs::NetStat,
+    ethtool: &'a ethtool::EthtoolStats,
+}
+
 #[derive(Serialize, Deserialize, below_derive::Queriable)]
 pub struct Model {
     #[queriable(ignore)]
@@ -514,7 +535,25 @@ impl Model {
             )
             .aggr_top_level_val(),
             process: ProcessModel::new(&sample.processes, last.map(|(s, d)| (&s.processes, d))),
-            network: NetworkModel::new(&sample.netstats, last.map(|(s, d)| (&s.netstats, d))),
+            network: {
+                let sample = NetworkStats {
+                    net: &sample.netstats,
+                    ethtool: &sample.ethtool
+                };
+                let network_stats: NetworkStats;
+
+                let last = if let Some((s, d)) = last {
+                    network_stats = NetworkStats {
+                        net: &s.netstats,
+                        ethtool: &s.ethtool
+                    };
+                    Some((&network_stats, d))
+                } else {
+                    None
+                };
+
+                NetworkModel::new(&sample, last)
+            },
             gpu: sample.gpus.as_ref().map(|gpus| {
                 GpuModel::new(&gpus.gpu_map, {
                     if let Some((s, d)) = last {
