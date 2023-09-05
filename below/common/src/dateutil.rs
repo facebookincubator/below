@@ -107,6 +107,10 @@ const TIME_OF_DAY_FORMATS: [&str; 6] = [
 const INVALID_OFFSET: i32 = i32::max_value();
 static DEFAUL_OFFSET: AtomicI32 = AtomicI32::new(INVALID_OFFSET);
 
+fn today() -> NaiveDate {
+    Local::now().date_naive()
+}
+
 impl HgTime {
     pub fn now() -> Self {
         let now: HgTime = Local::now().into();
@@ -124,18 +128,18 @@ impl HgTime {
         match date {
             "now" => Some(Self::now()),
             "today" => {
-                Some(Self::from(Local::today().and_hms_opt(0, 0, 0).unwrap()).use_default_offset())
+                Some(Self::from(today().and_hms_opt(0, 0, 0).unwrap()).use_default_offset())
             }
             "yesterday" => Some(
-                Self::from(Local::today().and_hms_opt(0, 0, 0).unwrap() - Duration::days(1))
+                Self::from(today().and_hms_opt(0, 0, 0).unwrap() - Duration::days(1))
                     .use_default_offset(),
             ),
             "tomorrow" => Some(
-                Self::from(Local::today().and_hms_opt(0, 0, 0).unwrap() + Duration::days(1))
+                Self::from(today().and_hms_opt(0, 0, 0).unwrap() + Duration::days(1))
                     .use_default_offset(),
             ),
             "day after tomorrow" | "the day after tomorrow" | "overmorrow" => Some(
-                Self::from(Local::today().and_hms_opt(0, 0, 0).unwrap() + Duration::days(2))
+                Self::from(today().and_hms_opt(0, 0, 0).unwrap() + Duration::days(2))
                     .use_default_offset(),
             ),
             // Match all string ends with [dhms] or ago but not ends with pm and am. Case insensitive.
@@ -214,28 +218,28 @@ impl HgTime {
                 Some(now..now + 1)
             }
             "today" => {
-                let date = Local::today();
+                let date = today();
                 let start = Self::from(date.and_hms_opt(0, 0, 0).unwrap()).use_default_offset();
                 let end =
                     Self::from(date.and_hms_opt(23, 59, 59).unwrap()).use_default_offset() + 1;
                 Some(start..end)
             }
             "yesterday" => {
-                let date = Local::today() - Duration::days(1);
+                let date = today() - Duration::days(1);
                 let start = Self::from(date.and_hms_opt(0, 0, 0).unwrap()).use_default_offset();
                 let end =
                     Self::from(date.and_hms_opt(23, 59, 59).unwrap()).use_default_offset() + 1;
                 Some(start..end)
             }
             "tomorrow" => {
-                let date = Local::today() + Duration::days(1);
+                let date = today() + Duration::days(1);
                 let start = Self::from(date.and_hms_opt(0, 0, 0).unwrap()).use_default_offset();
                 let end =
                     Self::from(date.and_hms_opt(23, 59, 59).unwrap()).use_default_offset() + 1;
                 Some(start..end)
             }
             "day after tomorrow" | "the day after tomorrow" | "overmorrow" => {
-                let date = Local::today() + Duration::days(2);
+                let date = today() + Duration::days(2);
                 let start = Self::from(date.and_hms_opt(0, 0, 0).unwrap()).use_default_offset();
                 let end =
                     Self::from(date.and_hms_opt(23, 59, 59).unwrap()).use_default_offset() + 1;
@@ -388,8 +392,7 @@ impl HgTime {
                 Local
                     .timestamp_opt(system_time_as_duration.as_secs() as i64, 0)
                     .unwrap()
-                    .date()
-                    .naive_local(),
+                    .date_naive(),
             );
         }
 
