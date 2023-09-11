@@ -528,7 +528,6 @@ fn test_dump_cgroup_titles() {
         "Pglazyfreed",
         "THP Fault Alloc",
         "THP Collapse Alloc",
-        "Mem High",
         "Events Low",
         "Events High",
         "Events Max",

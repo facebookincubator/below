@@ -505,7 +505,6 @@ pub struct CgroupMemoryModel {
     pub pglazyfreed: Option<u64>,
     pub thp_fault_alloc: Option<u64>,
     pub thp_collapse_alloc: Option<u64>,
-    pub memory_high: Option<i64>,
     pub events_low: Option<u64>,
     pub events_high: Option<u64>,
     pub events_max: Option<u64>,
@@ -577,7 +576,6 @@ impl std::ops::Add for CgroupMemoryModel {
             pglazyfreed: opt_add(self.pglazyfreed, other.pglazyfreed),
             thp_fault_alloc: opt_add(self.thp_fault_alloc, other.thp_fault_alloc),
             thp_collapse_alloc: opt_add(self.thp_collapse_alloc, other.thp_collapse_alloc),
-            memory_high: None,
             events_low: opt_add(self.events_low, other.events_low),
             events_high: opt_add(self.events_high, other.events_high),
             events_max: opt_add(self.events_max, other.events_max),
@@ -596,7 +594,6 @@ impl CgroupMemoryModel {
             total: sample.memory_current.map(|v| v as u64),
             swap: sample.memory_swap_current.map(|v| v as u64),
             zswap: sample.memory_zswap_current.map(|v| v as u64),
-            memory_high: sample.memory_high,
             ..Default::default()
         };
         if let Some(events) = &sample.memory_events {

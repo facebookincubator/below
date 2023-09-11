@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 362] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 361] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -190,7 +190,6 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 362] = [
     "cgroup.[path:/<cgroup_path>/.]mem.pglazyfreed",
     "cgroup.[path:/<cgroup_path>/.]mem.thp_fault_alloc",
     "cgroup.[path:/<cgroup_path>/.]mem.thp_collapse_alloc",
-    "cgroup.[path:/<cgroup_path>/.]mem.memory_high",
     "cgroup.[path:/<cgroup_path>/.]mem.events_low",
     "cgroup.[path:/<cgroup_path>/.]mem.events_high",
     "cgroup.[path:/<cgroup_path>/.]mem.events_max",
