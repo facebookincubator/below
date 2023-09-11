@@ -73,9 +73,9 @@ fn test_dump_sys_content() {
         match dump_field {
             DumpField::Common(_) => continue,
             DumpField::FieldId(field_id) => {
-                let rc = model::SystemModel::get_render_config_for_dump(&field_id);
+                let rc = model::SystemModel::get_render_config_for_dump(field_id);
                 assert_eq!(
-                    rc.render(model.system.query(&field_id), false),
+                    rc.render(model.system.query(field_id), false),
                     jval[rc.render_title(false)]
                         .as_str()
                         .unwrap_or_else(|| panic!(
@@ -242,9 +242,9 @@ fn test_dump_process_content() {
             match dump_field {
                 DumpField::Common(_) => continue,
                 DumpField::FieldId(field_id) => {
-                    let rc = model::SingleProcessModel::get_render_config_for_dump(&field_id);
+                    let rc = model::SingleProcessModel::get_render_config_for_dump(field_id);
                     assert_eq!(
-                        rc.render(spm.query(&field_id), false),
+                        rc.render(spm.query(field_id), false),
                         value[rc.render_title(false)]
                             .as_str()
                             .unwrap_or_else(|| panic!(
@@ -272,7 +272,7 @@ fn test_dump_proc_titles() {
         .filter_map(|dump_field| match dump_field {
             DumpField::Common(_) => None,
             DumpField::FieldId(field_id) => {
-                let rc = model::SingleProcessModel::get_render_config_for_dump(&field_id);
+                let rc = model::SingleProcessModel::get_render_config_for_dump(field_id);
                 Some(rc.render_title(false))
             }
         })
@@ -322,13 +322,15 @@ fn test_dump_proc_select() {
         .expect("Fail to get model");
 
     let fields = command::expand_fields(command::DEFAULT_PROCESS_FIELDS, true);
-    let mut opts: GeneralOpt = Default::default();
-    opts.everything = true;
-    opts.output_format = Some(OutputFormat::Json);
-    opts.filter = Some(
-        regex::Regex::new(&model.process.processes.iter().last().unwrap().0.to_string())
-            .expect("Fail to construct regex"),
-    );
+    let mut opts = GeneralOpt {
+        everything: true,
+        output_format: Some(OutputFormat::Json),
+        filter: Some(
+            regex::Regex::new(&model.process.processes.iter().last().unwrap().0.to_string())
+                .expect("Fail to construct regex"),
+        ),
+        ..Default::default()
+    };
     let process_dumper = process::Process::new(
         &opts,
         Some(model::SingleProcessModelFieldId::Pid),
@@ -465,9 +467,9 @@ fn test_dump_cgroup_content() {
 
     // verify json correctness
     assert!(!cgroup_content.is_empty());
-    let mut jval: Value =
+    let jval: Value =
         serde_json::from_slice(&cgroup_content).expect("Fail parse json of process dump");
-    traverse_cgroup_tree(&model.cgroup, &mut jval);
+    traverse_cgroup_tree(&model.cgroup, &jval);
 }
 
 #[test]
@@ -477,7 +479,7 @@ fn test_dump_cgroup_titles() {
         .filter_map(|dump_field| match dump_field {
             DumpField::Common(_) => None,
             DumpField::FieldId(field_id) => {
-                let rc = model::SingleCgroupModel::get_render_config_for_dump(&field_id);
+                let rc = model::SingleCgroupModel::get_render_config_for_dump(field_id);
                 Some(rc.render_title(false))
             }
         })
@@ -529,7 +531,6 @@ fn test_dump_cgroup_titles() {
         "Pglazyfreed",
         "THP Fault Alloc",
         "THP Collapse Alloc",
-        "Mem High",
         "Events Low",
         "Events High",
         "Events Max",
@@ -604,9 +605,9 @@ fn test_dump_iface_content() {
             match dump_field {
                 DumpField::Common(_) => continue,
                 DumpField::FieldId(field_id) => {
-                    let rc = model::SingleNetModel::get_render_config_for_dump(&field_id);
+                    let rc = model::SingleNetModel::get_render_config_for_dump(field_id);
                     assert_eq!(
-                        rc.render(snm.query(&field_id), false),
+                        rc.render(snm.query(field_id), false),
                         value[rc.render_title(false)]
                             .as_str()
                             .unwrap_or_else(|| panic!(
@@ -634,7 +635,7 @@ fn test_dump_iface_titles() {
         .filter_map(|dump_field| match dump_field {
             DumpField::Common(_) => None,
             DumpField::FieldId(field_id) => {
-                let rc = model::SingleNetModel::get_render_config_for_dump(&field_id);
+                let rc = model::SingleNetModel::get_render_config_for_dump(field_id);
                 Some(rc.render_title(false))
             }
         })
@@ -714,9 +715,9 @@ fn test_dump_network_content() {
         match dump_field {
             DumpField::Common(_) => continue,
             DumpField::FieldId(field_id) => {
-                let rc = model::NetworkModel::get_render_config_for_dump(&field_id);
+                let rc = model::NetworkModel::get_render_config_for_dump(field_id);
                 assert_eq!(
-                    rc.render(model.network.query(&field_id), false),
+                    rc.render(model.network.query(field_id), false),
                     jval[rc.render_title(false)]
                         .as_str()
                         .unwrap_or_else(|| panic!(
@@ -739,7 +740,7 @@ fn test_dump_network_titles() {
         .filter_map(|dump_field| match dump_field {
             DumpField::Common(_) => None,
             DumpField::FieldId(field_id) => {
-                let rc = model::NetworkModel::get_render_config_for_dump(&field_id);
+                let rc = model::NetworkModel::get_render_config_for_dump(field_id);
                 Some(rc.render_title(false))
             }
         })
@@ -835,9 +836,9 @@ fn test_dump_transport_content() {
         match dump_field {
             DumpField::Common(_) => continue,
             DumpField::FieldId(field_id) => {
-                let rc = model::NetworkModel::get_render_config_for_dump(&field_id);
+                let rc = model::NetworkModel::get_render_config_for_dump(field_id);
                 assert_eq!(
-                    rc.render(model.network.query(&field_id), false),
+                    rc.render(model.network.query(field_id), false),
                     jval[rc.render_title(false)]
                         .as_str()
                         .unwrap_or_else(|| panic!(
@@ -860,7 +861,7 @@ fn test_dump_transport_titles() {
         .filter_map(|dump_field| match dump_field {
             DumpField::Common(_) => None,
             DumpField::FieldId(field_id) => {
-                let rc = model::NetworkModel::get_render_config_for_dump(&field_id);
+                let rc = model::NetworkModel::get_render_config_for_dump(field_id);
                 Some(rc.render_title(false))
             }
         })
@@ -1110,9 +1111,9 @@ fn test_dump_disk_content() {
             match dump_field {
                 DumpField::Common(_) => continue,
                 DumpField::FieldId(field_id) => {
-                    let rc = model::SingleDiskModel::get_render_config_for_dump(&field_id);
+                    let rc = model::SingleDiskModel::get_render_config_for_dump(field_id);
                     assert_eq!(
-                        rc.render(sdm.query(&field_id), false),
+                        rc.render(sdm.query(field_id), false),
                         value[rc.render_title(false)]
                             .as_str()
                             .unwrap_or_else(|| panic!(
@@ -1140,7 +1141,7 @@ fn test_dump_disk_titles() {
         .filter_map(|dump_field| match dump_field {
             DumpField::Common(_) => None,
             DumpField::FieldId(field_id) => {
-                let rc = model::SingleDiskModel::get_render_config_for_dump(&field_id);
+                let rc = model::SingleDiskModel::get_render_config_for_dump(field_id);
                 Some(rc.render_title(false))
             }
         })

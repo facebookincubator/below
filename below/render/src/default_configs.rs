@@ -192,7 +192,6 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
                 Zswap => Some(counter.unit("bytes")),
                 // Not sure what to do about min/low/high/max values b/c they're neither
                 // counters nor gauges. So leave out for now.
-                MemoryHigh => None,
                 EventsLow => None,
                 EventsHigh => None,
                 EventsMax => None,
@@ -301,7 +300,6 @@ impl HasRenderConfig for model::CgroupMemoryModel {
             Total => rc.title("Mem").format(ReadableSize),
             Swap => rc.title("Mem Swap").format(ReadableSize),
             Zswap => rc.title("Mem Zswap").format(ReadableSize),
-            MemoryHigh => rc.title("Mem High").format(MaxOrReadableSize),
             EventsLow => rc.title("Events Low"),
             EventsHigh => rc.title("Events High"),
             EventsMax => rc.title("Events Max"),
@@ -1474,6 +1472,7 @@ impl HasRenderConfig for model::CgroupProperties {
             // "cpu cpuset hugetlb io memory pids" is 33 chars
             CgroupControllers => rc.title("Controllers").width(35),
             CgroupSubtreeControl => rc.title("SubtreeControl").width(35),
+            MemoryMin => rc.title("Mem Min").format(MaxOrReadableSize),
             MemoryLow => rc.title("Mem Low").format(MaxOrReadableSize),
             MemoryHigh => rc.title("Mem High").format(MaxOrReadableSize),
             MemoryMax => rc.title("Mem Max").format(MaxOrReadableSize),

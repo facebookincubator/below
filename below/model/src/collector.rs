@@ -393,6 +393,7 @@ fn collect_cgroup_sample(
             .transpose()?,
         memory_swap_current: wrap(reader.read_memory_swap_current().map(|v| v as i64))?,
         memory_zswap_current: wrap(reader.read_memory_zswap_current().map(|v| v as i64))?,
+        memory_min: wrap(reader.read_memory_min())?,
         memory_low: wrap(reader.read_memory_low())?,
         memory_high: wrap(reader.read_memory_high())?,
         memory_max: wrap(reader.read_memory_max())?,

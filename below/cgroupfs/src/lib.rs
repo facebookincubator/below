@@ -235,7 +235,7 @@ impl CgroupReader {
         relative_path: PathBuf,
         validate: bool,
     ) -> Result<CgroupReader> {
-        let mut path = root.clone();
+        let mut path = root;
         match relative_path.strip_prefix("/") {
             Ok(p) => path.push(p),
             _ => path.push(&relative_path),
@@ -277,7 +277,7 @@ impl CgroupReader {
             .dir
             .metadata(".")
             .map_err(|e| self.io_error(self.dir.recover_path().unwrap_or_else(|_| "".into()), e))?;
-        Ok(meta.stat().st_ino as u64)
+        Ok(meta.stat().st_ino)
     }
 
     /// Read a value from a file that has a single line. If the file is empty,
@@ -344,6 +344,12 @@ impl CgroupReader {
         self.read_singleline_controllers("cgroup.subtree_control")
     }
 
+    /// Read memory.min - returning memory.min limit in bytes
+    /// Will return -1 if the content is max
+    pub fn read_memory_min(&self) -> Result<i64> {
+        self.read_singleline_integer_or_max_stat_file("memory.min")
+    }
+
     /// Read memory.low - returning memory.low limit in bytes
     /// Will return -1 if the content is max
     pub fn read_memory_low(&self) -> Result<i64> {
@@ -394,22 +400,22 @@ impl CgroupReader {
 
     /// Read cpu.stat - returning assorted cpu consumption statistics
     pub fn read_cpu_stat(&self) -> Result<CpuStat> {
-        CpuStat::read(&self)
+        CpuStat::read(self)
     }
 
     /// Read io.stat - returning assorted io consumption statistics
     pub fn read_io_stat(&self) -> Result<BTreeMap<String, IoStat>> {
-        IoStat::read(&self, "io.stat")
+        IoStat::read(self, "io.stat")
     }
 
     /// Read memory.stat - returning assorted memory consumption
     /// statistics
     pub fn read_memory_stat(&self) -> Result<MemoryStat> {
-        MemoryStat::read(&self)
+        MemoryStat::read(self)
     }
 
     pub fn read_memory_events(&self) -> Result<MemoryEvents> {
-        MemoryEvents::read(&self)
+        MemoryEvents::read(self)
     }
 
     pub fn read_cgroup_stat(&self) -> Result<CgroupStat> {
