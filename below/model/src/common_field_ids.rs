@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 361] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 362] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -143,6 +143,7 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 361] = [
     "cgroup.[path:/<cgroup_path>/.]props.memory_high",
     "cgroup.[path:/<cgroup_path>/.]props.memory_low",
     "cgroup.[path:/<cgroup_path>/.]props.memory_max",
+    "cgroup.[path:/<cgroup_path>/.]props.memory_min",
     "cgroup.[path:/<cgroup_path>/.]props.memory_swap_max",
     "cgroup.[path:/<cgroup_path>/.]props.memory_zswap_max",
     "cgroup.[path:/<cgroup_path>/.]cpu.usage_pct",

@@ -189,6 +189,31 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
             "full_path": "",
             "inode_number": 1,
             "depth": 0,
+            "properties": {
+                "cgroup_controllers": ["cpu", "cpuset", "hugetlb", "io", "memory", "pids"],
+                "cgroup_subtree_control": ["cpu", "cpuset", "io", "memory", "pids"],
+                "memory_min": null,
+                "memory_low": null,
+                "memory_high": null,
+                "memory_max": null,
+                "memory_swap_max": null,
+                "memory_zswap_max": null,
+                "cpu_weight": null,
+                "cpu_max_usec": null,
+                "cpu_max_period_usec": null,
+                "cpuset_cpus": {
+                    "cpus": []
+                },
+                "cpuset_cpus_effective": {
+                    "cpus": [0, 1, 2, 3]
+                },
+                "cpuset_mems": {
+                    "nodes": []
+                },
+                "cpuset_mems_effective": {
+                    "nodes": [0, 1, 2, 3]
+                }
+            },
             "cpu": null,
             "memory": {
                 "total": 5000000000,
@@ -248,6 +273,31 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                     "full_path": "/init.scope",
                     "inode_number": 17,
                     "depth": 1,
+                    "properties": {
+                        "cgroup_controllers": ["cpu", "cpuset", "io", "memory", "pids"],
+                        "cgroup_subtree_control": ["cpu", "cpuset", "io", "memory", "pids"],
+                        "memory_min": 0,
+                        "memory_low": 0,
+                        "memory_high": -1,
+                        "memory_max": -1,
+                        "memory_swap_max": -1,
+                        "memory_zswap_max": -1,
+                        "cpu_weight": 100,
+                        "cpu_max_usec": -1,
+                        "cpu_max_period_usec": 100000,
+                        "cpuset_cpus": {
+                            "cpus": []
+                        },
+                        "cpuset_cpus_effective": {
+                            "cpus": [0, 1, 2, 3]
+                        },
+                        "cpuset_mems": {
+                            "nodes": []
+                        },
+                        "cpuset_mems_effective": {
+                            "nodes": [0, 1, 2, 3]
+                        }
+                    },
                     "cpu": {
                         "usage_pct": 0.01000,
                         "user_pct": 0.00900,
@@ -317,6 +367,23 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                     "full_path": "/child_a.slice",
                     "inode_number": 11111,
                     "depth": 1,
+                    "properties": {
+                        "cgroup_controllers": ["cpu", "cpuset", "io", "memory", "pids"],
+                        "cgroup_subtree_control": ["io", "memory", "pids"],
+                        "memory_min": 2000000000,
+                        "memory_low": 0,
+                        "memory_high": -1,
+                        "memory_max": -1,
+                        "memory_swap_max": 0,
+                        "memory_zswap_max": 0,
+                        "cpu_weight": null,
+                        "cpu_max_usec": null,
+                        "cpu_max_period_usec": null,
+                        "cpuset_cpus": null,
+                        "cpuset_cpus_effective": null,
+                        "cpuset_mems": null,
+                        "cpuset_mems_effective": null
+                    },
                     "cpu": {
                         "usage_pct": 0.0,
                         "user_pct": 0.0,
@@ -386,6 +453,31 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                     "full_path": "/child_b.slice",
                     "inode_number": 1111,
                     "depth": 1,
+                    "properties": {
+                        "cgroup_controllers": ["cpu", "cpuset", "io", "memory", "pids"],
+                        "cgroup_subtree_control": ["cpu", "cpuset", "pids"],
+                        "memory_min": null,
+                        "memory_low": null,
+                        "memory_high": null,
+                        "memory_max": null,
+                        "memory_swap_max": null,
+                        "memory_zswap_max": null,
+                        "cpu_weight": 100,
+                        "cpu_max_usec": 1500000,
+                        "cpu_max_period_usec": 100000,
+                        "cpuset_cpus": {
+                            "cpus": [2, 3]
+                        },
+                        "cpuset_cpus_effective": {
+                            "cpus": [2, 3]
+                        },
+                        "cpuset_mems": {
+                            "nodes": [2, 3]
+                        },
+                        "cpuset_mems_effective": {
+                            "nodes": [2, 3]
+                        }
+                    },
                     "cpu": {
                         "usage_pct": 3.5,
                         "user_pct": 3.5,
@@ -452,6 +544,31 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                             "full_path": "/child_b.slice/something.service",
                             "inode_number": 11111111,
                             "depth": 2,
+                            "properties": {
+                                "cgroup_controllers": ["cpu", "cpuset", "pids"],
+                                "cgroup_subtree_control": ["cpu", "cpuset", "pids"],
+                                "memory_min": null,
+                                "memory_low": null,
+                                "memory_high": null,
+                                "memory_max": null,
+                                "memory_swap_max": null,
+                                "memory_zswap_max": null,
+                                "cpu_weight": 100,
+                                "cpu_max_usec": 1200000,
+                                "cpu_max_period_usec": 100000,
+                                "cpuset_cpus": {
+                                    "cpus": []
+                                },
+                                "cpuset_cpus_effective": {
+                                    "cpus": [2, 3]
+                                },
+                                "cpuset_mems": {
+                                    "nodes": []
+                                },
+                                "cpuset_mems_effective": {
+                                    "nodes": [2, 3]
+                                }
+                            },
                             "cpu": {
                                 "usage_pct": 0.6,
                                 "user_pct": 0.1,

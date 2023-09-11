@@ -1399,6 +1399,7 @@ impl HasRenderConfig for model::CgroupProperties {
             // "cpu cpuset hugetlb io memory pids" is 33 chars
             CgroupControllers => rc.title("Controllers").width(35),
             CgroupSubtreeControl => rc.title("SubtreeControl").width(35),
+            MemoryMin => rc.title("Mem Min").format(MaxOrReadableSize),
             MemoryLow => rc.title("Mem Low").format(MaxOrReadableSize),
             MemoryHigh => rc.title("Mem High").format(MaxOrReadableSize),
             MemoryMax => rc.title("Mem Max").format(MaxOrReadableSize),

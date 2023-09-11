@@ -33,6 +33,7 @@ pub struct CgroupSample {
     pub children: Option<BTreeMap<String, CgroupSample>>,
     pub memory_swap_current: Option<i64>,
     pub memory_zswap_current: Option<i64>,
+    pub memory_min: Option<i64>,
     pub memory_low: Option<i64>,
     pub memory_high: Option<i64>,
     pub memory_max: Option<i64>,

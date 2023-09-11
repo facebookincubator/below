@@ -865,6 +865,7 @@ impl CgroupMemoryNumaModel {
 pub struct CgroupProperties {
     pub cgroup_controllers: Option<BTreeSet<String>>,
     pub cgroup_subtree_control: Option<BTreeSet<String>>,
+    pub memory_min: Option<i64>,
     pub memory_low: Option<i64>,
     pub memory_high: Option<i64>,
     pub memory_max: Option<i64>,
@@ -884,6 +885,7 @@ impl CgroupProperties {
         Self {
             cgroup_controllers: sample.cgroup_controllers.clone(),
             cgroup_subtree_control: sample.cgroup_subtree_control.clone(),
+            memory_min: sample.memory_min,
             memory_low: sample.memory_low,
             memory_high: sample.memory_high,
             memory_max: sample.memory_max,

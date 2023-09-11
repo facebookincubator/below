@@ -296,6 +296,7 @@ pub mod default_tabs {
     use model::CgroupPropertiesFieldId::MemoryHigh;
     use model::CgroupPropertiesFieldId::MemoryLow;
     use model::CgroupPropertiesFieldId::MemoryMax;
+    use model::CgroupPropertiesFieldId::MemoryMin;
     use model::CgroupPropertiesFieldId::MemorySwapMax;
     use model::CgroupPropertiesFieldId::MemoryZswapMax;
     use model::CgroupStatModelFieldId::NrDescendants;
@@ -421,6 +422,7 @@ pub mod default_tabs {
 
     pub static CGROUP_PROPERTIES_TAB: Lazy<CgroupTab> = Lazy::new(|| {
         CgroupTab::new(vec![
+            ViewItem::from_default(Props(MemoryMin)),
             ViewItem::from_default(Props(MemoryLow)),
             ViewItem::from_default(Props(MemoryHigh)),
             ViewItem::from_default(Props(MemoryMax)),
