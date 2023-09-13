@@ -80,7 +80,7 @@ fn _ioctl(fd: &OwnedFd, if_name: [u8; IFNAME_MAX_SIZE], data: usize) -> Result<(
 /// In case of error during parsing any stat name,
 /// the function returns a `ParseError`.
 fn parse_names(
-    data: [u8; MAX_GSTRINGS * ETH_GSTRINGS_LEN],
+    data: &[u8],
     length: usize,
 ) -> Result<Vec<String>, Error> {
     let names = data
@@ -102,7 +102,7 @@ fn parse_names(
 /// In case of error during parsing any feature,
 /// the function returns a `ParseError`.
 fn parse_values(
-    data: [u8; MAX_GSTRINGS * ETH_GSTATS_LEN],
+    data: &[u8],
     length: usize,
 ) -> Result<Vec<u64>, Error> {
     let mut values = Vec::with_capacity(length);
@@ -175,7 +175,7 @@ impl Ethtool {
             self.if_name,
             &mut gstrings as *mut GStrings as usize,
         ) {
-            Ok(_) => return parse_names(gstrings.data, length),
+            Ok(_) => return parse_names(&gstrings.data[..length * ETH_GSTRINGS_LEN], length),
             Err(errno) => Err(Error::GStringsReadError(errno)),
         }
     }
@@ -194,7 +194,7 @@ impl Ethtool {
             self.if_name,
             &mut gstats as *mut GStats as usize,
         ) {
-            Ok(_) => return parse_values(gstats.data, length),
+            Ok(_) => return parse_values(&gstats.data[..length * ETH_GSTATS_LEN], length),
             Err(errno) => Err(Error::GStatsReadError(errno)),
         }
     }
