@@ -18,6 +18,19 @@ pub use types::*;
 
 pub type Result<T> = std::result::Result<T, errors::Error>;
 
+
+/// Translate the name of a queue stat to a tuple of (queue_id, stat_name).
+/// Returns None if the name is not a queue stat.
+///
+/// The queue stat name is expected to be in the format of "queue_{queue_id}_{stat_name}".
+/// Other formats are as of now treated as non-queue stats.
+///
+/// # Examples
+/// ```ignore
+/// assert_eq!(parse_queue_stat("queue_0_rx_bytes"), Some((0, "rx_bytes")));
+/// assert_eq!(parse_queue_stat("queue"), None);
+/// assert_eq!(parse_queue_stat("queue_0"), None);
+/// ```
 fn parse_queue_stat(name: &str) -> Option<(usize, &str)> {
     if !name.starts_with("queue_") {
         return None;
