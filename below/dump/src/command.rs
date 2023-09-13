@@ -672,53 +672,46 @@ impl AggField<SingleNetModelFieldId> for IfaceAggField {
     fn expand(&self, detail: bool) -> Vec<SingleNetModelFieldId> {
         use model::SingleNetModelFieldId::*;
 
-        let rate_fields = vec![
-            RxBytesPerSec,
-            TxBytesPerSec,
-            ThroughputPerSec,
-            RxPacketsPerSec,
-            TxPacketsPerSec,
-        ];
-        let rx_fields = vec![
-            RxBytes,
-            RxCompressed,
-            RxCrcErrors,
-            RxDropped,
-            RxErrors,
-            RxFifoErrors,
-            RxFrameErrors,
-            RxLengthErrors,
-            RxMissedErrors,
-            RxNohandler,
-            RxOverErrors,
-            RxPackets,
-        ];
-        let tx_fields = vec![
-            TxAbortedErrors,
-            TxBytes,
-            TxCarrierErrors,
-            TxCompressed,
-            TxDropped,
-            TxErrors,
-            TxFifoErrors,
-            TxHeartbeatErrors,
-            TxPackets,
-            TxWindowErrors,
-        ];
-
-        if detail {
-            match self {
-                Self::Rate => rate_fields,
-                Self::Rx => rx_fields,
-                Self::Tx => tx_fields,
-                Self::Ethtool => vec![TxTimeoutPerSec, RawStats],
-            }
-        } else {
-            match self {
-                Self::Rate => rate_fields,
-                Self::Rx => rx_fields,
-                Self::Tx => tx_fields,
-                Self::Ethtool => vec![TxTimeoutPerSec],
+        match self {
+            Self::Rate => vec![
+                RxBytesPerSec,
+                TxBytesPerSec,
+                ThroughputPerSec,
+                RxPacketsPerSec,
+                TxPacketsPerSec,
+            ],
+            Self::Rx => vec![
+                RxBytes,
+                RxCompressed,
+                RxCrcErrors,
+                RxDropped,
+                RxErrors,
+                RxFifoErrors,
+                RxFrameErrors,
+                RxLengthErrors,
+                RxMissedErrors,
+                RxNohandler,
+                RxOverErrors,
+                RxPackets,
+            ],
+            Self::Tx => vec![
+                TxAbortedErrors,
+                TxBytes,
+                TxCarrierErrors,
+                TxCompressed,
+                TxDropped,
+                TxErrors,
+                TxFifoErrors,
+                TxHeartbeatErrors,
+                TxPackets,
+                TxWindowErrors,
+            ],
+            Self::Ethtool => {
+                let mut fields = vec![TxTimeoutPerSec];
+                if detail {
+                    fields.push(RawStats);
+                }
+                fields
             }
         }
     }
@@ -977,33 +970,21 @@ pub enum EthtoolQueueAggField {
 impl AggField<SingleQueueModelFieldId> for EthtoolQueueAggField {
     fn expand(&self, detail: bool) -> Vec<SingleQueueModelFieldId> {
         use model::SingleQueueModelFieldId::*;
+        let mut fields = vec![
+            Interface,
+            QueueId,
+            RxBytesPerSec,
+            TxBytesPerSec,
+            RxCountPerSec,
+            TxCountPerSec,
+            TxMissedTx,
+            TxUnmaskInterrupt,
+        ];
         if detail {
-            match self {
-                Self::Queue => vec![
-                    Interface,
-                    QueueId,
-                    RxBytesPerSec,
-                    TxBytesPerSec,
-                    RxCountPerSec,
-                    TxCountPerSec,
-                    TxMissedTx,
-                    TxUnmaskInterrupt,
-                    RawStats,
-                ],
-            }
-        } else {
-            match self {
-                Self::Queue => vec![
-                    Interface,
-                    QueueId,
-                    RxBytesPerSec,
-                    TxBytesPerSec,
-                    RxCountPerSec,
-                    TxCountPerSec,
-                    TxMissedTx,
-                    TxUnmaskInterrupt,
-                ],
-            }
+            fields.push(RawStats);
+        }
+        match self {
+            Self::Queue => fields
         }
     }
 }
