@@ -52,3 +52,30 @@ impl EthtoolReadable for FakeEthtool {
             .collect())
     }
 }
+
+#[cfg(test)]
+#[test]
+fn test_read_stats() {
+    let reader = EthtoolReader {};
+
+    let if_names = reader.read_interfaces();
+    assert!(if_names.is_ok());
+
+    let eth_stats = reader.read_stats::<FakeEthtool>();
+    assert!(eth_stats.is_ok());
+
+    let ethtool_stats = eth_stats.as_ref().unwrap();
+    let nic_stats = ethtool_stats.nic.values().next();
+    assert!(nic_stats.is_some());
+
+    let stats = nic_stats.unwrap();
+    assert_eq!(stats.tx_timeout, Some(10));
+    assert!(!stats.raw_stats.is_empty());
+
+    let queue_stats = stats.queue.get(0);
+    assert!(queue_stats.is_some());
+
+    let qstats = queue_stats.unwrap();
+    assert_eq!(qstats.rx_bytes, Some(159884486));
+    assert!(!qstats.raw_stats.is_empty());
+}
