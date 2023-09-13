@@ -131,12 +131,7 @@ impl EthtoolReader {
 
     pub fn read_stats<T: reader::EthtoolReadable>(&self) -> Result<EthtoolStats> {
         let mut nic_stats_map = BTreeMap::new();
-        let if_names = match self.read_interfaces() {
-            Ok(ifs) => ifs,
-            Err(err) => {
-                return Err(err);
-            }
-        };
+        let if_names = self.read_interfaces()?;
         for if_name in if_names {
             if let Ok(nic_stats) = self.read_nic_stats::<T>(&if_name) {
                 nic_stats_map.insert(if_name.to_string(), nic_stats);
