@@ -24,6 +24,9 @@ fn parse_queue_stat(name: &str) -> Option<(usize, &str)> {
     }
 
     let stat_segments: Vec<&str> = name.splitn(3, '_').collect();
+    if stat_segments.len() != 3 {
+        return None;
+    }
     match stat_segments[1].parse::<usize>() {
         Ok(queue_id) => Some((queue_id, stat_segments[2])),
         Err(_) => None,
