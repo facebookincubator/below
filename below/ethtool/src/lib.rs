@@ -64,7 +64,6 @@ fn translate_stats(stats: Vec<(String, u64)>) -> Result<NicStats> {
     let mut nic_stats = NicStats::default();
     let mut custom_props = BTreeMap::new();
     let mut queue_stats_map = BTreeMap::new(); // we want the queue stats to be sorted by queue id
-    println!("stats: {:?}", stats);
     for (name, value) in stats {
         match parse_queue_stat(&name) {
             Some((queue_id, stat)) => {
