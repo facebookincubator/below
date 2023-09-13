@@ -67,14 +67,9 @@ fn translate_stats(stats: Vec<(String, u64)>) -> Result<NicStats> {
     for (name, value) in stats {
         match parse_queue_stat(&name) {
             Some((queue_id, stat)) => {
-                if !queue_stats_map.contains_key(&queue_id) {
-                    let queue_stat = QueueStats {
-                        raw_stats: BTreeMap::new(),
-                        ..Default::default()
-                    };
-                    queue_stats_map.insert(queue_id, queue_stat);
-                }
-                let qstat = queue_stats_map.get_mut(&queue_id).unwrap();
+                let qstat = queue_stats_map
+                    .entry(queue_id)
+                    .or_insert_with(|| QueueStats::default());
                 insert_stat(qstat, stat, value);
             }
             None => match name.as_str() {
