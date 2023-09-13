@@ -10,7 +10,7 @@ mod types;
 
 mod test;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use errors::Error;
 pub use reader::*;
@@ -100,12 +100,12 @@ impl EthtoolReader {
     }
 
     /// Read the list of interface names.
-    pub fn read_interfaces(&self) -> Result<Vec<String>> {
-        let mut if_names = Vec::new();
+    pub fn read_interfaces(&self) -> Result<HashSet<String>> {
+        let mut if_names = HashSet::new();
         match nix::ifaddrs::getifaddrs() {
             Ok(interfaces) => {
                 for if_addr in interfaces {
-                    if_names.push(if_addr.interface_name);
+                    if_names.insert(if_addr.interface_name);
                 }
             }
             Err(errno) => {
