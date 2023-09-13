@@ -62,7 +62,7 @@ pub fn insert_stat(stat: &mut QueueStats, name: &str, value: u64) {
 
 fn translate_stats(stats: Vec<(String, u64)>) -> Result<NicStats> {
     let mut nic_stats = NicStats::default();
-    let mut custom_props = BTreeMap::new();
+    let mut raw_stats = BTreeMap::new();
     let mut queue_stats_map = BTreeMap::new(); // we want the queue stats to be sorted by queue id
     for (name, value) in stats {
         match parse_queue_stat(&name) {
@@ -75,7 +75,7 @@ fn translate_stats(stats: Vec<(String, u64)>) -> Result<NicStats> {
             None => match name.as_str() {
                 "tx_timeout" => nic_stats.tx_timeout = Some(value),
                 other => {
-                    custom_props.insert(other.to_string(), value);
+                    raw_stats.insert(other.to_string(), value);
                 }
             },
         }
@@ -87,7 +87,7 @@ fn translate_stats(stats: Vec<(String, u64)>) -> Result<NicStats> {
         .collect();
 
     nic_stats.queue = queue_stats;
-    nic_stats.raw_stats = custom_props;
+    nic_stats.raw_stats = raw_stats;
 
     Ok(nic_stats)
 }
