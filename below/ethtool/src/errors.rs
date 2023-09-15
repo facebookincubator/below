@@ -1,3 +1,5 @@
+use std::alloc;
+
 use nix::errno::Errno;
 use thiserror::Error;
 
@@ -8,6 +10,12 @@ pub enum EthtoolError {
 
     #[error("Failed to read interface names, error={0:}")]
     IfNamesReadError(Errno),
+
+    #[error("Failed to initialize struct, error={0:}")]
+    CStructInitError(#[from] alloc::LayoutError),
+
+    #[error("Failed to read data from struct pointer")]
+    CStructReadError(),
 
     #[error("Failed to read number of stats using ETHTOOL_GSSET_INFO, error={0:}")]
     GSSetInfoReadError(Errno),
