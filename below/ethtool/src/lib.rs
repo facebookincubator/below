@@ -3,7 +3,6 @@
 #![allow(non_snake_case)]
 include!(concat!(env!("OUT_DIR"), "/ethtool_bindings.rs"));
 
-
 mod errors;
 mod reader;
 mod types;
@@ -12,12 +11,11 @@ mod test;
 
 use std::collections::{BTreeMap, HashSet};
 
-use errors::Error;
+use errors::EthtoolError;
 pub use reader::*;
 pub use types::*;
 
-pub type Result<T> = std::result::Result<T, errors::Error>;
-
+pub type Result<T> = std::result::Result<T, errors::EthtoolError>;
 
 /// Translate the name of a queue stat to a tuple of (queue_id, stat_name).
 /// Returns None if the name is not a queue stat.
@@ -81,10 +79,7 @@ fn translate_stats(stats: Vec<(String, u64)>) -> Result<NicStats> {
         }
     }
 
-    let queue_stats = queue_stats_map
-        .into_iter()
-        .map(|(_, v)| v)
-        .collect();
+    let queue_stats = queue_stats_map.into_iter().map(|(_, v)| v).collect();
 
     nic_stats.queue = queue_stats;
     nic_stats.raw_stats = raw_stats;
@@ -109,7 +104,7 @@ impl EthtoolReader {
                 }
             }
             Err(errno) => {
-                return Err(Error::IfNamesReadError(errno));
+                return Err(EthtoolError::IfNamesReadError(errno));
             }
         }
         Ok(if_names)

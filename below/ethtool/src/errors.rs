@@ -2,7 +2,7 @@ use nix::errno::Errno;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum Error {
+pub enum EthtoolError {
     #[error("Failed to open a socket, error={0:}")]
     SocketError(Errno),
 

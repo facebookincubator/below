@@ -1,18 +1,15 @@
-use std::os::fd::{OwnedFd, AsRawFd};
+use std::os::fd::{AsRawFd, OwnedFd};
 use std::str;
 
 use nix::errno::Errno;
 use nix::libc::ioctl;
 use nix::sys::socket::{socket, AddressFamily, SockFlag, SockType};
 
+use crate::errors::EthtoolError;
 use crate::{
-    ETHTOOL_GSSET_INFO,
-    ETHTOOL_GSTRINGS,
-    ETHTOOL_GSTATS,
-    ethtool_stringset_ETH_SS_STATS as ETH_SS_STATS,
-    ETH_GSTRING_LEN,
+    ethtool_stringset_ETH_SS_STATS as ETH_SS_STATS, ETHTOOL_GSSET_INFO, ETHTOOL_GSTATS,
+    ETHTOOL_GSTRINGS, ETH_GSTRING_LEN,
 };
-use crate::errors::Error;
 
 const ETH_GSTRINGS_LEN: usize = ETH_GSTRING_LEN as usize;
 const ETH_GSTATS_LEN: usize = 8;
@@ -79,10 +76,7 @@ fn _ioctl(fd: &OwnedFd, if_name: [u8; IFNAME_MAX_SIZE], data: usize) -> Result<(
 /// Parses the byte array returned by ioctl for ETHTOOL_GSTRINGS command.
 /// In case of error during parsing any stat name,
 /// the function returns a `ParseError`.
-fn parse_names(
-    data: &[u8],
-    length: usize,
-) -> Result<Vec<String>, Error> {
+fn parse_names(data: &[u8], length: usize) -> Result<Vec<String>, EthtoolError> {
     let names = data
         .chunks(ETH_GSTRINGS_LEN)
         .map(|chunk| {
@@ -91,9 +85,9 @@ fn parse_names(
             // Convert the stat name to a string
             str::from_utf8(&chunk[..null_pos])
                 .map(|s| s.to_string())
-                .map_err(|err| Error::ParseError(err.to_string()))
+                .map_err(|err| EthtoolError::ParseError(err.to_string()))
         })
-        .collect::<Result<Vec<String>, Error>>()?;
+        .collect::<Result<Vec<String>, EthtoolError>>()?;
 
     Ok(names)
 }
@@ -101,10 +95,7 @@ fn parse_names(
 /// Parses the byte array returned by ioctl for ETHTOOL_GSTATS command.
 /// In case of error during parsing any feature,
 /// the function returns a `ParseError`.
-fn parse_values(
-    data: &[u8],
-    length: usize,
-) -> Result<Vec<u64>, Error> {
+fn parse_values(data: &[u8], length: usize) -> Result<Vec<u64>, EthtoolError> {
     let mut values = Vec::with_capacity(length);
     let mut value_bytes = [0u8; 8];
     for i in 0..length {
@@ -115,7 +106,7 @@ fn parse_values(
                 values.push(u64::from_ne_bytes(value_bytes));
             }
             None => {
-                return Err(Error::ParseError(format!(
+                return Err(EthtoolError::ParseError(format!(
                     "parse value failed at offset={}",
                     offset
                 )))
@@ -130,10 +121,10 @@ fn parse_values(
 ///
 /// This trait allows mocking the ethtool calls for unit testing.
 pub trait EthtoolReadable {
-    fn new(if_name: &str) -> Result<Self, Error>
+    fn new(if_name: &str) -> Result<Self, EthtoolError>
     where
         Self: Sized;
-    fn stats(&self) -> Result<Vec<(String, u64)>, Error>;
+    fn stats(&self) -> Result<Vec<(String, u64)>, EthtoolError>;
 }
 
 pub struct Ethtool {
@@ -143,7 +134,7 @@ pub struct Ethtool {
 
 impl Ethtool {
     /// Get the number of stats using ETHTOOL_GSSET_INFO command
-    fn gsset_info(&self) -> Result<usize, Errno> {
+    fn gsset_info(&self) -> Result<usize, EthtoolError> {
         let mut sset_info = StringSetInfo {
             cmd: ETHTOOL_GSSET_INFO,
             reserved: 1,
@@ -157,12 +148,12 @@ impl Ethtool {
             &mut sset_info as *mut StringSetInfo as usize,
         ) {
             Ok(_) => Ok(sset_info.data),
-            Err(errno) => Err(errno),
+            Err(errno) => Err(EthtoolError::GSSetInfoReadError(errno)),
         }
     }
 
     /// Get the feature names using ETHTOOL_GSTRINGS command
-    fn gstrings(&self, length: usize) -> Result<Vec<String>, Error> {
+    fn gstrings(&self, length: usize) -> Result<Vec<String>, EthtoolError> {
         let mut gstrings = GStrings {
             cmd: ETHTOOL_GSTRINGS,
             string_set: ETH_SS_STATS,
@@ -176,12 +167,12 @@ impl Ethtool {
             &mut gstrings as *mut GStrings as usize,
         ) {
             Ok(_) => return parse_names(&gstrings.data[..length * ETH_GSTRINGS_LEN], length),
-            Err(errno) => Err(Error::GStringsReadError(errno)),
+            Err(errno) => Err(EthtoolError::GStringsReadError(errno)),
         }
     }
 
     /// Get the statistics for the features using ETHTOOL_GSTATS command
-    fn gstats(&self, features: &[String]) -> Result<Vec<u64>, Error> {
+    fn gstats(&self, features: &[String]) -> Result<Vec<u64>, EthtoolError> {
         let length = features.len();
         let mut gstats = GStats {
             cmd: ETHTOOL_GSTATS,
@@ -195,13 +186,13 @@ impl Ethtool {
             &mut gstats as *mut GStats as usize,
         ) {
             Ok(_) => return parse_values(&gstats.data[..length * ETH_GSTATS_LEN], length),
-            Err(errno) => Err(Error::GStatsReadError(errno)),
+            Err(errno) => Err(EthtoolError::GStatsReadError(errno)),
         }
     }
 }
 
 impl EthtoolReadable for Ethtool {
-    fn new(if_name: &str) -> Result<Self, Error> {
+    fn new(if_name: &str) -> Result<Self, EthtoolError> {
         match socket(
             AddressFamily::Inet,
             SockType::Datagram,
@@ -212,16 +203,14 @@ impl EthtoolReadable for Ethtool {
                 sock_fd: fd,
                 if_name: if_name_bytes(if_name),
             }),
-            Err(errno) => Err(Error::SocketError(errno)),
+            Err(errno) => Err(EthtoolError::SocketError(errno)),
         }
     }
 
     /// Get statistics using ethtool
     /// Equivalent to `ethtool -S <ifname>` command
-    fn stats(&self) -> Result<Vec<(String, u64)>, Error> {
-        let length = self
-            .gsset_info()
-            .map_err(|errno| Error::GSSetInfoReadError(errno))?;
+    fn stats(&self) -> Result<Vec<(String, u64)>, EthtoolError> {
+        let length = self.gsset_info()?;
 
         let features = self.gstrings(length)?;
         let values = self.gstats(&features)?;
