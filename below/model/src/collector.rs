@@ -341,7 +341,7 @@ fn collect_cgroup_sample(
     };
     Ok(CgroupSample {
         cpu_stat: wrap(reader.read_cpu_stat())?.map(Into::into),
-        io_stat: io_stat.map(|m| m.into_iter().map(|(k, v)| (k, v.into())).collect()),
+        io_stat,
         memory_current: wrap(reader.read_memory_current().map(|v| v as i64))?,
         memory_stat: wrap(reader.read_memory_stat())?.map(Into::into),
         pressure: pressure_wrap(reader.read_pressure())?.map(Into::into),
@@ -382,7 +382,7 @@ fn collect_cgroup_sample(
             })
             .transpose()?,
         memory_swap_current: wrap(reader.read_memory_swap_current().map(|v| v as i64))?,
-        memory_zswap_current: wrap(reader.read_memory_zswap_current().map(|v| v as i64))?,
+        memory_zswap_current: None, // Use the one from memory.stat
         memory_min: wrap(reader.read_memory_min())?,
         memory_low: wrap(reader.read_memory_low())?,
         memory_high: wrap(reader.read_memory_high())?,

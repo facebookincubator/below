@@ -281,6 +281,7 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::WorkingsetRestoreAnon;
     use model::CgroupMemoryModelFieldId::WorkingsetRestoreFile;
     use model::CgroupMemoryModelFieldId::Zswap;
+    use model::CgroupMemoryModelFieldId::Zswapped;
     use model::CgroupPressureModelFieldId::CpuFullPct;
     use model::CgroupPressureModelFieldId::CpuSomePct;
     use model::CgroupPressureModelFieldId::IoFullPct;
@@ -349,13 +350,14 @@ pub mod default_tabs {
         CgroupTab::new(vec![
             ViewItem::from_default(Mem(Total)),
             ViewItem::from_default(Mem(Swap)),
-            ViewItem::from_default(Mem(Zswap)),
             ViewItem::from_default(Mem(Anon)),
             ViewItem::from_default(Mem(File)),
             ViewItem::from_default(Mem(KernelStack)),
             ViewItem::from_default(Mem(Slab)),
             ViewItem::from_default(Mem(Sock)),
             ViewItem::from_default(Mem(Shmem)),
+            ViewItem::from_default(Mem(Zswap)),
+            ViewItem::from_default(Mem(Zswapped)),
             ViewItem::from_default(Mem(FileMapped)),
             ViewItem::from_default(Mem(FileDirty)),
             ViewItem::from_default(Mem(FileWriteback)),
