@@ -661,6 +661,8 @@ key_values_format!(MemoryStat; memory.stat; [
     slab,
     sock,
     shmem,
+    zswap,
+    zswapped,
     file_mapped,
     file_dirty,
     file_writeback,

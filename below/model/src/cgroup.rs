@@ -469,13 +469,14 @@ impl std::ops::Add<&CgroupIoModel> for CgroupIoModel {
 pub struct CgroupMemoryModel {
     pub total: Option<u64>,
     pub swap: Option<u64>,
-    pub zswap: Option<u64>,
     pub anon: Option<u64>,
     pub file: Option<u64>,
     pub kernel_stack: Option<u64>,
     pub slab: Option<u64>,
     pub sock: Option<u64>,
     pub shmem: Option<u64>,
+    pub zswap: Option<u64>,
+    pub zswapped: Option<u64>,
     pub file_mapped: Option<u64>,
     pub file_dirty: Option<u64>,
     pub file_writeback: Option<u64>,
@@ -519,13 +520,14 @@ impl std::ops::Add for CgroupMemoryModel {
         Self {
             total: opt_add(self.total, other.total),
             swap: opt_add(self.swap, other.swap),
-            zswap: opt_add(self.zswap, other.zswap),
             anon: opt_add(self.anon, other.anon),
             file: opt_add(self.file, other.file),
             kernel_stack: opt_add(self.kernel_stack, other.kernel_stack),
             slab: opt_add(self.slab, other.slab),
             sock: opt_add(self.sock, other.sock),
             shmem: opt_add(self.shmem, other.shmem),
+            zswap: opt_add(self.zswap, other.zswap),
+            zswapped: opt_add(self.zswapped, other.zswapped),
             file_mapped: opt_add(self.file_mapped, other.file_mapped),
             file_dirty: opt_add(self.file_dirty, other.file_dirty),
             file_writeback: opt_add(self.file_writeback, other.file_writeback),
@@ -597,30 +599,35 @@ impl CgroupMemoryModel {
             ..Default::default()
         };
         if let Some(events) = &sample.memory_events {
-            model.events_low = events.low.map(|v| v as u64);
-            model.events_high = events.high.map(|v| v as u64);
-            model.events_max = events.max.map(|v| v as u64);
-            model.events_oom = events.oom.map(|v| v as u64);
-            model.events_oom_kill = events.oom_kill.map(|v| v as u64);
+            model.events_low = events.low;
+            model.events_high = events.high;
+            model.events_max = events.max;
+            model.events_oom = events.oom;
+            model.events_oom_kill = events.oom_kill;
         }
         if let Some(stat) = &sample.memory_stat {
-            model.anon = stat.anon.map(|v| v as u64);
-            model.file = stat.file.map(|v| v as u64);
-            model.kernel_stack = stat.kernel_stack.map(|v| v as u64);
-            model.slab = stat.slab.map(|v| v as u64);
-            model.sock = stat.sock.map(|v| v as u64);
-            model.shmem = stat.shmem.map(|v| v as u64);
-            model.file_mapped = stat.file_mapped.map(|v| v as u64);
-            model.file_dirty = stat.file_dirty.map(|v| v as u64);
-            model.file_writeback = stat.file_writeback.map(|v| v as u64);
-            model.anon_thp = stat.anon_thp.map(|v| v as u64);
-            model.inactive_anon = stat.inactive_anon.map(|v| v as u64);
-            model.active_anon = stat.active_anon.map(|v| v as u64);
-            model.inactive_file = stat.inactive_file.map(|v| v as u64);
-            model.active_file = stat.active_file.map(|v| v as u64);
-            model.unevictable = stat.unevictable.map(|v| v as u64);
-            model.slab_reclaimable = stat.slab_reclaimable.map(|v| v as u64);
-            model.slab_unreclaimable = stat.slab_unreclaimable.map(|v| v as u64);
+            model.anon = stat.anon;
+            model.file = stat.file;
+            model.kernel_stack = stat.kernel_stack;
+            model.slab = stat.slab;
+            model.sock = stat.sock;
+            model.shmem = stat.shmem;
+            // May be set by sample.memory_zswap_current
+            if model.zswap.is_none() {
+                model.zswap = stat.zswap;
+            }
+            model.zswapped = stat.zswapped;
+            model.file_mapped = stat.file_mapped;
+            model.file_dirty = stat.file_dirty;
+            model.file_writeback = stat.file_writeback;
+            model.anon_thp = stat.anon_thp;
+            model.inactive_anon = stat.inactive_anon;
+            model.active_anon = stat.active_anon;
+            model.inactive_file = stat.inactive_file;
+            model.active_file = stat.active_file;
+            model.unevictable = stat.unevictable;
+            model.slab_reclaimable = stat.slab_reclaimable;
+            model.slab_unreclaimable = stat.slab_unreclaimable;
 
             if let Some((
                 CgroupSample {

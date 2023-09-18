@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 372] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 373] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -154,13 +154,14 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 372] = [
     "cgroup.[path:/<cgroup_path>/.]cpu.throttled_pct",
     "cgroup.[path:/<cgroup_path>/.]mem.total",
     "cgroup.[path:/<cgroup_path>/.]mem.swap",
-    "cgroup.[path:/<cgroup_path>/.]mem.zswap",
     "cgroup.[path:/<cgroup_path>/.]mem.anon",
     "cgroup.[path:/<cgroup_path>/.]mem.file",
     "cgroup.[path:/<cgroup_path>/.]mem.kernel_stack",
     "cgroup.[path:/<cgroup_path>/.]mem.slab",
     "cgroup.[path:/<cgroup_path>/.]mem.sock",
     "cgroup.[path:/<cgroup_path>/.]mem.shmem",
+    "cgroup.[path:/<cgroup_path>/.]mem.zswap",
+    "cgroup.[path:/<cgroup_path>/.]mem.zswapped",
     "cgroup.[path:/<cgroup_path>/.]mem.file_mapped",
     "cgroup.[path:/<cgroup_path>/.]mem.file_dirty",
     "cgroup.[path:/<cgroup_path>/.]mem.file_writeback",
