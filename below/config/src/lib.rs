@@ -15,10 +15,10 @@
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 use anyhow::bail;
 use anyhow::Result;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -30,7 +30,7 @@ const BELOW_DEFAULT_LOG: &str = "/var/log/below";
 const BELOW_DEFAULT_STORE: &str = "/var/log/below/store";
 
 /// Global below config
-pub static BELOW_CONFIG: OnceCell<BelowConfig> = OnceCell::new();
+pub static BELOW_CONFIG: OnceLock<BelowConfig> = OnceLock::new();
 
 #[derive(Serialize, Deserialize, Debug)]
 // If value is missing during deserialization, use the Default::default()
