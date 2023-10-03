@@ -162,11 +162,8 @@ impl AggField<SystemModelFieldId> for SystemAggField {
 
         if detail {
             match self {
-                Self::Cpu => enum_iterator::all::<Cpu>()
-                    // The Idx field is always -1 (we aggregate all CPUs)
-                    .filter(|v| v != &Cpu::Idx)
-                    .map(FieldId::Cpu)
-                    .collect(),
+                // If detail is set, per cpu fields are added in `System::dump_model()`.
+                Self::Cpu => vec![],
                 Self::Mem => enum_iterator::all::<Mem>().map(FieldId::Mem).collect(),
                 Self::Vm => enum_iterator::all::<Vm>().map(FieldId::Vm).collect(),
                 Self::Stat => enum_iterator::all::<Stat>().map(FieldId::Stat).collect(),
