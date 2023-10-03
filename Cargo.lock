@@ -194,7 +194,6 @@ dependencies = [
  "anyhow",
  "below-btrfs",
  "cgroupfs",
- "once_cell",
  "serde",
  "tempdir",
  "toml 0.7.6",
