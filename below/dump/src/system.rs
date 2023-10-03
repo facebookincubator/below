@@ -41,6 +41,7 @@ impl Dumper for System {
 
         if self.opts.detail || self.opts.everything {
             // If detail is set, add per-cpu fields.
+            // The fields need to be added at runtime because we cannot know the number of CPUs in the model statically.
             for key in model.system.cpus.keys() {
                 for subquery_id in &enum_iterator::all::<model::SingleCpuModelFieldId>().collect::<Vec<_>>() {
                     let value = subquery_id.clone();
