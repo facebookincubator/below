@@ -35,6 +35,8 @@ pub struct CpuStat {
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Stat {
     pub total_cpu: Option<CpuStat>,
+    // TODO: deprecate in favor of cpus_map
+    pub cpus: Option<Vec<CpuStat>>,
     pub cpus_map: Option<BTreeMap<u32, CpuStat>>,
     pub total_interrupt_count: Option<u64>,
     pub context_switches: Option<u64>,

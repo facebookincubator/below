@@ -188,8 +188,11 @@ softirq 15518280031 0 3506477306 138437 1090758178 117192437 0 24543 800441241 9
 
     assert_eq!(total_cpu.guest_nice_usec, Some(0));
 
-    let cpu23 = &stat.cpus_map.expect("Failed to read cpus_map")[&23];
-    assert_eq!(cpu23.user_usec, Some(59379430000));
+    let cpu23_from_vec = &stat.cpus.expect("Failed to read cpus")[22];
+    assert_eq!(cpu23_from_vec.user_usec, Some(59379430000));
+
+    let cpu23_from_map = &stat.cpus_map.expect("Failed to read cpus_map")[&23];
+    assert_eq!(cpu23_from_map.user_usec, Some(59379430000));
 
     assert_eq!(stat.total_interrupt_count, Some(29638874355));
     assert_eq!(stat.context_switches, Some(48203489122));

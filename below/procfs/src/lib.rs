@@ -256,6 +256,7 @@ impl ProcReader {
             }
         }
         if !cpus_map.is_empty() {
+            stat.cpus = Some(cpus_map.values().cloned().collect());
             stat.cpus_map = Some(cpus_map);
         }
 
