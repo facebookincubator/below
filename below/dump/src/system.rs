@@ -43,7 +43,9 @@ impl Dumper for System {
             // If detail is set, add per-cpu fields.
             // The fields need to be added at runtime because we cannot know the number of CPUs in the model statically.
             for key in model.system.cpus.keys() {
-                for subquery_id in &enum_iterator::all::<model::SingleCpuModelFieldId>().collect::<Vec<_>>() {
+                for subquery_id in
+                    &enum_iterator::all::<model::SingleCpuModelFieldId>().collect::<Vec<_>>()
+                {
                     let value = subquery_id.clone();
                     fields.push(DumpField::FieldId(model::SystemModelFieldId::Cpus(
                         model::BTreeMapFieldId {
