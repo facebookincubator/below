@@ -37,12 +37,32 @@ impl Dumper for System {
         round: &mut usize,
         comma_flag: bool,
     ) -> Result<IterExecResult> {
+        let mut fields = self.fields.clone();
+
+        if self.opts.detail || self.opts.everything {
+            // If detail is set, add per-cpu fields.
+            // The fields need to be added at runtime because we cannot know the number of CPUs in the model statically.
+            for key in model.system.cpus.keys() {
+                for subquery_id in
+                    &enum_iterator::all::<model::SingleCpuModelFieldId>().collect::<Vec<_>>()
+                {
+                    let value = subquery_id.clone();
+                    fields.push(DumpField::FieldId(model::SystemModelFieldId::Cpus(
+                        model::BTreeMapFieldId {
+                            key: Some(*key),
+                            subquery_id: value,
+                        },
+                    )));
+                }
+            }
+        }
+
         match self.opts.output_format {
             Some(OutputFormat::Raw) | None => write!(
                 output,
                 "{}",
                 print::dump_raw(
-                    &self.fields,
+                    &fields,
                     ctx,
                     &model.system,
                     *round,
@@ -55,7 +75,7 @@ impl Dumper for System {
                 output,
                 "{}",
                 print::dump_csv(
-                    &self.fields,
+                    &fields,
                     ctx,
                     &model.system,
                     *round,
@@ -67,7 +87,7 @@ impl Dumper for System {
                 output,
                 "{}",
                 print::dump_tsv(
-                    &self.fields,
+                    &fields,
                     ctx,
                     &model.system,
                     *round,
@@ -78,10 +98,10 @@ impl Dumper for System {
             Some(OutputFormat::KeyVal) => write!(
                 output,
                 "{}",
-                print::dump_kv(&self.fields, ctx, &model.system, self.opts.raw)
+                print::dump_kv(&fields, ctx, &model.system, self.opts.raw)
             )?,
             Some(OutputFormat::Json) => {
-                let par = print::dump_json(&self.fields, ctx, &model.system, self.opts.raw);
+                let par = print::dump_json(&fields, ctx, &model.system, self.opts.raw);
                 if comma_flag {
                     write!(output, ",{}", par.to_string())?;
                 } else {
@@ -91,7 +111,7 @@ impl Dumper for System {
             Some(OutputFormat::OpenMetrics) => write!(
                 output,
                 "{}",
-                print::dump_openmetrics(&self.fields, ctx, &model.system)
+                print::dump_openmetrics(&fields, ctx, &model.system)
             )?,
         };
 
