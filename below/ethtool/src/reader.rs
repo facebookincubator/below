@@ -158,12 +158,10 @@ impl GStrings {
         unsafe {
             let cmd_ptr = ptr::addr_of_mut!((*gstrings_ptr).cmd);
             let ss_ptr = ptr::addr_of_mut!((*gstrings_ptr).string_set);
-            let len_ptr = ptr::addr_of_mut!((*gstrings_ptr).len);
             let data_ptr = ptr::addr_of_mut!((*gstrings_ptr).data);
 
             cmd_ptr.write(ETHTOOL_GSTRINGS);
             ss_ptr.write(ETH_SS_STATS);
-            len_ptr.write(length as u32);
 
             // Initialize the data field with zeros
             data_ptr.write_bytes(0u8, data_length);
@@ -212,19 +210,15 @@ impl GStats {
         )
         .map_err(|err| EthtoolError::CStructInitError(err))?;
 
-        let n_stats = length as u32;
-
         // Allocate memory for the struct
         let stats_ptr = unsafe { alloc::alloc(layout) } as *mut ethtool_stats;
 
         // Initialize the fields of the struct
         unsafe {
             let cmd_ptr = ptr::addr_of_mut!((*stats_ptr).cmd);
-            let n_stats_ptr = ptr::addr_of_mut!((*stats_ptr).n_stats);
             let data_ptr = ptr::addr_of_mut!((*stats_ptr).data);
 
             cmd_ptr.write(ETHTOOL_GSTATS);
-            n_stats_ptr.write(n_stats);
 
             // Initialize the data field with zeros
             let data_bytes = data_length * mem::size_of::<u64>();
