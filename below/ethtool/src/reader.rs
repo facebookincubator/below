@@ -1,5 +1,7 @@
 use std::{
-    alloc, mem,
+    alloc,
+    ffi::CStr,
+    mem,
     os::fd::{AsRawFd, OwnedFd},
     ptr, str,
 };
@@ -23,12 +25,14 @@ fn if_name_bytes(if_name: &str) -> [i8; libc::IF_NAMESIZE] {
     [0; libc::IF_NAMESIZE].map(|_| it.next().unwrap_or(0) as libc::c_char)
 }
 
-fn ioctl(fd: &OwnedFd, if_name: [i8; libc::IF_NAMESIZE], data: *mut libc::c_char) -> Result<(), Errno> {
+fn ioctl(
+    fd: &OwnedFd,
+    if_name: [i8; libc::IF_NAMESIZE],
+    data: *mut libc::c_char,
+) -> Result<(), Errno> {
     let ifr = libc::ifreq {
         ifr_name: if_name,
-        ifr_ifru: libc::__c_anonymous_ifr_ifru {
-            ifru_data: data
-        }
+        ifr_ifru: libc::__c_anonymous_ifr_ifru { ifru_data: data },
     };
 
     let exit_code = unsafe { libc::ioctl(fd.as_raw_fd(), nix::libc::SIOCETHTOOL, &ifr) };
@@ -41,16 +45,21 @@ fn ioctl(fd: &OwnedFd, if_name: [i8; libc::IF_NAMESIZE], data: *mut libc::c_char
 /// Parses the byte array returned by ioctl for ETHTOOL_GSTRINGS command.
 /// In case of error during parsing any stat name,
 /// the function returns a `ParseError`.
-fn parse_names(data: &[u8], length: usize) -> Result<Vec<String>, EthtoolError> {
+fn parse_names(data: &[u8]) -> Result<Vec<String>, EthtoolError> {
     let names = data
         .chunks(ETH_GSTRINGS_LEN)
         .map(|chunk| {
-            // Find the position of the null terminator for specific stat name
-            let null_pos = chunk.iter().position(|b| *b == 0).unwrap_or(length);
-            // Convert the stat name to a string
-            str::from_utf8(&chunk[..null_pos])
-                .map(|s| s.to_string())
-                .map_err(|err| EthtoolError::ParseError(err.to_string()))
+            // // Find the position of the null terminator for specific stat name
+            // let null_pos = chunk.iter().position(|b| *b == 0).unwrap_or(length);
+            // // Convert the stat name to a string
+            // str::from_utf8(&chunk[..null_pos])
+            //     .map(|s| s.to_string())
+            //     .map_err(|err| EthtoolError::ParseError(err.to_string()))
+            let c_str = CStr::from_bytes_until_nul(chunk);
+            match c_str {
+                Ok(c_str) => Ok(c_str.to_string_lossy().into_owned()),
+                Err(err) => Err(EthtoolError::ParseError(err.to_string())),
+            }
         })
         .collect::<Result<Vec<String>, EthtoolError>>()?;
 
@@ -280,7 +289,7 @@ impl Ethtool {
         let data = gstrings.ptr as *mut libc::c_char;
 
         match ioctl(&self.sock_fd, self.if_name, data) {
-            Ok(_) => parse_names(gstrings.data()?, length),
+            Ok(_) => parse_names(gstrings.data()?),
             Err(errno) => Err(EthtoolError::GStringsReadError(errno)),
         }
     }
