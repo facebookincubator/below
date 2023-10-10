@@ -5,7 +5,7 @@ use std::{
 };
 
 use nix::errno::Errno;
-use nix::libc::ioctl;
+use nix::libc;
 use nix::sys::socket::{socket, AddressFamily, SockFlag, SockType};
 
 use crate::errors::EthtoolError;
@@ -18,30 +18,20 @@ use crate::{
 const ETH_GSTRINGS_LEN: usize = ETH_GSTRING_LEN as usize;
 const ETH_GSTATS_LEN: usize = 8;
 
-/// Maximum size of an interface name
-const IFNAME_MAX_SIZE: usize = 16;
-
-#[derive(Debug)]
-#[repr(C)]
-struct IfReq {
-    if_name: [u8; IFNAME_MAX_SIZE],
-    if_data: usize,
+fn if_name_bytes(if_name: &str) -> [i8; libc::IF_NAMESIZE] {
+    let mut it = if_name.as_bytes().iter().copied();
+    [0; libc::IF_NAMESIZE].map(|_| it.next().unwrap_or(0) as libc::c_char)
 }
 
-fn if_name_bytes(if_name: &str) -> [u8; IFNAME_MAX_SIZE] {
-    let mut bytes = [0u8; IFNAME_MAX_SIZE];
-    bytes[..if_name.len()].copy_from_slice(if_name.as_bytes());
-    bytes
-}
-
-fn _ioctl(fd: &OwnedFd, if_name: [u8; IFNAME_MAX_SIZE], data: usize) -> Result<(), Errno> {
-    let mut request = IfReq {
-        if_name,
-        if_data: data,
+fn ioctl(fd: &OwnedFd, if_name: [i8; libc::IF_NAMESIZE], data: *mut libc::c_char) -> Result<(), Errno> {
+    let ifr = libc::ifreq {
+        ifr_name: if_name,
+        ifr_ifru: libc::__c_anonymous_ifr_ifru {
+            ifru_data: data
+        }
     };
 
-    let exit_code = unsafe { ioctl(fd.as_raw_fd(), nix::libc::SIOCETHTOOL, &mut request) };
-
+    let exit_code = unsafe { libc::ioctl(fd.as_raw_fd(), nix::libc::SIOCETHTOOL, &ifr) };
     if exit_code != 0 {
         return Err(Errno::from_i32(exit_code));
     }
@@ -269,15 +259,16 @@ pub trait EthtoolReadable {
 
 pub struct Ethtool {
     sock_fd: OwnedFd,
-    if_name: [u8; IFNAME_MAX_SIZE],
+    if_name: [i8; libc::IF_NAMESIZE],
 }
 
 impl Ethtool {
     /// Get the number of stats using ETHTOOL_GSSET_INFO command
     fn gsset_info(&self) -> Result<usize, EthtoolError> {
         let sset_info = StringSetInfo::new()?;
+        let data = sset_info.ptr as *mut libc::c_char;
 
-        match _ioctl(&self.sock_fd, self.if_name, sset_info.ptr as usize) {
+        match ioctl(&self.sock_fd, self.if_name, data) {
             Ok(_) => Ok(sset_info.data()?),
             Err(errno) => Err(EthtoolError::SocketError(errno)),
         }
@@ -286,8 +277,9 @@ impl Ethtool {
     /// Get the feature names using ETHTOOL_GSTRINGS command
     fn gstrings(&self, length: usize) -> Result<Vec<String>, EthtoolError> {
         let gstrings = GStrings::new(length)?;
+        let data = gstrings.ptr as *mut libc::c_char;
 
-        match _ioctl(&self.sock_fd, self.if_name, gstrings.ptr as usize) {
+        match ioctl(&self.sock_fd, self.if_name, data) {
             Ok(_) => parse_names(gstrings.data()?, length),
             Err(errno) => Err(EthtoolError::GStringsReadError(errno)),
         }
@@ -297,8 +289,9 @@ impl Ethtool {
     fn gstats(&self, features: &[String]) -> Result<Vec<u64>, EthtoolError> {
         let length = features.len();
         let gstats = GStats::new(length)?;
+        let data = gstats.ptr as *mut libc::c_char;
 
-        match _ioctl(&self.sock_fd, self.if_name, gstats.ptr as usize) {
+        match ioctl(&self.sock_fd, self.if_name, data) {
             Ok(_) => parse_values(gstats.data()?, length),
             Err(errno) => Err(EthtoolError::GStatsReadError(errno)),
         }
