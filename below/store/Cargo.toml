@@ -23,15 +23,15 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_cbor = "0.11"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 static_assertions = "1.1.0"
-zstd-safe = { version = "5.0.1+zstd.1.5.2", features = ["std"] }
+zstd-safe = { version = "7.0.0", features = ["std"] }
 
 [dev-dependencies]
-itertools = "0.10.3"
+itertools = "0.11.0"
 lazy_static = "1.4"
 paste = "1.0.13"
 slog-term = "2.8"
 tempdir = "0.3"
-zstd = { version = "0.11.2+zstd.1.5.2", features = ["experimental", "zstdmt"] }
+zstd = { version = "0.13", features = ["experimental", "zstdmt"] }
 
 [features]
 no-vendor = ["zstd-safe/pkg-config", "zstd/pkg-config"]
