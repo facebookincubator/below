@@ -50,7 +50,7 @@ use slog::error;
 use slog::warn;
 use tar::Archive;
 use tar::Builder as TarBuilder;
-use tempdir::TempDir;
+use tempfile::TempDir;
 use users::get_current_uid;
 use users::get_user_by_uid;
 
@@ -886,7 +886,7 @@ fn replay(
         (None, Some(snapshot)) => {
             let mut tarball =
                 Archive::new(fs::File::open(&snapshot).context("Failed to open snapshot file")?);
-            let mut snapshot_dir = TempDir::new("snapshot_replay")?.into_path();
+            let mut snapshot_dir = TempDir::with_prefix("snapshot_replay.")?.into_path();
             tarball.unpack(&snapshot_dir)?;
             // Find and append the name of the original snapshot directory
             for path in fs::read_dir(&snapshot_dir)? {
@@ -1435,8 +1435,8 @@ fn snapshot(
 
     // Create a directory for the output files
     // Format: snapshot_<timestamp_begin>_<timestamp_end>
-    let temp_folder = TempDir::new(&format!(
-        "snapshot_{:011}_{:011}",
+    let temp_folder = TempDir::with_prefix(&format!(
+        "snapshot_{:011}_{:011}.",
         timestamp_begin, timestamp_end
     ))
     .context("Failed to create temporary folder for snapshot")?;

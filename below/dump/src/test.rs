@@ -20,7 +20,7 @@ use model::Collector;
 use model::Queriable;
 use render::HasRenderConfigForDump;
 use serde_json::Value;
-use tempdir::TempDir;
+use tempfile::TempDir;
 use tmain::Dumper;
 
 use super::*;
@@ -1005,7 +1005,7 @@ fn test_dump_disk_titles() {
 
 #[test]
 fn test_parse_pattern() {
-    let tempdir = TempDir::new("below_dump_pattern").expect("Failed to create temp dir");
+    let tempdir = TempDir::with_prefix("below_dump_pattern.").expect("Failed to create temp dir");
     let path = tempdir.path().join("belowrc");
 
     let mut file = std::fs::OpenOptions::new()

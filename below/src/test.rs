@@ -28,12 +28,12 @@ use store::advance::new_advance_local;
 use store::ChunkSizePo2;
 use store::CompressionMode;
 use store::DataFrame;
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 #[test]
 fn record_replay_integration() {
     let logger = get_logger();
-    let dir = TempDir::new("below_record_replay_test").expect("tempdir failed");
+    let dir = TempDir::with_prefix("below_record_replay_test.").expect("tempdir failed");
     let mut store = store::StoreWriter::new(
         logger.clone(),
         &dir,
@@ -123,7 +123,7 @@ fn record_replay_integration() {
 #[test]
 fn advance_forward_and_reverse() {
     let logger = get_logger();
-    let dir = TempDir::new("below_record_replay_test").expect("tempdir failed");
+    let dir = TempDir::with_prefix("below_record_replay_test.").expect("tempdir failed");
     let mut store = store::StoreWriter::new(
         logger.clone(),
         &dir,
