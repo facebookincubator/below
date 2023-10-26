@@ -28,7 +28,7 @@ zstd-safe = { version = "7.0.0", features = ["std"] }
 [dev-dependencies]
 itertools = "0.11.0"
 lazy_static = "1.4"
-paste = "1.0.13"
+paste = "1.0.14"
 slog-term = "2.8"
 tempfile = "3.8"
 zstd = { version = "0.13", features = ["experimental", "zstdmt"] }
