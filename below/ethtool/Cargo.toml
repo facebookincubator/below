@@ -1,0 +1,12 @@
+[package]
+name = "ethtool"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+bindgen = "0.66"
+
+[dependencies]
+nix = { version = "0.27", features = ["net", "socket"] }
+serde = { version = "1.0.167", features = ["derive", "rc"] }
+thiserror = "1.0.43"

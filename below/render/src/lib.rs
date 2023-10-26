@@ -203,9 +203,9 @@ impl RenderOpenMetricsConfig {
         ret
     }
 
-    /// Render the field as an openmetrics field in string form
-    pub fn render(&self, key: &str, field: Field, timestamp: i64) -> String {
+    fn render_field(&self, key: &str, field: Field, timestamp: i64) -> String {
         let mut res = String::new();
+
         let key = self.normalize_key(key);
         let metric_type = self.ty.to_string();
         let labels = if self.labels.is_empty() {
@@ -231,6 +231,22 @@ impl RenderOpenMetricsConfig {
         writeln!(&mut res, "{key}{labels} {field} {timestamp}").unwrap();
 
         res
+    }
+
+    /// Render the field as an openmetrics field in string form
+    pub fn render(&self, key: &str, field: Field, timestamp: i64) -> String {
+        match field {
+            Field::StrU64Map(map) => {
+                let mut res = String::new();
+                for (k, v) in map {
+                    let key = format!("{}_{}", key, k);
+                    let out = self.render_field(&key, Field::U64(v), timestamp);
+                    res.push_str(&out);
+                }
+                res
+            }
+            _ => self.render_field(&key, field, timestamp),
+        }
     }
 }
 

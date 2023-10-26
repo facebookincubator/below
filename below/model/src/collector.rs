@@ -171,6 +171,7 @@ fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<S
     let mut reader = procfs::ProcReader::new();
     let btrfs_reader =
         btrfs::BtrfsReader::new(options.btrfs_samples, options.btrfs_min_pct, logger.clone());
+    let ethtool_reader = ethtool::EthtoolReader::new();
 
     // Take mutex, then take all values out of shared map and replace with default map
     //
@@ -271,6 +272,15 @@ fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<S
                 )
             } else {
                 None
+            }
+        },
+        ethtool: {
+            match ethtool_reader.read_stats::<ethtool::Ethtool>() {
+                Ok(ethtool_stats) => ethtool_stats.into(),
+                Err(e) => {
+                    error!(logger, "{:#}", e);
+                    Default::default()
+                }
             }
         },
     })

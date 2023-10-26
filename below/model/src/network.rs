@@ -35,57 +35,111 @@ pub struct NetworkModel {
 }
 
 impl NetworkModel {
-    pub fn new(sample: &procfs::NetStat, last: Option<(&procfs::NetStat, Duration)>) -> Self {
+    pub fn new(sample: &NetworkStats, last: Option<(&NetworkStats, Duration)>) -> Self {
         let mut interfaces: BTreeMap<String, SingleNetModel> = BTreeMap::new();
 
-        if let Some(ifaces) = sample.interfaces.as_ref() {
-            for (interface, iface_stat) in ifaces.iter() {
-                interfaces.insert(
-                    interface.to_string(),
-                    SingleNetModel::new(
-                        &interface,
-                        &iface_stat,
-                        last.and_then(|(n, d)| {
-                            n.interfaces
-                                .as_ref()
-                                .and_then(|ifaces| ifaces.get(interface).map(|n| (n, d)))
-                        }),
-                    ),
-                );
+        let net_stats = sample.net;
+        let ethtool_stats = sample.ethtool;
+
+        let mut iface_names = BTreeSet::new();
+        if let Some(ifaces) = net_stats.interfaces.as_ref() {
+            for (interface, _) in ifaces.iter() {
+                iface_names.insert(interface.to_string());
             }
+        }
+        for key in ethtool_stats.nic.keys() {
+            iface_names.insert(key.to_string());
+        }
+
+        for interface in iface_names {
+            let iface_stat = net_stats
+                .interfaces
+                .as_ref()
+                .and_then(|ifaces| ifaces.get(&interface));
+            let ethtool_stat = ethtool_stats.nic.get(&interface);
+
+            let s_iface = SingleNetworkStat {
+                iface: iface_stat,
+                nic: ethtool_stat,
+            };
+
+            let mut l_network_stat = SingleNetworkStat {
+                iface: None,
+                nic: None,
+            };
+            let l_iface = last.map(|(l, d)| {
+                let l_iface_stat = l
+                    .net
+                    .interfaces
+                    .as_ref()
+                    .and_then(|ifaces| ifaces.get(&interface));
+                let l_ethtool_stat = l.ethtool.nic.get(&interface);
+                l_network_stat = SingleNetworkStat {
+                    iface: l_iface_stat,
+                    nic: l_ethtool_stat,
+                };
+                (&l_network_stat, d)
+            });
+
+            let net_model = SingleNetModel::new(&interface, &s_iface, l_iface);
+            interfaces.insert(interface, net_model);
         }
 
         NetworkModel {
             interfaces,
             tcp: TcpModel::new(
-                sample.tcp.as_ref().unwrap_or(&Default::default()),
-                last.and_then(|(n, d)| n.tcp.as_ref().map(|n| (n, d))),
+                sample.net.tcp.as_ref().unwrap_or(&Default::default()),
+                last.and_then(|(l, d)| {
+                    let n = l.net;
+                    n.tcp.as_ref().map(|n| (n, d))
+                }),
             ),
             ip: IpModel::new(
-                sample.ip.as_ref().unwrap_or(&Default::default()),
-                last.and_then(|(n, d)| n.ip.as_ref().map(|n| (n, d))),
-                sample.ip_ext.as_ref().unwrap_or(&Default::default()),
-                last.and_then(|(n, d)| n.ip_ext.as_ref().map(|n| (n, d))),
+                sample.net.ip.as_ref().unwrap_or(&Default::default()),
+                last.and_then(|(l, d)| {
+                    let n = l.net;
+                    n.ip.as_ref().map(|n| (n, d))
+                }),
+                sample.net.ip_ext.as_ref().unwrap_or(&Default::default()),
+                last.and_then(|(l, d)| {
+                    let n = l.net;
+                    n.ip_ext.as_ref().map(|n| (n, d))
+                }),
             ),
             ip6: Ip6Model::new(
-                sample.ip6.as_ref().unwrap_or(&Default::default()),
-                last.and_then(|(n, d)| n.ip6.as_ref().map(|n| (n, d))),
+                sample.net.ip6.as_ref().unwrap_or(&Default::default()),
+                last.and_then(|(l, d)| {
+                    let n = l.net;
+                    n.ip6.as_ref().map(|n| (n, d))
+                }),
             ),
             icmp: IcmpModel::new(
-                sample.icmp.as_ref().unwrap_or(&Default::default()),
-                last.and_then(|(n, d)| n.icmp.as_ref().map(|n| (n, d))),
+                sample.net.icmp.as_ref().unwrap_or(&Default::default()),
+                last.and_then(|(l, d)| {
+                    let n = l.net;
+                    n.icmp.as_ref().map(|n| (n, d))
+                }),
             ),
             icmp6: Icmp6Model::new(
-                sample.icmp6.as_ref().unwrap_or(&Default::default()),
-                last.and_then(|(n, d)| n.icmp6.as_ref().map(|n| (n, d))),
+                sample.net.icmp6.as_ref().unwrap_or(&Default::default()),
+                last.and_then(|(l, d)| {
+                    let n = l.net;
+                    n.icmp6.as_ref().map(|n| (n, d))
+                }),
             ),
             udp: UdpModel::new(
-                sample.udp.as_ref().unwrap_or(&Default::default()),
-                last.and_then(|(n, d)| n.udp.as_ref().map(|n| (n, d))),
+                sample.net.udp.as_ref().unwrap_or(&Default::default()),
+                last.and_then(|(l, d)| {
+                    let n = l.net;
+                    n.udp.as_ref().map(|n| (n, d))
+                }),
             ),
             udp6: Udp6Model::new(
-                sample.udp6.as_ref().unwrap_or(&Default::default()),
-                last.and_then(|(n, d)| n.udp6.as_ref().map(|n| (n, d))),
+                sample.net.udp6.as_ref().unwrap_or(&Default::default()),
+                last.and_then(|(l, d)| {
+                    let n = l.net;
+                    n.udp6.as_ref().map(|n| (n, d))
+                }),
             ),
         }
     }
@@ -374,14 +428,24 @@ pub struct SingleNetModel {
     pub tx_heartbeat_errors: Option<u64>,
     pub tx_packets: Option<u64>,
     pub tx_window_errors: Option<u64>,
+    pub tx_timeout_per_sec: Option<u64>,
+    pub raw_stats: BTreeMap<String, u64>,
+
+    #[queriable(subquery)]
+    pub queues: Vec<SingleQueueModel>,
+}
+
+pub struct SingleNetworkStat<'a> {
+    iface: Option<&'a procfs::InterfaceStat>,
+    nic: Option<&'a ethtool::NicStats>,
 }
 
 impl SingleNetModel {
-    fn new(
-        interface: &str,
+    fn add_iface_stats(
+        net_model: &mut SingleNetModel,
         sample: &procfs::InterfaceStat,
         last: Option<(&procfs::InterfaceStat, Duration)>,
-    ) -> SingleNetModel {
+    ) {
         let rx_bytes_per_sec = last
             .map(|(l, d)| {
                 count_per_sec!(
@@ -403,62 +467,160 @@ impl SingleNetModel {
         let throughput_per_sec =
             Some(rx_bytes_per_sec.unwrap_or_default() + tx_bytes_per_sec.unwrap_or_default());
 
-        SingleNetModel {
-            interface: interface.to_string(),
-            rx_bytes_per_sec,
-            tx_bytes_per_sec,
-            throughput_per_sec,
-            rx_packets_per_sec: last
-                .map(|(l, d)| {
-                    count_per_sec!(
-                        l.rx_packets.map(|s| s as u64),
-                        sample.rx_packets.map(|s| s as u64),
-                        d
-                    )
-                })
-                .unwrap_or_default()
-                .map(|s| s as u64),
-            tx_packets_per_sec: last
-                .map(|(l, d)| {
-                    count_per_sec!(
-                        l.tx_packets.map(|s| s as u64),
-                        sample.tx_packets.map(|s| s as u64),
-                        d
-                    )
-                })
-                .unwrap_or_default()
-                .map(|s| s as u64),
-            collisions: sample.collisions.map(|s| s as u64),
-            multicast: sample.multicast.map(|s| s as u64),
-            rx_bytes: sample.rx_bytes.map(|s| s as u64),
-            rx_compressed: sample.rx_compressed.map(|s| s as u64),
-            rx_crc_errors: sample.rx_crc_errors.map(|s| s as u64),
-            rx_dropped: sample.rx_dropped.map(|s| s as u64),
-            rx_errors: sample.rx_errors.map(|s| s as u64),
-            rx_fifo_errors: sample.rx_fifo_errors.map(|s| s as u64),
-            rx_frame_errors: sample.rx_frame_errors.map(|s| s as u64),
-            rx_length_errors: sample.rx_length_errors.map(|s| s as u64),
-            rx_missed_errors: sample.rx_missed_errors.map(|s| s as u64),
-            rx_nohandler: sample.rx_nohandler.map(|s| s as u64),
-            rx_over_errors: sample.rx_over_errors.map(|s| s as u64),
-            rx_packets: sample.rx_packets.map(|s| s as u64),
-            tx_aborted_errors: sample.tx_aborted_errors.map(|s| s as u64),
-            tx_bytes: sample.tx_bytes.map(|s| s as u64),
-            tx_carrier_errors: sample.tx_carrier_errors.map(|s| s as u64),
-            tx_compressed: sample.tx_compressed.map(|s| s as u64),
-            tx_dropped: sample.tx_dropped.map(|s| s as u64),
-            tx_errors: sample.tx_errors.map(|s| s as u64),
-            tx_fifo_errors: sample.tx_fifo_errors.map(|s| s as u64),
-            tx_heartbeat_errors: sample.tx_heartbeat_errors.map(|s| s as u64),
-            tx_packets: sample.tx_packets.map(|s| s as u64),
-            tx_window_errors: sample.tx_window_errors.map(|s| s as u64),
+        net_model.rx_bytes_per_sec = rx_bytes_per_sec;
+        net_model.tx_bytes_per_sec = tx_bytes_per_sec;
+        net_model.throughput_per_sec = throughput_per_sec;
+        net_model.rx_packets_per_sec = last
+            .map(|(l, d)| {
+                count_per_sec!(
+                    l.rx_packets.map(|s| s as u64),
+                    sample.rx_packets.map(|s| s as u64),
+                    d
+                )
+            })
+            .unwrap_or_default()
+            .map(|s| s as u64);
+        net_model.tx_packets_per_sec = last
+            .map(|(l, d)| {
+                count_per_sec!(
+                    l.tx_packets.map(|s| s as u64),
+                    sample.tx_packets.map(|s| s as u64),
+                    d
+                )
+            })
+            .unwrap_or_default()
+            .map(|s| s as u64);
+        net_model.collisions = sample.collisions.map(|s| s as u64);
+        net_model.multicast = sample.multicast.map(|s| s as u64);
+        net_model.rx_bytes = sample.rx_bytes.map(|s| s as u64);
+        net_model.rx_compressed = sample.rx_compressed.map(|s| s as u64);
+        net_model.rx_crc_errors = sample.rx_crc_errors.map(|s| s as u64);
+        net_model.rx_dropped = sample.rx_dropped.map(|s| s as u64);
+        net_model.rx_errors = sample.rx_errors.map(|s| s as u64);
+        net_model.rx_fifo_errors = sample.rx_fifo_errors.map(|s| s as u64);
+        net_model.rx_frame_errors = sample.rx_frame_errors.map(|s| s as u64);
+        net_model.rx_length_errors = sample.rx_length_errors.map(|s| s as u64);
+        net_model.rx_missed_errors = sample.rx_missed_errors.map(|s| s as u64);
+        net_model.rx_nohandler = sample.rx_nohandler.map(|s| s as u64);
+        net_model.rx_over_errors = sample.rx_over_errors.map(|s| s as u64);
+        net_model.rx_packets = sample.rx_packets.map(|s| s as u64);
+        net_model.tx_aborted_errors = sample.tx_aborted_errors.map(|s| s as u64);
+        net_model.tx_bytes = sample.tx_bytes.map(|s| s as u64);
+        net_model.tx_carrier_errors = sample.tx_carrier_errors.map(|s| s as u64);
+        net_model.tx_compressed = sample.tx_compressed.map(|s| s as u64);
+        net_model.tx_dropped = sample.tx_dropped.map(|s| s as u64);
+        net_model.tx_errors = sample.tx_errors.map(|s| s as u64);
+        net_model.tx_fifo_errors = sample.tx_fifo_errors.map(|s| s as u64);
+        net_model.tx_heartbeat_errors = sample.tx_heartbeat_errors.map(|s| s as u64);
+        net_model.tx_packets = sample.tx_packets.map(|s| s as u64);
+        net_model.tx_window_errors = sample.tx_window_errors.map(|s| s as u64);
+    }
+
+    fn add_ethtool_stats(
+        net_model: &mut SingleNetModel,
+        sample: &ethtool::NicStats,
+        last: Option<(&ethtool::NicStats, Duration)>,
+    ) {
+        net_model.tx_timeout_per_sec = get_option_rate!(tx_timeout, sample, last);
+        net_model.raw_stats = sample.raw_stats.clone();
+
+        // set ethtool queue stats
+        let s_queue_stats = &sample.queue;
+        // Vec<QueueStats> are always sorted on the queue id
+        for (queue_id, s_queue_stats) in s_queue_stats.iter().enumerate() {
+            let idx = queue_id as u32;
+            let last = last.and_then(|(l, d)| {
+                let queue_stats = &l.queue;
+                queue_stats.get(queue_id).map(|n| (n, d))
+            });
+            let queue_model = SingleQueueModel::new(&net_model.interface, idx, s_queue_stats, last);
+            net_model.queues.push(queue_model);
         }
+    }
+
+    fn new(
+        interface: &str,
+        sample: &SingleNetworkStat,
+        last: Option<(&SingleNetworkStat, Duration)>,
+    ) -> SingleNetModel {
+        let iface_stat = sample.iface;
+        let ethtool_stat = sample.nic;
+
+        let mut net_model = SingleNetModel {
+            interface: interface.to_string(),
+            ..Default::default()
+        };
+
+        // set procfs iface stats
+        if let Some(iface_stat) = iface_stat {
+            Self::add_iface_stats(
+                &mut net_model,
+                iface_stat,
+                last.and_then(|(l, d)| {
+                    if let Some(l) = l.iface {
+                        Some((l, d))
+                    } else {
+                        None
+                    }
+                }),
+            );
+        }
+
+        // set ethtool stats
+        if let Some(nic_stat) = ethtool_stat {
+            let sample = nic_stat;
+            let last = last.and_then(|(l, d)| l.nic.map(|l| (l, d)));
+
+            Self::add_ethtool_stats(&mut net_model, sample, last);
+        }
+
+        net_model
     }
 }
 
 impl Nameable for SingleNetModel {
     fn name() -> &'static str {
         "network"
+    }
+}
+
+#[derive(Clone, Default, Serialize, Deserialize, below_derive::Queriable)]
+pub struct SingleQueueModel {
+    pub interface: String,
+    pub queue_id: u32,
+    pub rx_bytes_per_sec: Option<u64>,
+    pub tx_bytes_per_sec: Option<u64>,
+    pub rx_count_per_sec: Option<u64>,
+    pub tx_count_per_sec: Option<u64>,
+    pub tx_missed_tx: Option<u64>,
+    pub tx_unmask_interrupt: Option<u64>,
+    pub raw_stats: BTreeMap<String, u64>,
+}
+
+impl SingleQueueModel {
+    fn new(
+        interface: &str,
+        queue_id: u32,
+        sample: &ethtool::QueueStats,
+        last: Option<(&ethtool::QueueStats, Duration)>,
+    ) -> Self {
+        SingleQueueModel {
+            interface: interface.to_string(),
+            queue_id,
+            rx_bytes_per_sec: get_option_rate!(rx_bytes, sample, last),
+            tx_bytes_per_sec: get_option_rate!(tx_bytes, sample, last),
+            rx_count_per_sec: get_option_rate!(rx_count, sample, last),
+            tx_count_per_sec: get_option_rate!(tx_count, sample, last),
+            tx_missed_tx: sample.tx_missed_tx,
+            tx_unmask_interrupt: sample.tx_unmask_interrupt,
+            raw_stats: sample.raw_stats.clone(),
+        }
+    }
+}
+
+impl Nameable for SingleQueueModel {
+    fn name() -> &'static str {
+        "ethtool_queue"
     }
 }
 
@@ -473,7 +635,41 @@ mod test {
             "interfaces": {
                 "eth0": {
                     "interface": "eth0",
-                    "rx_bytes_per_sec": 42
+                    "rx_bytes_per_sec": 42,
+                    "tx_timeout_per_sec": 10,
+                    "raw_stats": {
+                        "stat0": 0
+                    },
+                    "queues": [
+                        {
+                            "interface": "eth0",
+                            "queue_id": 0,
+                            "rx_bytes_per_sec": 42,
+                            "tx_bytes_per_sec": 1337,
+                            "rx_count_per_sec": 10,
+                            "tx_count_per_sec": 20,
+                            "tx_missed_tx": 100,
+                            "tx_unmask_interrupt": 200,
+                            "raw_stats": {
+                                "stat1": 1,
+                                "stat2": 2
+                            }
+                        },
+                        {
+                            "interface": "eth0",
+                            "queue_id": 1,
+                            "rx_bytes_per_sec": 1337,
+                            "tx_bytes_per_sec": 42,
+                            "rx_count_per_sec": 20,
+                            "tx_count_per_sec": 10,
+                            "tx_missed_tx": 200,
+                            "tx_unmask_interrupt": 100,
+                            "raw_stats": {
+                                "stat3": 3,
+                                "stat4": 4
+                            }
+                        }
+                    ]
                 }
             },
             "tcp": {},
@@ -491,5 +687,135 @@ mod test {
                 .query(&NetworkModelFieldId::from_str("interfaces.eth0.rx_bytes_per_sec").unwrap()),
             Some(Field::F64(42.0))
         );
+
+        assert_eq!(
+            model.query(
+                &NetworkModelFieldId::from_str("interfaces.eth0.tx_timeout_per_sec").unwrap()
+            ),
+            Some(Field::U64(10))
+        );
+
+        assert_eq!(
+            model.query(
+                &NetworkModelFieldId::from_str("interfaces.eth0.queues.0.queue_id").unwrap()
+            ),
+            Some(Field::U32(0))
+        );
+        assert_eq!(
+            model.query(
+                &NetworkModelFieldId::from_str("interfaces.eth0.queues.0.rx_bytes_per_sec")
+                    .unwrap()
+            ),
+            Some(Field::U64(42))
+        );
+
+        assert_eq!(
+            model.query(
+                &NetworkModelFieldId::from_str("interfaces.eth0.queues.1.queue_id").unwrap()
+            ),
+            Some(Field::U32(1))
+        );
+    }
+
+    #[test]
+    fn test_parse_ethtool_stats() {
+        let l_net_stats = procfs::NetStat::default();
+        let s_net_stats = procfs::NetStat::default();
+
+        let l_ethtool_stats = ethtool::EthtoolStats {
+            nic: BTreeMap::from([(
+                "eth0".to_string(),
+                ethtool::NicStats {
+                    tx_timeout: Some(10),
+                    raw_stats: BTreeMap::from([("stat0".to_string(), 0)]),
+                    queue: vec![
+                        ethtool::QueueStats {
+                            rx_bytes: Some(42),
+                            tx_bytes: Some(1337),
+                            rx_count: Some(10),
+                            tx_count: Some(20),
+                            tx_missed_tx: Some(100),
+                            tx_unmask_interrupt: Some(200),
+                            raw_stats: vec![("stat1".to_string(), 1), ("stat2".to_string(), 2)]
+                                .into_iter()
+                                .collect(),
+                        },
+                        ethtool::QueueStats {
+                            rx_bytes: Some(1337),
+                            tx_bytes: Some(42),
+                            rx_count: Some(20),
+                            tx_count: Some(10),
+                            tx_missed_tx: Some(200),
+                            tx_unmask_interrupt: Some(100),
+                            raw_stats: vec![("stat3".to_string(), 3), ("stat4".to_string(), 4)]
+                                .into_iter()
+                                .collect(),
+                        },
+                    ],
+                },
+            )]),
+        };
+
+        let s_ethtool_stats = ethtool::EthtoolStats {
+            nic: BTreeMap::from([(
+                "eth0".to_string(),
+                ethtool::NicStats {
+                    tx_timeout: Some(20),
+                    raw_stats: BTreeMap::from([("stat0".to_string(), 10)]),
+                    queue: vec![
+                        ethtool::QueueStats {
+                            rx_bytes: Some(52),
+                            tx_bytes: Some(1347),
+                            rx_count: Some(20),
+                            tx_count: Some(30),
+                            tx_missed_tx: Some(110),
+                            tx_unmask_interrupt: Some(210),
+                            raw_stats: vec![("stat1".to_string(), 11), ("stat2".to_string(), 12)]
+                                .into_iter()
+                                .collect(),
+                        },
+                        ethtool::QueueStats {
+                            rx_bytes: Some(1347),
+                            tx_bytes: Some(52),
+                            rx_count: Some(30),
+                            tx_count: Some(20),
+                            tx_missed_tx: Some(210),
+                            tx_unmask_interrupt: Some(110),
+                            raw_stats: vec![("stat3".to_string(), 13), ("stat4".to_string(), 14)]
+                                .into_iter()
+                                .collect(),
+                        },
+                    ],
+                },
+            )]),
+        };
+
+        let prev_sample = NetworkStats {
+            net: &l_net_stats,
+            ethtool: &l_ethtool_stats,
+        };
+        let sample = NetworkStats {
+            net: &s_net_stats,
+            ethtool: &s_ethtool_stats,
+        };
+        let last = Some((&prev_sample, Duration::from_secs(1)));
+
+        let model = NetworkModel::new(&sample, last);
+
+        let iface_model = model.interfaces.get("eth0").unwrap();
+        assert_eq!(iface_model.tx_timeout_per_sec, Some(10));
+        let nic_raw_stat = iface_model.raw_stats.get("stat0").unwrap();
+        assert_eq!(*nic_raw_stat, 10);
+
+        let queue_model = iface_model.queues.get(0).unwrap();
+        assert_eq!(queue_model.rx_bytes_per_sec, Some(10));
+        // for raw stats, we just take the latest value (not the difference)
+        let queue_raw_stat = queue_model.raw_stats.get("stat1").unwrap();
+        assert_eq!(*queue_raw_stat, 11);
+
+        let queue_model = iface_model.queues.get(1).unwrap();
+        assert_eq!(queue_model.rx_bytes_per_sec, Some(10));
+        let queue_raw_stat = queue_model.raw_stats.get("stat3").unwrap();
+        assert_eq!(*queue_raw_stat, 13);
     }
 }
