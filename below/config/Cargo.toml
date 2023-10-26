@@ -14,7 +14,7 @@ anyhow = "=1.0.72"
 btrfs = { package = "below-btrfs", version = "0.7.1", path = "../btrfs" }
 cgroupfs = { version = "0.7.1", path = "../cgroupfs" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-toml = "0.8.4"
+toml = "0.7.3"
 
 [dev-dependencies]
 tempfile = "3.8"
