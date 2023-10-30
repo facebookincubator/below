@@ -67,7 +67,7 @@ fn translate_stats(stats: Vec<(String, u64)>) -> Result<NicStats> {
             Some((queue_id, stat)) => {
                 let qstat = queue_stats_map
                     .entry(queue_id)
-                    .or_insert_with(|| QueueStats::default());
+                    .or_insert_with(QueueStats::default);
                 insert_stat(qstat, stat, value);
             }
             None => match name.as_str() {
@@ -79,7 +79,7 @@ fn translate_stats(stats: Vec<(String, u64)>) -> Result<NicStats> {
         }
     }
 
-    let queue_stats = queue_stats_map.into_iter().map(|(_, v)| v).collect();
+    let queue_stats = queue_stats_map.into_values().collect();
 
     nic_stats.queue = queue_stats;
     nic_stats.raw_stats = raw_stats;

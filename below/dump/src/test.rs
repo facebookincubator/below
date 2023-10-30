@@ -934,10 +934,7 @@ fn test_dump_queue_content() {
             tx_count_per_sec: Some(200),
             tx_missed_tx: Some(50),
             tx_unmask_interrupt: Some(5),
-            raw_stats: BTreeMap::from([
-                ("stat1".to_string(), 1000),
-                ("stat2".to_string(), 2000),
-            ]),
+            raw_stats: BTreeMap::from([("stat1".to_string(), 1000), ("stat2".to_string(), 2000)]),
         },
         model::SingleQueueModel {
             interface: "eth0".to_string(),
@@ -948,28 +945,20 @@ fn test_dump_queue_content() {
             tx_count_per_sec: Some(100),
             tx_missed_tx: Some(5),
             tx_unmask_interrupt: Some(50),
-            raw_stats: BTreeMap::from([
-                ("stat1".to_string(), 2000),
-                ("stat2".to_string(), 1000),
-            ]),
+            raw_stats: BTreeMap::from([("stat1".to_string(), 2000), ("stat2".to_string(), 1000)]),
         },
     ];
-    let lo_queue_models = vec![
-        model::SingleQueueModel {
-            interface: "lo".to_string(),
-            queue_id: 1,
-            rx_bytes_per_sec: Some(20),
-            tx_bytes_per_sec: Some(10),
-            rx_count_per_sec: Some(200),
-            tx_count_per_sec: Some(100),
-            tx_missed_tx: Some(5),
-            tx_unmask_interrupt: Some(50),
-            raw_stats: BTreeMap::from([
-                ("stat1".to_string(), 2000),
-                ("stat2".to_string(), 1000),
-            ]),
-        }
-    ];
+    let lo_queue_models = vec![model::SingleQueueModel {
+        interface: "lo".to_string(),
+        queue_id: 1,
+        rx_bytes_per_sec: Some(20),
+        tx_bytes_per_sec: Some(10),
+        rx_count_per_sec: Some(200),
+        tx_count_per_sec: Some(100),
+        tx_missed_tx: Some(5),
+        tx_unmask_interrupt: Some(50),
+        raw_stats: BTreeMap::from([("stat1".to_string(), 2000), ("stat2".to_string(), 1000)]),
+    }];
 
     let eth0_model = model::SingleNetModel {
         interface: "eth0".to_string(),
@@ -994,7 +983,7 @@ fn test_dump_queue_content() {
         system: model::SystemModel::default(),
         cgroup: model::CgroupModel::default(),
         process: model::ProcessModel::default(),
-        network: network,
+        network,
         gpu: None,
     };
 

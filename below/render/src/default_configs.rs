@@ -795,24 +795,23 @@ impl HasRenderConfigForDump for model::SingleNetModel {
 
 impl HasRenderConfig for Vec<model::SingleQueueModel> {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
-        let mut rc = model::SingleQueueModel::get_render_config_builder(&field_id.subquery_id).get();
-        rc.title = rc.title.map(|title| {
-            format!("{}", title)
-        });
+        let mut rc =
+            model::SingleQueueModel::get_render_config_builder(&field_id.subquery_id).get();
+        rc.title = rc.title.map(|title| format!("{}", title));
         rc.into()
     }
 }
 
 impl HasRenderConfigForDump for Vec<model::SingleQueueModel> {
     fn get_openmetrics_config_for_dump(
-            &self,
-            field_id: &Self::FieldId,
-        ) -> Option<RenderOpenMetricsConfigBuilder> {
-            let idx = field_id
-                .idx
-                .expect("VecFieldId without index should not have render config");
-            self.get(idx)
-                .map(|queue| queue.get_openmetrics_config_for_dump(&field_id.subquery_id))?
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        let idx = field_id
+            .idx
+            .expect("VecFieldId without index should not have render config");
+        self.get(idx)
+            .map(|queue| queue.get_openmetrics_config_for_dump(&field_id.subquery_id))?
     }
 }
 

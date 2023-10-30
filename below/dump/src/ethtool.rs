@@ -6,10 +6,7 @@ pub struct EthtoolQueue {
 }
 
 impl EthtoolQueue {
-    pub fn new(
-        opts: &GeneralOpt,
-        fields: Vec<EthtoolQueueField>
-    ) -> Self {
+    pub fn new(opts: &GeneralOpt, fields: Vec<EthtoolQueueField>) -> Self {
         Self {
             opts: opts.to_owned(),
             fields,

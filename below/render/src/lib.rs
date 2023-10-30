@@ -240,15 +240,11 @@ impl RenderOpenMetricsConfig {
                 let mut res = String::new();
                 for (k, v) in map {
                     let key = format!("{}_{}", key, k);
-                    let out = self.render_field(
-                        &key,
-                        Field::U64(v),
-                        timestamp,
-                    );
+                    let out = self.render_field(&key, Field::U64(v), timestamp);
                     res.push_str(&out);
                 }
                 res
-            },
+            }
             _ => self.render_field(&key, field, timestamp),
         }
     }

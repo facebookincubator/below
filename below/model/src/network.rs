@@ -60,31 +60,28 @@ impl NetworkModel {
 
             let s_iface = SingleNetworkStat {
                 iface: iface_stat,
-                nic: ethtool_stat
+                nic: ethtool_stat,
             };
 
             let mut l_network_stat = SingleNetworkStat {
                 iface: None,
-                nic: None
+                nic: None,
             };
             let l_iface = last.map(|(l, d)| {
-                let l_iface_stat = l.net.interfaces.as_ref()
-                    .and_then(|ifaces| {
-                        ifaces.get(&interface)
-                    });
+                let l_iface_stat = l
+                    .net
+                    .interfaces
+                    .as_ref()
+                    .and_then(|ifaces| ifaces.get(&interface));
                 let l_ethtool_stat = l.ethtool.nic.get(&interface);
                 l_network_stat = SingleNetworkStat {
                     iface: l_iface_stat,
-                    nic: l_ethtool_stat
+                    nic: l_ethtool_stat,
                 };
                 (&l_network_stat, d)
             });
 
-            let net_model = SingleNetModel::new(
-                &interface,
-                &s_iface,
-                l_iface,
-            );
+            let net_model = SingleNetModel::new(&interface, &s_iface, l_iface);
             interfaces.insert(interface, net_model);
         }
 
@@ -440,7 +437,7 @@ pub struct SingleNetModel {
 
 pub struct SingleNetworkStat<'a> {
     iface: Option<&'a procfs::InterfaceStat>,
-    nic: Option<&'a ethtool::NicStats>
+    nic: Option<&'a ethtool::NicStats>,
 }
 
 impl SingleNetModel {
@@ -565,23 +562,15 @@ impl SingleNetModel {
                     } else {
                         None
                     }
-                })
+                }),
             );
         }
 
         // set ethtool stats
         if let Some(nic_stat) = ethtool_stat {
             let sample = nic_stat;
-            let last = last
-                .and_then(|(l, d)| {
-                    l.nic.map(|l| (l, d))
-                }
-            );
-
-            Self::add_ethtool_stats(&mut net_model,
-                sample,
-                last
-            );
+            let last = last.and_then(|(l, d)| l.nic.map(|l| (l, d)));
+            Self::add_ethtool_stats(&mut net_model, sample, last);
         }
 
         net_model
@@ -699,23 +688,30 @@ mod test {
         );
 
         assert_eq!(
-            model.query(&NetworkModelFieldId::from_str("interfaces.eth0.tx_timeout_per_sec").unwrap()),
+            model.query(
+                &NetworkModelFieldId::from_str("interfaces.eth0.tx_timeout_per_sec").unwrap()
+            ),
             Some(Field::U64(10))
         );
 
         assert_eq!(
-            model.query(&NetworkModelFieldId::from_str("interfaces.eth0.queues.0.queue_id").unwrap()),
+            model.query(
+                &NetworkModelFieldId::from_str("interfaces.eth0.queues.0.queue_id").unwrap()
+            ),
             Some(Field::U32(0))
         );
         assert_eq!(
             model.query(
-                &NetworkModelFieldId::from_str("interfaces.eth0.queues.0.rx_bytes_per_sec").unwrap()
+                &NetworkModelFieldId::from_str("interfaces.eth0.queues.0.rx_bytes_per_sec")
+                    .unwrap()
             ),
             Some(Field::U64(42))
         );
 
         assert_eq!(
-            model.query(&NetworkModelFieldId::from_str("interfaces.eth0.queues.1.queue_id").unwrap()),
+            model.query(
+                &NetworkModelFieldId::from_str("interfaces.eth0.queues.1.queue_id").unwrap()
+            ),
             Some(Field::U32(1))
         );
     }
@@ -727,7 +723,8 @@ mod test {
 
         let l_ethtool_stats = ethtool::EthtoolStats {
             nic: BTreeMap::from([(
-                "eth0".to_string(), ethtool::NicStats {
+                "eth0".to_string(),
+                ethtool::NicStats {
                     tx_timeout: Some(10),
                     raw_stats: BTreeMap::from([("stat0".to_string(), 0)]),
                     queue: vec![
@@ -755,12 +752,13 @@ mod test {
                         },
                     ],
                 },
-            )])
+            )]),
         };
 
         let s_ethtool_stats = ethtool::EthtoolStats {
             nic: BTreeMap::from([(
-                "eth0".to_string(), ethtool::NicStats {
+                "eth0".to_string(),
+                ethtool::NicStats {
                     tx_timeout: Some(20),
                     raw_stats: BTreeMap::from([("stat0".to_string(), 10)]),
                     queue: vec![
@@ -788,11 +786,17 @@ mod test {
                         },
                     ],
                 },
-            )])
+            )]),
         };
 
-        let prev_sample = NetworkStats { net: &l_net_stats, ethtool: &l_ethtool_stats };
-        let sample = NetworkStats { net: &s_net_stats, ethtool: &s_ethtool_stats };
+        let prev_sample = NetworkStats {
+            net: &l_net_stats,
+            ethtool: &l_ethtool_stats,
+        };
+        let sample = NetworkStats {
+            net: &s_net_stats,
+            ethtool: &s_ethtool_stats,
+        };
         let last = Some((&prev_sample, Duration::from_secs(1)));
 
         let model = NetworkModel::new(&sample, last);

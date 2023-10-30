@@ -72,8 +72,7 @@ fn parse_names(data: &[u8]) -> Result<Vec<String>, EthtoolError> {
 fn parse_values(data: &[u64], length: usize) -> Result<Vec<u64>, EthtoolError> {
     let values = data
         .iter()
-        .take(length)
-        .map(|value| *value)
+        .take(length).copied()
         .collect::<Vec<u64>>();
 
     Ok(values)
@@ -92,7 +91,7 @@ impl StringSetInfo {
             mem::size_of::<ethtool_sset_info>(),
             mem::align_of::<ethtool_sset_info>(),
         )
-        .map_err(|err| EthtoolError::CStructInitError(err))?;
+        .map_err(EthtoolError::CStructInitError)?;
 
         // Allocate memory for the struct
         let sset_info_ptr = unsafe { alloc::alloc(layout) } as *mut ethtool_sset_info;
@@ -149,7 +148,7 @@ impl GStrings {
             mem::size_of::<ethtool_gstrings>() + data_length * mem::size_of::<u8>(),
             mem::align_of::<ethtool_gstrings>(),
         )
-        .map_err(|err| EthtoolError::CStructInitError(err))?;
+        .map_err(EthtoolError::CStructInitError)?;
 
         // Allocate memory for the struct
         let gstrings_ptr = unsafe { alloc::alloc(layout) } as *mut ethtool_gstrings;
@@ -208,7 +207,7 @@ impl GStats {
             mem::size_of::<ethtool_stats>() + data_length * mem::size_of::<u64>(),
             mem::align_of::<ethtool_stats>(),
         )
-        .map_err(|err| EthtoolError::CStructInitError(err))?;
+        .map_err(EthtoolError::CStructInitError)?;
 
         // Allocate memory for the struct
         let stats_ptr = unsafe { alloc::alloc(layout) } as *mut ethtool_stats;

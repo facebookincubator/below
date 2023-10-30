@@ -538,14 +538,14 @@ impl Model {
             network: {
                 let sample = NetworkStats {
                     net: &sample.netstats,
-                    ethtool: &sample.ethtool
+                    ethtool: &sample.ethtool,
                 };
                 let network_stats: NetworkStats;
 
                 let last = if let Some((s, d)) = last {
                     network_stats = NetworkStats {
                         net: &s.netstats,
-                        ethtool: &s.ethtool
+                        ethtool: &s.ethtool,
                     };
                     Some((&network_stats, d))
                 } else {

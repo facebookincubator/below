@@ -24,8 +24,8 @@ use model::NetworkModelFieldId;
 use model::SingleCgroupModelFieldId;
 use model::SingleDiskModelFieldId;
 use model::SingleNetModelFieldId;
-use model::SingleQueueModelFieldId;
 use model::SingleProcessModelFieldId;
+use model::SingleQueueModelFieldId;
 use model::SystemModelFieldId;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -984,7 +984,7 @@ impl AggField<SingleQueueModelFieldId> for EthtoolQueueAggField {
             fields.push(RawStats);
         }
         match self {
-            Self::Queue => fields
+            Self::Queue => fields,
         }
     }
 }
