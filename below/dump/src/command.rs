@@ -25,6 +25,7 @@ use model::SingleCgroupModelFieldId;
 use model::SingleDiskModelFieldId;
 use model::SingleNetModelFieldId;
 use model::SingleProcessModelFieldId;
+use model::SingleTcModelFieldId;
 use model::SystemModelFieldId;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -941,6 +942,93 @@ $ below dump transport -b "08:30:00" -e "08:30:30" -f tcp udp -O json
     )
 });
 
+/// Represents the fields of the tc model.
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    below_derive::EnumFromStr,
+    below_derive::EnumToString
+)]
+pub enum TcAggField {
+    Stats,
+    XStats,
+    QDisc,
+    // Klass,
+}
+
+impl AggField<SingleTcModelFieldId> for TcAggField {
+    fn expand(&self, _detail: bool) -> Vec<SingleTcModelFieldId> {
+        use model::SingleTcModelFieldId as FieldId;
+
+        match self {
+            Self::Stats => vec![
+                FieldId::Dev,
+                FieldId::Kind,
+                FieldId::Qlen,
+                FieldId::Bps,
+                FieldId::Pps,
+                FieldId::BytesPerSec,
+                FieldId::PacketsPerSec,
+                FieldId::BacklogPerSec,
+                FieldId::DropsPerSec,
+                FieldId::RequeuesPerSec,
+                FieldId::OverlimitsPerSec,
+            ],
+            Self::XStats => enum_iterator::all::<model::XStatsModelFieldId>()
+                .map(FieldId::Xstats)
+                .collect::<Vec<_>>(),
+            Self::QDisc => enum_iterator::all::<model::QDiscModelFieldId>()
+                .map(FieldId::Qdisc)
+                .collect::<Vec<_>>(),
+        }
+    }
+}
+
+pub type TcOptionField = DumpOptionField<SingleTcModelFieldId, TcAggField>;
+
+pub static DEFAULT_TC_FIELDS: &[TcOptionField] = &[
+    DumpOptionField::Unit(DumpField::Common(CommonField::Datetime)),
+    DumpOptionField::Agg(TcAggField::Stats),
+    DumpOptionField::Agg(TcAggField::XStats),
+    DumpOptionField::Agg(TcAggField::QDisc),
+    // DumpOptionField::Agg(TcAggField::Klass),
+    DumpOptionField::Unit(DumpField::Common(CommonField::Timestamp)),
+];
+
+const TC_ABOUT: &str = "Dump the tc related stats including classless and classful qdiscs";
+
+/// Generated about message for tc (traffic control) dump so supported fields are up-to-date.
+static TC_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+    format!(
+        r#"{about}
+
+********************** Available fields **********************
+
+{common_fields}, {tc_fields}.
+
+********************** Aggregated fields **********************
+
+* --detail: no effect.
+
+* --default: includes [{default_fields}].
+
+* --everything: includes everything (equivalent to --default --detail).
+
+********************** Example Commands **********************
+
+Example:
+
+$ below dump tc -b "08:30:00" -e "08:30:30" -O json
+
+"#,
+        about = TC_ABOUT,
+        common_fields = join(enum_iterator::all::<CommonField>()),
+        tc_fields = join(enum_iterator::all::<SingleTcModelFieldId>()),
+        default_fields = join(DEFAULT_TC_FIELDS.to_owned()),
+    )
+});
+
 make_option! (OutputFormat {
     "raw": Raw,
     "csv": Csv,
@@ -1110,6 +1198,17 @@ pub enum DumpCommand {
         #[clap(flatten)]
         opts: GeneralOpt,
         /// Saved pattern in the dumprc file under [transport] section.
+        #[clap(long, short, conflicts_with("fields"))]
+        pattern: Option<String>,
+    },
+    #[clap(about = TC_ABOUT, long_about = TC_LONG_ABOUT.as_str())]
+    Tc {
+        /// Select which fields to display and in what order.
+        #[clap(short, long)]
+        fields: Option<Vec<TcOptionField>>,
+        #[clap(flatten)]
+        opts: GeneralOpt,
+        /// Saved pattern in the dumprc file under [tc] section.
         #[clap(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
