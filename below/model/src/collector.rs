@@ -273,6 +273,15 @@ fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<S
                 None
             }
         },
+        tc: {
+            match tc::tc_stats() {
+                Ok(tc_stats) => tc_stats,
+                Err(e) => {
+                    error!(logger, "{:#}", e);
+                    Default::default()
+                }
+            }
+        },
     })
 }
 
@@ -423,6 +432,13 @@ macro_rules! usec_pct {
 }
 
 macro_rules! count_per_sec {
+    ($a:ident, $b:ident, $delta:expr, $target_type:ty) => {{
+        let mut ret = None;
+        if $a <= $b {
+            ret = Some((($b - $a) as f64 / $delta.as_secs_f64()).ceil() as $target_type);
+        }
+        ret
+    }};
     ($a_opt:expr, $b_opt:expr, $delta:expr) => {{
         let mut ret = None;
         if let (Some(a), Some(b)) = ($a_opt, $b_opt) {

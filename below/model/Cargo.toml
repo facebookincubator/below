@@ -25,6 +25,7 @@ regex = "1.9.2"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+tc = { package = "below-tc", version = "0.0.1", path = "../tc" }
 
 [dev-dependencies]
 futures = { version = "0.3.28", features = ["async-await", "compat"] }

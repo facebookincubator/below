@@ -39,6 +39,7 @@ pub mod process;
 pub mod sample;
 mod sample_model;
 pub mod system;
+pub mod tc_model;
 
 open_source_shim!(pub);
 
@@ -48,6 +49,7 @@ pub use network::*;
 pub use process::*;
 pub use sample::*;
 pub use system::*;
+pub use tc_model::*;
 
 /// A wrapper for different field types used in Models. By this way we can query
 /// different fields in a single function without using Box.
@@ -494,6 +496,8 @@ pub struct Model {
     pub network: NetworkModel,
     #[queriable(subquery)]
     pub gpu: Option<GpuModel>,
+    #[queriable(subquery)]
+    pub tc: TcModel,
 }
 
 impl Model {
@@ -524,6 +528,7 @@ impl Model {
                     }
                 })
             }),
+            tc: TcModel::new(&sample.tc, last.map(|(s, d)| (&s.tc, d))),
         }
     }
 }

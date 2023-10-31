@@ -21,6 +21,7 @@ pub struct Sample {
     pub system: SystemSample,
     pub netstats: procfs::NetStat,
     pub gpus: Option<gpu_stats::GpuSample>,
+    pub tc: tc::TcStats,
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
