@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::BTreeMap;
+use std::time::Duration;
+
 use command::expand_fields;
 use command::GeneralOpt;
 use command::OutputFormat;
@@ -669,6 +672,8 @@ fn test_dump_iface_titles() {
         "TX Heartbeat Errors",
         "TX Packets",
         "TX Window Errors",
+        "TX Timeout",
+        "Raw Stats",
     ];
     assert_eq!(titles, expected_titles);
 }
@@ -892,6 +897,161 @@ fn test_dump_transport_titles() {
         "Udp6IgnoredMulti",
     ];
     assert_eq!(titles, expected_titles);
+}
+
+#[test]
+fn test_queue_titles() {
+    let titles = expand_fields(command::DEFAULT_ETHTOOL_QUEUE_FIELDS, true)
+        .iter()
+        .filter_map(|dump_field| match dump_field {
+            DumpField::Common(_) => None,
+            DumpField::FieldId(field_id) => Some(field_id.to_string()),
+        })
+        .collect::<Vec<_>>();
+    let expected_titles = vec![
+        "interface",
+        "queue_id",
+        "rx_bytes_per_sec",
+        "tx_bytes_per_sec",
+        "rx_count_per_sec",
+        "tx_count_per_sec",
+        "tx_missed_tx",
+        "tx_unmask_interrupt",
+        "raw_stats",
+    ];
+    assert_eq!(titles, expected_titles);
+}
+
+#[test]
+fn test_dump_queue_content() {
+    let eth0_queue_models = vec![
+        model::SingleQueueModel {
+            interface: "eth0".to_string(),
+            queue_id: 0,
+            rx_bytes_per_sec: Some(10),
+            tx_bytes_per_sec: Some(20),
+            rx_count_per_sec: Some(100),
+            tx_count_per_sec: Some(200),
+            tx_missed_tx: Some(50),
+            tx_unmask_interrupt: Some(5),
+            raw_stats: BTreeMap::from([("stat1".to_string(), 1000), ("stat2".to_string(), 2000)]),
+        },
+        model::SingleQueueModel {
+            interface: "eth0".to_string(),
+            queue_id: 1,
+            rx_bytes_per_sec: Some(20),
+            tx_bytes_per_sec: Some(10),
+            rx_count_per_sec: Some(200),
+            tx_count_per_sec: Some(100),
+            tx_missed_tx: Some(5),
+            tx_unmask_interrupt: Some(50),
+            raw_stats: BTreeMap::from([("stat1".to_string(), 2000), ("stat2".to_string(), 1000)]),
+        },
+    ];
+    let lo_queue_models = vec![model::SingleQueueModel {
+        interface: "lo".to_string(),
+        queue_id: 1,
+        rx_bytes_per_sec: Some(20),
+        tx_bytes_per_sec: Some(10),
+        rx_count_per_sec: Some(200),
+        tx_count_per_sec: Some(100),
+        tx_missed_tx: Some(5),
+        tx_unmask_interrupt: Some(50),
+        raw_stats: BTreeMap::from([("stat1".to_string(), 2000), ("stat2".to_string(), 1000)]),
+    }];
+
+    let eth0_model = model::SingleNetModel {
+        interface: "eth0".to_string(),
+        queues: eth0_queue_models.clone(),
+        ..Default::default()
+    };
+    let lo_model = model::SingleNetModel {
+        interface: "lo".to_string(),
+        queues: lo_queue_models.clone(),
+        ..Default::default()
+    };
+    let network = model::NetworkModel {
+        interfaces: BTreeMap::from([
+            ("eth0".to_string(), eth0_model),
+            ("lo".to_string(), lo_model),
+        ]),
+        ..Default::default()
+    };
+    let model = model::Model {
+        time_elapsed: Duration::from_secs(60 * 10),
+        timestamp: SystemTime::now(),
+        system: model::SystemModel::default(),
+        cgroup: model::CgroupModel::default(),
+        process: model::ProcessModel::default(),
+        network,
+        gpu: None,
+    };
+
+    let mut opts: GeneralOpt = Default::default();
+    let fields = command::expand_fields(command::DEFAULT_ETHTOOL_QUEUE_FIELDS, true);
+
+    opts.output_format = Some(OutputFormat::Json);
+    let queue_dumper = ethtool::EthtoolQueue::new(&opts, fields.clone());
+
+    let mut queue_content: Vec<u8> = Vec::new();
+    let mut round = 0;
+    let ctx = CommonFieldContext {
+        timestamp: 0,
+        hostname: "h".to_string(),
+    };
+
+    let result = queue_dumper
+        .dump_model(&ctx, &model, &mut queue_content, &mut round, false)
+        .expect("Failed to dump queue model");
+    assert!(result == tmain::IterExecResult::Success);
+
+    // verify json correctness
+    assert!(!queue_content.is_empty());
+    let jval: Value =
+        serde_json::from_slice(&queue_content).expect("Fail parse json of queue dump");
+
+    let expected_json = json!([
+        {
+            "Datetime": "1969-12-31 16:00:00",
+            "Interface": "eth0",
+            "Queue": "0",
+            "RawStats": "stat1=1000, stat2=2000",
+            "RxBytes": "10 B/s",
+            "RxCount": "100/s",
+            "Timestamp": "0",
+            "TxBytes": "20 B/s",
+            "TxCount": "200/s",
+            "TxMissedTx": "50",
+            "TxUnmaskInterrupt": "5"
+        },
+        {
+            "Datetime": "1969-12-31 16:00:00",
+            "Interface": "eth0",
+            "Queue": "1",
+            "RawStats": "stat1=2000, stat2=1000",
+            "RxBytes": "20 B/s",
+            "RxCount": "200/s",
+            "Timestamp": "0",
+            "TxBytes": "10 B/s",
+            "TxCount": "100/s",
+            "TxMissedTx": "5",
+            "TxUnmaskInterrupt": "50"
+        },
+        {
+            "Datetime": "1969-12-31 16:00:00",
+            "Interface": "lo",
+            "Queue": "1",
+            "RawStats": "stat1=2000, stat2=1000",
+            "RxBytes": "20 B/s",
+            "RxCount": "200/s",
+            "Timestamp": "0",
+            "TxBytes": "10 B/s",
+            "TxCount": "100/s",
+            "TxMissedTx": "5",
+            "TxUnmaskInterrupt": "50"
+        }
+    ]);
+    assert_eq!(jval, expected_json);
 }
 
 #[test]

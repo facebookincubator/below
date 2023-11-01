@@ -7,6 +7,7 @@ members = [
   "below/common",
   "below/config",
   "below/dump",
+  "below/ethtool",
   "below/gpu_stats",
   "below/model",
   "below/procfs",

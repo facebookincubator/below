@@ -25,6 +25,7 @@ use model::SingleCgroupModelFieldId;
 use model::SingleDiskModelFieldId;
 use model::SingleNetModelFieldId;
 use model::SingleProcessModelFieldId;
+use model::SingleQueueModelFieldId;
 use model::SystemModelFieldId;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -664,11 +665,13 @@ pub enum IfaceAggField {
     Rate,
     Rx,
     Tx,
+    Ethtool,
 }
 
 impl AggField<SingleNetModelFieldId> for IfaceAggField {
-    fn expand(&self, _detail: bool) -> Vec<SingleNetModelFieldId> {
+    fn expand(&self, detail: bool) -> Vec<SingleNetModelFieldId> {
         use model::SingleNetModelFieldId::*;
+
         match self {
             Self::Rate => vec![
                 RxBytesPerSec,
@@ -703,6 +706,13 @@ impl AggField<SingleNetModelFieldId> for IfaceAggField {
                 TxPackets,
                 TxWindowErrors,
             ],
+            Self::Ethtool => {
+                let mut fields = vec![TxTimeoutPerSec];
+                if detail {
+                    fields.push(RawStats);
+                }
+                fields
+            }
         }
     }
 }
@@ -717,6 +727,7 @@ pub static DEFAULT_IFACE_FIELDS: &[IfaceOptionField] = &[
     DumpOptionField::Agg(IfaceAggField::Rate),
     DumpOptionField::Agg(IfaceAggField::Rx),
     DumpOptionField::Agg(IfaceAggField::Tx),
+    DumpOptionField::Agg(IfaceAggField::Ethtool),
     DumpOptionField::Unit(DumpField::Common(CommonField::Timestamp)),
 ];
 
@@ -739,7 +750,9 @@ static IFACE_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
 
 * tx: includes [{agg_tx_fields}].
 
-* --detail: no effect.
+* ethtool: includes [{agg_ethtool_fields}].
+
+* --detail: includes `raw_stats` field.
 
 * --default: includes [{default_fields}].
 
@@ -763,6 +776,7 @@ $ below dump iface -b "08:30:00" -e "08:30:30" -s interface -F eth* -O json
         agg_rate_fields = join(IfaceAggField::Rate.expand(false)),
         agg_rx_fields = join(IfaceAggField::Rx.expand(false)),
         agg_tx_fields = join(IfaceAggField::Tx.expand(false)),
+        agg_ethtool_fields = join(IfaceAggField::Ethtool.expand(false)),
         default_fields = join(DEFAULT_IFACE_FIELDS.to_owned()),
     )
 });
@@ -941,6 +955,83 @@ $ below dump transport -b "08:30:00" -e "08:30:30" -f tcp udp -O json
     )
 });
 
+/// Represents the ethtool queue sub-model of the network model.
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    below_derive::EnumFromStr,
+    below_derive::EnumToString
+)]
+pub enum EthtoolQueueAggField {
+    Queue,
+}
+
+impl AggField<SingleQueueModelFieldId> for EthtoolQueueAggField {
+    fn expand(&self, detail: bool) -> Vec<SingleQueueModelFieldId> {
+        use model::SingleQueueModelFieldId::*;
+        let mut fields = vec![
+            Interface,
+            QueueId,
+            RxBytesPerSec,
+            TxBytesPerSec,
+            RxCountPerSec,
+            TxCountPerSec,
+            TxMissedTx,
+            TxUnmaskInterrupt,
+        ];
+        if detail {
+            fields.push(RawStats);
+        }
+        match self {
+            Self::Queue => fields,
+        }
+    }
+}
+
+pub type EthtoolQueueOptionField = DumpOptionField<SingleQueueModelFieldId, EthtoolQueueAggField>;
+
+pub static DEFAULT_ETHTOOL_QUEUE_FIELDS: &[EthtoolQueueOptionField] = &[
+    DumpOptionField::Unit(DumpField::Common(CommonField::Datetime)),
+    DumpOptionField::Agg(EthtoolQueueAggField::Queue),
+    DumpOptionField::Unit(DumpField::Common(CommonField::Timestamp)),
+];
+
+const ETHTOOL_QUEUE_ABOUT: &str = "Dump network interface queue stats";
+
+/// Generated about message for Ethtool Queue dump so supported fields are up-to-date.
+static ETHTOOL_QUEUE_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+    format!(
+        r#"{about}
+
+********************** Available fields **********************
+
+{common_fields}, and expanded fields below.
+
+********************** Aggregated fields **********************
+
+* queue: includes [{agg_queue_fields}].
+
+* --detail: includes `raw_stats` field.
+
+* --default: includes [{default_fields}].
+
+* --everything: includes everything (equivalent to --default --detail).
+
+********************** Example Commands **********************
+
+Example:
+
+$ below dump ethtool-queue -b "08:30:00" -e "08:30:30" -O json
+
+"#,
+        about = ETHTOOL_QUEUE_ABOUT,
+        common_fields = join(enum_iterator::all::<CommonField>()),
+        agg_queue_fields = join(EthtoolQueueAggField::Queue.expand(false)),
+        default_fields = join(DEFAULT_ETHTOOL_QUEUE_FIELDS.to_owned()),
+    )
+});
+
 make_option! (OutputFormat {
     "raw": Raw,
     "csv": Csv,
@@ -1110,6 +1201,17 @@ pub enum DumpCommand {
         #[clap(flatten)]
         opts: GeneralOpt,
         /// Saved pattern in the dumprc file under [transport] section.
+        #[clap(long, short, conflicts_with("fields"))]
+        pattern: Option<String>,
+    },
+    #[clap(about = ETHTOOL_QUEUE_ABOUT, long_about = ETHTOOL_QUEUE_LONG_ABOUT.as_str())]
+    EthtoolQueue {
+        /// Select which fields to display and in what order.
+        #[clap(short, long, num_args = 1..)]
+        fields: Option<Vec<EthtoolQueueOptionField>>,
+        #[clap(flatten)]
+        opts: GeneralOpt,
+        /// Saved pattern in the dumprc file under [ethtool] section.
         #[clap(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },

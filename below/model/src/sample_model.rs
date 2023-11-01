@@ -716,7 +716,41 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                 "tx_fifo_errors": 0,
                 "tx_heartbeat_errors": 0,
                 "tx_packets": 100000000,
-                "tx_window_errors": 0
+                "tx_window_errors": 0,
+                "tx_timeout_per_sec": 10,
+                "raw_stats": {
+                    "stat0": 0
+                },
+                "queues": [
+                    {
+                        "interface": "eth0",
+                        "queue_id": 0,
+                        "rx_bytes_per_sec": 42,
+                        "tx_bytes_per_sec": 1337,
+                        "rx_count_per_sec": 10,
+                        "tx_count_per_sec": 20,
+                        "tx_missed_tx": 100,
+                        "tx_unmask_interrupt": 200,
+                        "raw_stats": {
+                            "stat1": 1,
+                            "stat2": 2
+                        }
+                    },
+                    {
+                        "interface": "eth0",
+                        "queue_id": 1,
+                        "rx_bytes_per_sec": 1337,
+                        "tx_bytes_per_sec": 42,
+                        "rx_count_per_sec": 20,
+                        "tx_count_per_sec": 10,
+                        "tx_missed_tx": 200,
+                        "tx_unmask_interrupt": 100,
+                        "raw_stats": {
+                            "stat3": 3,
+                            "stat4": 4
+                        }
+                    }
+                ]
             },
             "lo": {
                 "interface": "lo",
@@ -748,7 +782,41 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                 "tx_fifo_errors": 0,
                 "tx_heartbeat_errors": 0,
                 "tx_packets": 60000000,
-                "tx_window_errors": 0
+                "tx_window_errors": 0,
+                "tx_timeout_per_sec": 1,
+                "raw_stats": {
+                    "stat0": 0
+                },
+                "queues": [
+                    {
+                        "interface": "lo",
+                        "queue_id": 0,
+                        "rx_bytes_per_sec": 24,
+                        "tx_bytes_per_sec": 7331,
+                        "rx_count_per_sec": 1,
+                        "tx_count_per_sec": 2,
+                        "tx_missed_tx": 3,
+                        "tx_unmask_interrupt": 400,
+                        "raw_stats": {
+                            "stat1": 5,
+                            "stat2": 6
+                        }
+                    },
+                    {
+                        "interface": "lo",
+                        "queue_id": 1,
+                        "rx_bytes_per_sec": 7331,
+                        "tx_bytes_per_sec": 24,
+                        "rx_count_per_sec": 2,
+                        "tx_count_per_sec": 1,
+                        "tx_missed_tx": 4,
+                        "tx_unmask_interrupt": 3,
+                        "raw_stats": {
+                            "stat3": 7,
+                            "stat4": 8
+                        }
+                    }
+                ]
             }
         },
         "tcp": {

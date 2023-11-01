@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 362] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 373] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -311,6 +311,17 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 362] = [
     "network.interfaces.<key>.tx_heartbeat_errors",
     "network.interfaces.<key>.tx_packets",
     "network.interfaces.<key>.tx_window_errors",
+    "network.interfaces.<key>.tx_timeout_per_sec",
+    "network.interfaces.<key>.raw_stats",
+    "network.interfaces.<key>.queues.<idx>.interface",
+    "network.interfaces.<key>.queues.<idx>.queue_id",
+    "network.interfaces.<key>.queues.<idx>.rx_bytes_per_sec",
+    "network.interfaces.<key>.queues.<idx>.rx_count_per_sec",
+    "network.interfaces.<key>.queues.<idx>.tx_bytes_per_sec",
+    "network.interfaces.<key>.queues.<idx>.tx_count_per_sec",
+    "network.interfaces.<key>.queues.<idx>.tx_missed_tx",
+    "network.interfaces.<key>.queues.<idx>.tx_unmask_interrupt",
+    "network.interfaces.<key>.queues.<idx>.raw_stats",
     "network.tcp.active_opens_per_sec",
     "network.tcp.passive_opens_per_sec",
     "network.tcp.attempt_fails_per_sec",

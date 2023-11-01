@@ -811,7 +811,11 @@ impl CgroupMemoryNumaModel {
         if let (Some(anon), Some(file), Some(kernel_stack), Some(pagetables)) =
             (model.anon, model.file, model.kernel_stack, model.pagetables)
         {
-            model.total = Some(anon + file + kernel_stack + pagetables);
+            model.total = Some(
+                anon.saturating_add(file)
+                    .saturating_add(kernel_stack)
+                    .saturating_add(pagetables),
+            );
         }
 
         if let Some((l, delta)) = last {

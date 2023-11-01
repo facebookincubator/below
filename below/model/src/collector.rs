@@ -29,6 +29,7 @@ pub struct CollectorOptions {
     pub collect_io_stat: bool,
     pub disable_disk_stat: bool,
     pub enable_btrfs_stats: bool,
+    pub enable_ethtool_stats: bool,
     pub btrfs_samples: u64,
     pub btrfs_min_pct: f64,
     pub cgroup_re: Option<Regex>,
@@ -44,6 +45,7 @@ impl Default for CollectorOptions {
             collect_io_stat: true,
             disable_disk_stat: false,
             enable_btrfs_stats: false,
+            enable_ethtool_stats: false,
             btrfs_samples: btrfs::DEFAULT_SAMPLES,
             btrfs_min_pct: btrfs::DEFAULT_MIN_PCT,
             cgroup_re: None,
@@ -171,6 +173,7 @@ fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<S
     let mut reader = procfs::ProcReader::new();
     let btrfs_reader =
         btrfs::BtrfsReader::new(options.btrfs_samples, options.btrfs_min_pct, logger.clone());
+    let ethtool_reader = ethtool::EthtoolReader::new();
 
     // Take mutex, then take all values out of shared map and replace with default map
     //
@@ -271,6 +274,17 @@ fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<S
                 )
             } else {
                 None
+            }
+        },
+        ethtool: if !options.enable_ethtool_stats {
+            Default::default()
+        } else {
+            match ethtool_reader.read_stats::<ethtool::Ethtool>() {
+                Ok(ethtool_stats) => ethtool_stats,
+                Err(e) => {
+                    error!(logger, "{:#}", e);
+                    Default::default()
+                }
             }
         },
     })
