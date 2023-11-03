@@ -137,11 +137,11 @@ impl<K> Decompressor<K> {
     /// Decompresses the given frame using the previously loaded dict, if any.
     pub fn decompress_with_loaded_dict(&mut self, frame: &[u8]) -> Result<Bytes> {
         let capacity = match zstd_safe::get_frame_content_size(frame) {
-            zstd_safe::CONTENTSIZE_ERROR => bail!("Error getting frame content size"),
+            Err(zstd_safe::ContentSizeError) => bail!("Error getting frame content size"),
             // Decompressed size should only be unknown when using streaming
             // mode, which we should never use
-            zstd_safe::CONTENTSIZE_UNKNOWN => bail!("Unknown decompressed size"),
-            capacity => capacity as usize,
+            Ok(None) => bail!("Unknown decompressed size"),
+            Ok(Some(capacity)) => capacity as usize,
         };
         let mut buf = Vec::with_capacity(capacity);
         self.dctx

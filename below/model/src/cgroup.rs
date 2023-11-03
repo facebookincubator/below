@@ -75,34 +75,25 @@ pub struct CgroupModelFieldId {
     pub subquery_id: SingleCgroupModelFieldId,
 }
 
-// For sorting CgroupModel with SingleCgroupModelFieldId
-impl From<SingleCgroupModelFieldId> for CgroupModelFieldId {
-    fn from(v: SingleCgroupModelFieldId) -> Self {
-        Self {
-            path: None,
-            subquery_id: v,
-        }
-    }
-}
-
 impl FieldId for CgroupModelFieldId {
     type Queriable = CgroupModel;
 }
 
+impl DelegatedSequence for CgroupModelFieldId {
+    type Delegate = SingleCgroupModelFieldId;
+    fn get_delegate(&self) -> &Self::Delegate {
+        &self.subquery_id
+    }
+    fn from_delegate(delegate: Self::Delegate) -> Self {
+        Self {
+            path: None,
+            subquery_id: delegate,
+        }
+    }
+}
+
 impl Sequence for CgroupModelFieldId {
-    const CARDINALITY: usize = SingleCgroupModelFieldId::CARDINALITY;
-    fn next(&self) -> Option<Self> {
-        self.subquery_id.next().map(Self::from)
-    }
-    fn previous(&self) -> Option<Self> {
-        self.subquery_id.previous().map(Self::from)
-    }
-    fn first() -> Option<Self> {
-        SingleCgroupModelFieldId::first().map(Self::from)
-    }
-    fn last() -> Option<Self> {
-        SingleCgroupModelFieldId::last().map(Self::from)
-    }
+    impl_sequence_for_delegated_sequence!();
 }
 
 impl std::string::ToString for CgroupModelFieldId {
@@ -478,13 +469,14 @@ impl std::ops::Add<&CgroupIoModel> for CgroupIoModel {
 pub struct CgroupMemoryModel {
     pub total: Option<u64>,
     pub swap: Option<u64>,
-    pub zswap: Option<u64>,
     pub anon: Option<u64>,
     pub file: Option<u64>,
     pub kernel_stack: Option<u64>,
     pub slab: Option<u64>,
     pub sock: Option<u64>,
     pub shmem: Option<u64>,
+    pub zswap: Option<u64>,
+    pub zswapped: Option<u64>,
     pub file_mapped: Option<u64>,
     pub file_dirty: Option<u64>,
     pub file_writeback: Option<u64>,
@@ -514,7 +506,6 @@ pub struct CgroupMemoryModel {
     pub pglazyfreed: Option<u64>,
     pub thp_fault_alloc: Option<u64>,
     pub thp_collapse_alloc: Option<u64>,
-    pub memory_high: Option<i64>,
     pub events_low: Option<u64>,
     pub events_high: Option<u64>,
     pub events_max: Option<u64>,
@@ -529,13 +520,14 @@ impl std::ops::Add for CgroupMemoryModel {
         Self {
             total: opt_add(self.total, other.total),
             swap: opt_add(self.swap, other.swap),
-            zswap: opt_add(self.zswap, other.zswap),
             anon: opt_add(self.anon, other.anon),
             file: opt_add(self.file, other.file),
             kernel_stack: opt_add(self.kernel_stack, other.kernel_stack),
             slab: opt_add(self.slab, other.slab),
             sock: opt_add(self.sock, other.sock),
             shmem: opt_add(self.shmem, other.shmem),
+            zswap: opt_add(self.zswap, other.zswap),
+            zswapped: opt_add(self.zswapped, other.zswapped),
             file_mapped: opt_add(self.file_mapped, other.file_mapped),
             file_dirty: opt_add(self.file_dirty, other.file_dirty),
             file_writeback: opt_add(self.file_writeback, other.file_writeback),
@@ -586,7 +578,6 @@ impl std::ops::Add for CgroupMemoryModel {
             pglazyfreed: opt_add(self.pglazyfreed, other.pglazyfreed),
             thp_fault_alloc: opt_add(self.thp_fault_alloc, other.thp_fault_alloc),
             thp_collapse_alloc: opt_add(self.thp_collapse_alloc, other.thp_collapse_alloc),
-            memory_high: None,
             events_low: opt_add(self.events_low, other.events_low),
             events_high: opt_add(self.events_high, other.events_high),
             events_max: opt_add(self.events_max, other.events_max),
@@ -605,34 +596,38 @@ impl CgroupMemoryModel {
             total: sample.memory_current.map(|v| v as u64),
             swap: sample.memory_swap_current.map(|v| v as u64),
             zswap: sample.memory_zswap_current.map(|v| v as u64),
-            memory_high: sample.memory_high,
             ..Default::default()
         };
         if let Some(events) = &sample.memory_events {
-            model.events_low = events.low.map(|v| v as u64);
-            model.events_high = events.high.map(|v| v as u64);
-            model.events_max = events.max.map(|v| v as u64);
-            model.events_oom = events.oom.map(|v| v as u64);
-            model.events_oom_kill = events.oom_kill.map(|v| v as u64);
+            model.events_low = events.low;
+            model.events_high = events.high;
+            model.events_max = events.max;
+            model.events_oom = events.oom;
+            model.events_oom_kill = events.oom_kill;
         }
         if let Some(stat) = &sample.memory_stat {
-            model.anon = stat.anon.map(|v| v as u64);
-            model.file = stat.file.map(|v| v as u64);
-            model.kernel_stack = stat.kernel_stack.map(|v| v as u64);
-            model.slab = stat.slab.map(|v| v as u64);
-            model.sock = stat.sock.map(|v| v as u64);
-            model.shmem = stat.shmem.map(|v| v as u64);
-            model.file_mapped = stat.file_mapped.map(|v| v as u64);
-            model.file_dirty = stat.file_dirty.map(|v| v as u64);
-            model.file_writeback = stat.file_writeback.map(|v| v as u64);
-            model.anon_thp = stat.anon_thp.map(|v| v as u64);
-            model.inactive_anon = stat.inactive_anon.map(|v| v as u64);
-            model.active_anon = stat.active_anon.map(|v| v as u64);
-            model.inactive_file = stat.inactive_file.map(|v| v as u64);
-            model.active_file = stat.active_file.map(|v| v as u64);
-            model.unevictable = stat.unevictable.map(|v| v as u64);
-            model.slab_reclaimable = stat.slab_reclaimable.map(|v| v as u64);
-            model.slab_unreclaimable = stat.slab_unreclaimable.map(|v| v as u64);
+            model.anon = stat.anon;
+            model.file = stat.file;
+            model.kernel_stack = stat.kernel_stack;
+            model.slab = stat.slab;
+            model.sock = stat.sock;
+            model.shmem = stat.shmem;
+            // May be set by sample.memory_zswap_current
+            if model.zswap.is_none() {
+                model.zswap = stat.zswap;
+            }
+            model.zswapped = stat.zswapped;
+            model.file_mapped = stat.file_mapped;
+            model.file_dirty = stat.file_dirty;
+            model.file_writeback = stat.file_writeback;
+            model.anon_thp = stat.anon_thp;
+            model.inactive_anon = stat.inactive_anon;
+            model.active_anon = stat.active_anon;
+            model.inactive_file = stat.inactive_file;
+            model.active_file = stat.active_file;
+            model.unevictable = stat.unevictable;
+            model.slab_reclaimable = stat.slab_reclaimable;
+            model.slab_unreclaimable = stat.slab_unreclaimable;
 
             if let Some((
                 CgroupSample {
@@ -816,7 +811,11 @@ impl CgroupMemoryNumaModel {
         if let (Some(anon), Some(file), Some(kernel_stack), Some(pagetables)) =
             (model.anon, model.file, model.kernel_stack, model.pagetables)
         {
-            model.total = Some(anon + file + kernel_stack + pagetables);
+            model.total = Some(
+                anon.saturating_add(file)
+                    .saturating_add(kernel_stack)
+                    .saturating_add(pagetables),
+            );
         }
 
         if let Some((l, delta)) = last {
@@ -874,6 +873,7 @@ impl CgroupMemoryNumaModel {
 pub struct CgroupProperties {
     pub cgroup_controllers: Option<BTreeSet<String>>,
     pub cgroup_subtree_control: Option<BTreeSet<String>>,
+    pub memory_min: Option<i64>,
     pub memory_low: Option<i64>,
     pub memory_high: Option<i64>,
     pub memory_max: Option<i64>,
@@ -893,6 +893,7 @@ impl CgroupProperties {
         Self {
             cgroup_controllers: sample.cgroup_controllers.clone(),
             cgroup_subtree_control: sample.cgroup_subtree_control.clone(),
+            memory_min: sample.memory_min,
             memory_low: sample.memory_low,
             memory_high: sample.memory_high,
             memory_max: sample.memory_max,

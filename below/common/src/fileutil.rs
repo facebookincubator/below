@@ -33,7 +33,7 @@ mod tests {
     use std::io::BufWriter;
     use std::io::Write;
 
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use super::*;
 
@@ -50,13 +50,13 @@ mod tests {
     fn test_get_dir_size() {
         // Empty directory
         {
-            let dir = TempDir::new("below_fileutil_test").expect("tempdir failed");
+            let dir = TempDir::with_prefix("below_fileutil_test.").expect("tempdir failed");
             let size = get_dir_size(dir.path());
             assert_eq!(size, 0);
         }
         // Directory with files and files in nested directories
         {
-            let dir = TempDir::new("below_fileutil_test").expect("tempdir failed");
+            let dir = TempDir::with_prefix("below_fileutil_test.").expect("tempdir failed");
             fs::create_dir(dir.path().join("dir_A")).expect("Failed to create directory");
             fs::create_dir(dir.path().join("dir_B")).expect("Failed to create directory");
             make_file(dir.path().join("A"), 1000);

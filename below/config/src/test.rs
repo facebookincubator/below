@@ -14,7 +14,7 @@
 
 use std::io::Write;
 
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 use super::*;
 
@@ -37,7 +37,8 @@ fn test_config_default() {
 
 #[test]
 fn test_config_fs_failure() {
-    let tempdir = TempDir::new("below_config_fs_failuer").expect("Failed to create temp dir");
+    let tempdir =
+        TempDir::with_prefix("below_config_fs_failuer.").expect("Failed to create temp dir");
     let path = tempdir.path();
     match BelowConfig::load(&path.to_path_buf()) {
         Ok(_) => panic!("Below should not load if the non existing path is not default path"),
@@ -59,7 +60,7 @@ fn test_config_fs_failure() {
 
 #[test]
 fn test_config_load_success() {
-    let tempdir = TempDir::new("below_config_load").expect("Failed to create temp dir");
+    let tempdir = TempDir::with_prefix("below_config_load.").expect("Failed to create temp dir");
     let path = tempdir.path().join("below.config");
 
     let mut file = std::fs::OpenOptions::new()
@@ -93,7 +94,8 @@ fn test_config_load_success() {
 
 #[test]
 fn test_config_load_failed() {
-    let tempdir = TempDir::new("below_config_load_failed").expect("Failed to create temp dir");
+    let tempdir =
+        TempDir::with_prefix("below_config_load_failed.").expect("Failed to create temp dir");
     let path = tempdir.path().join("below.config");
     let mut file = std::fs::OpenOptions::new()
         .read(true)
@@ -122,7 +124,7 @@ fn test_config_load_failed() {
 
 #[test]
 fn test_config_partial_load() {
-    let tempdir = TempDir::new("below_config_load").expect("Failed to create temp dir");
+    let tempdir = TempDir::with_prefix("below_config_load.").expect("Failed to create temp dir");
     let path = tempdir.path().join("below.config");
 
     let mut file = std::fs::OpenOptions::new()

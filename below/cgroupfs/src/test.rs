@@ -61,15 +61,16 @@ impl TestCgroup {
 
     fn create_file_with_content<P: AsRef<Path>>(&self, p: P, content: &[u8]) {
         let path = self.path().join(p);
-        let mut file = File::create(&path).expect(&format!("Failed to create {}", path.display()));
+        let mut file =
+            File::create(&path).unwrap_or_else(|_| panic!("Failed to create {}", path.display()));
         file.write_all(content)
-            .expect(&format!("Failed to write to {}", path.display()));
+            .unwrap_or_else(|_| panic!("Failed to write to {}", path.display()));
     }
 
     fn create_child<P: AsRef<Path>>(&self, p: P) {
         let path = self.path().join(p);
         std::fs::create_dir(&path)
-            .expect(&format!("Failed to create child cgroup {}", path.display()));
+            .unwrap_or_else(|_| panic!("Failed to create child cgroup {}", path.display()));
     }
 }
 
@@ -138,6 +139,7 @@ macro_rules! singleline_integer_or_max_test {
     };
 }
 
+singleline_integer_or_max_test!(read_memory_min, "memory.min");
 singleline_integer_or_max_test!(read_memory_low, "memory.low");
 singleline_integer_or_max_test!(read_memory_high, "memory.high");
 singleline_integer_or_max_test!(read_memory_max, "memory.max");
@@ -349,7 +351,7 @@ fn test_memory_stat_overflow() {
         .read_memory_stat()
         .expect("Failed to read memory.stat");
     assert_eq!(
-        val.slab.expect("Failed to populate slab field") as u64,
+        val.slab.expect("Failed to populate slab field"),
         14914318128160131214
     );
 }

@@ -656,7 +656,7 @@ mod tests {
 
     use common::util::get_unix_timestamp;
     use slog::Drain;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
     use Direction::Forward;
     use Direction::Reverse;
 
@@ -798,7 +798,7 @@ mod tests {
 
     /// Write a single sample in different ways and read it back.
     fn simple_put_read(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = get_unix_timestamp(SystemTime::now());
         let now = std::time::UNIX_EPOCH + std::time::Duration::from_secs(ts);
         let mut writer = StoreWriter::new(get_logger(), &dir, compression_mode, format)
@@ -911,7 +911,7 @@ mod tests {
     /// Calling advance with nothing in the store and cursor uninitialized.
     #[test]
     fn advance_when_empty() {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let mut cursor = StoreCursor::new(get_logger(), dir.path().to_path_buf());
 
         assert!(!cursor.advance(Forward).unwrap());
@@ -923,7 +923,7 @@ mod tests {
     /// Calling advance in both directions when cursor is at the last pos.
     #[test]
     fn advance_at_boundries() {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = get_unix_timestamp(SystemTime::now());
         let writer = TestWriter::new(&dir);
         let mut cursor = StoreCursor::new(get_logger(), dir.path().to_path_buf());
@@ -944,7 +944,7 @@ mod tests {
     /// Cursor moves back and forth.
     #[test]
     fn advance_simple() {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = get_unix_timestamp(SystemTime::now());
         let writer = TestWriter::new(&dir);
         let mut cursor = StoreCursor::new(get_logger(), dir.path().to_path_buf());
@@ -973,7 +973,7 @@ mod tests {
     /// Retry advance succeeds after updates.
     #[test]
     fn advance_retry() {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = get_unix_timestamp(SystemTime::now());
         let writer = TestWriter::new(&dir);
         let mut cursor = StoreCursor::new(get_logger(), dir.path().to_path_buf());
@@ -999,7 +999,7 @@ mod tests {
     /// Get corrupt index/data should return None.
     #[test]
     fn get_corrupt() {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = get_unix_timestamp(SystemTime::now());
         let writer = TestWriter::new(&dir);
         let mut cursor = StoreCursor::new(get_logger(), dir.path().to_path_buf());
@@ -1020,7 +1020,7 @@ mod tests {
     /// Calling next skips corrupted index/data entries.
     #[test]
     fn skip_corrupt() {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = get_unix_timestamp(SystemTime::now());
         let writer = TestWriter::new(&dir);
         let mut cursor = StoreCursor::new(get_logger(), dir.path().to_path_buf());
@@ -1055,7 +1055,7 @@ mod tests {
     /// Ensure get and set cursor offset work as expected.
     #[test]
     fn manipulate_offset() {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = get_unix_timestamp(SystemTime::now());
         let writer = TestWriter::new(&dir);
         let mut cursor = StoreCursor::new(get_logger(), dir.path().to_path_buf());
@@ -1102,7 +1102,7 @@ mod tests {
     /// Calling advance after set_offset with invalid offsets.
     #[test]
     fn advance_from_invalid_offset() {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = get_unix_timestamp(SystemTime::now());
         let writer = TestWriter::new(&dir);
         let mut cursor = StoreCursor::new(get_logger(), dir.path().to_path_buf());
@@ -1130,7 +1130,7 @@ mod tests {
     /// Ensure jump_to_key works as expected.
     #[test]
     fn jump_to_key() {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = get_unix_timestamp(SystemTime::now());
         let writer = TestWriter::new(&dir);
         let mut cursor = StoreCursor::new(get_logger(), dir.path().to_path_buf());

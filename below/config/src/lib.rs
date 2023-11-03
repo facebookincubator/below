@@ -15,10 +15,10 @@
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 use anyhow::bail;
 use anyhow::Result;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -30,7 +30,7 @@ const BELOW_DEFAULT_LOG: &str = "/var/log/below";
 const BELOW_DEFAULT_STORE: &str = "/var/log/below/store";
 
 /// Global below config
-pub static BELOW_CONFIG: OnceCell<BelowConfig> = OnceCell::new();
+pub static BELOW_CONFIG: OnceLock<BelowConfig> = OnceLock::new();
 
 #[derive(Serialize, Deserialize, Debug)]
 // If value is missing during deserialization, use the Default::default()
@@ -45,6 +45,7 @@ pub struct BelowConfig {
     pub enable_btrfs_stats: bool,
     pub btrfs_samples: u64,
     pub btrfs_min_pct: f64,
+    pub enable_ethtool_stats: bool,
 }
 
 impl Default for BelowConfig {
@@ -59,6 +60,7 @@ impl Default for BelowConfig {
             enable_btrfs_stats: false,
             btrfs_samples: btrfs::DEFAULT_SAMPLES,
             btrfs_min_pct: btrfs::DEFAULT_MIN_PCT,
+            enable_ethtool_stats: false,
         }
     }
 }

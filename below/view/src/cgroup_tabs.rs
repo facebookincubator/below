@@ -17,6 +17,7 @@ use std::collections::HashSet;
 use cursive::utils::markup::StyledString;
 use model::sort_queriables;
 use model::CgroupModel;
+use model::CgroupModelFieldId;
 use model::Queriable;
 use model::SingleCgroupModel;
 use model::SingleCgroupModelFieldId;
@@ -117,7 +118,12 @@ impl CgroupTab {
 
             let mut children = Vec::from_iter(&cgroup.children);
             if let Some(sort_order) = state.sort_order.as_ref() {
-                sort_queriables(&mut children, &sort_order.to_owned().into(), state.reverse);
+                // field_id that query its own data
+                let field_id = CgroupModelFieldId {
+                    path: Some(vec![]),
+                    subquery_id: sort_order.clone(),
+                };
+                sort_queriables(&mut children, &field_id, state.reverse);
             }
 
             // Stop at next level (one below <root>)
@@ -274,6 +280,8 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::WorkingsetRefaultFile;
     use model::CgroupMemoryModelFieldId::WorkingsetRestoreAnon;
     use model::CgroupMemoryModelFieldId::WorkingsetRestoreFile;
+    use model::CgroupMemoryModelFieldId::Zswap;
+    use model::CgroupMemoryModelFieldId::Zswapped;
     use model::CgroupPressureModelFieldId::CpuFullPct;
     use model::CgroupPressureModelFieldId::CpuSomePct;
     use model::CgroupPressureModelFieldId::IoFullPct;
@@ -289,6 +297,7 @@ pub mod default_tabs {
     use model::CgroupPropertiesFieldId::MemoryHigh;
     use model::CgroupPropertiesFieldId::MemoryLow;
     use model::CgroupPropertiesFieldId::MemoryMax;
+    use model::CgroupPropertiesFieldId::MemoryMin;
     use model::CgroupPropertiesFieldId::MemorySwapMax;
     use model::CgroupPropertiesFieldId::MemoryZswapMax;
     use model::CgroupStatModelFieldId::NrDescendants;
@@ -347,6 +356,8 @@ pub mod default_tabs {
             ViewItem::from_default(Mem(Slab)),
             ViewItem::from_default(Mem(Sock)),
             ViewItem::from_default(Mem(Shmem)),
+            ViewItem::from_default(Mem(Zswap)),
+            ViewItem::from_default(Mem(Zswapped)),
             ViewItem::from_default(Mem(FileMapped)),
             ViewItem::from_default(Mem(FileDirty)),
             ViewItem::from_default(Mem(FileWriteback)),
@@ -413,6 +424,7 @@ pub mod default_tabs {
 
     pub static CGROUP_PROPERTIES_TAB: Lazy<CgroupTab> = Lazy::new(|| {
         CgroupTab::new(vec![
+            ViewItem::from_default(Props(MemoryMin)),
             ViewItem::from_default(Props(MemoryLow)),
             ViewItem::from_default(Props(MemoryHigh)),
             ViewItem::from_default(Props(MemoryMax)),

@@ -245,7 +245,7 @@ impl RenderOpenMetricsConfig {
                 }
                 res
             }
-            _ => self.render_field(&key, field, timestamp),
+            _ => self.render_field(key, field, timestamp),
         }
     }
 }

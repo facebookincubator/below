@@ -29,6 +29,7 @@ pub struct CollectorOptions {
     pub collect_io_stat: bool,
     pub disable_disk_stat: bool,
     pub enable_btrfs_stats: bool,
+    pub enable_ethtool_stats: bool,
     pub btrfs_samples: u64,
     pub btrfs_min_pct: f64,
     pub cgroup_re: Option<Regex>,
@@ -44,6 +45,7 @@ impl Default for CollectorOptions {
             collect_io_stat: true,
             disable_disk_stat: false,
             enable_btrfs_stats: false,
+            enable_ethtool_stats: false,
             btrfs_samples: btrfs::DEFAULT_SAMPLES,
             btrfs_min_pct: btrfs::DEFAULT_MIN_PCT,
             cgroup_re: None,
@@ -274,9 +276,11 @@ fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<S
                 None
             }
         },
-        ethtool: {
+        ethtool: if !options.enable_ethtool_stats {
+            Default::default()
+        } else {
             match ethtool_reader.read_stats::<ethtool::Ethtool>() {
-                Ok(ethtool_stats) => ethtool_stats.into(),
+                Ok(ethtool_stats) => ethtool_stats,
                 Err(e) => {
                     error!(logger, "{:#}", e);
                     Default::default()
@@ -351,7 +355,7 @@ fn collect_cgroup_sample(
     };
     Ok(CgroupSample {
         cpu_stat: wrap(reader.read_cpu_stat())?.map(Into::into),
-        io_stat: io_stat.map(|m| m.into_iter().map(|(k, v)| (k, v.into())).collect()),
+        io_stat,
         memory_current: wrap(reader.read_memory_current().map(|v| v as i64))?,
         memory_stat: wrap(reader.read_memory_stat())?.map(Into::into),
         pressure: pressure_wrap(reader.read_pressure())?.map(Into::into),
@@ -392,7 +396,8 @@ fn collect_cgroup_sample(
             })
             .transpose()?,
         memory_swap_current: wrap(reader.read_memory_swap_current().map(|v| v as i64))?,
-        memory_zswap_current: wrap(reader.read_memory_zswap_current().map(|v| v as i64))?,
+        memory_zswap_current: None, // Use the one from memory.stat
+        memory_min: wrap(reader.read_memory_min())?,
         memory_low: wrap(reader.read_memory_low())?,
         memory_high: wrap(reader.read_memory_high())?,
         memory_max: wrap(reader.read_memory_max())?,

@@ -1,23 +1,21 @@
-use std::{
-    alloc,
-    ffi::CStr,
-    mem,
-    os::fd::{AsRawFd, OwnedFd},
-    ptr, str,
-};
+use std::alloc;
+use std::ffi::CStr;
+use std::mem;
+use std::os::fd::AsRawFd;
+use std::os::fd::FromRawFd;
+use std::os::fd::OwnedFd;
+use std::ptr;
+use std::str;
 
 use nix::errno::Errno;
 use nix::libc;
-use nix::sys::socket::{socket, AddressFamily, SockFlag, SockType};
+use nix::sys::socket::socket;
+use nix::sys::socket::AddressFamily;
+use nix::sys::socket::SockFlag;
+use nix::sys::socket::SockType;
 
 use crate::errors::EthtoolError;
-use crate::{
-    ethtool_gstrings, ethtool_sset_info, ethtool_stats,
-    ethtool_stringset_ETH_SS_STATS as ETH_SS_STATS, ETHTOOL_GSSET_INFO, ETHTOOL_GSTATS,
-    ETHTOOL_GSTRINGS, ETH_GSTRING_LEN,
-};
-
-const ETH_GSTRINGS_LEN: usize = ETH_GSTRING_LEN as usize;
+use crate::ethtool_sys;
 const ETH_GSTATS_LEN: usize = 8;
 
 fn if_name_bytes(if_name: &str) -> [i8; libc::IF_NAMESIZE] {
@@ -47,14 +45,9 @@ fn ioctl(
 /// the function returns a `ParseError`.
 fn parse_names(data: &[u8]) -> Result<Vec<String>, EthtoolError> {
     let names = data
-        .chunks(ETH_GSTRINGS_LEN)
+        .chunks(ethtool_sys::ETH_GSTRING_LEN as usize)
         .map(|chunk| {
-            // // Find the position of the null terminator for specific stat name
-            // let null_pos = chunk.iter().position(|b| *b == 0).unwrap_or(length);
-            // // Convert the stat name to a string
-            // str::from_utf8(&chunk[..null_pos])
-            //     .map(|s| s.to_string())
-            //     .map_err(|err| EthtoolError::ParseError(err.to_string()))
+            // Find the position of the null terminator for specific stat name
             let c_str = CStr::from_bytes_until_nul(chunk);
             match c_str {
                 Ok(c_str) => Ok(c_str.to_string_lossy().into_owned()),
@@ -70,18 +63,14 @@ fn parse_names(data: &[u8]) -> Result<Vec<String>, EthtoolError> {
 /// In case of error during parsing any feature,
 /// the function returns a `ParseError`.
 fn parse_values(data: &[u64], length: usize) -> Result<Vec<u64>, EthtoolError> {
-    let values = data
-        .iter()
-        .take(length)
-        .map(|value| *value)
-        .collect::<Vec<u64>>();
+    let values = data.iter().take(length).copied().collect::<Vec<u64>>();
 
     Ok(values)
 }
 
 struct StringSetInfo {
     layout: alloc::Layout,
-    ptr: *mut ethtool_sset_info,
+    ptr: *mut ethtool_sys::ethtool_sset_info,
 }
 
 impl StringSetInfo {
@@ -89,13 +78,13 @@ impl StringSetInfo {
     fn new() -> Result<Self, EthtoolError> {
         // Calculate the layout with proper alignment
         let layout = alloc::Layout::from_size_align(
-            mem::size_of::<ethtool_sset_info>(),
-            mem::align_of::<ethtool_sset_info>(),
+            mem::size_of::<ethtool_sys::ethtool_sset_info>(),
+            mem::align_of::<ethtool_sys::ethtool_sset_info>(),
         )
-        .map_err(|err| EthtoolError::CStructInitError(err))?;
+        .map_err(EthtoolError::CStructInitError)?;
 
         // Allocate memory for the struct
-        let sset_info_ptr = unsafe { alloc::alloc(layout) } as *mut ethtool_sset_info;
+        let sset_info_ptr = unsafe { alloc::alloc(layout) } as *mut ethtool_sys::ethtool_sset_info;
 
         // Initialize the fields of the struct
         unsafe {
@@ -104,9 +93,9 @@ impl StringSetInfo {
             let sset_mask_ptr = ptr::addr_of_mut!((*sset_info_ptr).sset_mask);
             let data_ptr = ptr::addr_of_mut!((*sset_info_ptr).data);
 
-            cmd_ptr.write(ETHTOOL_GSSET_INFO);
+            cmd_ptr.write(ethtool_sys::ETHTOOL_GSSET_INFO);
             reserved_ptr.write(1u32);
-            sset_mask_ptr.write((1 << ETH_SS_STATS) as u64);
+            sset_mask_ptr.write((1 << ethtool_sys::ethtool_stringset_ETH_SS_STATS) as u64);
 
             data_ptr.write_bytes(0u8, mem::size_of::<u32>());
         }
@@ -118,7 +107,6 @@ impl StringSetInfo {
     }
 
     fn data(&self) -> Result<usize, EthtoolError> {
-        // (unsafe { self.ptr.as_mut().unwrap().data.as_ptr().read() }) as usize
         unsafe {
             let value = self.ptr.as_ref().ok_or(EthtoolError::CStructReadError())?;
             Ok(value.data.as_ptr().read() as usize)
@@ -137,22 +125,25 @@ impl Drop for StringSetInfo {
 struct GStrings {
     length: usize,
     layout: alloc::Layout,
-    ptr: *mut ethtool_gstrings,
+    ptr: *mut ethtool_sys::ethtool_gstrings,
 }
 
 impl GStrings {
     fn new(length: usize) -> Result<Self, EthtoolError> {
-        let data_length = length * ETH_GSTRINGS_LEN;
+        let data_length = length * ethtool_sys::ETH_GSTRING_LEN as usize;
 
         // Calculate the layout with proper alignment based on the struct itself
         let layout = alloc::Layout::from_size_align(
-            mem::size_of::<ethtool_gstrings>() + data_length * mem::size_of::<u8>(),
-            mem::align_of::<ethtool_gstrings>(),
+            mem::size_of::<ethtool_sys::ethtool_gstrings>() + data_length * mem::size_of::<u8>(),
+            mem::align_of::<ethtool_sys::ethtool_gstrings>(),
         )
-        .map_err(|err| EthtoolError::CStructInitError(err))?;
+        .map_err(EthtoolError::CStructInitError)?;
 
         // Allocate memory for the struct
-        let gstrings_ptr = unsafe { alloc::alloc(layout) } as *mut ethtool_gstrings;
+        let gstrings_ptr = unsafe { alloc::alloc(layout) } as *mut ethtool_sys::ethtool_gstrings;
+        if gstrings_ptr.is_null() {
+            return Err(EthtoolError::AllocationFailure());
+        }
 
         // Initialize the fields of the struct using raw pointers
         unsafe {
@@ -160,8 +151,8 @@ impl GStrings {
             let ss_ptr = ptr::addr_of_mut!((*gstrings_ptr).string_set);
             let data_ptr = ptr::addr_of_mut!((*gstrings_ptr).data);
 
-            cmd_ptr.write(ETHTOOL_GSTRINGS);
-            ss_ptr.write(ETH_SS_STATS);
+            cmd_ptr.write(ethtool_sys::ETHTOOL_GSTRINGS);
+            ss_ptr.write(ethtool_sys::ethtool_stringset_ETH_SS_STATS);
 
             // Initialize the data field with zeros
             data_ptr.write_bytes(0u8, data_length);
@@ -178,7 +169,7 @@ impl GStrings {
         unsafe {
             Ok(std::slice::from_raw_parts(
                 (*self.ptr).data.as_ptr(),
-                self.length * ETH_GSTRINGS_LEN,
+                self.length * ethtool_sys::ETH_GSTRING_LEN as usize,
             ))
         }
     }
@@ -195,7 +186,7 @@ impl Drop for GStrings {
 struct GStats {
     length: usize,
     layout: alloc::Layout,
-    ptr: *mut ethtool_stats,
+    ptr: *mut ethtool_sys::ethtool_stats,
 }
 
 impl GStats {
@@ -205,20 +196,23 @@ impl GStats {
 
         // Calculate the layout with proper alignment
         let layout = alloc::Layout::from_size_align(
-            mem::size_of::<ethtool_stats>() + data_length * mem::size_of::<u64>(),
-            mem::align_of::<ethtool_stats>(),
+            mem::size_of::<ethtool_sys::ethtool_stats>() + data_length * mem::size_of::<u64>(),
+            mem::align_of::<ethtool_sys::ethtool_stats>(),
         )
-        .map_err(|err| EthtoolError::CStructInitError(err))?;
+        .map_err(EthtoolError::CStructInitError)?;
 
         // Allocate memory for the struct
-        let stats_ptr = unsafe { alloc::alloc(layout) } as *mut ethtool_stats;
+        let stats_ptr = unsafe { alloc::alloc(layout) } as *mut ethtool_sys::ethtool_stats;
+        if stats_ptr.is_null() {
+            return Err(EthtoolError::AllocationFailure());
+        }
 
         // Initialize the fields of the struct
         unsafe {
             let cmd_ptr = ptr::addr_of_mut!((*stats_ptr).cmd);
             let data_ptr = ptr::addr_of_mut!((*stats_ptr).data);
 
-            cmd_ptr.write(ETHTOOL_GSTATS);
+            cmd_ptr.write(ethtool_sys::ETHTOOL_GSTATS);
 
             // Initialize the data field with zeros
             let data_bytes = data_length * mem::size_of::<u64>();
@@ -310,7 +304,7 @@ impl EthtoolReadable for Ethtool {
             None,
         ) {
             Ok(fd) => Ok(Ethtool {
-                sock_fd: fd,
+                sock_fd: unsafe { OwnedFd::from_raw_fd(fd) },
                 if_name: if_name_bytes(if_name),
             }),
             Err(errno) => Err(EthtoolError::SocketError(errno)),

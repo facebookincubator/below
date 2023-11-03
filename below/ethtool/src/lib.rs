@@ -1,15 +1,16 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-include!(concat!(env!("OUT_DIR"), "/ethtool_bindings.rs"));
 
 mod errors;
+mod ethtool_sys;
 mod reader;
 mod types;
 
 mod test;
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashSet;
 
 use errors::EthtoolError;
 pub use reader::*;
@@ -44,7 +45,7 @@ fn parse_queue_stat(name: &str) -> Option<(usize, &str)> {
     }
 }
 
-pub fn insert_stat(stat: &mut QueueStats, name: &str, value: u64) {
+fn insert_stat(stat: &mut QueueStats, name: &str, value: u64) {
     match name {
         "rx_bytes" => stat.rx_bytes = Some(value),
         "tx_bytes" => stat.tx_bytes = Some(value),
@@ -67,7 +68,7 @@ fn translate_stats(stats: Vec<(String, u64)>) -> Result<NicStats> {
             Some((queue_id, stat)) => {
                 let qstat = queue_stats_map
                     .entry(queue_id)
-                    .or_insert_with(|| QueueStats::default());
+                    .or_insert_with(QueueStats::default);
                 insert_stat(qstat, stat, value);
             }
             None => match name.as_str() {
@@ -79,7 +80,7 @@ fn translate_stats(stats: Vec<(String, u64)>) -> Result<NicStats> {
         }
     }
 
-    let queue_stats = queue_stats_map.into_iter().map(|(_, v)| v).collect();
+    let queue_stats = queue_stats_map.into_values().collect();
 
     nic_stats.queue = queue_stats;
     nic_stats.raw_stats = raw_stats;
