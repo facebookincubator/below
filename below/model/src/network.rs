@@ -58,7 +58,9 @@ impl NetworkModel {
                 .interfaces
                 .as_ref()
                 .and_then(|ifaces| ifaces.get(&interface));
-            let ethtool_stat = ethtool_stats.as_ref().and_then(|stat| stat.nic.get(&interface));
+            let ethtool_stat = ethtool_stats
+                .as_ref()
+                .and_then(|stat| stat.nic.get(&interface));
 
             let s_iface = SingleNetworkStat {
                 iface: iface_stat,
