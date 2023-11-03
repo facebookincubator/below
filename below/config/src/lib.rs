@@ -60,7 +60,7 @@ impl Default for BelowConfig {
             enable_btrfs_stats: false,
             btrfs_samples: btrfs::DEFAULT_SAMPLES,
             btrfs_min_pct: btrfs::DEFAULT_MIN_PCT,
-            enable_ethtool_stats: false,
+            enable_ethtool_stats: true,
         }
     }
 }
