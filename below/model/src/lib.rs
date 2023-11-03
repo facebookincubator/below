@@ -496,7 +496,7 @@ impl<K: Ord, Q: Queriable> Queriable for BTreeMap<K, Q> {
 
 pub struct NetworkStats<'a> {
     net: &'a procfs::NetStat,
-    ethtool: &'a ethtool::EthtoolStats,
+    ethtool: &'a Option<ethtool::EthtoolStats>,
 }
 
 #[derive(Serialize, Deserialize, below_derive::Queriable)]
