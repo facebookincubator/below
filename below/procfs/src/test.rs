@@ -1190,6 +1190,26 @@ fn test_read_net_stat() {
     verify_interfaces(&netstat);
 }
 
+#[test]
+fn test_read_with_errors() {
+    let netsysfs = TestProcfs::new();
+    write_net_map(&netsysfs);
+    let netstat = netsysfs
+        .get_net_reader()
+        .read_netstat()
+        .expect("Fail to get NetStat");
+    verify_interfaces(&netstat);
+    assert_eq!(netstat.tcp, None);
+    assert_eq!(netstat.tcp_ext, None);
+    assert_eq!(netstat.ip, None);
+    assert_eq!(netstat.ip_ext, None);
+    assert_eq!(netstat.ip6, None);
+    assert_eq!(netstat.icmp, None);
+    assert_eq!(netstat.icmp6, None);
+    assert_eq!(netstat.udp, None);
+    assert_eq!(netstat.udp6, None);
+}
+
 fn verify_tcp(netstat: &NetStat) {
     let tcp = netstat.tcp.as_ref().expect("Fail to collect tcp stats");
     assert_eq!(tcp.active_opens, Some(54_858_563));
