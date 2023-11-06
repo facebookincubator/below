@@ -1305,21 +1305,21 @@ impl NetReader {
     }
 
     pub fn read_netstat(&self) -> Result<NetStat> {
-        let netstat_map = self.read_kv_diff_line("netstat")?;
-        let snmp_map = self.read_kv_diff_line("snmp")?;
-        let snmp6_map = self.read_kv_same_line("snmp6")?;
+        let netstat_map = self.read_kv_diff_line("netstat").ok();
+        let snmp_map = self.read_kv_diff_line("snmp").ok();
+        let snmp6_map = self.read_kv_same_line("snmp6").ok();
 
         Ok(NetStat {
-            interfaces: Some(self.read_net_map()?),
-            tcp: Some(Self::read_tcp_stat(&snmp_map)),
-            tcp_ext: Some(Self::read_tcp_ext_stat(&netstat_map)),
-            ip: Some(Self::read_ip_stat(&snmp_map)),
-            ip_ext: Some(Self::read_ip_ext_stat(&netstat_map)),
-            ip6: Some(Self::read_ip6_stat(&snmp6_map)),
-            icmp: Some(Self::read_icmp_stat(&snmp_map)),
-            icmp6: Some(Self::read_icmp6_stat(&snmp6_map)),
-            udp: Some(Self::read_udp_stat(&snmp_map)),
-            udp6: Some(Self::read_udp6_stat(&snmp6_map)),
+            interfaces: self.read_net_map().ok(),
+            tcp: snmp_map.as_ref().map(Self::read_tcp_stat),
+            tcp_ext: netstat_map.as_ref().map(Self::read_tcp_ext_stat),
+            ip: snmp_map.as_ref().map(Self::read_ip_stat),
+            ip_ext: netstat_map.as_ref().map(Self::read_ip_ext_stat),
+            ip6: snmp6_map.as_ref().map(Self::read_ip6_stat),
+            icmp: snmp_map.as_ref().map(Self::read_icmp_stat),
+            icmp6: snmp6_map.as_ref().map(Self::read_icmp6_stat),
+            udp: snmp_map.as_ref().map(Self::read_udp_stat),
+            udp6: snmp6_map.as_ref().map(Self::read_udp6_stat),
         })
     }
 }
