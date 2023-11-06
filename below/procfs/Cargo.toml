@@ -11,11 +11,13 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
+common = { package = "below-common", version = "0.7.1", path = "../common" }
 lazy_static = "1.4"
 libc = "0.2.139"
 nix = "0.25"
 openat = "0.1.21"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.43"
 threadpool = "1.8.1"
 

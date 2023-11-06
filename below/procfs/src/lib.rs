@@ -29,8 +29,11 @@ use std::time::Duration;
 use lazy_static::lazy_static;
 use nix::sys;
 use openat::Dir;
+use slog::error;
 use thiserror::Error;
 use threadpool::ThreadPool;
+
+use common::logutil::get_logger;
 
 mod types;
 pub use types::*;
@@ -1305,12 +1308,26 @@ impl NetReader {
     }
 
     pub fn read_netstat(&self) -> Result<NetStat> {
-        let netstat_map = self.read_kv_diff_line("netstat").ok();
-        let snmp_map = self.read_kv_diff_line("snmp").ok();
-        let snmp6_map = self.read_kv_same_line("snmp6").ok();
+        let logger = get_logger();
+        let netstat_map = self
+            .read_kv_diff_line("netstat")
+            .map_err(|err| error!(logger, "Failed to read netstat: {:?}", err))
+            .ok();
+        let snmp_map = self
+            .read_kv_diff_line("snmp")
+            .map_err(|err| error!(logger, "Failed to read snmp stats: {:?}", err))
+            .ok();
+        let snmp6_map = self
+            .read_kv_same_line("snmp6")
+            .map_err(|err| error!(logger, "Failed to read snmp6 stats: {:?}", err))
+            .ok();
+        let iface_map = self
+            .read_net_map()
+            .map_err(|err| error!(logger, "Failed to read interface stats: {:?}", err))
+            .ok();
 
         Ok(NetStat {
-            interfaces: self.read_net_map().ok(),
+            interfaces: iface_map,
             tcp: snmp_map.as_ref().map(Self::read_tcp_stat),
             tcp_ext: netstat_map.as_ref().map(Self::read_tcp_ext_stat),
             ip: snmp_map.as_ref().map(Self::read_ip_stat),
