@@ -33,8 +33,6 @@ use slog::error;
 use thiserror::Error;
 use threadpool::ThreadPool;
 
-use common::logutil::get_logger;
-
 mod types;
 pub use types::*;
 
@@ -911,16 +909,18 @@ macro_rules! get_val_from_stats_map {
 }
 
 pub struct NetReader {
+    logger: slog::Logger,
     interface_dir: Dir,
     proc_net_dir: Dir,
 }
 
 impl NetReader {
-    pub fn new() -> Result<NetReader> {
-        Self::new_with_custom_path(NET_SYSFS.into(), NET_PROCFS.into())
+    pub fn new(logger: slog::Logger) -> Result<NetReader> {
+        Self::new_with_custom_path(logger, NET_SYSFS.into(), NET_PROCFS.into())
     }
 
     pub fn new_with_custom_path(
+        logger: slog::Logger,
         interface_path: PathBuf,
         proc_net_path: PathBuf,
     ) -> Result<NetReader> {
@@ -930,6 +930,7 @@ impl NetReader {
             Dir::open(&proc_net_path).map_err(|e| Error::IoError(proc_net_path, e))?;
 
         Ok(NetReader {
+            logger,
             interface_dir,
             proc_net_dir,
         })
@@ -1308,22 +1309,21 @@ impl NetReader {
     }
 
     pub fn read_netstat(&self) -> Result<NetStat> {
-        let logger = get_logger();
         let netstat_map = self
             .read_kv_diff_line("netstat")
-            .map_err(|err| error!(logger, "Failed to read netstat: {:?}", err))
+            .map_err(|err| error!(self.logger, "Failed to read netstat: {:?}", err))
             .ok();
         let snmp_map = self
             .read_kv_diff_line("snmp")
-            .map_err(|err| error!(logger, "Failed to read snmp stats: {:?}", err))
+            .map_err(|err| error!(self.logger, "Failed to read snmp stats: {:?}", err))
             .ok();
         let snmp6_map = self
             .read_kv_same_line("snmp6")
-            .map_err(|err| error!(logger, "Failed to read snmp6 stats: {:?}", err))
+            .map_err(|err| error!(self.logger, "Failed to read snmp6 stats: {:?}", err))
             .ok();
         let iface_map = self
             .read_net_map()
-            .map_err(|err| error!(logger, "Failed to read interface stats: {:?}", err))
+            .map_err(|err| error!(self.logger, "Failed to read interface stats: {:?}", err))
             .ok();
 
         Ok(NetStat {

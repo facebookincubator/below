@@ -17,6 +17,7 @@ use std::io::Write;
 use std::os::unix::fs::symlink;
 use std::path::Path;
 
+use common::logutil::get_logger;
 use tempfile::TempDir;
 
 use crate::types::*;
@@ -80,11 +81,12 @@ impl TestProcfs {
     }
 
     fn get_net_reader(&self) -> NetReader {
+        let logger = get_logger();
         let iface_dir = self.path().join("iface");
         if !iface_dir.exists() {
             std::fs::create_dir(&iface_dir).expect("Failed to create iface dir");
         }
-        NetReader::new_with_custom_path(iface_dir, self.path().to_path_buf())
+        NetReader::new_with_custom_path(logger, iface_dir, self.path().to_path_buf())
             .expect("Fail to construct Net Reader")
     }
 

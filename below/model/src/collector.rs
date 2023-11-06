@@ -200,7 +200,7 @@ fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<S
                 .collect(),
             exit_pidmap,
         ),
-        netstats: match procfs::NetReader::new().and_then(|v| v.read_netstat()) {
+        netstats: match procfs::NetReader::new(logger.clone()).and_then(|v| v.read_netstat()) {
             Ok(ns) => ns.into(),
             Err(e) => {
                 error!(logger, "{:#}", e);
