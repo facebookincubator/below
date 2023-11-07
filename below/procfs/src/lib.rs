@@ -29,7 +29,7 @@ use std::time::Duration;
 use lazy_static::lazy_static;
 use nix::sys;
 use openat::Dir;
-use slog::warn;
+use slog::debug;
 use thiserror::Error;
 use threadpool::ThreadPool;
 
@@ -1334,7 +1334,7 @@ fn handle_io_error<K, V>(
     result: Result<BTreeMap<K, V>>,
 ) -> Result<Option<BTreeMap<K, V>>> {
     let netstat_map = if let Err(Error::IoError(_, err)) = result {
-        warn!(logger, "{:?}", err);
+        debug!(logger, "{:?}", err);
         None
     } else {
         Some(result?)
