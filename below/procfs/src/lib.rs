@@ -29,7 +29,7 @@ use std::time::Duration;
 use lazy_static::lazy_static;
 use nix::sys;
 use openat::Dir;
-use slog::error;
+use slog::warn;
 use thiserror::Error;
 use threadpool::ThreadPool;
 
@@ -1309,22 +1309,10 @@ impl NetReader {
     }
 
     pub fn read_netstat(&self) -> Result<NetStat> {
-        let netstat_map = self
-            .read_kv_diff_line("netstat")
-            .map_err(|err| error!(self.logger, "Failed to read netstat: {:?}", err))
-            .ok();
-        let snmp_map = self
-            .read_kv_diff_line("snmp")
-            .map_err(|err| error!(self.logger, "Failed to read snmp stats: {:?}", err))
-            .ok();
-        let snmp6_map = self
-            .read_kv_same_line("snmp6")
-            .map_err(|err| error!(self.logger, "Failed to read snmp6 stats: {:?}", err))
-            .ok();
-        let iface_map = self
-            .read_net_map()
-            .map_err(|err| error!(self.logger, "Failed to read interface stats: {:?}", err))
-            .ok();
+        let netstat_map = handle_io_error(&self.logger, self.read_kv_diff_line("netstat"))?;
+        let snmp_map = handle_io_error(&self.logger, self.read_kv_diff_line("snmp"))?;
+        let snmp6_map = handle_io_error(&self.logger, self.read_kv_same_line("snmp6"))?;
+        let iface_map = handle_io_error(&self.logger, self.read_net_map())?;
 
         Ok(NetStat {
             interfaces: iface_map,
@@ -1339,4 +1327,17 @@ impl NetReader {
             udp6: snmp6_map.as_ref().map(Self::read_udp6_stat),
         })
     }
+}
+
+fn handle_io_error<K, V>(
+    logger: &slog::Logger,
+    result: Result<BTreeMap<K, V>>,
+) -> Result<Option<BTreeMap<K, V>>> {
+    let netstat_map = if let Err(Error::IoError(_, err)) = result {
+        warn!(logger, "{:?}", err);
+        None
+    } else {
+        Some(result?)
+    };
+    Ok(netstat_map)
 }
