@@ -1193,9 +1193,10 @@ fn test_read_net_stat() {
 }
 
 #[test]
-fn test_read_with_errors() {
+fn test_read_enoent() {
     let netsysfs = TestProcfs::new();
     write_net_map(&netsysfs);
+
     let netstat = netsysfs
         .get_net_reader()
         .read_netstat()
@@ -1210,6 +1211,19 @@ fn test_read_with_errors() {
     assert_eq!(netstat.icmp6, None);
     assert_eq!(netstat.udp, None);
     assert_eq!(netstat.udp6, None);
+}
+
+#[test]
+fn test_read_bad_file() {
+    let netsysfs = TestProcfs::new();
+    write_net_map(&netsysfs);
+    netsysfs.create_file_with_content("snmp", b"bad\nfile");
+
+    let err = netsysfs
+        .get_net_reader()
+        .read_netstat()
+        .unwrap_err();
+    assert!(matches!(err, crate::Error::InvalidFileFormat(_)));
 }
 
 fn verify_tcp(netstat: &NetStat) {
