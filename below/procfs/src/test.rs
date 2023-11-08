@@ -1222,10 +1222,7 @@ fn test_read_bad_file() {
     write_net_map(&netsysfs);
     netsysfs.create_file_with_content("snmp", b"bad\nfile");
 
-    let err = netsysfs
-        .get_net_reader()
-        .read_netstat()
-        .unwrap_err();
+    let err = netsysfs.get_net_reader().read_netstat().unwrap_err();
     assert!(matches!(err, crate::Error::InvalidFileFormat(_)));
 }
 
