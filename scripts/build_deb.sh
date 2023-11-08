@@ -33,6 +33,12 @@ if [[ $# != 1 ]]; then
 fi
 
 docker build -f Dockerfile.debian --build-arg RELEASE="$1" -t below-deb .
-docker run -v $(pwd):/output below-deb /bin/bash -c "cp /below/target/debian/below_*.deb /output"
+docker run -i -v $(pwd):/output -e RELEASE="$1" below-deb /bin/bash <<'EOF'
+  # Hacky way to select a file by glob but still append a suffix
+  cd /below/target/debian
+  for d in ./below_*.deb; do
+    cp $d /output/${d%.deb}_${RELEASE}.deb
+  done
+EOF
 
 echo Debian package copied to $(pwd)
