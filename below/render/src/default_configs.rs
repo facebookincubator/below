@@ -89,6 +89,7 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
         use model::CgroupMemoryModelFieldId::WorkingsetRestoreAnon;
         use model::CgroupMemoryModelFieldId::WorkingsetRestoreFile;
         use model::CgroupMemoryModelFieldId::Zswap;
+        use model::CgroupMemoryModelFieldId::Zswapped;
         use model::CgroupPressureModelFieldId::MemoryFullPct;
         use model::CgroupPressureModelFieldId::MemorySomePct;
         use model::SingleCgroupModelFieldId::Cpu;
@@ -114,12 +115,13 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
             Io(CostIndelayPct) => rc.title("Cost Indelay"),
             Mem(Total) => rc.title("Mem Total"),
             Mem(Swap) => rc.title("Mem Swap"),
-            Mem(Zswap) => rc.title("Mem Zswap"),
             Mem(Anon) => rc.title("Mem Anon"),
             Mem(File) => rc.title("Mem File"),
             Mem(Slab) => rc.title("Mem Slab"),
             Mem(Sock) => rc.title("Mem Sock"),
             Mem(Shmem) => rc.title("Mem Shmem"),
+            Mem(Zswap) => rc.title("Mem Zswap"),
+            Mem(Zswapped) => rc.title("Mem Zswapped"),
             Mem(Pgfault) => rc.title("Pgfault"),
             Mem(Pgmajfault) => rc.title("Pgmajfault"),
             Mem(WorkingsetRefaultAnon) => rc.title("Workingset Refault Anon"),
@@ -189,10 +191,8 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
             Mem(field_id) => match field_id {
                 Total => Some(counter.unit("bytes")),
                 Swap => Some(counter.unit("bytes")),
-                Zswap => Some(counter.unit("bytes")),
                 // Not sure what to do about min/low/high/max values b/c they're neither
                 // counters nor gauges. So leave out for now.
-                MemoryHigh => None,
                 EventsLow => None,
                 EventsHigh => None,
                 EventsMax => None,
@@ -204,6 +204,8 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
                 Slab => Some(gauge.unit("bytes")),
                 Sock => Some(gauge.unit("bytes")),
                 Shmem => Some(gauge.unit("bytes")),
+                Zswap => Some(counter.unit("bytes")),
+                Zswapped => Some(gauge.unit("bytes")),
                 FileMapped => Some(gauge.unit("bytes")),
                 FileDirty => Some(gauge.unit("bytes")),
                 FileWriteback => Some(gauge.unit("bytes")),
@@ -300,8 +302,6 @@ impl HasRenderConfig for model::CgroupMemoryModel {
         match field_id {
             Total => rc.title("Mem").format(ReadableSize),
             Swap => rc.title("Mem Swap").format(ReadableSize),
-            Zswap => rc.title("Mem Zswap").format(ReadableSize),
-            MemoryHigh => rc.title("Mem High").format(MaxOrReadableSize),
             EventsLow => rc.title("Events Low"),
             EventsHigh => rc.title("Events High"),
             EventsMax => rc.title("Events Max"),
@@ -313,6 +313,8 @@ impl HasRenderConfig for model::CgroupMemoryModel {
             Slab => rc.title("Slab").format(ReadableSize),
             Sock => rc.title("Sock").format(ReadableSize),
             Shmem => rc.title("Shmem").format(ReadableSize),
+            Zswap => rc.title("Zswap").format(ReadableSize),
+            Zswapped => rc.title("Zswapped").format(ReadableSize),
             FileMapped => rc.title("File Mapped").format(ReadableSize),
             FileDirty => rc.title("File Dirty").format(ReadableSize),
             FileWriteback => rc.title("File WB").format(ReadableSize),
@@ -794,7 +796,7 @@ impl HasRenderConfig for Vec<model::SingleQueueModel> {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         let mut rc =
             model::SingleQueueModel::get_render_config_builder(&field_id.subquery_id).get();
-        rc.title = rc.title.map(|title| format!("{}", title));
+        rc.title = rc.title.map(|title| title.to_string());
         rc.into()
     }
 }
@@ -1472,6 +1474,7 @@ impl HasRenderConfig for model::CgroupProperties {
             // "cpu cpuset hugetlb io memory pids" is 33 chars
             CgroupControllers => rc.title("Controllers").width(35),
             CgroupSubtreeControl => rc.title("SubtreeControl").width(35),
+            MemoryMin => rc.title("Mem Min").format(MaxOrReadableSize),
             MemoryLow => rc.title("Mem Low").format(MaxOrReadableSize),
             MemoryHigh => rc.title("Mem High").format(MaxOrReadableSize),
             MemoryMax => rc.title("Mem Max").format(MaxOrReadableSize),

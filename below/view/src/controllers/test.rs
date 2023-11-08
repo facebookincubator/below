@@ -14,7 +14,7 @@
 
 use std::io::prelude::*;
 
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 use super::*;
 use crate::fake_view::FakeView;
@@ -295,7 +295,7 @@ fn test_event_to_str() {
 #[test]
 fn test_belowrc_to_event() {
     // Creating self cleaning test belowrc file
-    let tempdir = TempDir::new("below_cmd_test").expect("Failed to create temp dir");
+    let tempdir = TempDir::with_prefix("below_cmd_test.").expect("Failed to create temp dir");
     let path = tempdir.path().join("belowrc");
 
     let mut file = std::fs::OpenOptions::new()

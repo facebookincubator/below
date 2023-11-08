@@ -56,6 +56,8 @@ pub struct MemoryStat {
     pub slab: Option<u64>,
     pub sock: Option<u64>,
     pub shmem: Option<u64>,
+    pub zswap: Option<u64>,
+    pub zswapped: Option<u64>,
     pub file_mapped: Option<u64>,
     pub file_dirty: Option<u64>,
     pub file_writeback: Option<u64>,

@@ -471,49 +471,37 @@ impl SingleNetModel {
         net_model.tx_bytes_per_sec = tx_bytes_per_sec;
         net_model.throughput_per_sec = throughput_per_sec;
         net_model.rx_packets_per_sec = last
-            .map(|(l, d)| {
-                count_per_sec!(
-                    l.rx_packets.map(|s| s as u64),
-                    sample.rx_packets.map(|s| s as u64),
-                    d
-                )
-            })
+            .map(|(l, d)| count_per_sec!(l.rx_packets, sample.rx_packets, d))
             .unwrap_or_default()
             .map(|s| s as u64);
         net_model.tx_packets_per_sec = last
-            .map(|(l, d)| {
-                count_per_sec!(
-                    l.tx_packets.map(|s| s as u64),
-                    sample.tx_packets.map(|s| s as u64),
-                    d
-                )
-            })
+            .map(|(l, d)| count_per_sec!(l.tx_packets, sample.tx_packets, d))
             .unwrap_or_default()
             .map(|s| s as u64);
-        net_model.collisions = sample.collisions.map(|s| s as u64);
-        net_model.multicast = sample.multicast.map(|s| s as u64);
-        net_model.rx_bytes = sample.rx_bytes.map(|s| s as u64);
-        net_model.rx_compressed = sample.rx_compressed.map(|s| s as u64);
-        net_model.rx_crc_errors = sample.rx_crc_errors.map(|s| s as u64);
-        net_model.rx_dropped = sample.rx_dropped.map(|s| s as u64);
-        net_model.rx_errors = sample.rx_errors.map(|s| s as u64);
-        net_model.rx_fifo_errors = sample.rx_fifo_errors.map(|s| s as u64);
-        net_model.rx_frame_errors = sample.rx_frame_errors.map(|s| s as u64);
-        net_model.rx_length_errors = sample.rx_length_errors.map(|s| s as u64);
-        net_model.rx_missed_errors = sample.rx_missed_errors.map(|s| s as u64);
-        net_model.rx_nohandler = sample.rx_nohandler.map(|s| s as u64);
-        net_model.rx_over_errors = sample.rx_over_errors.map(|s| s as u64);
-        net_model.rx_packets = sample.rx_packets.map(|s| s as u64);
-        net_model.tx_aborted_errors = sample.tx_aborted_errors.map(|s| s as u64);
-        net_model.tx_bytes = sample.tx_bytes.map(|s| s as u64);
-        net_model.tx_carrier_errors = sample.tx_carrier_errors.map(|s| s as u64);
-        net_model.tx_compressed = sample.tx_compressed.map(|s| s as u64);
-        net_model.tx_dropped = sample.tx_dropped.map(|s| s as u64);
-        net_model.tx_errors = sample.tx_errors.map(|s| s as u64);
-        net_model.tx_fifo_errors = sample.tx_fifo_errors.map(|s| s as u64);
-        net_model.tx_heartbeat_errors = sample.tx_heartbeat_errors.map(|s| s as u64);
-        net_model.tx_packets = sample.tx_packets.map(|s| s as u64);
-        net_model.tx_window_errors = sample.tx_window_errors.map(|s| s as u64);
+        net_model.collisions = sample.collisions;
+        net_model.multicast = sample.multicast;
+        net_model.rx_bytes = sample.rx_bytes;
+        net_model.rx_compressed = sample.rx_compressed;
+        net_model.rx_crc_errors = sample.rx_crc_errors;
+        net_model.rx_dropped = sample.rx_dropped;
+        net_model.rx_errors = sample.rx_errors;
+        net_model.rx_fifo_errors = sample.rx_fifo_errors;
+        net_model.rx_frame_errors = sample.rx_frame_errors;
+        net_model.rx_length_errors = sample.rx_length_errors;
+        net_model.rx_missed_errors = sample.rx_missed_errors;
+        net_model.rx_nohandler = sample.rx_nohandler;
+        net_model.rx_over_errors = sample.rx_over_errors;
+        net_model.rx_packets = sample.rx_packets;
+        net_model.tx_aborted_errors = sample.tx_aborted_errors;
+        net_model.tx_bytes = sample.tx_bytes;
+        net_model.tx_carrier_errors = sample.tx_carrier_errors;
+        net_model.tx_compressed = sample.tx_compressed;
+        net_model.tx_dropped = sample.tx_dropped;
+        net_model.tx_errors = sample.tx_errors;
+        net_model.tx_fifo_errors = sample.tx_fifo_errors;
+        net_model.tx_heartbeat_errors = sample.tx_heartbeat_errors;
+        net_model.tx_packets = sample.tx_packets;
+        net_model.tx_window_errors = sample.tx_window_errors;
     }
 
     fn add_ethtool_stats(
@@ -556,13 +544,7 @@ impl SingleNetModel {
             Self::add_iface_stats(
                 &mut net_model,
                 iface_stat,
-                last.and_then(|(l, d)| {
-                    if let Some(l) = l.iface {
-                        Some((l, d))
-                    } else {
-                        None
-                    }
-                }),
+                last.and_then(|(l, d)| l.iface.map(|l| (l, d))),
             );
         }
 

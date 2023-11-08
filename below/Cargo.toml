@@ -20,7 +20,7 @@ unit-name = "below"
 unit-scripts = "../etc"
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = "=1.0.72"
 cgroupfs = { version = "0.7.1", path = "cgroupfs" }
 clap = { version = "4.3.5", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 clap_complete = "4.3.1"
@@ -29,7 +29,7 @@ config = { package = "below-config", version = "0.7.1", path = "config" }
 cursive = { version = "0.20.0", features = ["crossterm-backend"], default-features = false }
 dump = { package = "below-dump", version = "0.7.1", path = "dump" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
-indicatif = { version = "0.17.3", features = ["improved_unicode", "rayon", "tokio"] }
+indicatif = { version = "0.17.6", features = ["improved_unicode", "rayon", "tokio"] }
 libbpf-rs = "0.21.2"
 libc = "0.2.139"
 model = { package = "below-model", version = "0.7.1", path = "model" }
@@ -43,7 +43,7 @@ slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 slog-term = "2.8"
 store = { package = "below-store", version = "0.7.1", path = "store" }
 tar = "0.4.40"
-tempdir = "0.3"
+tempfile = "3.8"
 users = "0.11"
 view = { package = "below-view", version = "0.7.1", path = "view" }
 

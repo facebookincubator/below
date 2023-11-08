@@ -28,4 +28,7 @@ pub enum EthtoolError {
 
     #[error("Failed to parse stats, error={0:}")]
     ParseError(String),
+
+    #[error("Failed to allocate memory")]
+    AllocationFailure(),
 }

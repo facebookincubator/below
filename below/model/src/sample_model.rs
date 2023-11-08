@@ -189,6 +189,31 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
             "full_path": "",
             "inode_number": 1,
             "depth": 0,
+            "properties": {
+                "cgroup_controllers": ["cpu", "cpuset", "hugetlb", "io", "memory", "pids"],
+                "cgroup_subtree_control": ["cpu", "cpuset", "io", "memory", "pids"],
+                "memory_min": null,
+                "memory_low": null,
+                "memory_high": null,
+                "memory_max": null,
+                "memory_swap_max": null,
+                "memory_zswap_max": null,
+                "cpu_weight": null,
+                "cpu_max_usec": null,
+                "cpu_max_period_usec": null,
+                "cpuset_cpus": {
+                    "cpus": []
+                },
+                "cpuset_cpus_effective": {
+                    "cpus": [0, 1, 2, 3]
+                },
+                "cpuset_mems": {
+                    "nodes": []
+                },
+                "cpuset_mems_effective": {
+                    "nodes": [0, 1, 2, 3]
+                }
+            },
             "cpu": null,
             "memory": {
                 "total": 5000000000,
@@ -199,6 +224,8 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                 "slab": 300000000,
                 "sock": 10000000,
                 "shmem": 2000000,
+                "zswap": 100,
+                "zswapped": 1000000,
                 "file_mapped": 200000000,
                 "file_dirty": 3000000,
                 "file_writeback": 60000000,
@@ -224,7 +251,6 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                 "pglazyfreed": 0,
                 "thp_fault_alloc": 0,
                 "thp_collapse_alloc": 0,
-                "memory_high": null,
                 "events_low": 0,
                 "events_high": 300000,
                 "events_max": 300000,
@@ -248,6 +274,31 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                     "full_path": "/init.scope",
                     "inode_number": 17,
                     "depth": 1,
+                    "properties": {
+                        "cgroup_controllers": ["cpu", "cpuset", "io", "memory", "pids"],
+                        "cgroup_subtree_control": ["cpu", "cpuset", "io", "memory", "pids"],
+                        "memory_min": 0,
+                        "memory_low": 0,
+                        "memory_high": -1,
+                        "memory_max": -1,
+                        "memory_swap_max": -1,
+                        "memory_zswap_max": -1,
+                        "cpu_weight": 100,
+                        "cpu_max_usec": -1,
+                        "cpu_max_period_usec": 100000,
+                        "cpuset_cpus": {
+                            "cpus": []
+                        },
+                        "cpuset_cpus_effective": {
+                            "cpus": [0, 1, 2, 3]
+                        },
+                        "cpuset_mems": {
+                            "nodes": []
+                        },
+                        "cpuset_mems_effective": {
+                            "nodes": [0, 1, 2, 3]
+                        }
+                    },
                     "cpu": {
                         "usage_pct": 0.01000,
                         "user_pct": 0.00900,
@@ -265,6 +316,8 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                         "slab": 5000000,
                         "sock": 0,
                         "shmem": 30000,
+                        "zswap": 20,
+                        "zswapped": 20000,
                         "file_mapped": 7000000,
                         "file_dirty": 0,
                         "file_writeback": 800000,
@@ -290,7 +343,6 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                         "pglazyfreed": 0,
                         "thp_fault_alloc": 0,
                         "thp_collapse_alloc": 0,
-                        "memory_high": -1,
                         "events_low": 0,
                         "events_high": 0,
                         "events_max": 0,
@@ -317,6 +369,23 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                     "full_path": "/child_a.slice",
                     "inode_number": 11111,
                     "depth": 1,
+                    "properties": {
+                        "cgroup_controllers": ["cpu", "cpuset", "io", "memory", "pids"],
+                        "cgroup_subtree_control": ["io", "memory", "pids"],
+                        "memory_min": 2000000000,
+                        "memory_low": 0,
+                        "memory_high": -1,
+                        "memory_max": -1,
+                        "memory_swap_max": 0,
+                        "memory_zswap_max": 0,
+                        "cpu_weight": null,
+                        "cpu_max_usec": null,
+                        "cpu_max_period_usec": null,
+                        "cpuset_cpus": null,
+                        "cpuset_cpus_effective": null,
+                        "cpuset_mems": null,
+                        "cpuset_mems_effective": null
+                    },
                     "cpu": {
                         "usage_pct": 0.0,
                         "user_pct": 0.0,
@@ -334,6 +403,8 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                         "slab": 3000000,
                         "sock": 0,
                         "shmem": 0,
+                        "zswap": 0,
+                        "zswapped": 0,
                         "file_mapped": 0,
                         "file_dirty": 0,
                         "file_writeback": 0,
@@ -359,7 +430,6 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                         "pglazyfreed": 0,
                         "thp_fault_alloc": 0,
                         "thp_collapse_alloc": 0,
-                        "memory_high": -1,
                         "events_low": 0,
                         "events_high": 0,
                         "events_max": 0,
@@ -386,6 +456,31 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                     "full_path": "/child_b.slice",
                     "inode_number": 1111,
                     "depth": 1,
+                    "properties": {
+                        "cgroup_controllers": ["cpu", "cpuset", "io", "memory", "pids"],
+                        "cgroup_subtree_control": ["cpu", "cpuset", "pids"],
+                        "memory_min": null,
+                        "memory_low": null,
+                        "memory_high": null,
+                        "memory_max": null,
+                        "memory_swap_max": null,
+                        "memory_zswap_max": null,
+                        "cpu_weight": 100,
+                        "cpu_max_usec": 1500000,
+                        "cpu_max_period_usec": 100000,
+                        "cpuset_cpus": {
+                            "cpus": [2, 3]
+                        },
+                        "cpuset_cpus_effective": {
+                            "cpus": [2, 3]
+                        },
+                        "cpuset_mems": {
+                            "nodes": [2, 3]
+                        },
+                        "cpuset_mems_effective": {
+                            "nodes": [2, 3]
+                        }
+                    },
                     "cpu": {
                         "usage_pct": 3.5,
                         "user_pct": 3.5,
@@ -403,6 +498,8 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                         "slab": 3000000,
                         "sock": 400000,
                         "shmem": 1000000,
+                        "zswap": 500,
+                        "zswapped": 500000,
                         "file_mapped": 50000000,
                         "file_dirty": 1000000,
                         "file_writeback": 9000000,
@@ -428,7 +525,6 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                         "pglazyfreed": 0,
                         "thp_fault_alloc": 0,
                         "thp_collapse_alloc": 0,
-                        "memory_high": -1,
                         "events_low": 0,
                         "events_high": 0,
                         "events_max": 0,
@@ -452,6 +548,31 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                             "full_path": "/child_b.slice/something.service",
                             "inode_number": 11111111,
                             "depth": 2,
+                            "properties": {
+                                "cgroup_controllers": ["cpu", "cpuset", "pids"],
+                                "cgroup_subtree_control": ["cpu", "cpuset", "pids"],
+                                "memory_min": null,
+                                "memory_low": null,
+                                "memory_high": null,
+                                "memory_max": null,
+                                "memory_swap_max": null,
+                                "memory_zswap_max": null,
+                                "cpu_weight": 100,
+                                "cpu_max_usec": 1200000,
+                                "cpu_max_period_usec": 100000,
+                                "cpuset_cpus": {
+                                    "cpus": []
+                                },
+                                "cpuset_cpus_effective": {
+                                    "cpus": [2, 3]
+                                },
+                                "cpuset_mems": {
+                                    "nodes": []
+                                },
+                                "cpuset_mems_effective": {
+                                    "nodes": [2, 3]
+                                }
+                            },
                             "cpu": {
                                 "usage_pct": 0.6,
                                 "user_pct": 0.1,
@@ -469,6 +590,8 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                                 "slab": 200000,
                                 "sock": 0,
                                 "shmem": 0,
+                                "zswap": 50,
+                                "zswapped": 50000,
                                 "file_mapped": 200000,
                                 "file_dirty": 0,
                                 "file_writeback": 0,
@@ -494,7 +617,6 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                                 "pglazyfreed": 0,
                                 "thp_fault_alloc": 0,
                                 "thp_collapse_alloc": 0,
-                                "memory_high": -1,
                                 "events_low": 0,
                                 "events_high": 0,
                                 "events_max": 0,

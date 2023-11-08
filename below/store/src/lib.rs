@@ -880,7 +880,7 @@ mod tests {
 
     use paste::paste;
     use slog::Drain;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use super::*;
 
@@ -931,7 +931,7 @@ mod tests {
     fn writing_to_already_written_index_with_different_compression_format_works() {
         use itertools::Itertools;
 
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
 
         // States, (compression_mode, format), that we transition between when
@@ -991,7 +991,7 @@ mod tests {
 
     #[test]
     fn write_index_padding() {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         // Keep test on one shard
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
         // Write 1 frame without compression. Doesn't add padding.
@@ -1110,14 +1110,14 @@ mod tests {
 
     store_test!(create_writer, _create_writer);
     fn _create_writer(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         StoreWriter::new(get_logger(), &dir, compression_mode, format)
             .expect("Failed to create store");
     }
 
     store_test!(simple_put_read, _simple_put_read);
     fn _simple_put_read(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = SystemTime::now();
         {
             let mut writer = StoreWriter::new(get_logger(), &dir, compression_mode, format)
@@ -1139,7 +1139,7 @@ mod tests {
 
     store_test!(simple_put_read_10, _simple_put_read_10);
     fn _simple_put_read_10(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         // Keep test on one shard
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
         {
@@ -1170,7 +1170,7 @@ mod tests {
 
     store_test!(put_new_shard, _put_new_shard);
     fn _put_new_shard(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let now = SystemTime::now();
         // Ensure that the follow writes (within 60s) are to the same shard
         let ts = if calculate_shard(now) == calculate_shard(now + Duration::from_secs(60)) {
@@ -1263,7 +1263,7 @@ mod tests {
 
     store_test!(put_read_corrupt_data, _put_read_corrupt_data);
     fn _put_read_corrupt_data(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = SystemTime::now();
         let ts_next = ts + Duration::from_secs(1);
         {
@@ -1316,7 +1316,7 @@ mod tests {
         _read_past_the_end_returns_none
     );
     fn _read_past_the_end_returns_none(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = SystemTime::now();
         {
             let mut writer = StoreWriter::new(get_logger(), &dir, compression_mode, format)
@@ -1339,7 +1339,7 @@ mod tests {
 
     store_test!(read_iterates_appropriately, _read_iterates_appropriately);
     fn _read_iterates_appropriately(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = SystemTime::now();
         {
             let mut writer = StoreWriter::new(get_logger(), &dir, compression_mode, format)
@@ -1372,7 +1372,7 @@ mod tests {
         _put_and_read_work_across_shards
     );
     fn _put_and_read_work_across_shards(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = SystemTime::now();
         {
             let mut writer = StoreWriter::new(get_logger(), &dir, compression_mode, format)
@@ -1402,7 +1402,7 @@ mod tests {
 
     store_test!(read_reverse, _read_reverse);
     fn _read_reverse(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = SystemTime::now();
         {
             let mut writer = StoreWriter::new(get_logger(), &dir, compression_mode, format)
@@ -1424,7 +1424,7 @@ mod tests {
 
     store_test!(read_reverse_across_shards, _read_reverse_across_shards);
     fn _read_reverse_across_shards(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = SystemTime::now();
         {
             let mut writer = StoreWriter::new(get_logger(), &dir, compression_mode, format)
@@ -1454,7 +1454,7 @@ mod tests {
 
     store_test!(discard_earlier, _discard_earlier);
     fn _discard_earlier(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
         {
             let mut writer = StoreWriter::new(get_logger(), &dir, compression_mode, format)
@@ -1495,7 +1495,7 @@ mod tests {
 
     store_test!(try_discard_until_size, _try_discard_until_size);
     fn _try_discard_until_size(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let dir_path_buf = dir.path().to_path_buf();
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
         let mut shard_sizes = Vec::new();
@@ -1608,7 +1608,7 @@ mod tests {
 
     store_test!(flock_protects, _flock_protects);
     fn _flock_protects(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = SystemTime::now();
         let shard = calculate_shard(ts);
         let mut index_path = dir.path().to_path_buf();
@@ -1635,7 +1635,7 @@ mod tests {
         _writing_to_already_written_index_works
     );
     fn _writing_to_already_written_index_works(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
         {
             let mut writer = StoreWriter::new(get_logger(), &dir, compression_mode, format)
@@ -1679,7 +1679,7 @@ mod tests {
         _read_skips_over_corrupt_index_entry
     );
     fn _read_skips_over_corrupt_index_entry(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let ts = std::time::UNIX_EPOCH + Duration::from_secs(SHARD_TIME);
         {
             let mut writer = StoreWriter::new(get_logger(), &dir, compression_mode, format)
@@ -1727,7 +1727,7 @@ mod tests {
 
     store_test!(writer_creates_directory, _writer_creates_directory);
     fn _writer_creates_directory(compression_mode: CompressionMode, format: Format) {
-        let dir = TempDir::new("below_store_test").expect("tempdir failed");
+        let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let mut subdir = dir.path().to_path_buf();
         subdir.push("foo");
         let ts = SystemTime::now();

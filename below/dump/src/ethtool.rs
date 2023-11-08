@@ -24,7 +24,7 @@ impl Dumper for EthtoolQueue {
         comma_flag: bool,
     ) -> Result<IterExecResult> {
         let mut queues = Vec::new();
-        for (_, nic) in &model.network.interfaces {
+        for nic in model.network.interfaces.values() {
             for queue in &nic.queues {
                 queues.push(queue);
             }
