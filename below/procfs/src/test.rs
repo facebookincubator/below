@@ -17,6 +17,7 @@ use std::io::Write;
 use std::os::unix::fs::symlink;
 use std::path::Path;
 
+use common::logutil::get_logger;
 use tempfile::TempDir;
 
 use crate::types::*;
@@ -80,11 +81,12 @@ impl TestProcfs {
     }
 
     fn get_net_reader(&self) -> NetReader {
+        let logger = get_logger();
         let iface_dir = self.path().join("iface");
         if !iface_dir.exists() {
             std::fs::create_dir(&iface_dir).expect("Failed to create iface dir");
         }
-        NetReader::new_with_custom_path(iface_dir, self.path().to_path_buf())
+        NetReader::new_with_custom_path(logger, iface_dir, self.path().to_path_buf())
             .expect("Fail to construct Net Reader")
     }
 
@@ -1191,6 +1193,40 @@ fn test_read_net_stat() {
     verify_udp(&netstat);
     verify_udp6(&netstat);
     verify_interfaces(&netstat);
+}
+
+#[test]
+fn test_read_enoent() {
+    let netsysfs = TestProcfs::new();
+    write_net_map(&netsysfs);
+
+    let netstat = netsysfs
+        .get_net_reader()
+        .read_netstat()
+        .expect("Fail to get NetStat");
+    verify_interfaces(&netstat);
+    assert_eq!(netstat.tcp, None);
+    assert_eq!(netstat.tcp_ext, None);
+    assert_eq!(netstat.ip, None);
+    assert_eq!(netstat.ip_ext, None);
+    assert_eq!(netstat.ip6, None);
+    assert_eq!(netstat.icmp, None);
+    assert_eq!(netstat.icmp6, None);
+    assert_eq!(netstat.udp, None);
+    assert_eq!(netstat.udp6, None);
+}
+
+#[test]
+fn test_read_bad_file() {
+    let netsysfs = TestProcfs::new();
+    write_net_map(&netsysfs);
+    netsysfs.create_file_with_content("snmp", b"bad\nfile");
+
+    let err = netsysfs
+        .get_net_reader()
+        .read_netstat()
+        .unwrap_err();
+    assert!(matches!(err, crate::Error::InvalidFileFormat(_)));
 }
 
 fn verify_tcp(netstat: &NetStat) {
