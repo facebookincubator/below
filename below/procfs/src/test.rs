@@ -17,7 +17,7 @@ use std::io::Write;
 use std::os::unix::fs::symlink;
 use std::path::Path;
 
-use common::logutil::get_logger;
+use slog::Drain;
 use tempfile::TempDir;
 
 use crate::types::*;
@@ -122,6 +122,11 @@ impl TestProcfs {
         let path = interface_dir.join(p);
         self.create_file_with_content_full_path(path, content.to_string().as_bytes());
     }
+}
+
+fn get_logger() -> slog::Logger {
+    let plain = slog_term::PlainSyncDecorator::new(std::io::stderr());
+    slog::Logger::root(slog_term::FullFormat::new(plain).build().fuse(), slog::o!())
 }
 
 #[test]
@@ -1219,10 +1224,7 @@ fn test_read_bad_file() {
     write_net_map(&netsysfs);
     netsysfs.create_file_with_content("snmp", b"bad\nfile");
 
-    let err = netsysfs
-        .get_net_reader()
-        .read_netstat()
-        .unwrap_err();
+    let err = netsysfs.get_net_reader().read_netstat().unwrap_err();
     assert!(matches!(err, crate::Error::InvalidFileFormat(_)));
 }
 
