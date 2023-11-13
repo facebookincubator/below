@@ -29,6 +29,7 @@ use std::time::Duration;
 use lazy_static::lazy_static;
 use nix::sys;
 use openat::Dir;
+use slog::debug;
 use thiserror::Error;
 use threadpool::ThreadPool;
 
@@ -908,16 +909,18 @@ macro_rules! get_val_from_stats_map {
 }
 
 pub struct NetReader {
+    logger: slog::Logger,
     interface_dir: Dir,
     proc_net_dir: Dir,
 }
 
 impl NetReader {
-    pub fn new() -> Result<NetReader> {
-        Self::new_with_custom_path(NET_SYSFS.into(), NET_PROCFS.into())
+    pub fn new(logger: slog::Logger) -> Result<NetReader> {
+        Self::new_with_custom_path(logger, NET_SYSFS.into(), NET_PROCFS.into())
     }
 
     pub fn new_with_custom_path(
+        logger: slog::Logger,
         interface_path: PathBuf,
         proc_net_path: PathBuf,
     ) -> Result<NetReader> {
@@ -927,6 +930,7 @@ impl NetReader {
             Dir::open(&proc_net_path).map_err(|e| Error::IoError(proc_net_path, e))?;
 
         Ok(NetReader {
+            logger,
             interface_dir,
             proc_net_dir,
         })
@@ -1305,21 +1309,44 @@ impl NetReader {
     }
 
     pub fn read_netstat(&self) -> Result<NetStat> {
-        let netstat_map = self.read_kv_diff_line("netstat")?;
-        let snmp_map = self.read_kv_diff_line("snmp")?;
-        let snmp6_map = self.read_kv_same_line("snmp6")?;
+        // Any of these files could be missing, however unlikely.
+        // An interface file could be missing if it is deleted while reading the directory.
+        // For example, if ipv6 is disabled, /proc/net/snmp6 won't exist.
+        // Similarly, one could even disable ipv4, in which case /proc/net/snmp won't exist.
+        // Thus, we handle ENOENT errors by setting corresponding fields to `None`.
+        let netstat_map = handle_enoent(&self.logger, self.read_kv_diff_line("netstat"))?;
+        let snmp_map = handle_enoent(&self.logger, self.read_kv_diff_line("snmp"))?;
+        let snmp6_map = handle_enoent(&self.logger, self.read_kv_same_line("snmp6"))?;
+        let iface_map = handle_enoent(&self.logger, self.read_net_map())?;
 
         Ok(NetStat {
-            interfaces: Some(self.read_net_map()?),
-            tcp: Some(Self::read_tcp_stat(&snmp_map)),
-            tcp_ext: Some(Self::read_tcp_ext_stat(&netstat_map)),
-            ip: Some(Self::read_ip_stat(&snmp_map)),
-            ip_ext: Some(Self::read_ip_ext_stat(&netstat_map)),
-            ip6: Some(Self::read_ip6_stat(&snmp6_map)),
-            icmp: Some(Self::read_icmp_stat(&snmp_map)),
-            icmp6: Some(Self::read_icmp6_stat(&snmp6_map)),
-            udp: Some(Self::read_udp_stat(&snmp_map)),
-            udp6: Some(Self::read_udp6_stat(&snmp6_map)),
+            interfaces: iface_map,
+            tcp: snmp_map.as_ref().map(Self::read_tcp_stat),
+            tcp_ext: netstat_map.as_ref().map(Self::read_tcp_ext_stat),
+            ip: snmp_map.as_ref().map(Self::read_ip_stat),
+            ip_ext: netstat_map.as_ref().map(Self::read_ip_ext_stat),
+            ip6: snmp6_map.as_ref().map(Self::read_ip6_stat),
+            icmp: snmp_map.as_ref().map(Self::read_icmp_stat),
+            icmp6: snmp6_map.as_ref().map(Self::read_icmp6_stat),
+            udp: snmp_map.as_ref().map(Self::read_udp_stat),
+            udp6: snmp6_map.as_ref().map(Self::read_udp6_stat),
         })
+    }
+}
+
+/// Wraps the result into an `Option` if the result is not an error.
+/// If the error is of type `ENOENT`, it is returned as `Ok(None)`.
+/// Else, the error itself is returned.
+fn handle_enoent<K, V>(
+    logger: &slog::Logger,
+    result: Result<BTreeMap<K, V>>,
+) -> Result<Option<BTreeMap<K, V>>> {
+    match result {
+        Ok(map) => Ok(Some(map)),
+        Err(Error::IoError(_, err)) if err.kind() == ErrorKind::NotFound => {
+            debug!(logger, "{:?}", err);
+            Ok(None)
+        }
+        Err(err) => Err(err),
     }
 }
