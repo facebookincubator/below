@@ -12,4 +12,4 @@ license = "Apache-2.0"
 [dependencies]
 nix = "0.25"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-thiserror = "1.0.43"
+thiserror = "1.0.49"
