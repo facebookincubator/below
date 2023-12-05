@@ -52,6 +52,7 @@ pub struct IoStat {
 pub struct MemoryStat {
     pub anon: Option<u64>,
     pub file: Option<u64>,
+    pub kernel: Option<u64>,
     pub kernel_stack: Option<u64>,
     pub slab: Option<u64>,
     pub sock: Option<u64>,

@@ -471,6 +471,7 @@ pub struct CgroupMemoryModel {
     pub swap: Option<u64>,
     pub anon: Option<u64>,
     pub file: Option<u64>,
+    pub kernel: Option<u64>,
     pub kernel_stack: Option<u64>,
     pub slab: Option<u64>,
     pub sock: Option<u64>,
@@ -522,6 +523,7 @@ impl std::ops::Add for CgroupMemoryModel {
             swap: opt_add(self.swap, other.swap),
             anon: opt_add(self.anon, other.anon),
             file: opt_add(self.file, other.file),
+            kernel: opt_add(self.kernel, other.kernel),
             kernel_stack: opt_add(self.kernel_stack, other.kernel_stack),
             slab: opt_add(self.slab, other.slab),
             sock: opt_add(self.sock, other.sock),
@@ -608,6 +610,7 @@ impl CgroupMemoryModel {
         if let Some(stat) = &sample.memory_stat {
             model.anon = stat.anon;
             model.file = stat.file;
+            model.kernel = stat.kernel;
             model.kernel_stack = stat.kernel_stack;
             model.slab = stat.slab;
             model.sock = stat.sock;

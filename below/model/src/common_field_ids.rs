@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 373] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 374] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -156,6 +156,7 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 373] = [
     "cgroup.[path:/<cgroup_path>/.]mem.swap",
     "cgroup.[path:/<cgroup_path>/.]mem.anon",
     "cgroup.[path:/<cgroup_path>/.]mem.file",
+    "cgroup.[path:/<cgroup_path>/.]mem.kernel",
     "cgroup.[path:/<cgroup_path>/.]mem.kernel_stack",
     "cgroup.[path:/<cgroup_path>/.]mem.slab",
     "cgroup.[path:/<cgroup_path>/.]mem.sock",

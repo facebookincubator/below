@@ -657,6 +657,7 @@ key_values_format!(CpuStat; cpu.stat; [
 key_values_format!(MemoryStat; memory.stat; [
     anon,
     file,
+    kernel,
     kernel_stack,
     slab,
     sock,

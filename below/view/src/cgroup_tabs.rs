@@ -253,6 +253,7 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::FileWriteback;
     use model::CgroupMemoryModelFieldId::InactiveAnon;
     use model::CgroupMemoryModelFieldId::InactiveFile;
+    use model::CgroupMemoryModelFieldId::Kernel;
     use model::CgroupMemoryModelFieldId::KernelStack;
     use model::CgroupMemoryModelFieldId::Pgactivate;
     use model::CgroupMemoryModelFieldId::Pgdeactivate;
@@ -352,6 +353,7 @@ pub mod default_tabs {
             ViewItem::from_default(Mem(Swap)),
             ViewItem::from_default(Mem(Anon)),
             ViewItem::from_default(Mem(File)),
+            ViewItem::from_default(Mem(Kernel)),
             ViewItem::from_default(Mem(KernelStack)),
             ViewItem::from_default(Mem(Slab)),
             ViewItem::from_default(Mem(Sock)),

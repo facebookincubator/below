@@ -497,6 +497,7 @@ fn test_dump_cgroup_titles() {
         "Mem Swap",
         "Mem Anon",
         "Mem File",
+        "Kernel",
         "Kernel Stack",
         "Mem Slab",
         "Mem Sock",
