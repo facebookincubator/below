@@ -30,6 +30,7 @@ pub struct CollectorOptions {
     pub disable_disk_stat: bool,
     pub enable_btrfs_stats: bool,
     pub enable_ethtool_stats: bool,
+    pub enable_resctrl_stats: bool,
     pub btrfs_samples: u64,
     pub btrfs_min_pct: f64,
     pub cgroup_re: Option<Regex>,
@@ -46,6 +47,7 @@ impl Default for CollectorOptions {
             disable_disk_stat: false,
             enable_btrfs_stats: false,
             enable_ethtool_stats: false,
+            enable_resctrl_stats: false,
             btrfs_samples: btrfs::DEFAULT_SAMPLES,
             btrfs_min_pct: btrfs::DEFAULT_MIN_PCT,
             cgroup_re: None,
@@ -284,6 +286,24 @@ fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<S
                 Err(e) => {
                     error!(logger, "{:#}", e);
                     Default::default()
+                }
+            }
+        },
+        resctrl: if !options.enable_resctrl_stats {
+            None
+        } else {
+            match resctrlfs::ResctrlReader::root() {
+                Ok(resctrl_reader) => match resctrl_reader.read_all() {
+                    Ok(resctrl) => Some(resctrl),
+                    Err(e) => {
+                        error!(logger, "{:#}", e);
+                        None
+                    }
+                },
+                Err(_e) => {
+                    // ResctrlReader only fails to initialize if resctrlfs is
+                    // not mounted. In this case we ignore.
+                    None
                 }
             }
         },

@@ -986,6 +986,7 @@ fn test_dump_queue_content() {
         process: model::ProcessModel::default(),
         network,
         gpu: None,
+        resctrl: None,
     };
 
     let mut opts: GeneralOpt = Default::default();

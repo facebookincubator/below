@@ -36,6 +36,7 @@ pub mod collector_plugin;
 mod common_field_ids;
 pub mod network;
 pub mod process;
+pub mod resctrl;
 pub mod sample;
 mod sample_model;
 pub mod system;
@@ -46,6 +47,7 @@ pub use cgroup::*;
 pub use collector::*;
 pub use network::*;
 pub use process::*;
+pub use resctrl::*;
 pub use sample::*;
 pub use system::*;
 
@@ -66,6 +68,8 @@ pub enum Field {
     StrU64Map(BTreeMap<String, u64>),
     Cpuset(cgroupfs::Cpuset),
     MemNodes(cgroupfs::MemNodes),
+    ResctrlCpuset(resctrlfs::Cpuset),
+    ResctrlGroupMode(resctrlfs::GroupMode),
 }
 
 impl From<Field> for u64 {
@@ -196,6 +200,18 @@ impl From<cgroupfs::MemNodes> for Field {
     }
 }
 
+impl From<resctrlfs::Cpuset> for Field {
+    fn from(v: resctrlfs::Cpuset) -> Self {
+        Field::ResctrlCpuset(v)
+    }
+}
+
+impl From<resctrlfs::GroupMode> for Field {
+    fn from(v: resctrlfs::GroupMode) -> Self {
+        Field::ResctrlGroupMode(v)
+    }
+}
+
 impl<T: Into<Field> + Clone> From<&T> for Field {
     fn from(v: &T) -> Self {
         v.clone().into()
@@ -284,6 +300,8 @@ impl fmt::Display for Field {
             )),
             Field::Cpuset(v) => v.fmt(f),
             Field::MemNodes(v) => v.fmt(f),
+            Field::ResctrlCpuset(v) => v.fmt(f),
+            Field::ResctrlGroupMode(v) => v.fmt(f),
         }
     }
 }
@@ -515,6 +533,8 @@ pub struct Model {
     pub network: NetworkModel,
     #[queriable(subquery)]
     pub gpu: Option<GpuModel>,
+    #[queriable(subquery)]
+    pub resctrl: Option<ResctrlModel>,
 }
 
 impl Model {
@@ -562,6 +582,16 @@ impl Model {
                         None
                     }
                 })
+            }),
+            resctrl: sample.resctrl.as_ref().map(|r| {
+                ResctrlModel::new(
+                    r,
+                    if let Some((s, d)) = last {
+                        s.resctrl.as_ref().map(|r| (r, d))
+                    } else {
+                        None
+                    },
+                )
             }),
         }
     }
