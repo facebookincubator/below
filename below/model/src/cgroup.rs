@@ -14,7 +14,7 @@
 
 use super::*;
 
-/// Collection of all data local to the cgroup, e.g. its memory/io/cpu usage.
+/// Collection of all data local to the cgroup, e.g. its memory/io/cpu/pids usage.
 /// Nothing about child cgroups or siblings, and therefore "Single" in its name.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, below_derive::Queriable)]
 pub struct SingleCgroupModel {
@@ -31,6 +31,9 @@ pub struct SingleCgroupModel {
     #[queriable(subquery)]
     #[queriable(preferred_name = mem)]
     pub memory: Option<CgroupMemoryModel>,
+    #[queriable(subquery)]
+    #[queriable(preferred_name = pids)]
+    pub pids: Option<CgroupPidsModel>,
     #[queriable(subquery)]
     #[queriable(preferred_name = io_details)]
     pub io: Option<BTreeMap<String, CgroupIoModel>>,
@@ -220,6 +223,8 @@ impl CgroupModel {
 
         let memory = Some(CgroupMemoryModel::new(sample, last));
 
+        let pids = Some(CgroupPidsModel::new(sample));
+
         let pressure = sample
             .pressure
             .as_ref()
@@ -278,6 +283,7 @@ impl CgroupModel {
                 properties,
                 cpu,
                 memory,
+                pids,
                 io,
                 io_total,
                 pressure,
@@ -720,6 +726,38 @@ impl CgroupMemoryModel {
     Deserialize,
     below_derive::Queriable
 )]
+pub struct CgroupPidsModel {
+    pub tids_current: Option<u64>,
+}
+
+impl std::ops::Add for CgroupPidsModel {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self::Output {
+        Self {
+            tids_current: opt_add(self.tids_current, other.tids_current),
+        }
+    }
+}
+
+impl CgroupPidsModel {
+    pub fn new(sample: &CgroupSample) -> Self {
+        let tids_current = sample.tids_current;
+        CgroupPidsModel {
+            tids_current,
+        }
+    }
+}
+
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
 pub struct CgroupPressureModel {
     pub cpu_some_pct: Option<f64>,
     pub cpu_full_pct: Option<f64>,
@@ -876,6 +914,7 @@ impl CgroupMemoryNumaModel {
 pub struct CgroupProperties {
     pub cgroup_controllers: Option<BTreeSet<String>>,
     pub cgroup_subtree_control: Option<BTreeSet<String>>,
+    pub tids_max: Option<i64>,
     pub memory_min: Option<i64>,
     pub memory_low: Option<i64>,
     pub memory_high: Option<i64>,
@@ -896,6 +935,7 @@ impl CgroupProperties {
         Self {
             cgroup_controllers: sample.cgroup_controllers.clone(),
             cgroup_subtree_control: sample.cgroup_subtree_control.clone(),
+            tids_max: sample.tids_max,
             memory_min: sample.memory_min,
             memory_low: sample.memory_low,
             memory_high: sample.memory_high,

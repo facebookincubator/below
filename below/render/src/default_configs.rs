@@ -44,6 +44,7 @@ impl HasRenderConfig for model::SingleCgroupModel {
                 model::CgroupMemoryNumaModel::get_render_config_builder(&field_id.subquery_id)
             }
             Props(field_id) => model::CgroupProperties::get_render_config_builder(field_id),
+            Pids(field_id) => model::CgroupPidsModel::get_render_config_builder(field_id),
         }
     }
 }
@@ -152,6 +153,7 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
         field_id: &Self::FieldId,
     ) -> Option<RenderOpenMetricsConfigBuilder> {
         use model::CgroupCpuModelFieldId::*;
+        use model::CgroupPidsModelFieldId::*;
         use model::CgroupIoModelFieldId::*;
         use model::CgroupMemoryModelFieldId::*;
         use model::CgroupPressureModelFieldId::*;
@@ -174,6 +176,9 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
                 NrPeriodsPerSec => Some(gauge),
                 NrThrottledPerSec => Some(gauge),
                 ThrottledPct => Some(gauge.unit("percent")),
+            },
+            Pids(field_id) => match field_id {
+                TidsCurrent => Some(counter.unit("count")),
             },
             Io(field_id) => match field_id {
                 RbytesPerSec => Some(gauge.unit("bytes_per_second")),
@@ -272,6 +277,16 @@ impl HasRenderConfig for model::CgroupCpuModel {
             NrPeriodsPerSec => rc.title("Nr Period").suffix("/s").format(Precision(2)),
             NrThrottledPerSec => rc.title("Nr Throttled").suffix("/s").format(Precision(2)),
             ThrottledPct => rc.title("Throttled").suffix("%").format(Precision(2)),
+        }
+    }
+}
+
+impl HasRenderConfig for model::CgroupPidsModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::CgroupPidsModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            TidsCurrent => rc.title("Tids Current").format(Precision(1)),
         }
     }
 }
@@ -1476,6 +1491,7 @@ impl HasRenderConfig for model::CgroupProperties {
             // "cpu cpuset hugetlb io memory pids" is 33 chars
             CgroupControllers => rc.title("Controllers").width(35),
             CgroupSubtreeControl => rc.title("SubtreeControl").width(35),
+            TidsMax => rc.title("Tids Max").format(MaxOrReadableSize),
             MemoryMin => rc.title("Mem Min").format(MaxOrReadableSize),
             MemoryLow => rc.title("Mem Low").format(MaxOrReadableSize),
             MemoryHigh => rc.title("Mem High").format(MaxOrReadableSize),

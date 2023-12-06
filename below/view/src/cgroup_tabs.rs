@@ -295,6 +295,7 @@ pub mod default_tabs {
     use model::CgroupPropertiesFieldId::CpuWeight;
     use model::CgroupPropertiesFieldId::CpusetCpus;
     use model::CgroupPropertiesFieldId::CpusetCpusEffective;
+    use model::CgroupPropertiesFieldId::TidsMax;
     use model::CgroupPropertiesFieldId::MemoryHigh;
     use model::CgroupPropertiesFieldId::MemoryLow;
     use model::CgroupPropertiesFieldId::MemoryMax;
@@ -309,7 +310,9 @@ pub mod default_tabs {
     use model::SingleCgroupModelFieldId::Mem;
     use model::SingleCgroupModelFieldId::Name;
     use model::SingleCgroupModelFieldId::Pressure;
+    use model::SingleCgroupModelFieldId::Pids;
     use model::SingleCgroupModelFieldId::Props;
+    use model::CgroupPidsModelFieldId::TidsCurrent;
     use once_cell::sync::Lazy;
 
     use super::*;
@@ -333,6 +336,7 @@ pub mod default_tabs {
             ViewItem::from_default(Io(RwbytesPerSec)),
             ViewItem::from_default(CgroupStat(NrDescendants)),
             ViewItem::from_default(CgroupStat(NrDyingDescendants)),
+            ViewItem::from_default(Pids(TidsCurrent)),
         ])
     });
 
@@ -437,6 +441,7 @@ pub mod default_tabs {
             ViewItem::from_default(Props(CpuWeight)),
             ViewItem::from_default(Props(CpusetCpus)),
             ViewItem::from_default(Props(CpusetCpusEffective)),
+            ViewItem::from_default(Props(TidsMax)),
             ViewItem::from_default(Props(CgroupControllers)),
         ])
     });
