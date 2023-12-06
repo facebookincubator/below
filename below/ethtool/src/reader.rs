@@ -18,14 +18,14 @@ use crate::errors::EthtoolError;
 use crate::ethtool_sys;
 const ETH_GSTATS_LEN: usize = 8;
 
-fn if_name_bytes(if_name: &str) -> [i8; libc::IF_NAMESIZE] {
+fn if_name_bytes(if_name: &str) -> [libc::c_char; libc::IF_NAMESIZE] {
     let mut it = if_name.as_bytes().iter().copied();
     [0; libc::IF_NAMESIZE].map(|_| it.next().unwrap_or(0) as libc::c_char)
 }
 
 fn ioctl(
     fd: &OwnedFd,
-    if_name: [i8; libc::IF_NAMESIZE],
+    if_name: [libc::c_char; libc::IF_NAMESIZE],
     data: *mut libc::c_char,
 ) -> Result<(), Errno> {
     let ifr = libc::ifreq {
@@ -256,7 +256,7 @@ pub trait EthtoolReadable {
 
 pub struct Ethtool {
     sock_fd: OwnedFd,
-    if_name: [i8; libc::IF_NAMESIZE],
+    if_name: [libc::c_char; libc::IF_NAMESIZE],
 }
 
 impl Ethtool {
