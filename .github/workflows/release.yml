@@ -47,3 +47,18 @@ jobs:
         files: |
           ./output/below
           ./*.deb
+
+    - name: Get Token
+      id: get_workflow_token
+      uses: peter-murray/workflow-application-token-action@8e1ba3bf1619726336414f1014e37f17fbadf1db # v2.1.0
+      with:
+        application_id: ${{ secrets.AVX_WORKFLOW_APPLICATION_ID }}
+        application_private_key: ${{ secrets.AVX_WORKFLOW_APPLICATION_PRIVATE_KEY }}
+
+    # Enable CD and trigger the build of the associated docker image
+    # see https://github.com/AvxSre/docker-images
+    - name: Trigger docker image build
+      env:
+        GITHUB_TOKEN: ${{ steps.get_workflow_token.outputs.token }}
+      run: |
+        gh workflow run -R AvxSre/docker-images docker.yml -f "image=tracelogs-analyzer"
