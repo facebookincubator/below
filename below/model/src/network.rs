@@ -47,8 +47,10 @@ impl NetworkModel {
                 iface_names.insert(interface.to_string());
             }
         }
-        for key in ethtool_stats.nic.keys() {
-            iface_names.insert(key.to_string());
+        if let Some(ethtool_stats) = ethtool_stats {
+            for key in ethtool_stats.nic.keys() {
+                iface_names.insert(key.to_string());
+            }
         }
 
         for interface in iface_names {
@@ -56,7 +58,9 @@ impl NetworkModel {
                 .interfaces
                 .as_ref()
                 .and_then(|ifaces| ifaces.get(&interface));
-            let ethtool_stat = ethtool_stats.nic.get(&interface);
+            let ethtool_stat = ethtool_stats
+                .as_ref()
+                .and_then(|stat| stat.nic.get(&interface));
 
             let s_iface = SingleNetworkStat {
                 iface: iface_stat,
@@ -73,7 +77,7 @@ impl NetworkModel {
                     .interfaces
                     .as_ref()
                     .and_then(|ifaces| ifaces.get(&interface));
-                let l_ethtool_stat = l.ethtool.nic.get(&interface);
+                let l_ethtool_stat = l.ethtool.as_ref().and_then(|stat| stat.nic.get(&interface));
                 l_network_stat = SingleNetworkStat {
                     iface: l_iface_stat,
                     nic: l_ethtool_stat,
@@ -774,11 +778,11 @@ mod test {
 
         let prev_sample = NetworkStats {
             net: &l_net_stats,
-            ethtool: &l_ethtool_stats,
+            ethtool: &Some(l_ethtool_stats),
         };
         let sample = NetworkStats {
             net: &s_net_stats,
-            ethtool: &s_ethtool_stats,
+            ethtool: &Some(s_ethtool_stats),
         };
         let last = Some((&prev_sample, Duration::from_secs(1)));
 

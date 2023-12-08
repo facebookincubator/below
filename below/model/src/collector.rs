@@ -280,7 +280,7 @@ fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<S
             Default::default()
         } else {
             match ethtool_reader.read_stats::<ethtool::Ethtool>() {
-                Ok(ethtool_stats) => ethtool_stats,
+                Ok(ethtool_stats) => Some(ethtool_stats),
                 Err(e) => {
                     error!(logger, "{:#}", e);
                     Default::default()
