@@ -29,6 +29,8 @@ pub struct Sample {
 pub struct CgroupSample {
     pub cpu_stat: Option<cgroupfs::CpuStat>,
     pub io_stat: Option<BTreeMap<String, cgroupfs::IoStat>>,
+    pub tids_current: Option<u64>,
+    pub tids_max: Option<i64>,
     pub memory_current: Option<i64>,
     pub memory_stat: Option<cgroupfs::MemoryStat>,
     pub pressure: Option<cgroupfs::Pressure>,

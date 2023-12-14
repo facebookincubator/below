@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 408] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 410] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -140,6 +140,7 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 408] = [
     "cgroup.[path:/<cgroup_path>/.]props.cpuset_cpus_effective",
     "cgroup.[path:/<cgroup_path>/.]props.cpuset_mems",
     "cgroup.[path:/<cgroup_path>/.]props.cpuset_mems_effective",
+    "cgroup.[path:/<cgroup_path>/.]props.tids_max",
     "cgroup.[path:/<cgroup_path>/.]props.memory_high",
     "cgroup.[path:/<cgroup_path>/.]props.memory_low",
     "cgroup.[path:/<cgroup_path>/.]props.memory_max",
@@ -152,6 +153,7 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 408] = [
     "cgroup.[path:/<cgroup_path>/.]cpu.nr_periods_per_sec",
     "cgroup.[path:/<cgroup_path>/.]cpu.nr_throttled_per_sec",
     "cgroup.[path:/<cgroup_path>/.]cpu.throttled_pct",
+    "cgroup.[path:/<cgroup_path>/.]pids.tids_current",
     "cgroup.[path:/<cgroup_path>/.]mem.total",
     "cgroup.[path:/<cgroup_path>/.]mem.swap",
     "cgroup.[path:/<cgroup_path>/.]mem.anon",

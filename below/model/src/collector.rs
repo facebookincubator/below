@@ -376,6 +376,8 @@ fn collect_cgroup_sample(
     Ok(CgroupSample {
         cpu_stat: wrap(reader.read_cpu_stat())?.map(Into::into),
         io_stat,
+        tids_current: wrap(reader.read_pids_current())?,
+        tids_max: wrap(reader.read_pids_max())?,
         memory_current: wrap(reader.read_memory_current().map(|v| v as i64))?,
         memory_stat: wrap(reader.read_memory_stat())?.map(Into::into),
         pressure: pressure_wrap(reader.read_pressure())?.map(Into::into),

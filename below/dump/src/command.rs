@@ -549,6 +549,7 @@ pub enum CgroupAggField {
     Cpu,
     Mem,
     Io,
+    Pids,
     Pressure,
 }
 
@@ -557,6 +558,7 @@ impl AggField<SingleCgroupModelFieldId> for CgroupAggField {
         use model::CgroupCpuModelFieldId as Cpu;
         use model::CgroupIoModelFieldId as Io;
         use model::CgroupMemoryModelFieldId as Mem;
+        use model::CgroupPidsModelFieldId as Pid;
         use model::CgroupPressureModelFieldId as Pressure;
         use model::SingleCgroupModelFieldId as FieldId;
 
@@ -565,6 +567,7 @@ impl AggField<SingleCgroupModelFieldId> for CgroupAggField {
                 Self::Cpu => enum_iterator::all::<Cpu>().map(FieldId::Cpu).collect(),
                 Self::Mem => enum_iterator::all::<Mem>().map(FieldId::Mem).collect(),
                 Self::Io => enum_iterator::all::<Io>().map(FieldId::Io).collect(),
+                Self::Pids => enum_iterator::all::<Pid>().map(FieldId::Pids).collect(),
                 Self::Pressure => enum_iterator::all::<Pressure>()
                     .map(FieldId::Pressure)
                     .collect(),
@@ -575,6 +578,7 @@ impl AggField<SingleCgroupModelFieldId> for CgroupAggField {
                 Self::Cpu => vec![FieldId::Cpu(Cpu::UsagePct)],
                 Self::Mem => vec![FieldId::Mem(Mem::Total)],
                 Self::Io => vec![FieldId::Io(Io::RbytesPerSec), FieldId::Io(Io::WbytesPerSec)],
+                Self::Pids => vec![FieldId::Pids(Pid::TidsCurrent)],
                 Self::Pressure => vec![
                     FieldId::Pressure(Pressure::CpuSomePct),
                     FieldId::Pressure(Pressure::MemoryFullPct),

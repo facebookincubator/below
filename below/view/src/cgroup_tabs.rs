@@ -283,6 +283,7 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::WorkingsetRestoreFile;
     use model::CgroupMemoryModelFieldId::Zswap;
     use model::CgroupMemoryModelFieldId::Zswapped;
+    use model::CgroupPidsModelFieldId::TidsCurrent;
     use model::CgroupPressureModelFieldId::CpuFullPct;
     use model::CgroupPressureModelFieldId::CpuSomePct;
     use model::CgroupPressureModelFieldId::IoFullPct;
@@ -301,6 +302,7 @@ pub mod default_tabs {
     use model::CgroupPropertiesFieldId::MemoryMin;
     use model::CgroupPropertiesFieldId::MemorySwapMax;
     use model::CgroupPropertiesFieldId::MemoryZswapMax;
+    use model::CgroupPropertiesFieldId::TidsMax;
     use model::CgroupStatModelFieldId::NrDescendants;
     use model::CgroupStatModelFieldId::NrDyingDescendants;
     use model::SingleCgroupModelFieldId::CgroupStat;
@@ -308,6 +310,7 @@ pub mod default_tabs {
     use model::SingleCgroupModelFieldId::Io;
     use model::SingleCgroupModelFieldId::Mem;
     use model::SingleCgroupModelFieldId::Name;
+    use model::SingleCgroupModelFieldId::Pids;
     use model::SingleCgroupModelFieldId::Pressure;
     use model::SingleCgroupModelFieldId::Props;
     use once_cell::sync::Lazy;
@@ -333,6 +336,7 @@ pub mod default_tabs {
             ViewItem::from_default(Io(RwbytesPerSec)),
             ViewItem::from_default(CgroupStat(NrDescendants)),
             ViewItem::from_default(CgroupStat(NrDyingDescendants)),
+            ViewItem::from_default(Pids(TidsCurrent)),
         ])
     });
 
@@ -437,6 +441,7 @@ pub mod default_tabs {
             ViewItem::from_default(Props(CpuWeight)),
             ViewItem::from_default(Props(CpusetCpus)),
             ViewItem::from_default(Props(CpusetCpusEffective)),
+            ViewItem::from_default(Props(TidsMax)),
             ViewItem::from_default(Props(CgroupControllers)),
         ])
     });
