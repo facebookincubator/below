@@ -16,3 +16,4 @@ members = [
   "below/store",
   "below/view",
 ]
+resolver = "2"
