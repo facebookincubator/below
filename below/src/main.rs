@@ -51,6 +51,7 @@ use slog::warn;
 use tar::Archive;
 use tar::Builder as TarBuilder;
 use tempfile::TempDir;
+use tokio::runtime::Builder as TB;
 use users::get_current_uid;
 use users::get_user_by_uid;
 
@@ -431,7 +432,11 @@ pub fn start_gpu_stats_thread_and_get_stats_receiver(
             let mut interval = target_interval;
             loop {
                 let collect_instant = Instant::now();
-                match futures::executor::block_on(collector.collect_and_update()) {
+                let rt = TB::new_current_thread()
+                    .thread_name("create_fburl")
+                    .build()
+                    .expect("Failed to build tokio runtime.");
+                match rt.block_on(collector.collect_and_update()) {
                     Ok(_) => {
                         interval = target_interval;
                     }
