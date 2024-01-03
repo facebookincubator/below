@@ -52,8 +52,8 @@ use tar::Archive;
 use tar::Builder as TarBuilder;
 use tempfile::TempDir;
 use tokio::runtime::Builder as TB;
-use users::get_current_uid;
-use users::get_user_by_uid;
+use uzers::get_current_uid;
+use uzers::get_user_by_uid;
 
 mod exitstat;
 #[cfg(test)]
