@@ -12,7 +12,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "1.0.75"
 below_derive = { version = "0.7.1", path = "../below_derive" }
-clap = { version = "4.4.7", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.4.12", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 common = { package = "below-common", version = "0.7.1", path = "../common" }
 enum-iterator = "1.4.1"
 model = { package = "below-model", version = "0.7.1", path = "../model" }
