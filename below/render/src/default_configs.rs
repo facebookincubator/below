@@ -923,16 +923,16 @@ impl HasRenderConfigForDump for model::SingleProcessModel {
         use model::ProcessIoModelFieldId::*;
         use model::ProcessMemoryModelFieldId::*;
         use model::SingleProcessModelFieldId::*;
-        let counter = if let Some(pid) = &self.pid {
-            counter().label("pid", &pid.to_string())
-        } else {
-            counter()
-        };
-        let gauge = if let Some(pid) = &self.pid {
-            gauge().label("pid", &pid.to_string())
-        } else {
-            gauge()
-        };
+        let mut counter = counter();
+        let mut gauge = gauge();
+        if let Some(pid) = &self.pid {
+            counter = counter.label("pid", &pid.to_string());
+            gauge = gauge.label("pid", &pid.to_string());
+        }
+        if let Some(comm) = &self.comm {
+            counter = counter.label("comm", comm);
+            gauge = gauge.label("comm", comm);
+        }
         match field_id {
             // We will label all the other metrics with the pid
             Pid => None,
