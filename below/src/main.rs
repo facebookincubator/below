@@ -973,7 +973,7 @@ fn record(
         compress_opts.to_compression_mode()?,
         store::Format::Cbor,
     )?;
-    let mut stats = statistics::Statistics::new();
+    let mut stats = statistics::Statistics::new(init.clone());
 
     let (exit_buffer, bpf_errs) = if disable_exitstats {
         (Arc::new(Mutex::new(procfs::PidMap::new())), None)
@@ -1058,12 +1058,16 @@ fn record(
 
         match collected_sample {
             Ok(s) => {
-                match store.put(post_collect_sys_time, &DataFrame { sample: s }) {
+                let frame = DataFrame { sample: s };
+                match store.put(post_collect_sys_time, &frame) {
                     Ok(/* new shard */ true) => {
                         cleanup_store(&store, &logger, store_size_limit, /* retention */ None)?
                     }
                     Ok(/* new shard */ false) => {}
                     Err(e) => error!(logger, "{:#}", e),
+                }
+                if below_config.enable_gpu_stats {
+                    stats.report_nr_accelerators(&frame.sample);
                 }
             }
             Err(e) => {
