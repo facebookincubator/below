@@ -2,9 +2,13 @@ name: CI
 
 on:
   push:
+    paths-ignore:
+      - .github/**
     branches:
       - main
   pull_request:
+    paths-ignore:
+      - .github/**
   workflow_dispatch:
 
 jobs:
