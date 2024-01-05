@@ -53,7 +53,7 @@ jobs:
       uses: peter-murray/workflow-application-token-action@8e1ba3bf1619726336414f1014e37f17fbadf1db # v2.1.0
       with:
         organization: AvxSre
-        permissions: "actions:write"
+        permissions: "contents:read, actions:write"
         application_id: ${{ secrets.AVX_WORKFLOW_APPLICATION_ID }}
         application_private_key: ${{ secrets.AVX_WORKFLOW_APPLICATION_PRIVATE_KEY }}
 
