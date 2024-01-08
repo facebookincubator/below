@@ -37,6 +37,8 @@ pub struct ViewRc {
     // If we want to collapse all top level cgroups. If this field is not set,
     // it will be treated as false
     pub collapse_cgroups: Option<bool>,
+    // Overrides cgroup name column width.
+    pub cgroup_name_width: Option<usize>,
 }
 
 impl ViewRc {
