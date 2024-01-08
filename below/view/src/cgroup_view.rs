@@ -43,6 +43,7 @@ use crate::stats_view::ColumnTitles;
 use crate::stats_view::StateCommon;
 use crate::stats_view::StatsView;
 use crate::stats_view::ViewBridge;
+use crate::viewrc::ViewRc;
 use crate::ViewState;
 
 pub type ViewType = StatsView<CgroupView>;
@@ -204,7 +205,7 @@ pub struct CgroupView {
 }
 
 impl CgroupView {
-    pub fn new(c: &mut Cursive) -> NamedView<ViewType> {
+    pub fn new(c: &mut Cursive, viewrc: &ViewRc) -> NamedView<ViewType> {
         let mut list = SelectView::new();
         list.set_on_submit(|c, cgroup: &String| {
             let mut view = CgroupView::get_cgroup_view(c);
@@ -257,48 +258,52 @@ impl CgroupView {
         tabs_map.insert(
             "General".into(),
             CgroupView {
-                tab: &*CGROUP_GENERAL_TAB,
+                tab: &CGROUP_GENERAL_TAB,
             },
         );
         tabs_map.insert(
             "CPU".into(),
             CgroupView {
-                tab: &*CGROUP_CPU_TAB,
+                tab: &CGROUP_CPU_TAB,
             },
         );
         tabs_map.insert(
             "Mem".into(),
             CgroupView {
-                tab: &*CGROUP_MEM_TAB,
+                tab: &CGROUP_MEM_TAB,
             },
         );
         tabs_map.insert(
             "I/O".into(),
             CgroupView {
-                tab: &*CGROUP_IO_TAB,
+                tab: &CGROUP_IO_TAB,
             },
         );
         tabs_map.insert(
             "Pressure".into(),
             CgroupView {
-                tab: &*CGROUP_PRESSURE_TAB,
+                tab: &CGROUP_PRESSURE_TAB,
             },
         );
         tabs_map.insert(
             "Properties".into(),
             CgroupView {
-                tab: &*CGROUP_PROPERTIES_TAB,
+                tab: &CGROUP_PROPERTIES_TAB,
             },
         );
         let user_data = c
             .user_data::<ViewState>()
             .expect("No data stored in Cursive Object!");
+        let mut cgroup_state = CgroupState::new(user_data.cgroup.clone());
+        if viewrc.collapse_cgroups == Some(true) {
+            cgroup_state.collapse_all_top_level_cgroup = true;
+        }
         StatsView::new(
             "Cgroup",
             tabs,
             tabs_map,
             list,
-            CgroupState::new(user_data.cgroup.clone()),
+            cgroup_state,
             user_data.event_controllers.clone(),
             user_data.cmd_controllers.clone(),
         )

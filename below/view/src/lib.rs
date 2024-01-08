@@ -332,13 +332,9 @@ impl View {
         // Verify belowrc file format
         let cmdrc_opt = match std::fs::read_to_string(filename) {
             Ok(belowrc_str) => match belowrc_str.parse::<Value>() {
-                Ok(belowrc) => {
-                    if let Some(cmdrc) = belowrc.get(get_belowrc_cmd_section_key()) {
-                        Some(cmdrc.to_owned())
-                    } else {
-                        None
-                    }
-                }
+                Ok(belowrc) => belowrc
+                    .get(get_belowrc_cmd_section_key())
+                    .map(|cmdrc| cmdrc.to_owned()),
                 Err(e) => {
                     view_warn!(c, "Failed to parse belowrc: {}", e);
                     None
@@ -356,6 +352,8 @@ impl View {
     }
 
     pub fn run(&mut self) -> Result<()> {
+        let (viewrc, viewrc_error) = viewrc::ViewRc::new();
+
         let mut theme = self.inner.current_theme().clone();
         theme.palette[PaletteColor::Background] = Color::TerminalDefault;
         theme.palette[PaletteColor::View] = Color::TerminalDefault;
@@ -406,7 +404,7 @@ impl View {
 
         let status_bar = status_bar::new(&mut self.inner);
         let system_view = system_view::new(&mut self.inner);
-        let cgroup_view = cgroup_view::CgroupView::new(&mut self.inner);
+        let cgroup_view = cgroup_view::CgroupView::new(&mut self.inner, &viewrc);
         let process_view = process_view::ProcessView::new(&mut self.inner);
         let core_view = core_view::CoreView::new(&mut self.inner);
         #[cfg(fbcode_build)]
@@ -453,9 +451,35 @@ impl View {
             .focus_name("dynamic_view")
             .expect("Could not set focus at initialization!");
 
+        // Set default view from viewrc
+        if let Some(view) = &viewrc.default_view {
+            let main_view_state = &mut self
+                .inner
+                .user_data::<ViewState>()
+                .expect("No data stored in Cursive object!")
+                .main_view_state;
+            match view {
+                viewrc::DefaultFrontView::Cgroup => {
+                    *main_view_state = MainViewState::Cgroup;
+                    set_active_screen(&mut self.inner, "cgroup_view_panel")
+                }
+                viewrc::DefaultFrontView::Process => {
+                    *main_view_state = MainViewState::Process(ProcessZoomState::NoZoom);
+                    set_active_screen(&mut self.inner, "process_view_panel")
+                }
+                viewrc::DefaultFrontView::System => {
+                    *main_view_state = MainViewState::Core;
+                    set_active_screen(&mut self.inner, "core_view_panel")
+                }
+            }
+        }
+
         // Raise warning message if failed to map the customized command.
         Self::generate_event_controller_map(&mut self.inner, get_belowrc_filename());
-        viewrc::ViewRc::process(&mut self.inner);
+        if let Some(msg) = viewrc_error {
+            let c = &mut self.inner;
+            view_warn!(c, "{}", msg);
+        }
         if let Some(msg) = init_warnings {
             let c = &mut self.inner;
             view_warn!(c, "{}", msg);
@@ -523,7 +547,7 @@ pub mod fake_view {
         }
 
         pub fn add_cgroup_view(&mut self) {
-            let cgroup_view = CgroupView::new(&mut self.inner);
+            let cgroup_view = CgroupView::new(&mut self.inner, &Default::default());
             self.inner.add_layer(cgroup_view);
         }
 

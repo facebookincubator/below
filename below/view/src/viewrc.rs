@@ -12,11 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use cursive::Cursive;
 use serde::Deserialize;
 
-use super::cgroup_view::CgroupView;
-use super::controllers::Controllers;
 use super::get_belowrc_filename;
 use super::get_belowrc_view_section_key;
 
@@ -45,9 +42,9 @@ pub struct ViewRc {
 impl ViewRc {
     /// Create a new ViewRc object base on the content in
     /// $HOME/.config/below/belowrc. Will return default ViewRc if the belowrc
-    /// file is missing or view section does not exists. Will raise a warning
-    /// in the command palette if the belowrc file is malformated.
-    fn new(c: &mut Cursive) -> ViewRc {
+    /// file is missing or view section does not exists. Optionally return a
+    /// parse error string.
+    pub fn new() -> (ViewRc, Option<String>) {
         match std::fs::read_to_string(get_belowrc_filename()) {
             Ok(belowrc_str) => match belowrc_str.parse::<toml::value::Value>() {
                 // We get the belowrc file, parsing the [view] section
@@ -55,141 +52,26 @@ impl ViewRc {
                     if let Some(viewrc_val) = belowrc_val.get(get_belowrc_view_section_key()) {
                         // Got the [view] section, let's see if we can deserialize it to ViewRc
                         match viewrc_val.to_owned().try_into::<ViewRc>() {
-                            Ok(viewrc) => viewrc,
-                            Err(e) => {
-                                view_warn!(
-                                    c,
+                            Ok(viewrc) => (viewrc, None),
+                            Err(e) => (
+                                Default::default(),
+                                Some(format!(
                                     "Failed to parse belowrc::{}: {}",
                                     get_belowrc_view_section_key(),
                                     e
-                                );
-                                Default::default()
-                            }
+                                )),
+                            ),
                         }
                     } else {
                         Default::default()
                     }
                 }
-                Err(e) => {
-                    view_warn!(c, "Failed to parse belowrc: {}", e);
-                    Default::default()
-                }
+                Err(e) => (
+                    Default::default(),
+                    Some(format!("Failed to parse belowrc: {}", e)),
+                ),
             },
-            _ => Default::default(),
+            _ => (Default::default(), None),
         }
-    }
-
-    /// Fold the top level cgroups base on the value of collapse_cgroups.
-    pub fn process_collapse_cgroups(&self, c: &mut Cursive) {
-        if Some(true) == self.collapse_cgroups {
-            let cgroup_view = CgroupView::get_cgroup_view(c);
-            cgroup_view.state.borrow_mut().collapse_all_top_level_cgroup = true;
-            cgroup_view
-                .state
-                .borrow_mut()
-                .collapsed_cgroups
-                .borrow_mut()
-                .clear();
-        }
-    }
-
-    /// Move the desired view to front base on the value of default_view
-    pub fn process_default_view(&self, c: &mut Cursive) {
-        match self.default_view {
-            Some(DefaultFrontView::Cgroup) => Controllers::Cgroup.callback::<CgroupView>(c, &[]),
-            Some(DefaultFrontView::Process) => Controllers::Process.callback::<CgroupView>(c, &[]),
-            Some(DefaultFrontView::System) => Controllers::System.callback::<CgroupView>(c, &[]),
-            None => {}
-        }
-    }
-
-    /// Syntactic sugar for processing the belowrc file.
-    pub fn process(c: &mut Cursive) {
-        let viewrc = Self::new(c);
-        viewrc.process_default_view(c);
-        viewrc.process_collapse_cgroups(c);
-        super::refresh(c);
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::fake_view::FakeView;
-    use crate::MainViewState;
-    use crate::ProcessZoomState;
-    use crate::ViewState;
-
-    #[test]
-    fn test_viewrc_collapse_cgroups() {
-        let cgroup_collapsed = |c: &mut Cursive| -> bool {
-            let cgroup_view = CgroupView::get_cgroup_view(c);
-            let res = cgroup_view.state.borrow_mut().collapse_all_top_level_cgroup;
-            res
-        };
-        let mut view = FakeView::new();
-        view.add_cgroup_view();
-
-        // Test for default setup
-        {
-            let viewrc: ViewRc = Default::default();
-            viewrc.process_collapse_cgroups(&mut view.inner);
-            assert!(!cgroup_collapsed(&mut view.inner));
-        }
-
-        // Test for collapse_cgroups = false
-        {
-            let viewrc = ViewRc {
-                collapse_cgroups: Some(false),
-                ..Default::default()
-            };
-            viewrc.process_collapse_cgroups(&mut view.inner);
-            assert!(!cgroup_collapsed(&mut view.inner));
-        }
-
-        // Test for collapse_cgroups = true
-        {
-            let viewrc = ViewRc {
-                collapse_cgroups: Some(true),
-                ..Default::default()
-            };
-            viewrc.process_collapse_cgroups(&mut view.inner);
-            assert!(cgroup_collapsed(&mut view.inner));
-        }
-    }
-
-    #[test]
-    fn test_viewrc_default_view() {
-        let mut view = FakeView::new();
-
-        let desired_state = vec![
-            None,
-            Some(DefaultFrontView::Cgroup),
-            Some(DefaultFrontView::Process),
-            Some(DefaultFrontView::System),
-        ];
-        let expected_state = vec![
-            MainViewState::Cgroup,
-            MainViewState::Cgroup,
-            MainViewState::Process(ProcessZoomState::NoZoom),
-            MainViewState::Core,
-        ];
-        desired_state
-            .into_iter()
-            .zip(expected_state)
-            .for_each(move |(desired, expected)| {
-                let viewrc = ViewRc {
-                    default_view: desired,
-                    ..Default::default()
-                };
-                viewrc.process_default_view(&mut view.inner);
-                let current_state = view
-                    .inner
-                    .user_data::<ViewState>()
-                    .expect("No data stored in Cursive object!")
-                    .main_view_state
-                    .clone();
-                assert_eq!(current_state, expected);
-            });
     }
 }
