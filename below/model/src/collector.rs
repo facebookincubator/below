@@ -59,6 +59,7 @@ impl Default for CollectorOptions {
 /// Collects data samples and maintains the latest data
 pub struct Collector {
     logger: slog::Logger,
+    proc_reader: procfs::ProcReader,
     prev_sample: Option<(Sample, Instant)>,
     collector_options: CollectorOptions,
 }
@@ -67,13 +68,14 @@ impl Collector {
     pub fn new(logger: slog::Logger, collector_options: CollectorOptions) -> Self {
         Self {
             logger,
+            proc_reader: procfs::ProcReader::new(),
             prev_sample: None,
             collector_options,
         }
     }
 
-    pub fn collect_sample(&self) -> Result<Sample> {
-        collect_sample(&self.logger, &self.collector_options)
+    pub fn collect_sample(&mut self) -> Result<Sample> {
+        collect_sample(&self.logger, &mut self.proc_reader, &self.collector_options)
     }
 
     /// Collect a new `Sample`, returning an updated Model
@@ -171,8 +173,11 @@ fn is_all_zero_disk_stats(disk_stats: &procfs::DiskStat) -> bool {
         && disk_stats.time_spend_discard_ms == Some(0)
 }
 
-fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<Sample> {
-    let mut reader = procfs::ProcReader::new();
+fn collect_sample(
+    logger: &slog::Logger,
+    reader: &mut procfs::ProcReader,
+    options: &CollectorOptions,
+) -> Result<Sample> {
     let btrfs_reader =
         btrfs::BtrfsReader::new(options.btrfs_samples, options.btrfs_min_pct, logger.clone());
     let ethtool_reader = ethtool::EthtoolReader::new();

@@ -1002,7 +1002,7 @@ fn record(
         None
     };
 
-    let collector = model::Collector::new(
+    let mut collector = model::Collector::new(
         logger.clone(),
         model::CollectorOptions {
             cgroup_root: below_config.cgroup_root.clone(),
