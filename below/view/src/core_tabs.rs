@@ -20,9 +20,11 @@ use model::system::BtrfsModelFieldId;
 use model::system::MemoryModelFieldId;
 use model::system::SingleCpuModelFieldId;
 use model::system::SingleDiskModelFieldId;
+use model::system::SingleSlabModelFieldId;
 use model::system::VmModelFieldId;
 use model::BtrfsModel;
 use model::Queriable;
+use model::SingleSlabModel;
 
 use crate::core_view::CoreState;
 use crate::core_view::CoreStateFieldId;
@@ -147,6 +149,51 @@ impl CoreTab for CoreVm {
                 line.append_plain(" ");
                 line.append(item.update(Rc::new().width(FIELD_WIDTH)).render(&model.vm));
                 line
+            })
+            .filter(|s| {
+                if let Some((_, filter)) = &state.filter_info {
+                    s.source().contains(filter)
+                } else {
+                    true
+                }
+            })
+            .map(|s| (s.clone(), "".into()))
+            .collect()
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct CoreSlab;
+
+impl CoreTab for CoreSlab {
+    fn get_titles(&self) -> ColumnTitles {
+        ColumnTitles {
+            titles: enum_iterator::all::<SingleSlabModelFieldId>()
+                .map(|field_id| ViewItem::from_default(field_id).config.render_title())
+                .collect(),
+            pinned_titles: 1,
+        }
+    }
+
+    fn get_rows(&self, state: &CoreState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
+        let model = state.get_model();
+        let mut slab: Vec<&SingleSlabModel> = model.slab.values().collect();
+
+        if let Some(CoreStateFieldId::Slab(sort_order)) = state.sort_order.as_ref() {
+            model::sort_queriables(&mut slab, sort_order, state.reverse);
+        }
+
+        slab.into_iter()
+            .map(|ssm| {
+                enum_iterator::all::<SingleSlabModelFieldId>().fold(
+                    StyledString::new(),
+                    |mut line, field_id| {
+                        let view_item = ViewItem::from_default(field_id.clone());
+                        line.append(view_item.render(ssm));
+                        line.append_plain(" ");
+                        line
+                    },
+                )
             })
             .filter(|s| {
                 if let Some((_, filter)) = &state.filter_info {

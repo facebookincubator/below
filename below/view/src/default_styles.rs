@@ -96,6 +96,8 @@ impl HasViewStyle for model::SingleCpuModel {}
 
 impl HasViewStyle for model::VmModel {}
 
+impl HasViewStyle for model::SingleSlabModel {}
+
 impl HasViewStyle for model::SingleDiskModel {}
 
 impl HasViewStyle for model::BtrfsModel {}

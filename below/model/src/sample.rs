@@ -62,6 +62,7 @@ pub struct SystemSample {
     pub stat: procfs::Stat,
     pub meminfo: procfs::MemInfo,
     pub vmstat: procfs::VmStat,
+    pub slabinfo: procfs::SlabInfoMap,
     pub hostname: String,
     pub disks: procfs::DiskMap,
     pub btrfs: Option<btrfs::BtrfsMap>,

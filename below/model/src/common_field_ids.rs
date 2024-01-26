@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 410] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 416] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -103,6 +103,12 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 410] = [
     "system.vm.pgscan_kswapd",
     "system.vm.pgscan_direct",
     "system.vm.oom_kill",
+    "system.slab.<key>.name",
+    "system.slab.<key>.active_objs",
+    "system.slab.<key>.num_objs",
+    "system.slab.<key>.obj_size",
+    "system.slab.<key>.obj_per_slab",
+    "system.slab.<key>.num_slabs",
     "system.disks.<key>.name",
     "system.disks.<key>.disk_usage",
     "system.disks.<key>.partition_size",

@@ -1041,6 +1041,9 @@ impl HasRenderConfig for model::SystemModel {
             }
             Mem(field_id) => model::MemoryModel::get_render_config_builder(field_id),
             Vm(field_id) => model::VmModel::get_render_config_builder(field_id),
+            Slab(field_id) => {
+                model::SingleSlabModel::get_render_config_builder(&field_id.subquery_id)
+            }
             Disks(field_id) => {
                 model::SingleDiskModel::get_render_config_builder(&field_id.subquery_id)
             }
@@ -1067,6 +1070,7 @@ impl HasRenderConfigForDump for model::SystemModel {
             Cpus(field_id) => self.cpus.get_openmetrics_config_for_dump(field_id),
             Mem(field_id) => self.mem.get_openmetrics_config_for_dump(field_id),
             Vm(field_id) => self.vm.get_openmetrics_config_for_dump(field_id),
+            Slab(_) => None,
             // Same as with NetworkModel, we leave disk dumping to `disk` category
             Disks(_) => None,
             // Same as with above, we leave btrfs dumping to `btrfs` category
@@ -1310,6 +1314,38 @@ impl HasRenderConfigForDump for model::VmModel {
             PgscanKswapd => Some(counter()),
             PgscanDirect => Some(counter()),
             OomKill => Some(counter()),
+        }
+    }
+}
+
+impl HasRenderConfig for model::SingleSlabModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::SingleSlabModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            Name => rc.title("Name").width(25),
+            ActiveObjs => rc.title("Active"),
+            NumObjs => rc.title("Objs"),
+            ObjSize => rc.title("Size").format(ReadableSize),
+            ObjPerSlab => rc.title("Obj/Slab"),
+            NumSlabs => rc.title("Slabs"),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::SingleSlabModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::SingleSlabModelFieldId::*;
+        match field_id {
+            Name => None,
+            ActiveObjs => Some(counter()),
+            NumObjs => Some(counter()),
+            ObjSize => Some(counter()),
+            ObjPerSlab => Some(counter()),
+            NumSlabs => Some(counter()),
         }
     }
 }

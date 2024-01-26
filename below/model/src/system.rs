@@ -39,6 +39,8 @@ pub struct SystemModel {
     #[queriable(subquery)]
     pub vm: VmModel,
     #[queriable(subquery)]
+    pub slab: BTreeMap<String, SingleSlabModel>,
+    #[queriable(subquery)]
     pub disks: BTreeMap<String, SingleDiskModel>,
     #[queriable(subquery)]
     pub btrfs: Option<BTreeMap<String, BtrfsModel>>,
@@ -74,10 +76,15 @@ impl SystemModel {
             _ => Default::default(),
         };
 
-        let mem = Some(MemoryModel::new(&sample.meminfo)).unwrap_or_default();
+        let mem = MemoryModel::new(&sample.meminfo);
         let vm = last
             .map(|(last, duration)| VmModel::new(&last.vmstat, &sample.vmstat, duration))
             .unwrap_or_default();
+        let slab = sample
+            .slabinfo
+            .iter()
+            .map(|(name, slab_info)| (name.to_owned(), SingleSlabModel::new(slab_info)))
+            .collect::<_>();
         let mut disks: BTreeMap<String, SingleDiskModel> = BTreeMap::new();
         sample.disks.iter().for_each(|(disk_name, end_disk_stat)| {
             disks.insert(
@@ -121,6 +128,7 @@ impl SystemModel {
             cpus,
             mem,
             vm,
+            slab,
             disks,
             btrfs,
         }
@@ -394,6 +402,37 @@ impl VmModel {
     Deserialize,
     below_derive::Queriable
 )]
+pub struct SingleSlabModel {
+    pub name: Option<String>,
+    pub active_objs: Option<u64>,
+    pub num_objs: Option<u64>,
+    pub obj_size: Option<u64>,
+    pub obj_per_slab: Option<u64>,
+    pub num_slabs: Option<u64>,
+}
+
+impl SingleSlabModel {
+    fn new(slabinfo: &procfs::SlabInfo) -> SingleSlabModel {
+        SingleSlabModel {
+            name: slabinfo.name.clone(),
+            active_objs: slabinfo.active_objs,
+            num_objs: slabinfo.num_objs,
+            obj_size: slabinfo.obj_size,
+            obj_per_slab: slabinfo.obj_per_slab,
+            num_slabs: slabinfo.num_slabs,
+        }
+    }
+}
+
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    below_derive::Queriable
+)]
 pub struct SingleDiskModel {
     pub name: Option<String>,
     pub disk_usage: Option<f32>,
@@ -520,6 +559,7 @@ mod test {
             "cpus": {},
             "mem": {},
             "vm": {},
+            "slab": {},
             "disks": {
                 "sda": {
                     "name": "sda",

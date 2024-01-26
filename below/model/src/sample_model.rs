@@ -131,6 +131,24 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
             "pgscan_direct": 0,
             "oom_kill": 0
         },
+        "slab": {
+            "task_struct": {
+                "name": "task_group",
+                "active_objs": 13000,
+                "num_objs": 14000,
+                "obj_size": 6000,
+                "obj_per_slab": 5,
+                "num_slabs": 3000
+            },
+            "vmap_area": {
+                "name": "vmap_area",
+                "active_objs": 4000000,
+                "num_objs": 6000000,
+                "obj_size": 64,
+                "obj_per_slab": 64,
+                "num_slabs": 100000
+            }
+        },
         "disks": {
             "vda": {
                 "name": "vda",

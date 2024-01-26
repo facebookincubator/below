@@ -30,6 +30,7 @@ use model::BtrfsModelFieldId;
 use model::MemoryModelFieldId;
 use model::SingleCpuModelFieldId;
 use model::SingleDiskModelFieldId;
+use model::SingleSlabModelFieldId;
 use model::VmModelFieldId;
 
 use crate::core_tabs::*;
@@ -62,6 +63,7 @@ pub enum CoreStateFieldId {
     Cpu(SingleCpuModelFieldId),
     Mem(MemoryModelFieldId),
     Vm(VmModelFieldId),
+    Slab(SingleSlabModelFieldId),
 }
 
 impl std::string::ToString for CoreStateFieldId {
@@ -72,6 +74,7 @@ impl std::string::ToString for CoreStateFieldId {
             Self::Cpu(field) => field.to_string(),
             Self::Mem(field) => field.to_string(),
             Self::Vm(field) => field.to_string(),
+            Self::Slab(field) => field.to_string(),
         }
     }
 }
@@ -118,6 +121,11 @@ impl StateCommon for CoreState {
             // they don't use FieldId as column titles/selected col (it isn't used to filter)
             "Mem" => CoreStateFieldId::Mem(MemoryModelFieldId::Total),
             "Vm" => CoreStateFieldId::Vm(VmModelFieldId::PgpginPerSec),
+            "Slab" => CoreStateFieldId::Slab(
+                enum_iterator::all::<SingleSlabModelFieldId>()
+                    .nth(idx)
+                    .expect("Tag out of range"),
+            ),
             _ => panic!("bug: got unsupported tab {}", tab),
         }
     }
@@ -150,7 +158,7 @@ impl StateCommon for CoreState {
 
     fn set_sort_tag_from_tab_idx(&mut self, tab: &str, idx: usize, reverse: &mut bool) -> bool {
         match tab {
-            "Btrfs" => {
+            "Btrfs" | "Slab" => {
                 let sort_order = self.get_tag_from_tab_idx(tab, idx);
                 self.set_sort_tag(sort_order, reverse)
             }
@@ -195,6 +203,7 @@ pub enum CoreView {
     Cpu(CoreCpu),
     Mem(CoreMem),
     Vm(CoreVm),
+    Slab(CoreSlab),
     Disk(CoreDisk),
     Btrfs(CoreBtrfs),
 }
@@ -223,6 +232,7 @@ impl CoreView {
             "CPU".into(),
             "Mem".into(),
             "Vm".into(),
+            "Slab".into(),
             "Disk".into(),
             "Btrfs".into(),
         ];
@@ -230,6 +240,7 @@ impl CoreView {
         tabs_map.insert("CPU".into(), CoreView::Cpu(Default::default()));
         tabs_map.insert("Mem".into(), CoreView::Mem(Default::default()));
         tabs_map.insert("Vm".into(), CoreView::Vm(Default::default()));
+        tabs_map.insert("Slab".into(), CoreView::Slab(Default::default()));
         tabs_map.insert("Disk".into(), CoreView::Disk(Default::default()));
         tabs_map.insert("Btrfs".into(), CoreView::Btrfs(Default::default()));
         let user_data = c
@@ -261,6 +272,7 @@ impl CoreView {
             Self::Cpu(inner) => Box::new(inner.clone()),
             Self::Mem(inner) => Box::new(inner.clone()),
             Self::Vm(inner) => Box::new(inner.clone()),
+            Self::Slab(inner) => Box::new(inner.clone()),
             Self::Disk(inner) => Box::new(inner.clone()),
             Self::Btrfs(inner) => Box::new(inner.clone()),
         }
