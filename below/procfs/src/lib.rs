@@ -393,6 +393,35 @@ impl ProcReader {
         }
     }
 
+    pub fn read_slabinfo(&self) -> Result<SlabInfoMap> {
+        let path = self.path.join("slabinfo");
+        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
+        let buf_reader = BufReader::new(file);
+        let mut slab_info_map: SlabInfoMap = Default::default();
+
+        // The first line is version, second line is headers:
+        //
+        // slabinfo - version: 2.1
+        // # name            <active_objs> <num_objs> <objsize> <objperslab> <pagesperslab> : tunables <limit> <batchcount> <sharedfactor> : slabdata <active_slabs> <num_slabs> <sharedavail>
+        //
+        for line in buf_reader.lines().skip(2) {
+            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
+            let mut items = line.split_whitespace();
+            let mut slab_info: SlabInfo = Default::default();
+            let name = items.next().unwrap().to_owned();
+            slab_info.name = Some(name.clone());
+            slab_info.active_objs = parse_item!(path, items.next(), u64, line)?;
+            slab_info.num_objs = parse_item!(path, items.next(), u64, line)?;
+            slab_info.obj_size = parse_item!(path, items.next(), u64, line)?;
+            slab_info.obj_per_slab = parse_item!(path, items.next(), u64, line)?;
+            slab_info.pages_per_slab = parse_item!(path, items.next(), u64, line)?;
+            slab_info.active_slabs = parse_item!(path, items.nth(7), u64, line)?;
+            slab_info.num_slabs = parse_item!(path, items.next(), u64, line)?;
+            slab_info_map.insert(name, slab_info);
+        }
+        Ok(slab_info_map)
+    }
+
     fn read_disk_fsinfo(&self, mount_info: &MountInfo) -> Option<(f32, u64)> {
         if let Some(mount_point) = &mount_info.mount_point {
             if let Ok(stat) = sys::statvfs::statvfs(Path::new(&mount_point)) {

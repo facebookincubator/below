@@ -273,6 +273,18 @@ pub struct VmStat {
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct SlabInfo {
+    pub name: Option<String>,
+    pub active_objs: Option<u64>,
+    pub num_objs: Option<u64>,
+    pub obj_size: Option<u64>,
+    pub obj_per_slab: Option<u64>,
+    pub pages_per_slab: Option<u64>,
+    pub active_slabs: Option<u64>,
+    pub num_slabs: Option<u64>,
+}
+
+#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct MountInfo {
     pub mnt_id: Option<i32>,
     pub parent_mnt_id: Option<i32>,
@@ -374,6 +386,7 @@ pub struct PidInfo {
 pub type PidMap = BTreeMap<i32, PidInfo>;
 pub type NetMap = BTreeMap<String, InterfaceStat>;
 pub type DiskMap = BTreeMap<String, DiskStat>;
+pub type SlabInfoMap = BTreeMap<String, SlabInfo>;
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct NetStat {
