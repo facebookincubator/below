@@ -987,6 +987,7 @@ fn test_dump_queue_content() {
         network,
         gpu: None,
         resctrl: None,
+        tc: None,
     };
 
     let mut opts: GeneralOpt = Default::default();
@@ -1223,4 +1224,215 @@ proc = ["datetime", "mem.anon"]
             model::SingleProcessModelFieldId::Mem(model::ProcessMemoryModelFieldId::Anon)
         ))
     );
+}
+
+#[test]
+fn test_tc_titles() {
+    let titles = expand_fields(command::DEFAULT_TC_FIELDS, true)
+        .iter()
+        .filter_map(|dump_field| match dump_field {
+            DumpField::Common(_) => None,
+            DumpField::FieldId(field_id) => Some(field_id.to_string()),
+        })
+        .collect::<Vec<_>>();
+
+    let expected_titles = vec![
+        "interface",
+        "kind",
+        "qlen",
+        "bps",
+        "pps",
+        "bytes_per_sec",
+        "packets_per_sec",
+        "backlog_per_sec",
+        "drops_per_sec",
+        "requeues_per_sec",
+        "overlimits_per_sec",
+        "xstats.fq_codel.maxpacket",
+        "xstats.fq_codel.ecn_mark",
+        "xstats.fq_codel.new_flows_len",
+        "xstats.fq_codel.old_flows_len",
+        "xstats.fq_codel.ce_mark",
+        "xstats.fq_codel.drop_overlimit_per_sec",
+        "xstats.fq_codel.new_flow_count_per_sec",
+        "xstats.fq_codel.memory_usage_per_sec",
+        "xstats.fq_codel.drop_overmemory_per_sec",
+        "qdisc.fq_codel.target",
+        "qdisc.fq_codel.limit",
+        "qdisc.fq_codel.interval",
+        "qdisc.fq_codel.ecn",
+        "qdisc.fq_codel.quantum",
+        "qdisc.fq_codel.ce_threshold",
+        "qdisc.fq_codel.drop_batch_size",
+        "qdisc.fq_codel.memory_limit",
+        "qdisc.fq_codel.flows_per_sec",
+    ];
+    assert_eq!(titles, expected_titles);
+}
+
+#[test]
+fn test_dump_tc_content() {
+    let tc_models = vec![
+        model::SingleTcModel {
+            interface: "eth0".to_string(),
+            kind: "mq".to_string(),
+            qlen: Some(42),
+            bps: Some(420),
+            pps: Some(1337),
+            bytes_per_sec: Some(299792458),
+            packets_per_sec: Some(314),
+            backlog_per_sec: Some(271828182),
+            drops_per_sec: Some(8675309),
+            requeues_per_sec: Some(12345),
+            overlimits_per_sec: Some(314159),
+            qdisc: None,
+            xstats: None,
+        },
+        model::SingleTcModel {
+            interface: "eth0".to_string(),
+            kind: "fq_codel".to_string(),
+            qlen: Some(42),
+            bps: Some(420),
+            pps: Some(1337),
+            bytes_per_sec: Some(299792458),
+            packets_per_sec: Some(314),
+            backlog_per_sec: Some(271828182),
+            drops_per_sec: Some(8675309),
+            requeues_per_sec: Some(12345),
+            overlimits_per_sec: Some(314159),
+            qdisc: Some(model::QDiscModel {
+                fq_codel: Some(model::FqCodelQDiscModel {
+                    target: 2701,
+                    limit: 7,
+                    interval: 3,
+                    ecn: 6,
+                    quantum: 42,
+                    ce_threshold: 101,
+                    drop_batch_size: 9000,
+                    memory_limit: 123456,
+                    flows_per_sec: Some(31415),
+                }),
+            }),
+            xstats: Some(model::XStatsModel {
+                fq_codel: Some(model::FqCodelXStatsModel {
+                    maxpacket: 8675309,
+                    ecn_mark: 299792458,
+                    new_flows_len: 314,
+                    old_flows_len: 1729,
+                    ce_mark: 42,
+                    drop_overlimit_per_sec: Some(420),
+                    new_flow_count_per_sec: Some(1337),
+                    memory_usage_per_sec: Some(271828182),
+                    drop_overmemory_per_sec: Some(27182),
+                }),
+            }),
+        },
+    ];
+
+    let model = model::Model {
+        time_elapsed: Duration::from_secs(60 * 10),
+        timestamp: SystemTime::now(),
+        system: model::SystemModel::default(),
+        cgroup: model::CgroupModel::default(),
+        process: model::ProcessModel::default(),
+        network: model::NetworkModel::default(),
+        gpu: None,
+        resctrl: None,
+        tc: Some(model::TcModel {
+            tc: tc_models,
+        }),
+    };
+
+    let mut opts: GeneralOpt = Default::default();
+    let fields = command::expand_fields(command::DEFAULT_TC_FIELDS, true);
+
+    opts.output_format = Some(OutputFormat::Json);
+    let queue_dumper = tc::Tc::new(&opts, fields.clone());
+
+    let mut queue_content: Vec<u8> = Vec::new();
+    let mut round = 0;
+    let ctx = CommonFieldContext {
+        timestamp: 0,
+        hostname: "h".to_string(),
+    };
+
+    let result = queue_dumper
+        .dump_model(&ctx, &model, &mut queue_content, &mut round, false)
+        .expect("Failed to dump queue model");
+    assert!(result == tmain::IterExecResult::Success);
+
+    // verify json correctness
+    assert!(!queue_content.is_empty());
+    let jval: Value =
+        serde_json::from_slice(&queue_content).expect("Fail parse json of queue dump");
+
+    let expected_json = json!([
+        {
+            "Datetime": "1970-01-01 00:00:00",
+            "Device": "1",
+            "Kind": "mq",
+            "Queue Length": "42",
+            "Bps": "420 B/s",
+            "Pps": "1337/s",
+            "Bytes": "285.9 MB/s",
+            "Packets": "314/s",
+            "Backlog": "271828182/s",
+            "Drops": "8675309/s",
+            "Requeues": "12345/s",
+            "Overlimits": "314159/s",
+            "Target": "?",
+            "Limit": "?",
+            "Interval": "?",
+            "Ecn": "?",
+            "Quantum": "?",
+            "CeThreshold": "?",
+            "DropBatchSize": "?",
+            "MemoryLimit": "?",
+            "Flows": "?",
+            "MaxPacket": "?",
+            "EcnMark": "?",
+            "NewFlowsLen": "?",
+            "OldFlowsLen": "?",
+            "CeMark": "?",
+            "DropOverlimit": "?",
+            "NewFlowCount": "?",
+            "MemoryUsage": "?",
+            "DropOvermemory": "?",
+            "Timestamp": "0"
+        },
+        {
+            "Datetime": "1970-01-01 00:00:00",
+            "Device": "1",
+            "Kind": "fq_codel",
+            "Queue Length": "42",
+            "Bps": "420 B/s",
+            "Pps": "1337/s",
+            "Bytes": "285.9 MB/s",
+            "Packets": "314/s",
+            "Backlog": "271828182/s",
+            "Drops": "8675309/s",
+            "Requeues": "12345/s",
+            "Overlimits": "314159/s",
+            "Target": "2701",
+            "Limit": "7",
+            "Interval": "3",
+            "Ecn": "6",
+            "Quantum": "42",
+            "CeThreshold": "101",
+            "DropBatchSize": "9000",
+            "MemoryLimit": "123456",
+            "Flows": "31415/s",
+            "MaxPacket": "8675309",
+            "EcnMark": "299792458",
+            "NewFlowsLen": "314",
+            "OldFlowsLen": "1729",
+            "CeMark": "42",
+            "DropOverlimit": "420/s",
+            "NewFlowCount": "1337/s",
+            "MemoryUsage": "271828182/s",
+            "DropOvermemory": "27182/s",
+            "Timestamp": "0"
+        }
+    ]);
+    assert_eq!(jval, expected_json);
 }
