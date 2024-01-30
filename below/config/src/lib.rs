@@ -47,6 +47,7 @@ pub struct BelowConfig {
     pub btrfs_min_pct: f64,
     pub enable_ethtool_stats: bool,
     pub enable_resctrl_stats: bool,
+    pub enable_tc_stats: bool,
 }
 
 impl Default for BelowConfig {
@@ -63,6 +64,7 @@ impl Default for BelowConfig {
             btrfs_min_pct: btrfs::DEFAULT_MIN_PCT,
             enable_ethtool_stats: false,
             enable_resctrl_stats: false,
+            enable_tc_stats: false,
         }
     }
 }

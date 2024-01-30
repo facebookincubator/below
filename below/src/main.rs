@@ -1012,6 +1012,7 @@ fn record(
             enable_btrfs_stats: below_config.enable_btrfs_stats,
             enable_ethtool_stats: below_config.enable_ethtool_stats,
             enable_resctrl_stats: below_config.enable_resctrl_stats,
+            enable_tc_stats: below_config.enable_tc_stats,
             btrfs_samples: below_config.btrfs_samples,
             btrfs_min_pct: below_config.btrfs_min_pct,
             cgroup_re,
