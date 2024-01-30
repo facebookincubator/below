@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 420] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 445] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -444,4 +444,33 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 420] = [
     "network.udp6.sndbuf_errors",
     "network.udp6.in_csum_errors",
     "network.udp6.ignored_multi",
+    "tc.tc.<idx>.backlog_per_sec",
+    "tc.tc.<idx>.bps",
+    "tc.tc.<idx>.bytes_per_sec",
+    "tc.tc.<idx>.interface",
+    "tc.tc.<idx>.drops_per_sec",
+    "tc.tc.<idx>.kind",
+    "tc.tc.<idx>.overlimits_per_sec",
+    "tc.tc.<idx>.packets_per_sec",
+    "tc.tc.<idx>.pps",
+    "tc.tc.<idx>.qdisc.fq_codel.ce_threshold",
+    "tc.tc.<idx>.qdisc.fq_codel.drop_batch_size",
+    "tc.tc.<idx>.qdisc.fq_codel.ecn",
+    "tc.tc.<idx>.qdisc.fq_codel.flows_per_sec",
+    "tc.tc.<idx>.qdisc.fq_codel.interval",
+    "tc.tc.<idx>.qdisc.fq_codel.limit",
+    "tc.tc.<idx>.qdisc.fq_codel.memory_limit",
+    "tc.tc.<idx>.qdisc.fq_codel.quantum",
+    "tc.tc.<idx>.qdisc.fq_codel.target",
+    "tc.tc.<idx>.qlen",
+    "tc.tc.<idx>.requeues_per_sec",
+    "tc.tc.<idx>.xstats.fq_codel.ce_mark",
+    "tc.tc.<idx>.xstats.fq_codel.drop_overlimit_per_sec",
+    "tc.tc.<idx>.xstats.fq_codel.drop_overmemory_per_sec",
+    "tc.tc.<idx>.xstats.fq_codel.ecn_mark",
+    "tc.tc.<idx>.xstats.fq_codel.maxpacket",
+    "tc.tc.<idx>.xstats.fq_codel.memory_usage_per_sec",
+    "tc.tc.<idx>.xstats.fq_codel.new_flow_count_per_sec",
+    "tc.tc.<idx>.xstats.fq_codel.new_flows_len",
+    "tc.tc.<idx>.xstats.fq_codel.old_flows_len",
 ];

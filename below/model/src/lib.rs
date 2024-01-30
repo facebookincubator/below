@@ -40,6 +40,7 @@ pub mod resctrl;
 pub mod sample;
 mod sample_model;
 pub mod system;
+pub mod tc_model;
 
 open_source_shim!(pub);
 
@@ -50,6 +51,7 @@ pub use process::*;
 pub use resctrl::*;
 pub use sample::*;
 pub use system::*;
+pub use tc_model::*;
 
 /// A wrapper for different field types used in Models. By this way we can query
 /// different fields in a single function without using Box.
@@ -535,6 +537,8 @@ pub struct Model {
     pub gpu: Option<GpuModel>,
     #[queriable(subquery)]
     pub resctrl: Option<ResctrlModel>,
+    #[queriable(subquery)]
+    pub tc: Option<TcModel>,
 }
 
 impl Model {
@@ -588,6 +592,16 @@ impl Model {
                     r,
                     if let Some((s, d)) = last {
                         s.resctrl.as_ref().map(|r| (r, d))
+                    } else {
+                        None
+                    },
+                )
+            }),
+            tc: sample.tc.as_ref().map(|tc| {
+                TcModel::new(
+                    tc,
+                    if let Some((s, d)) = last {
+                        s.tc.as_ref().map(|tc| (tc, d))
                     } else {
                         None
                     },

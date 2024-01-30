@@ -31,6 +31,7 @@ pub struct CollectorOptions {
     pub enable_btrfs_stats: bool,
     pub enable_ethtool_stats: bool,
     pub enable_resctrl_stats: bool,
+    pub enable_tc_stats: bool,
     pub btrfs_samples: u64,
     pub btrfs_min_pct: f64,
     pub cgroup_re: Option<Regex>,
@@ -48,6 +49,7 @@ impl Default for CollectorOptions {
             enable_btrfs_stats: false,
             enable_ethtool_stats: false,
             enable_resctrl_stats: false,
+            enable_tc_stats: false,
             btrfs_samples: btrfs::DEFAULT_SAMPLES,
             btrfs_min_pct: btrfs::DEFAULT_MIN_PCT,
             cgroup_re: None,
@@ -306,6 +308,17 @@ fn collect_sample(
                 }
             }
         },
+        tc: if !options.enable_tc_stats {
+            None
+        } else {
+            match tc::tc_stats() {
+                Ok(tc_stats) => Some(tc_stats),
+                Err(e) => {
+                    error!(logger, "{:#}", e);
+                    Default::default()
+                }
+            }
+        }
     })
 }
 
@@ -464,6 +477,13 @@ macro_rules! count_per_sec {
             if a <= b {
                 ret = Some((b - a) as f64 / $delta.as_secs_f64());
             }
+        }
+        ret
+    }};
+    ($a:ident, $b:ident, $delta:expr, $target_type:ty) => {{
+        let mut ret = None;
+        if $a <= $b {
+            ret = Some((($b - $a) as f64 / $delta.as_secs_f64()).ceil() as $target_type);
         }
         ret
     }};

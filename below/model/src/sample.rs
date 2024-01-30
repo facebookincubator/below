@@ -23,6 +23,7 @@ pub struct Sample {
     pub gpus: Option<gpu_stats::GpuSample>,
     pub ethtool: Option<ethtool::EthtoolStats>,
     pub resctrl: Option<resctrlfs::ResctrlSample>,
+    pub tc: Option<tc::TcStats>,
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
