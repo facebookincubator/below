@@ -6,9 +6,11 @@ mod test;
 
 use std::collections::BTreeMap;
 
-use netlink_packet_core::{NetlinkHeader, NetlinkMessage, NetlinkPayload, NLM_F_DUMP, NLM_F_REQUEST};
-use netlink_packet_route::RouteNetlinkMessage;
+use netlink_packet_core::{
+    NetlinkHeader, NetlinkMessage, NetlinkPayload, NLM_F_DUMP, NLM_F_REQUEST,
+};
 use netlink_packet_route::tc::TcMessage;
+use netlink_packet_route::RouteNetlinkMessage;
 use netlink_sys::constants::NETLINK_ROUTE;
 use netlink_sys::{Socket, SocketAddr};
 use nix::net::if_;
@@ -25,7 +27,10 @@ pub fn tc_stats() -> Result<TcStats> {
     read_tc_stats(ifaces, &get_netlink_qdiscs)
 }
 
-fn read_tc_stats(interfaces: BTreeMap<u32, String>, netlink_retriever: &dyn Fn() -> Result<Vec<TcMessage>>) -> Result<TcStats> {
+fn read_tc_stats(
+    interfaces: BTreeMap<u32, String>,
+    netlink_retriever: &dyn Fn() -> Result<Vec<TcMessage>>,
+) -> Result<TcStats> {
     let messages = netlink_retriever()?;
     let tc_stats = messages
         .into_iter()
@@ -41,7 +46,9 @@ fn read_tc_stats(interfaces: BTreeMap<u32, String>, netlink_retriever: &dyn Fn()
 fn get_netlink_qdiscs() -> Result<Vec<TcMessage>> {
     // open a socket
     let socket = Socket::new(NETLINK_ROUTE).map_err(|e| TcError::Netlink(e.to_string()))?;
-    socket.connect(&SocketAddr::new(0, 0)).map_err(|e| TcError::Netlink(e.to_string()))?;
+    socket
+        .connect(&SocketAddr::new(0, 0))
+        .map_err(|e| TcError::Netlink(e.to_string()))?;
 
     // create a netlink request
     let mut nl_hdr = NetlinkHeader::default();
@@ -53,7 +60,9 @@ fn get_netlink_qdiscs() -> Result<Vec<TcMessage>> {
     packet.serialize(&mut buf[..]);
 
     // send the request
-    socket.send(&buf[..], 0).map_err(|e| TcError::Netlink(e.to_string()))?;
+    socket
+        .send(&buf[..], 0)
+        .map_err(|e| TcError::Netlink(e.to_string()))?;
 
     // receive the response
     let mut recv_buf = vec![0; 4096];
@@ -83,7 +92,9 @@ fn get_netlink_qdiscs() -> Result<Vec<TcMessage>> {
 
     let mut tc_msgs = Vec::new();
     for msg in response {
-        if let NetlinkPayload::InnerMessage(RouteNetlinkMessage::NewQueueDiscipline(tc)) = msg.payload {
+        if let NetlinkPayload::InnerMessage(RouteNetlinkMessage::NewQueueDiscipline(tc)) =
+            msg.payload
+        {
             tc_msgs.push(tc);
         }
     }
@@ -95,17 +106,17 @@ fn get_netlink_qdiscs() -> Result<Vec<TcMessage>> {
 fn get_interfaces() -> Result<BTreeMap<u32, String>> {
     let ifaces = if_::if_nameindex().map_err(|e| TcError::ReadInterfaces(e.to_string()))?;
     let if_map = ifaces
-    .iter()
-    .map(|iface| {
-        let index = iface.index();
-        let name = if let Ok(name) = iface.name().to_str() {
-            name.to_string()
-        } else {
-            String::new()
-        };
-        (index, name)
-    })
-    .collect::<BTreeMap<u32, String>>();
+        .iter()
+        .map(|iface| {
+            let index = iface.index();
+            let name = if let Ok(name) = iface.name().to_str() {
+                name.to_string()
+            } else {
+                String::new()
+            };
+            (index, name)
+        })
+        .collect::<BTreeMap<u32, String>>();
 
     Ok(if_map)
 }

@@ -318,7 +318,7 @@ fn collect_sample(
                     Default::default()
                 }
             }
-        }
+        },
     })
 }
 

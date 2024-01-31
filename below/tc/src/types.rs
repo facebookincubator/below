@@ -1,7 +1,9 @@
 use std::collections::BTreeMap;
 
 use netlink_packet_route::tc;
-use netlink_packet_route::tc::{TcAttribute, TcFqCodelXstats, TcMessage, TcOption, TcQdiscFqCodelOption};
+use netlink_packet_route::tc::{
+    TcAttribute, TcFqCodelXstats, TcMessage, TcOption, TcQdiscFqCodelOption,
+};
 use serde::{Deserialize, Serialize};
 
 const FQ_CODEL: &str = "fq_codel";
@@ -21,7 +23,9 @@ pub struct Tc {
 impl Tc {
     pub fn new(interfaces: &BTreeMap<u32, String>, tc_msg: &TcMessage) -> Self {
         let if_index = tc_msg.header.index as u32;
-        let if_name = interfaces.get(&if_index).map_or_else(String::new, |iface| iface.to_string());
+        let if_name = interfaces
+            .get(&if_index)
+            .map_or_else(String::new, |iface| iface.to_string());
         let mut tc = Self {
             if_index,
             if_name,
@@ -57,18 +61,15 @@ impl Tc {
                         }
                     }
                 }
-                TcAttribute::Xstats(tc_xstats) => {
-                    match tc_xstats {
-                        tc::TcXstats::FqCodel(fq_codel_xstats) => {
-                            tc.stats.xstats = Some(XStats::FqCodel(FqCodelXStats::new(fq_codel_xstats)))
-                        }
-                        _ => {}
+                TcAttribute::Xstats(tc_xstats) => match tc_xstats {
+                    tc::TcXstats::FqCodel(fq_codel_xstats) => {
+                        tc.stats.xstats = Some(XStats::FqCodel(FqCodelXStats::new(fq_codel_xstats)))
                     }
-                }
+                    _ => {}
+                },
                 _ => {}
             }
         }
-
 
         tc.qdisc = QDisc::new(&tc.kind, opts);
 
@@ -108,20 +109,24 @@ impl QDisc {
             let mut fq_codel = FqCodelQDisc::default();
             for opt in opts {
                 match opt {
-                    TcOption::FqCodel(fq_codel_opt) => {
-                        match fq_codel_opt {
-                            TcQdiscFqCodelOption::Target(target) => fq_codel.target = target,
-                            TcQdiscFqCodelOption::Limit(limit) => fq_codel.limit = limit,
-                            TcQdiscFqCodelOption::Interval(interval) => fq_codel.interval = interval,
-                            TcQdiscFqCodelOption::Ecn(ecn) => fq_codel.ecn = ecn,
-                            TcQdiscFqCodelOption::Flows(flows) => fq_codel.flows = flows,
-                            TcQdiscFqCodelOption::Quantum(quantum) => fq_codel.quantum = quantum,
-                            TcQdiscFqCodelOption::CeThreshold(ce_threshold) => fq_codel.ce_threshold = ce_threshold,
-                            TcQdiscFqCodelOption::DropBatchSize(drop_batch_size) => fq_codel.drop_batch_size = drop_batch_size,
-                            TcQdiscFqCodelOption::MemoryLimit(memory_limit) => fq_codel.memory_limit = memory_limit,
-                            _ => {}
+                    TcOption::FqCodel(fq_codel_opt) => match fq_codel_opt {
+                        TcQdiscFqCodelOption::Target(target) => fq_codel.target = target,
+                        TcQdiscFqCodelOption::Limit(limit) => fq_codel.limit = limit,
+                        TcQdiscFqCodelOption::Interval(interval) => fq_codel.interval = interval,
+                        TcQdiscFqCodelOption::Ecn(ecn) => fq_codel.ecn = ecn,
+                        TcQdiscFqCodelOption::Flows(flows) => fq_codel.flows = flows,
+                        TcQdiscFqCodelOption::Quantum(quantum) => fq_codel.quantum = quantum,
+                        TcQdiscFqCodelOption::CeThreshold(ce_threshold) => {
+                            fq_codel.ce_threshold = ce_threshold
                         }
-                    }
+                        TcQdiscFqCodelOption::DropBatchSize(drop_batch_size) => {
+                            fq_codel.drop_batch_size = drop_batch_size
+                        }
+                        TcQdiscFqCodelOption::MemoryLimit(memory_limit) => {
+                            fq_codel.memory_limit = memory_limit
+                        }
+                        _ => {}
+                    },
                     _ => {}
                 }
             }

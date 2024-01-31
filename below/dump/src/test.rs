@@ -1338,9 +1338,7 @@ fn test_dump_tc_content() {
         network: model::NetworkModel::default(),
         gpu: None,
         resctrl: None,
-        tc: Some(model::TcModel {
-            tc: tc_models,
-        }),
+        tc: Some(model::TcModel { tc: tc_models }),
     };
 
     let mut opts: GeneralOpt = Default::default();

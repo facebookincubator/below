@@ -52,8 +52,8 @@ pub mod network;
 pub mod print;
 pub mod process;
 pub mod system;
-pub mod tmain;
 pub mod tc;
+pub mod tmain;
 pub mod transport;
 
 #[cfg(test)]

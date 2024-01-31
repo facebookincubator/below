@@ -1,4 +1,7 @@
-use netlink_packet_route::tc::{TcAttribute, TcFqCodelQdStats, TcFqCodelXstats, TcHandle, TcHeader, TcMessage, TcOption, TcQdiscFqCodelOption, TcStats, TcStats2, TcStatsBasic, TcStatsQueue, TcXstats};
+use netlink_packet_route::tc::{
+    TcAttribute, TcFqCodelQdStats, TcFqCodelXstats, TcHandle, TcHeader, TcMessage, TcOption,
+    TcQdiscFqCodelOption, TcStats, TcStats2, TcStatsBasic, TcStatsQueue, TcXstats,
+};
 
 use super::*;
 
@@ -53,24 +56,20 @@ fn fake_netlink_qdiscs() -> Result<Vec<TcMessage>> {
                     queue
                 }),
             ]),
-            TcAttribute::Xstats(
-                TcXstats::FqCodel(
-                    TcFqCodelXstats::Qdisc({
-                        let mut fq_codel = TcFqCodelQdStats::default();
-                        fq_codel.maxpacket = 258;
-                        fq_codel.drop_overlimit = 0;
-                        fq_codel.ecn_mark = 0;
-                        fq_codel.new_flow_count = 91;
-                        fq_codel.new_flows_len = 0;
-                        fq_codel.old_flows_len = 0;
-                        fq_codel.ce_mark = 0;
-                        fq_codel.memory_usage = 0;
-                        fq_codel.drop_overmemory = 0;
-                        fq_codel
-                    }
-                )
-            )
-        ),],
+            TcAttribute::Xstats(TcXstats::FqCodel(TcFqCodelXstats::Qdisc({
+                let mut fq_codel = TcFqCodelQdStats::default();
+                fq_codel.maxpacket = 258;
+                fq_codel.drop_overlimit = 0;
+                fq_codel.ecn_mark = 0;
+                fq_codel.new_flow_count = 91;
+                fq_codel.new_flows_len = 0;
+                fq_codel.old_flows_len = 0;
+                fq_codel.ce_mark = 0;
+                fq_codel.memory_usage = 0;
+                fq_codel.drop_overmemory = 0;
+                fq_codel
+            }))),
+        ],
     );
     tc_msgs.push(msg1);
 
@@ -95,28 +94,34 @@ fn test_tc_stats() {
     assert_eq!(tc.stats.pps, Some(400));
 
     // qdisc
-    assert_eq!(tc.qdisc, Some(QDisc::FqCodel(FqCodelQDisc {
-        target: 4999,
-        limit: 10240,
-        interval: 99999,
-        ecn: 1,
-        flows: 1024,
-        quantum: 1514,
-        ce_threshold: 0,
-        drop_batch_size: 64,
-        memory_limit: 33554432,
-    })));
+    assert_eq!(
+        tc.qdisc,
+        Some(QDisc::FqCodel(FqCodelQDisc {
+            target: 4999,
+            limit: 10240,
+            interval: 99999,
+            ecn: 1,
+            flows: 1024,
+            quantum: 1514,
+            ce_threshold: 0,
+            drop_batch_size: 64,
+            memory_limit: 33554432,
+        }))
+    );
 
     // xstats
-    assert_eq!(tc.stats.xstats, Some(XStats::FqCodel(FqCodelXStats {
-        maxpacket: 258,
-        drop_overlimit: 0,
-        ecn_mark: 0,
-        new_flow_count: 91,
-        new_flows_len: 0,
-        old_flows_len: 0,
-        ce_mark: 0,
-        memory_usage: 0,
-        drop_overmemory: 0,
-    })));
+    assert_eq!(
+        tc.stats.xstats,
+        Some(XStats::FqCodel(FqCodelXStats {
+            maxpacket: 258,
+            drop_overlimit: 0,
+            ecn_mark: 0,
+            new_flow_count: 91,
+            new_flows_len: 0,
+            old_flows_len: 0,
+            ce_mark: 0,
+            memory_usage: 0,
+            drop_overmemory: 0,
+        }))
+    );
 }

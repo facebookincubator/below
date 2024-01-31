@@ -28,18 +28,14 @@ pub struct TcModel {
 }
 
 impl TcModel {
-    pub fn new(
-        sample: &Vec<Tc>,
-        last: Option<(&Vec<Tc>, Duration)>,
-    ) -> Self {
+    pub fn new(sample: &Vec<Tc>, last: Option<(&Vec<Tc>, Duration)>) -> Self {
         // Assumption: sample and last are always ordered
         let tc = match last {
-            Some((last_tcs, d)) if last_tcs.len() == sample.len() => {
-                sample.iter()
-                    .zip(last_tcs.iter())
-                    .map(|(sample, last)| SingleTcModel::new(sample, Some((last, d))))
-                    .collect::<Vec<_>>()
-            }
+            Some((last_tcs, d)) if last_tcs.len() == sample.len() => sample
+                .iter()
+                .zip(last_tcs.iter())
+                .map(|(sample, last)| SingleTcModel::new(sample, Some((last, d))))
+                .collect::<Vec<_>>(),
             _ => Vec::new(),
         };
 
@@ -110,8 +106,7 @@ impl SingleTcModel {
         });
 
         if let Some(sample) = stats.xstats.as_ref() {
-            let last =
-                last.and_then(|(last, d)| last.stats.xstats.as_ref().map(|l| (l, d)));
+            let last = last.and_then(|(last, d)| last.stats.xstats.as_ref().map(|l| (l, d)));
 
             tc_model.xstats = Some(XStatsModel::new(sample, last));
         }
