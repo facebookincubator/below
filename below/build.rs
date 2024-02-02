@@ -31,4 +31,9 @@ fn main() {
     }
     builder.build_and_generate(out).unwrap();
     println!("cargo:rerun-if-changed={}", SRC);
+
+    #[cfg(all(feature = "no-vendor", feature = "default"))]
+    compile_error!(
+        "In order to build without vendored dependencies please disable default features"
+    );
 }

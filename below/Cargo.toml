@@ -55,5 +55,6 @@ portpicker = "0.1.1"
 libbpf-cargo = { version = "0.22", git = "https://github.com/libbpf/libbpf-rs.git", rev = "56dca575089ab2144f51b7949a9ee4c9fc226a47", default-features = false }
 
 [features]
+default = ["libbpf-cargo/default", "libbpf-rs/default"]
 enable_backtrace = []
-no-vendor = ["libbpf-cargo/novendor", "libbpf-rs/novendor", "store/no-vendor"]
+no-vendor = ["store/no-vendor"]
