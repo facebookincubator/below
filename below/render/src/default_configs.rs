@@ -1324,11 +1324,15 @@ impl HasRenderConfig for model::SingleSlabModel {
         let rc = RenderConfigBuilder::new();
         match field_id {
             Name => rc.title("Name").width(25),
-            ActiveObjs => rc.title("Active"),
-            NumObjs => rc.title("Objs"),
-            ObjSize => rc.title("Size").format(ReadableSize),
+            ActiveObjs => rc.title("ActiveObjs"),
+            NumObjs => rc.title("TotalObjs"),
+            ObjSize => rc.title("ObjSize").format(ReadableSize),
             ObjPerSlab => rc.title("Obj/Slab"),
             NumSlabs => rc.title("Slabs"),
+            ActiveCaches => rc.title("ActiveCaches"),
+            NumCaches => rc.title("TotalCaches"),
+            ActiveSize => rc.title("ActiveSize").format(ReadableSize),
+            TotalSize => rc.title("TotalSize").format(ReadableSize),
         }
     }
 }
@@ -1346,6 +1350,10 @@ impl HasRenderConfigForDump for model::SingleSlabModel {
             ObjSize => Some(counter()),
             ObjPerSlab => Some(counter()),
             NumSlabs => Some(counter()),
+            ActiveCaches => Some(counter()),
+            NumCaches => Some(counter()),
+            ActiveSize => Some(counter()),
+            TotalSize => Some(counter()),
         }
     }
 }

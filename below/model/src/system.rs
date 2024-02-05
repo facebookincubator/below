@@ -80,11 +80,31 @@ impl SystemModel {
         let vm = last
             .map(|(last, duration)| VmModel::new(&last.vmstat, &sample.vmstat, duration))
             .unwrap_or_default();
-        let slab = sample
+
+        let mut slab = sample
             .slabinfo
             .iter()
             .map(|(name, slab_info)| (name.to_owned(), SingleSlabModel::new(slab_info)))
-            .collect::<_>();
+            .collect::<BTreeMap<String, SingleSlabModel>>();
+
+        let slab_total = slab.iter().fold(
+            SingleSlabModel {
+                name: Some(String::from("TOTAL")),
+                ..Default::default()
+            },
+            |mut acc, (_, slabinfo)| {
+                acc.active_objs = opt_add(acc.active_objs, slabinfo.active_objs);
+                acc.num_objs = opt_add(acc.num_objs, slabinfo.num_objs);
+                acc.num_slabs = opt_add(acc.num_slabs, slabinfo.num_slabs);
+                acc.active_caches = opt_add(acc.active_caches, slabinfo.active_caches);
+                acc.num_caches = opt_add(acc.num_caches, slabinfo.num_caches);
+                acc.active_size = opt_add(acc.active_size, slabinfo.active_size);
+                acc.total_size = opt_add(acc.total_size, slabinfo.total_size);
+                acc
+            },
+        );
+        slab.insert(String::from("TOTAL"), slab_total);
+
         let mut disks: BTreeMap<String, SingleDiskModel> = BTreeMap::new();
         sample.disks.iter().for_each(|(disk_name, end_disk_stat)| {
             disks.insert(
@@ -409,6 +429,10 @@ pub struct SingleSlabModel {
     pub obj_size: Option<u64>,
     pub obj_per_slab: Option<u64>,
     pub num_slabs: Option<u64>,
+    pub active_caches: Option<u64>,
+    pub num_caches: Option<u64>,
+    pub active_size: Option<u64>,
+    pub total_size: Option<u64>,
 }
 
 impl SingleSlabModel {
@@ -420,6 +444,14 @@ impl SingleSlabModel {
             obj_size: slabinfo.obj_size,
             obj_per_slab: slabinfo.obj_per_slab,
             num_slabs: slabinfo.num_slabs,
+            active_caches: slabinfo.active_objs.map(
+                |active_objs| {
+                    if active_objs > 0 { 1 } else { 0 }
+                },
+            ),
+            num_caches: Some(1),
+            active_size: opt_multiply(slabinfo.obj_size, slabinfo.active_objs),
+            total_size: opt_multiply(slabinfo.obj_size, slabinfo.num_objs),
         }
     }
 }
