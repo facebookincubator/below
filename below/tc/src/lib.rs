@@ -4,6 +4,7 @@ mod types;
 #[cfg(test)]
 mod test;
 
+use std::borrow::{Borrow, BorrowMut};
 use std::collections::BTreeMap;
 
 use netlink_packet_core::{
@@ -57,20 +58,20 @@ fn get_netlink_qdiscs() -> Result<Vec<TcMessage>> {
     let mut packet = NetlinkMessage::new(nl_hdr, NetlinkPayload::from(msg));
     packet.finalize();
     let mut buf = vec![0; packet.header.length as usize];
-    packet.serialize(&mut buf[..]);
+    packet.serialize(buf[..].borrow_mut());
 
     // send the request
     socket
-        .send(&buf[..], 0)
+        .send(buf[..].borrow(), 0)
         .map_err(|e| TcError::Netlink(e.to_string()))?;
 
     // receive the response
     let mut recv_buf = vec![0; 4096];
     let mut offset = 0;
     let mut response = Vec::new();
-    'out: while let Ok(size) = socket.recv(&mut &mut recv_buf[offset..], 0) {
+    'out: while let Ok(size) = socket.recv(&mut recv_buf[..].borrow_mut(), 0) {
         loop {
-            let bytes = &recv_buf[offset..];
+            let bytes = recv_buf[offset..].borrow();
             let rx_packet = <NetlinkMessage<RouteNetlinkMessage>>::deserialize(bytes)
                 .map_err(|e| TcError::Netlink(e.to_string()))?;
             response.push(rx_packet.clone());
