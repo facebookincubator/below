@@ -1,4 +1,8 @@
-use super::*;
+use std::time::Duration;
+
+use serde::{Deserialize, Serialize};
+
+use crate::{Field, FieldId, Nameable, Queriable};
 use tc::{QDisc, Tc, XStats};
 
 /// rate! macro calculates the rate of a field for given sample and last objects.

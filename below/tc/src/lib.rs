@@ -16,11 +16,11 @@ use netlink_sys::constants::NETLINK_ROUTE;
 use netlink_sys::{Socket, SocketAddr};
 use nix::net::if_;
 
-pub use errors::*;
-pub use types::*;
+use errors::TcError;
+pub use types::{FqCodelQDisc, FqCodelXStats, QDisc, Tc, XStats};
 
 pub type TcStats = Vec<Tc>;
-pub type Result<T> = std::result::Result<T, TcError>;
+type Result<T> = std::result::Result<T, TcError>;
 
 /// Get list of all `tc` qdiscs.
 pub fn tc_stats() -> Result<TcStats> {

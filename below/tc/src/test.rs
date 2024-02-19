@@ -1,9 +1,11 @@
+use std::collections::BTreeMap;
+
 use netlink_packet_route::tc::{
     TcAttribute, TcFqCodelQdStats, TcFqCodelXstats, TcHandle, TcHeader, TcMessage, TcOption,
     TcQdiscFqCodelOption, TcStats, TcStats2, TcStatsBasic, TcStatsQueue, TcXstats,
 };
 
-use super::*;
+use crate::{types::XStats, FqCodelQDisc, FqCodelXStats, QDisc, Result};
 
 fn fake_netlink_qdiscs() -> Result<Vec<TcMessage>> {
     let mut tc_msgs = Vec::new();
@@ -79,7 +81,7 @@ fn fake_netlink_qdiscs() -> Result<Vec<TcMessage>> {
 #[test]
 fn test_tc_stats() {
     let ifaces = BTreeMap::from_iter(vec![(2, "eth0".to_string())]);
-    let tc_map = read_tc_stats(ifaces, &fake_netlink_qdiscs).unwrap();
+    let tc_map = crate::read_tc_stats(ifaces, &fake_netlink_qdiscs).unwrap();
 
     let tc = tc_map.get(0).unwrap();
     assert_eq!(tc.if_index, 2);
