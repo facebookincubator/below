@@ -82,7 +82,7 @@ s64 percpu_counter_read_positive(struct percpu_counter *fbc) {
   ret = fbc->count;
   if (ret >= 0)
     return ret;
-  return ret;
+  return 0;
 }
 
 u32 task_cpu(void *arg) {
@@ -93,27 +93,6 @@ u32 task_cpu(void *arg) {
     struct task_struct___post516 *task = arg;
     return BPF_CORE_READ(task, thread_info.cpu);
   }
-}
-
-u64 mm_active_rss_pages(void *arg) {
-  u64 file_pages = 0;
-  u64 anon_pages = 0;
-  u64 shmem_pages = 0;
-  if (bpf_core_type_matches(struct mm_struct___pre62)) {
-    const struct mm_struct___pre62 *mm = arg;
-    file_pages = BPF_CORE_READ(mm, rss_stat.count[MM_FILEPAGES].counter);
-    anon_pages = BPF_CORE_READ(mm, rss_stat.count[MM_ANONPAGES].counter);
-    shmem_pages = BPF_CORE_READ(mm, rss_stat.count[MM_SHMEMPAGES].counter);
-  } else {
-    const struct mm_struct___post62 *mm = arg;
-    struct percpu_counter file_fbc = BPF_CORE_READ(mm, rss_stat[MM_FILEPAGES]);
-    struct percpu_counter anon_fbc = BPF_CORE_READ(mm, rss_stat[MM_FILEPAGES]);
-    struct percpu_counter shmem_fbc = BPF_CORE_READ(mm, rss_stat[MM_FILEPAGES]);
-    file_pages = percpu_counter_read_positive(&file_fbc);
-    anon_pages = percpu_counter_read_positive(&anon_fbc);
-    shmem_pages = percpu_counter_read_positive(&shmem_fbc);
-  }
-  return file_pages + anon_pages + shmem_pages;
 }
 
 // sched:sched_process_exit is triggered right before process/thread exits. At
@@ -150,7 +129,24 @@ int tracepoint__sched__sched_process_exit(
   data.stats.etime_us = (now - BPF_CORE_READ(task, start_time)) / 1000;
   const struct mm_struct* mm = BPF_CORE_READ(task, mm);
   if (mm) {
-    data.stats.active_rss_pages = mm_active_rss_pages(mm);
+    u64 file_pages = 0;
+    u64 anon_pages = 0;
+    u64 shmem_pages = 0;
+    if (bpf_core_type_matches(struct mm_struct___pre62)) {
+      const struct mm_struct___pre62 *mms = mm;
+      file_pages = BPF_CORE_READ(mms, rss_stat.count[MM_FILEPAGES].counter);
+      anon_pages = BPF_CORE_READ(mms, rss_stat.count[MM_ANONPAGES].counter);
+      shmem_pages = BPF_CORE_READ(mms, rss_stat.count[MM_SHMEMPAGES].counter);
+    } else if (bpf_core_type_matches(struct mm_struct___post62)) {
+      const struct mm_struct___post62 *mms = mm;
+      struct percpu_counter file_fbc = BPF_CORE_READ(mms, rss_stat[MM_FILEPAGES]);
+      struct percpu_counter anon_fbc = BPF_CORE_READ(mms, rss_stat[MM_FILEPAGES]);
+      struct percpu_counter shmem_fbc = BPF_CORE_READ(mms, rss_stat[MM_FILEPAGES]);
+      file_pages = percpu_counter_read_positive(&file_fbc);
+      anon_pages = percpu_counter_read_positive(&anon_fbc);
+      shmem_pages = percpu_counter_read_positive(&shmem_fbc);
+    }
+    data.stats.active_rss_pages = file_pages + anon_pages + shmem_pages;
   } else {
     data.stats.active_rss_pages = 0;
   }
