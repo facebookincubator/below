@@ -19,14 +19,6 @@ use crate::stats_view::StatsView;
 use crate::stats_view::ViewBridge;
 
 make_event_controller!(
-    URLPopup,
-    "__unused_url",
-    "",
-    vec![Event::Char('u')],
-    |_, _| {},
-    |_, _| {}
-);
-make_event_controller!(
     GpuView,
     "__unused_gpu",
     "",
