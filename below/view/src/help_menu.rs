@@ -102,7 +102,6 @@ fn get_description(controller: &Controllers) -> &'static str {
         Controllers::Fold => "Fold processes (post filter) and display aggregated values.",
         Controllers::NextPage => "Scroll down 15 lines primary display.",
         Controllers::PrevPage => "Scroll up 15 lines primary display.",
-        Controllers::Url => "Show Corresponding Below Web URL.",
         _ => "Unknown",
     }
 }

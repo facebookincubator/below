@@ -135,5 +135,4 @@ make_controllers!(
     PrevPage: PrevPageImpl,
     NextSelection: NextSelectionImpl,
     PrevSelection: PrevSelectionImpl,
-    Url: URLPopup,
 );
