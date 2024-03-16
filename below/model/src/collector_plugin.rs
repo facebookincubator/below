@@ -155,14 +155,14 @@ mod test {
             // Test overwriting sample
             futures::executor::block_on(collector.collect_and_update()).unwrap();
             c.wait(); // <-- 1
-                      // Consumer checking overwritten sample
+            // Consumer checking overwritten sample
             c.wait(); // <-- 2
-                      // Test sending None
+            // Test sending None
             futures::executor::block_on(collector.collect_and_update()).unwrap();
             c.wait(); // <-- 3
-                      // Consumer checking None
+            // Consumer checking None
             c.wait(); // <-- 4
-                      // Test sending error. Will fail on both collector and consumer threads.
+            // Test sending error. Will fail on both collector and consumer threads.
             let is_error = matches!(
                 futures::executor::block_on(collector.collect_and_update()),
                 Err(_)
