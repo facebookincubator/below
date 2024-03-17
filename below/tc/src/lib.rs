@@ -35,7 +35,12 @@ fn read_tc_stats(
     let messages = netlink_retriever()?;
     let tc_stats = messages
         .into_iter()
-        .map(|msg| TcStat::new(&interfaces, &msg))
+        .filter_map(|msg| {
+            interfaces
+                .get(&(msg.header.index as u32))
+                .cloned()
+                .map(|if_name| TcStat::new(if_name, &msg))
+        })
         .collect();
 
     Ok(tc_stats)

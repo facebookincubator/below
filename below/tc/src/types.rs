@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use netlink_packet_route::tc;
 use netlink_packet_route::tc::{
     TcAttribute, TcFqCodelXstats, TcMessage, TcOption, TcQdiscFqCodelOption,
@@ -28,11 +26,8 @@ pub struct TcStat {
 }
 
 impl TcStat {
-    pub fn new(interfaces: &BTreeMap<u32, String>, tc_msg: &TcMessage) -> Self {
+    pub fn new(if_name: String, tc_msg: &TcMessage) -> Self {
         let if_index = tc_msg.header.index as u32;
-        let if_name = interfaces
-            .get(&if_index)
-            .map_or_else(String::new, |iface| iface.to_string());
         let mut tc = Self {
             if_index,
             if_name,
