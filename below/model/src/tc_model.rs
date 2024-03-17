@@ -3,7 +3,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
 use crate::{Field, FieldId, Nameable, Queriable};
-use tc::{QDisc, Tc, XStats};
+use tc::{QDisc, TcStat, TcStats, XStats};
 
 /// rate! macro calculates the rate of a field for given sample and last objects.
 /// It basically calls count_per_sec! macro after extracting the field from the objects.
@@ -32,7 +32,7 @@ pub struct TcModel {
 }
 
 impl TcModel {
-    pub fn new(sample: &Vec<Tc>, last: Option<(&Vec<Tc>, Duration)>) -> Self {
+    pub fn new(sample: &TcStats, last: Option<(&TcStats, Duration)>) -> Self {
         // Assumption: sample and last are always ordered
         let tc = match last {
             Some((last_tcs, d)) if last_tcs.len() == sample.len() => sample
@@ -87,7 +87,7 @@ impl Nameable for SingleTcModel {
 }
 
 impl SingleTcModel {
-    pub fn new(sample: &Tc, last: Option<(&Tc, Duration)>) -> Self {
+    pub fn new(sample: &TcStat, last: Option<(&TcStat, Duration)>) -> Self {
         let mut tc_model = SingleTcModel {
             interface: sample.if_name.clone(),
             kind: sample.kind.clone(),

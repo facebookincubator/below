@@ -10,7 +10,7 @@ const FQ_CODEL: &str = "fq_codel";
 
 /// `Tc` represents a traffic control qdisc.
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct Tc {
+pub struct TcStat {
     /// Index of the network interface.
     pub if_index: u32,
     /// Name of the network interface.
@@ -27,7 +27,7 @@ pub struct Tc {
     pub qdisc: Option<QDisc>,
 }
 
-impl Tc {
+impl TcStat {
     pub fn new(interfaces: &BTreeMap<u32, String>, tc_msg: &TcMessage) -> Self {
         let if_index = tc_msg.header.index as u32;
         let if_name = interfaces

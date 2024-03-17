@@ -17,9 +17,9 @@ use netlink_sys::{Socket, SocketAddr};
 use nix::net::if_;
 
 use errors::TcError;
-pub use types::{FqCodelQDisc, FqCodelXStats, QDisc, Tc, XStats};
+pub use types::{FqCodelQDisc, FqCodelXStats, QDisc, TcStat, XStats};
 
-pub type TcStats = Vec<Tc>;
+pub type TcStats = Vec<TcStat>;
 type Result<T> = std::result::Result<T, TcError>;
 
 /// Get list of all `tc` qdiscs.
@@ -35,7 +35,7 @@ fn read_tc_stats(
     let messages = netlink_retriever()?;
     let tc_stats = messages
         .into_iter()
-        .map(|msg| Tc::new(&interfaces, &msg))
+        .map(|msg| TcStat::new(&interfaces, &msg))
         .collect();
 
     Ok(tc_stats)
