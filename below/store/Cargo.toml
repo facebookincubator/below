@@ -2,7 +2,7 @@
 
 [package]
 name = "below-store"
-version = "0.7.1"
+version = "0.8.0"
 authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
 edition = "2021"
 description = "Store crate for below"
@@ -13,11 +13,11 @@ license = "Apache-2.0"
 anyhow = "1.0.75"
 bitflags = { version = "2.4", features = ["serde"] }
 bytes = { version = "1.1", features = ["serde"] }
-common = { package = "below-common", version = "0.7.1", path = "../common" }
+common = { package = "below-common", version = "0.8.0", path = "../common" }
 humantime = "2.1"
 maplit = "1.0"
 memmap2 = "0.5.10"
-model = { package = "below-model", version = "0.7.1", path = "../model" }
+model = { package = "below-model", version = "0.8.0", path = "../model" }
 nix = "0.25"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_cbor = "0.11"
