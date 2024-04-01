@@ -37,6 +37,8 @@ pub struct CollectorOptions {
     pub cgroup_re: Option<Regex>,
     pub gpu_stats_receiver:
         Option<collector_plugin::Consumer<crate::gpu_stats_collector_plugin::SampleType>>,
+    pub tc_stats_receiver:
+        Option<collector_plugin::Consumer<crate::tc_collector_plugin::SampleType>>,
 }
 
 impl Default for CollectorOptions {
@@ -54,6 +56,7 @@ impl Default for CollectorOptions {
             btrfs_min_pct: btrfs::DEFAULT_MIN_PCT,
             cgroup_re: None,
             gpu_stats_receiver: None,
+            tc_stats_receiver: None,
         }
     }
 }
@@ -308,16 +311,15 @@ fn collect_sample(
                 }
             }
         },
-        tc: if !options.enable_tc_stats {
-            None
+        tc: if let Some(tc_stats_receiver) = &options.tc_stats_receiver {
+            Some(
+                tc_stats_receiver
+                    .try_take()
+                    .context("TC stats collector had an error")?
+                    .unwrap_or_default(),
+            )
         } else {
-            match tc::tc_stats() {
-                Ok(tc_stats) => Some(tc_stats),
-                Err(e) => {
-                    error!(logger, "{:#}", e);
-                    Default::default()
-                }
-            }
+            None
         },
     })
 }

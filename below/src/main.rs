@@ -475,6 +475,70 @@ pub fn start_gpu_stats_thread_and_get_stats_receiver(
     Ok(receiver)
 }
 
+fn start_tc_stats_thread_and_get_stats_receiver(
+    logger: slog::Logger,
+    interval: Duration,
+) -> Result<model::collector_plugin::Consumer<model::tc_collector_plugin::SampleType>> {
+    let tc_collector = model::tc_collector_plugin::TcStatsCollectorPlugin::new(logger.clone())
+        .context("Failed to initialize TC stats collector")?;
+    let (mut collector, receiver) = model::collector_plugin::collector_consumer(tc_collector);
+
+    // Start a thread to collect TC stats
+    let target_interval = interval.clone();
+    thread::Builder::new()
+        .name("tc_stats_collector".to_owned())
+        .spawn(move || {
+            // Exponential backoff on unrecoverable errors
+            const EXP_BACKOFF_FACTOR: u32 = 2;
+            const MAX_BACKOFF_SECS: u64 = 900;
+            let max_backoff = Duration::from_secs(MAX_BACKOFF_SECS);
+            let mut interval = target_interval;
+            loop {
+                let collect_instant = Instant::now();
+                let rt = TB::new_current_thread()
+                    .thread_name("create_fburl")
+                    .build()
+                    .expect("Failed to build tokio runtime.");
+                match rt.block_on(collector.collect_and_update()) {
+                    Ok(_) => {
+                        interval = target_interval;
+                    }
+                    Err(e) => {
+                        interval = std::cmp::min(
+                            interval
+                                .saturating_mul(EXP_BACKOFF_FACTOR),
+                            max_backoff,
+                        );
+                        error!(
+                            logger,
+                            "TC stats collection backing off {:?} because of unrecoverable error: {:?}",
+                            interval,
+                            e
+                        );
+                    }
+                }
+                let collect_duration = Instant::now().duration_since(collect_instant);
+
+                const COLLECT_DURATION_WARN_THRESHOLD: u64 = 2;
+                if collect_duration > Duration::from_secs(COLLECT_DURATION_WARN_THRESHOLD) {
+                    warn!(
+                        logger,
+                        "TC collection took {} > {}",
+                        collect_duration.as_secs_f64(),
+                        COLLECT_DURATION_WARN_THRESHOLD
+                    );
+                }
+                if interval > collect_duration {
+                    let sleep_duration = interval - collect_duration;
+                    std::thread::sleep(sleep_duration);
+                }
+            }
+        })
+        .expect("Failed to spawn thread");
+
+    Ok(receiver)
+}
+
 /// Returns true if other end disconnected, false otherwise
 fn check_for_exitstat_errors(logger: &slog::Logger, receiver: &Receiver<Error>) -> bool {
     // Print an error but don't exit on bpf issues. Do this b/c we can't always
@@ -1002,6 +1066,12 @@ fn record(
         None
     };
 
+    let tc_stats_receiver = if below_config.enable_tc_stats {
+        Some(start_tc_stats_thread_and_get_stats_receiver(logger.clone(), interval)?)
+    } else {
+        None
+    };
+
     let mut collector = model::Collector::new(
         logger.clone(),
         model::CollectorOptions {
@@ -1017,6 +1087,7 @@ fn record(
             btrfs_min_pct: below_config.btrfs_min_pct,
             cgroup_re,
             gpu_stats_receiver,
+            tc_stats_receiver,
         },
     );
 

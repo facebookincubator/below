@@ -41,6 +41,7 @@ pub mod sample;
 mod sample_model;
 pub mod system;
 pub mod tc_model;
+pub mod tc_collector_plugin;
 
 open_source_shim!(pub);
 
