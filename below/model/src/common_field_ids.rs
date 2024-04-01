@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 445] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 449] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
