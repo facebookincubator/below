@@ -12,7 +12,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "1.0.75"
 bitflags = { version = "2.4", features = ["serde"] }
-bytes = { version = "1.1", features = ["serde"] }
+bytes = { version = "1.6.0", features = ["serde"] }
 common = { package = "below-common", version = "0.8.1", path = "../common" }
 humantime = "2.1"
 maplit = "1.0"
