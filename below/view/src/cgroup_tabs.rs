@@ -134,10 +134,10 @@ impl CgroupTab {
             let mut children = Vec::from_iter(&cgroup.children);
             if let Some(sort_order) = state.sort_order.as_ref() {
                 // field_id that query its own data
-                let field_id = CgroupModelFieldId {
-                    path: Some(vec![]),
-                    subquery_id: sort_order.clone(),
-                };
+                let field_id = CgroupModelFieldId::new(
+                    Some(model::CgroupPath { path: vec![] }),
+                    sort_order.clone(),
+                );
                 sort_queriables(&mut children, &field_id, state.reverse);
             }
 

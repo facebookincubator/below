@@ -35,13 +35,13 @@ impl HasRenderConfig for model::SingleCgroupModel {
             Cpu(field_id) => model::CgroupCpuModel::get_render_config_builder(field_id),
             Io(field_id) => model::CgroupIoModel::get_render_config_builder(field_id),
             IoDetails(field_id) => {
-                model::CgroupIoModel::get_render_config_builder(&field_id.subquery_id)
+                model::CgroupIoModel::get_render_config_builder(&field_id.subquery_id.0)
             }
             Mem(field_id) => model::CgroupMemoryModel::get_render_config_builder(field_id),
             Pressure(field_id) => model::CgroupPressureModel::get_render_config_builder(field_id),
             CgroupStat(field_id) => model::CgroupStatModel::get_render_config_builder(field_id),
             MemNuma(field_id) => {
-                model::CgroupMemoryNumaModel::get_render_config_builder(&field_id.subquery_id)
+                model::CgroupMemoryNumaModel::get_render_config_builder(&field_id.subquery_id.0)
             }
             Props(field_id) => model::CgroupProperties::get_render_config_builder(field_id),
             Pids(field_id) => model::CgroupPidsModel::get_render_config_builder(field_id),
@@ -394,7 +394,7 @@ impl HasRenderConfig for model::NetworkModel {
         use model::NetworkModelFieldId::*;
         match field_id {
             Interfaces(field_id) => {
-                model::SingleNetModel::get_render_config_builder(&field_id.subquery_id)
+                model::SingleNetModel::get_render_config_builder(&field_id.subquery_id.0)
             }
             Tcp(field_id) => model::TcpModel::get_render_config_builder(field_id),
             Ip(field_id) => model::IpModel::get_render_config_builder(field_id),
@@ -812,7 +812,7 @@ impl HasRenderConfigForDump for model::SingleNetModel {
 impl HasRenderConfig for Vec<model::SingleQueueModel> {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         let mut rc =
-            model::SingleQueueModel::get_render_config_builder(&field_id.subquery_id).get();
+            model::SingleQueueModel::get_render_config_builder(&field_id.subquery_id.0).get();
         rc.title = rc.title.map(|title| title.to_string());
         rc.into()
     }
@@ -827,7 +827,7 @@ impl HasRenderConfigForDump for Vec<model::SingleQueueModel> {
             .idx
             .expect("VecFieldId without index should not have render config");
         self.get(idx)
-            .map(|queue| queue.get_openmetrics_config_for_dump(&field_id.subquery_id))?
+            .map(|queue| queue.get_openmetrics_config_for_dump(&field_id.subquery_id.0))?
     }
 }
 
@@ -1042,12 +1042,14 @@ impl HasRenderConfig for model::SystemModel {
             Mem(field_id) => model::MemoryModel::get_render_config_builder(field_id),
             Vm(field_id) => model::VmModel::get_render_config_builder(field_id),
             Slab(field_id) => {
-                model::SingleSlabModel::get_render_config_builder(&field_id.subquery_id)
+                model::SingleSlabModel::get_render_config_builder(&field_id.subquery_id.0)
             }
             Disks(field_id) => {
-                model::SingleDiskModel::get_render_config_builder(&field_id.subquery_id)
+                model::SingleDiskModel::get_render_config_builder(&field_id.subquery_id.0)
             }
-            Btrfs(field_id) => model::BtrfsModel::get_render_config_builder(&field_id.subquery_id),
+            Btrfs(field_id) => {
+                model::BtrfsModel::get_render_config_builder(&field_id.subquery_id.0)
+            }
         }
     }
 }
@@ -1159,12 +1161,13 @@ impl HasRenderConfigForDump for model::SingleCpuModel {
 
 impl HasRenderConfig for BTreeMap<u32, model::SingleCpuModel> {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
-        let mut rc = model::SingleCpuModel::get_render_config_builder(&field_id.subquery_id).get();
+        let mut rc =
+            model::SingleCpuModel::get_render_config_builder(&field_id.subquery_id.0).get();
         rc.title = rc.title.map(|title| {
             format!(
                 "CPU {} {}",
                 field_id
-                    .key
+                    .idx
                     .expect("BTreeMapFieldId without key should not have render config"),
                 title
             )
@@ -1179,10 +1182,10 @@ impl HasRenderConfigForDump for BTreeMap<u32, model::SingleCpuModel> {
         field_id: &Self::FieldId,
     ) -> Option<RenderOpenMetricsConfigBuilder> {
         let key = field_id
-            .key
+            .idx
             .expect("BTreeMapFieldId without key should not have render config");
         self.get(&key)
-            .map(|cpu| cpu.get_openmetrics_config_for_dump(&field_id.subquery_id))?
+            .map(|cpu| cpu.get_openmetrics_config_for_dump(&field_id.subquery_id.0))?
     }
 }
 

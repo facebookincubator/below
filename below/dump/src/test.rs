@@ -41,10 +41,7 @@ fn test_dump_sys_content() {
     let mut fields = command::expand_fields(command::DEFAULT_SYSTEM_FIELDS, true);
     for subquery_id in enum_iterator::all::<model::SingleCpuModelFieldId>() {
         fields.push(DumpField::FieldId(model::SystemModelFieldId::Cpus(
-            model::BTreeMapFieldId {
-                key: Some(31),
-                subquery_id,
-            },
+            model::BTreeMapFieldId::new(Some(31), subquery_id),
         )));
     }
     opts.output_format = Some(OutputFormat::Json);
@@ -97,10 +94,9 @@ fn test_dump_sys_titles() {
         .into_iter()
         .chain(
             enum_iterator::all::<model::SingleCpuModelFieldId>().map(|subquery_id| {
-                DumpField::FieldId(model::SystemModelFieldId::Cpus(model::BTreeMapFieldId {
-                    key: Some(31),
-                    subquery_id,
-                }))
+                DumpField::FieldId(model::SystemModelFieldId::Cpus(
+                    model::BTreeMapFieldId::new(Some(31), subquery_id),
+                ))
             }),
         )
         .filter_map(|dump_field| match dump_field {

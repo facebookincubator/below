@@ -48,10 +48,7 @@ impl Dumper for System {
                 {
                     let value = subquery_id.clone();
                     fields.push(DumpField::FieldId(model::SystemModelFieldId::Cpus(
-                        model::BTreeMapFieldId {
-                            key: Some(*key),
-                            subquery_id: value,
-                        },
+                        model::BTreeMapFieldId::new(Some(*key), value),
                     )));
                 }
             }
