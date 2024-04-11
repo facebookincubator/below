@@ -14,7 +14,7 @@
 
 use super::*;
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct ResctrlL3MonModel {
     pub llc_occupancy_bytes: Option<u64>,
     pub mbm_total_bytes_per_sec: Option<u64>,
@@ -22,7 +22,7 @@ pub struct ResctrlL3MonModel {
 }
 
 /// Model for mon data
-#[derive(Clone, Debug, Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct ResctrlMonModel {
     #[queriable(subquery)]
     pub total: ResctrlL3MonModel,
@@ -31,7 +31,7 @@ pub struct ResctrlMonModel {
 }
 
 /// Collection of all data about a single MON group
-#[derive(Clone, Debug, Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct ResctrlMonGroupModel {
     pub name: String,
     pub full_path: String,
@@ -40,7 +40,7 @@ pub struct ResctrlMonGroupModel {
 }
 
 /// Collection of all data about a single CTRL_MON group and descendents
-#[derive(Clone, Debug, Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct ResctrlCtrlMonGroupModel {
     pub name: String,
     pub full_path: String,
@@ -53,7 +53,7 @@ pub struct ResctrlCtrlMonGroupModel {
 }
 
 /// All data about the entire resctrl filesystem
-#[derive(Clone, Debug, Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct ResctrlModel {
     pub cpuset: Option<resctrlfs::Cpuset>,
     pub mode: Option<resctrlfs::GroupMode>,

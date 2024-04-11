@@ -14,15 +14,7 @@
 
 use super::*;
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct SystemModel {
     pub hostname: String,
     pub kernel_version: Option<String>,
@@ -161,15 +153,7 @@ impl Nameable for SystemModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct ProcStatModel {
     pub total_interrupt_ct: Option<u64>,
     pub context_switches: Option<u64>,
@@ -192,15 +176,7 @@ impl ProcStatModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct SingleCpuModel {
     pub idx: i32,
     pub usage_pct: Option<f64>,
@@ -283,15 +259,7 @@ impl SingleCpuModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct MemoryModel {
     pub total: Option<u64>,
     pub free: Option<u64>,
@@ -376,15 +344,7 @@ impl MemoryModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct VmModel {
     pub pgpgin_per_sec: Option<f64>,
     pub pgpgout_per_sec: Option<f64>,
@@ -413,15 +373,7 @@ impl VmModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct SingleSlabModel {
     pub name: Option<String>,
     pub active_objs: Option<u64>,
@@ -456,15 +408,7 @@ impl SingleSlabModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct SingleDiskModel {
     pub name: Option<String>,
     pub disk_usage: Option<f32>,
@@ -544,15 +488,7 @@ impl Nameable for SingleDiskModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct BtrfsModel {
     pub name: Option<String>,
     pub disk_fraction: Option<f64>,

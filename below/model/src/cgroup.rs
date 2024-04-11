@@ -16,7 +16,7 @@ use super::*;
 
 /// Collection of all data local to the cgroup, e.g. its memory/io/cpu/pids usage.
 /// Nothing about child cgroups or siblings, and therefore "Single" in its name.
-#[derive(Clone, Debug, Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct SingleCgroupModel {
     pub name: String,
     pub full_path: String,
@@ -323,15 +323,7 @@ impl Nameable for SingleCgroupModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupCpuModel {
     pub usage_pct: Option<f64>,
     pub user_pct: Option<f64>,
@@ -358,15 +350,7 @@ impl CgroupCpuModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupStatModel {
     pub nr_descendants: Option<u32>,
     pub nr_dying_descendants: Option<u32>,
@@ -381,15 +365,7 @@ impl CgroupStatModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupIoModel {
     pub rbytes_per_sec: Option<f64>,
     pub wbytes_per_sec: Option<f64>,
@@ -463,15 +439,7 @@ impl std::ops::Add<&CgroupIoModel> for CgroupIoModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupMemoryModel {
     pub total: Option<u64>,
     pub swap: Option<u64>,
@@ -717,15 +685,7 @@ impl CgroupMemoryModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupPidsModel {
     pub tids_current: Option<u64>,
 }
@@ -747,15 +707,7 @@ impl CgroupPidsModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupPressureModel {
     pub cpu_some_pct: Option<f64>,
     pub cpu_full_pct: Option<f64>,
@@ -780,15 +732,7 @@ impl CgroupPressureModel {
         }
     }
 }
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupMemoryNumaModel {
     pub total: Option<u64>,
     pub anon: Option<u64>,
@@ -900,15 +844,7 @@ impl CgroupMemoryNumaModel {
 
 /// Cgroup properties. Without any cgroup configuration changes, these should
 /// typically be static.
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupProperties {
     pub cgroup_controllers: Option<BTreeSet<String>>,
     pub cgroup_subtree_control: Option<BTreeSet<String>>,

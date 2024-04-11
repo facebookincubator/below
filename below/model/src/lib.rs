@@ -637,7 +637,7 @@ mod tests {
         get_sample_model();
     }
 
-    #[derive(Clone, Default, Debug, below_derive::Queriable)]
+    #[::below_derive::queriable_derives]
     pub struct TestModel {
         pub msg: String,
     }
