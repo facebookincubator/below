@@ -65,7 +65,7 @@ impl TcStat {
                 }
                 TcAttribute::Xstats(tc_xstats) => match tc_xstats {
                     tc::TcXstats::FqCodel(fq_codel_xstats) => {
-                        tc.stats.xstats = Some(XStats::FqCodel(FqCodelXStats::new(fq_codel_xstats)))
+                        tc.stats.xstats = FqCodelXStats::new(fq_codel_xstats).map(XStats::FqCodel);
                     }
                     _ => {}
                 },
@@ -175,8 +175,13 @@ pub struct FqCodelQDisc {
     pub memory_limit: u32,
 }
 
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum FqCodelXStats {
+    FqCodelQdiscStats(FqCodelQdStats),
+}
+
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct FqCodelXStats {
+pub struct FqCodelQdStats {
     /// Largest packet we've seen so far
     pub maxpacket: u32,
     /// Number of time max qdisc packet limit was hit.
@@ -198,20 +203,22 @@ pub struct FqCodelXStats {
 }
 
 impl FqCodelXStats {
-    pub fn new(xstats: &TcFqCodelXstats) -> Self {
+    pub fn new(xstats: &TcFqCodelXstats) -> Option<Self> {
         match xstats {
-            TcFqCodelXstats::Qdisc(qdisc) => Self {
-                maxpacket: qdisc.maxpacket,
-                drop_overlimit: qdisc.drop_overlimit,
-                ecn_mark: qdisc.ecn_mark,
-                new_flow_count: qdisc.new_flow_count,
-                new_flows_len: qdisc.new_flows_len,
-                old_flows_len: qdisc.old_flows_len,
-                ce_mark: qdisc.ce_mark,
-                memory_usage: qdisc.memory_usage,
-                drop_overmemory: qdisc.drop_overmemory,
-            },
-            _ => Self::default(),
+            TcFqCodelXstats::Qdisc(qdisc) => {
+                Some(FqCodelXStats::FqCodelQdiscStats(FqCodelQdStats {
+                    maxpacket: qdisc.maxpacket,
+                    drop_overlimit: qdisc.drop_overlimit,
+                    ecn_mark: qdisc.ecn_mark,
+                    new_flow_count: qdisc.new_flow_count,
+                    new_flows_len: qdisc.new_flows_len,
+                    old_flows_len: qdisc.old_flows_len,
+                    ce_mark: qdisc.ce_mark,
+                    memory_usage: qdisc.memory_usage,
+                    drop_overmemory: qdisc.drop_overmemory,
+                }))
+            }
+            _ => None,
         }
     }
 }

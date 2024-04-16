@@ -17,7 +17,7 @@ use netlink_sys::{Socket, SocketAddr};
 use nix::net::if_;
 
 use errors::TcError;
-pub use types::{FqCodelQDisc, FqCodelXStats, QDisc, TcStat, XStats};
+pub use types::{FqCodelQDisc, FqCodelQdStats, FqCodelXStats, QDisc, TcStat, XStats};
 
 pub type TcStats = Vec<TcStat>;
 type Result<T> = std::result::Result<T, TcError>;

@@ -5,7 +5,7 @@ use netlink_packet_route::tc::{
     TcQdiscFqCodelOption, TcStats, TcStats2, TcStatsBasic, TcStatsQueue, TcXstats,
 };
 
-use crate::{types::XStats, FqCodelQDisc, FqCodelXStats, QDisc, Result};
+use crate::{types::XStats, FqCodelQDisc, FqCodelQdStats, FqCodelXStats, QDisc, Result};
 
 fn fake_netlink_qdiscs() -> Result<Vec<TcMessage>> {
     let mut tc_msgs = Vec::new();
@@ -114,16 +114,18 @@ fn test_tc_stats() {
     // xstats
     assert_eq!(
         tc.stats.xstats,
-        Some(XStats::FqCodel(FqCodelXStats {
-            maxpacket: 258,
-            drop_overlimit: 0,
-            ecn_mark: 0,
-            new_flow_count: 91,
-            new_flows_len: 0,
-            old_flows_len: 0,
-            ce_mark: 0,
-            memory_usage: 0,
-            drop_overmemory: 0,
-        }))
+        Some(XStats::FqCodel(FqCodelXStats::FqCodelQdiscStats(
+            FqCodelQdStats {
+                maxpacket: 258,
+                drop_overlimit: 0,
+                ecn_mark: 0,
+                new_flow_count: 91,
+                new_flows_len: 0,
+                old_flows_len: 0,
+                ce_mark: 0,
+                memory_usage: 0,
+                drop_overmemory: 0,
+            }
+        )))
     );
 }

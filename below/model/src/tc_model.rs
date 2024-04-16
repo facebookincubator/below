@@ -112,7 +112,7 @@ impl SingleTcModel {
         if let Some(sample) = stats.xstats.as_ref() {
             let last = last.and_then(|(last, d)| last.stats.xstats.as_ref().map(|l| (l, d)));
 
-            tc_model.xstats = Some(XStatsModel::new(sample, last));
+            tc_model.xstats = XStatsModel::new(sample, last);
         }
 
         if let Some(sample) = sample.qdisc.as_ref() {
@@ -213,18 +213,18 @@ pub struct XStatsModel {
 }
 
 impl XStatsModel {
-    fn new(sample: &XStats, last: Option<(&XStats, Duration)>) -> Self {
-        match sample {
-            XStats::FqCodel(sample) => Self {
-                fq_codel: {
-                    last.map(|(l, d)| match l {
-                        XStats::FqCodel(last) => {
-                            let last = Some((last, d));
-                            FqCodelXStatsModel::new(sample, last)
-                        }
-                    })
-                },
+    fn new(sample: &XStats, last: Option<(&XStats, Duration)>) -> Option<Self> {
+        match (sample, last) {
+            (XStats::FqCodel(sample), Some((XStats::FqCodel(last), d))) => {
+                match (sample, last) {
+                    (tc::FqCodelXStats::FqCodelQdiscStats(sample), tc::FqCodelXStats::FqCodelQdiscStats(last)) => {
+                        Some(Self {
+                            fq_codel: Some(FqCodelXStatsModel::new(sample, Some((last, d)))),
+                        })
+                    },
+                }
             },
+            _ => None,
         }
     }
 }
@@ -239,6 +239,7 @@ impl XStatsModel {
     below_derive::Queriable
 )]
 pub struct FqCodelXStatsModel {
+    // FqCodelQdXStats
     pub maxpacket: u32,
     pub ecn_mark: u32,
     pub new_flows_len: u32,
@@ -251,7 +252,7 @@ pub struct FqCodelXStatsModel {
 }
 
 impl FqCodelXStatsModel {
-    fn new(sample: &tc::FqCodelXStats, last: Option<(&tc::FqCodelXStats, Duration)>) -> Self {
+    fn new(sample: &tc::FqCodelQdStats, last: Option<(&tc::FqCodelQdStats, Duration)>) -> Self {
         Self {
             maxpacket: sample.maxpacket,
             ecn_mark: sample.ecn_mark,
