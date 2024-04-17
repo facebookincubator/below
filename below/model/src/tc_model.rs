@@ -17,15 +17,7 @@ macro_rules! rate {
     }};
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[below_derive::queriable_derives]
 pub struct TcModel {
     #[queriable(subquery)]
     pub tc: Vec<SingleTcModel>,
@@ -47,15 +39,7 @@ impl TcModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[below_derive::queriable_derives]
 pub struct SingleTcModel {
     /// Name of the interface
     pub interface: String,
@@ -125,15 +109,7 @@ impl SingleTcModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[below_derive::queriable_derives]
 pub struct QDiscModel {
     #[queriable(subquery)]
     pub fq_codel: Option<FqCodelQDiscModel>,
@@ -156,15 +132,7 @@ impl QDiscModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[below_derive::queriable_derives]
 pub struct FqCodelQDiscModel {
     pub target: u32,
     pub limit: u32,
