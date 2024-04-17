@@ -183,14 +183,13 @@ pub struct XStatsModel {
 impl XStatsModel {
     fn new(sample: &XStats, last: Option<(&XStats, Duration)>) -> Option<Self> {
         match (sample, last) {
-            (XStats::FqCodel(sample), Some((XStats::FqCodel(last), d))) => {
-                match (sample, last) {
-                    (tc::FqCodelXStats::FqCodelQdiscStats(sample), tc::FqCodelXStats::FqCodelQdiscStats(last)) => {
-                        Some(Self {
-                            fq_codel: Some(FqCodelXStatsModel::new(sample, Some((last, d)))),
-                        })
-                    },
-                }
+            (XStats::FqCodel(sample), Some((XStats::FqCodel(last), d))) => match (sample, last) {
+                (
+                    tc::FqCodelXStats::FqCodelQdiscStats(sample),
+                    tc::FqCodelXStats::FqCodelQdiscStats(last),
+                ) => Some(Self {
+                    fq_codel: Some(FqCodelXStatsModel::new(sample, Some((last, d)))),
+                }),
             },
             _ => None,
         }
