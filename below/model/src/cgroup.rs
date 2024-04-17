@@ -16,7 +16,7 @@ use super::*;
 
 /// Collection of all data local to the cgroup, e.g. its memory/io/cpu/pids usage.
 /// Nothing about child cgroups or siblings, and therefore "Single" in its name.
-#[derive(Clone, Debug, Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct SingleCgroupModel {
     pub name: String,
     pub full_path: String,
@@ -70,75 +70,49 @@ pub struct CgroupModel {
 /// The path is used to drill into the Cgroup Model tree. If Vec empty, the
 /// current CgroupModel is selected and queried with the subquery_id.
 /// The path is optional in parsing and converting to String.
+pub type CgroupModelFieldId = QueriableContainerFieldId<CgroupModel>;
+
 #[derive(Clone, Debug, PartialEq)]
-pub struct CgroupModelFieldId {
-    /// To drill into children recursively. If Vec empty, queries self.
-    /// None is only for listing variants and otherwise invalid.
-    pub path: Option<Vec<String>>,
-    pub subquery_id: SingleCgroupModelFieldId,
+pub struct CgroupPath {
+    pub path: Vec<String>,
 }
 
-impl FieldId for CgroupModelFieldId {
-    type Queriable = CgroupModel;
-}
-
-impl DelegatedSequence for CgroupModelFieldId {
-    type Delegate = SingleCgroupModelFieldId;
-    fn get_delegate(&self) -> &Self::Delegate {
-        &self.subquery_id
-    }
-    fn from_delegate(delegate: Self::Delegate) -> Self {
-        Self {
-            path: None,
-            subquery_id: delegate,
-        }
-    }
-}
-
-impl Sequence for CgroupModelFieldId {
-    impl_sequence_for_delegated_sequence!();
-}
-
-impl std::string::ToString for CgroupModelFieldId {
+impl ToString for CgroupPath {
     fn to_string(&self) -> String {
-        match &self.path {
-            Some(path) if path.is_empty() => self.subquery_id.to_string(),
-            Some(path) => format!("path:/{}/.{}", path.join("/"), self.subquery_id.to_string()),
-            None => format!("[path:/<cgroup_path>/.]{}", self.subquery_id.to_string()),
-        }
+        format!("path:/{}/", self.path.join("/"))
     }
 }
 
-impl std::str::FromStr for CgroupModelFieldId {
+impl FromStr for CgroupPath {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        let (path_str, subquery_id_str) = if s.starts_with("path:") {
-            s["path:".len()..]
-                .rsplit_once("/.")
-                .ok_or_else(|| anyhow!("Path is not terminated by `/.`: {}", s))?
-        } else {
-            ("", s)
-        };
-        let path = Some(
-            path_str
+        if !s.starts_with("path:/") {
+            return Err(anyhow!("Path is not prefixed with `path:/`: {}", s));
+        }
+        Ok(Self {
+            path: s["path:/".len()..]
                 .split('/')
                 .filter(|part| !part.is_empty())
                 .map(|part| part.to_owned())
                 .collect(),
-        );
-        let subquery_id = SingleCgroupModelFieldId::from_str(subquery_id_str)?;
-        Ok(Self { path, subquery_id })
+        })
     }
 }
 
-impl Queriable for CgroupModel {
-    type FieldId = CgroupModelFieldId;
-    fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
+impl QueriableContainer for CgroupModel {
+    type Idx = CgroupPath;
+    type SubqueryId = SingleCgroupModelFieldId;
+    const IDX_PLACEHOLDER: &'static str = "[path:/<cgroup_path>/.]";
+    fn split(s: &str) -> Option<(&str, &str)> {
+        let idx_end = s.rfind("/.")?;
+        Some((&s[..idx_end + 1], &s[idx_end + 2..]))
+    }
+    fn get_item(&self, idx: &Self::Idx) -> Option<&SingleCgroupModel> {
         let mut model = self;
-        for part in field_id.path.as_ref()?.iter() {
+        for part in idx.path.iter() {
             model = model.children.get(part.as_str())?;
         }
-        model.data.query(&field_id.subquery_id)
+        Some(&model.data)
     }
 }
 
@@ -323,15 +297,7 @@ impl Nameable for SingleCgroupModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupCpuModel {
     pub usage_pct: Option<f64>,
     pub user_pct: Option<f64>,
@@ -358,15 +324,7 @@ impl CgroupCpuModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupStatModel {
     pub nr_descendants: Option<u32>,
     pub nr_dying_descendants: Option<u32>,
@@ -381,15 +339,7 @@ impl CgroupStatModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupIoModel {
     pub rbytes_per_sec: Option<f64>,
     pub wbytes_per_sec: Option<f64>,
@@ -463,15 +413,7 @@ impl std::ops::Add<&CgroupIoModel> for CgroupIoModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupMemoryModel {
     pub total: Option<u64>,
     pub swap: Option<u64>,
@@ -717,15 +659,7 @@ impl CgroupMemoryModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupPidsModel {
     pub tids_current: Option<u64>,
 }
@@ -747,15 +681,7 @@ impl CgroupPidsModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupPressureModel {
     pub cpu_some_pct: Option<f64>,
     pub cpu_full_pct: Option<f64>,
@@ -780,15 +706,7 @@ impl CgroupPressureModel {
         }
     }
 }
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupMemoryNumaModel {
     pub total: Option<u64>,
     pub anon: Option<u64>,
@@ -900,15 +818,7 @@ impl CgroupMemoryNumaModel {
 
 /// Cgroup properties. Without any cgroup configuration changes, these should
 /// typically be static.
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct CgroupProperties {
     pub cgroup_controllers: Option<BTreeSet<String>>,
     pub cgroup_subtree_control: Option<BTreeSet<String>>,
@@ -990,8 +900,6 @@ mod tests {
         let model: CgroupModel =
             serde_json::from_str(model_json).expect("Failed to deserialize cgroup model JSON");
         for (field_id, expected) in &[
-            // "path:" omitted falls back to querying self (root)
-            ("full_path", Some("")),
             // Ignore consecutive slashes
             ("path:///////.name", Some("<root>")),
             ("path:/system.slice/.full_path", Some("/system.slice")),

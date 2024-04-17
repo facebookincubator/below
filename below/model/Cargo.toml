@@ -2,7 +2,7 @@
 
 [package]
 name = "below-model"
-version = "0.8.0"
+version = "0.8.1"
 authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
 edition = "2021"
 description = "Model crate for below"
@@ -12,18 +12,18 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "1.0.75"
 async-trait = "0.1.71"
-below_derive = { version = "0.8.0", path = "../below_derive" }
-btrfs = { package = "below-btrfs", version = "0.8.0", path = "../btrfs" }
-cgroupfs = { version = "0.8.0", path = "../cgroupfs" }
-common = { package = "below-common", version = "0.8.0", path = "../common" }
+below_derive = { version = "0.8.1", path = "../below_derive" }
+btrfs = { package = "below-btrfs", version = "0.8.1", path = "../btrfs" }
+cgroupfs = { version = "0.8.1", path = "../cgroupfs" }
+common = { package = "below-common", version = "0.8.1", path = "../common" }
 enum-iterator = "1.4.1"
-ethtool = { package = "below-ethtool", version = "0.8.0", path = "../ethtool" }
-gpu-stats = { package = "below-gpu-stats", version = "0.8.0", path = "../gpu_stats" }
+ethtool = { package = "below-ethtool", version = "0.8.1", path = "../ethtool" }
+gpu-stats = { package = "below-gpu-stats", version = "0.8.1", path = "../gpu_stats" }
 hostname = "0.3"
 os_info = "3.0.7"
-procfs = { package = "fb_procfs", version = "0.8.0", path = "../procfs" }
+procfs = { package = "fb_procfs", version = "0.8.1", path = "../procfs" }
 regex = "1.9.2"
-resctrlfs = { version = "0.8.0", path = "../resctrlfs" }
+resctrlfs = { version = "0.8.1", path = "../resctrlfs" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

@@ -117,3 +117,30 @@ pub fn queriable_derive(input: TokenStream) -> TokenStream {
         .unwrap_or_else(|err| err.to_compile_error())
         .into()
 }
+
+/// Shorthand to add #[derive] for all traits necessary for a Queriable model.
+/// Example:
+///
+/// #[below_derive::queriable_derives]
+/// struct Foo {
+///    ...
+/// }
+///
+/// Generates:
+///
+/// #[derive(
+///     Clone,
+///     Debug,
+///     Default,
+///     PartialEq,
+///     Serialize,
+///     Deserialize,
+///     ::below_derive::Queriable,
+/// )]
+/// struct Foo {
+///   ...
+/// }
+#[proc_macro_attribute]
+pub fn queriable_derives(_: TokenStream, input: TokenStream) -> TokenStream {
+    queriable::queriable_derives_impl(input.into()).into()
+}

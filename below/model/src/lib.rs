@@ -15,6 +15,7 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::fmt;
+use std::marker::PhantomData;
 use std::str::FromStr;
 use std::time::Duration;
 use std::time::Instant;
@@ -344,88 +345,96 @@ pub trait Nameable {
     fn name() -> &'static str;
 }
 
-/// Sequence that wraps a delegate sequence and owns no variants.
-trait DelegatedSequence {
-    type Delegate: Sequence;
-    fn get_delegate(&self) -> &Self::Delegate;
-    // Not using From trait as conversion should only be used for Sequence
-    fn from_delegate(delegate: Self::Delegate) -> Self;
+/// Type that contains sub-queriables of the same type, individually retrieveable
+/// by some index. It is itself a Queriable.
+pub trait QueriableContainer {
+    type Idx;
+    type SubqueryId: FieldId;
+    const IDX_PLACEHOLDER: &'static str = "<idx>.";
+    fn split(s: &str) -> Option<(&str, &str)> {
+        s.split_once('.')
+    }
+    fn get_item(&self, idx: &Self::Idx) -> Option<&<Self::SubqueryId as FieldId>::Queriable>;
 }
 
-/// Implements Sequence for DelegatedSequence. Must be a macro due to orphan
-/// rule. See https://github.com/rust-lang/rfcs/issues/1124
-macro_rules! impl_sequence_for_delegated_sequence {
-    () => {
-        const CARDINALITY: usize = <Self as DelegatedSequence>::Delegate::CARDINALITY;
-        fn next(&self) -> Option<Self> {
-            self.get_delegate().next().map(Self::from_delegate)
-        }
-        fn previous(&self) -> Option<Self> {
-            self.get_delegate().previous().map(Self::from_delegate)
-        }
-        fn first() -> Option<Self> {
-            <Self as DelegatedSequence>::Delegate::first().map(Self::from_delegate)
-        }
-        fn last() -> Option<Self> {
-            <Self as DelegatedSequence>::Delegate::last().map(Self::from_delegate)
-        }
-    };
+impl<C: QueriableContainer> Queriable for C {
+    type FieldId = QueriableContainerFieldId<C>;
+    fn query(&self, field_id: &<C as Queriable>::FieldId) -> Option<Field> {
+        self.get_item(field_id.idx.as_ref()?)
+            .and_then(|sub| sub.query(&field_id.subquery_id.0))
+    }
 }
-pub(crate) use impl_sequence_for_delegated_sequence;
 
-/// Type that makes Vec Queriable if Vec's inner type is Queriable. Uses `idx`
-/// to query into a Vec. Uses `subquery_id` to query into the selected item.
 #[derive(Clone, Debug, PartialEq)]
-pub struct VecFieldId<F: FieldId> {
+pub struct QueriableContainerFieldId<C: QueriableContainer> {
     /// None is only for listing variants and otherwise invalid.
-    pub idx: Option<usize>,
-    pub subquery_id: F,
+    /// If None, shows up as C::IDX_PLACEHOLDER
+    pub idx: Option<C::Idx>,
+    // Wraps inside a tuple so we can #[derive] traits without adding type constraints
+    pub subquery_id: (C::SubqueryId,),
+    phantom: PhantomData<C>,
 }
 
-impl<F: FieldId> FieldId for VecFieldId<F>
-where
-    <F as FieldId>::Queriable: Sized,
-{
-    type Queriable = Vec<F::Queriable>;
+impl<C: QueriableContainer> FieldId for QueriableContainerFieldId<C> {
+    type Queriable = C;
 }
 
-impl<F: FieldId + Sequence> DelegatedSequence for VecFieldId<F> {
-    type Delegate = F;
-    fn get_delegate(&self) -> &Self::Delegate {
-        &self.subquery_id
-    }
-    fn from_delegate(delegate: Self::Delegate) -> Self {
+impl<C: QueriableContainer> QueriableContainerFieldId<C> {
+    pub fn new(idx: Option<C::Idx>, subquery_id: C::SubqueryId) -> Self {
         Self {
-            idx: None,
-            subquery_id: delegate,
+            idx,
+            subquery_id: (subquery_id,),
+            phantom: PhantomData,
         }
     }
 }
 
-impl<F: FieldId + Sequence> Sequence for VecFieldId<F> {
-    impl_sequence_for_delegated_sequence!();
-}
-
-impl<F: FieldId + ToString> ToString for VecFieldId<F> {
-    fn to_string(&self) -> String {
-        match self.idx {
-            Some(idx) => format!("{}.{}", idx, self.subquery_id.to_string()),
-            None => format!("<idx>.{}", self.subquery_id.to_string()),
-        }
-    }
-}
-
-impl<F: FieldId + FromStr> FromStr for VecFieldId<F>
+impl<C: QueriableContainer> Sequence for QueriableContainerFieldId<C>
 where
-    <F as FromStr>::Err: Into<anyhow::Error>,
+    C::SubqueryId: Sequence,
+{
+    const CARDINALITY: usize = C::SubqueryId::CARDINALITY;
+    fn next(&self) -> Option<Self> {
+        self.subquery_id.0.next().map(|s| Self::new(None, s))
+    }
+    fn previous(&self) -> Option<Self> {
+        self.subquery_id.0.previous().map(|s| Self::new(None, s))
+    }
+    fn first() -> Option<Self> {
+        C::SubqueryId::first().map(|s| Self::new(None, s))
+    }
+    fn last() -> Option<Self> {
+        C::SubqueryId::last().map(|s| Self::new(None, s))
+    }
+}
+
+impl<C: QueriableContainer> ToString for QueriableContainerFieldId<C>
+where
+    C::Idx: ToString,
+    C::SubqueryId: ToString,
+{
+    fn to_string(&self) -> String {
+        match self.idx.as_ref() {
+            Some(idx) => format!("{}.{}", idx.to_string(), self.subquery_id.0.to_string()),
+            None => format!("{}{}", C::IDX_PLACEHOLDER, self.subquery_id.0.to_string()),
+        }
+    }
+}
+
+impl<C: QueriableContainer> FromStr for QueriableContainerFieldId<C>
+where
+    C::Idx: FromStr,
+    C::SubqueryId: FromStr,
+    <C::Idx as FromStr>::Err: Into<anyhow::Error>,
+    <C::SubqueryId as FromStr>::Err: Into<anyhow::Error>,
 {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        if let Some(dot_idx) = s.find('.') {
-            Ok(Self {
-                idx: Some(s[..dot_idx].parse()?),
-                subquery_id: F::from_str(&s[dot_idx + 1..]).map_err(Into::into)?,
-            })
+        if let Some((idx_str, subquery_id_str)) = C::split(s) {
+            Ok(Self::new(
+                Some(C::Idx::from_str(idx_str).map_err(Into::into)?),
+                C::SubqueryId::from_str(subquery_id_str).map_err(Into::into)?,
+            ))
         } else {
             Err(anyhow!(
                 "Unable to find a variant of the given enum matching string `{}`.",
@@ -435,85 +444,26 @@ where
     }
 }
 
-impl<Q: Queriable> Queriable for Vec<Q> {
-    type FieldId = VecFieldId<Q::FieldId>;
-    fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
-        self.get(field_id.idx?)
-            .and_then(|f| f.query(&field_id.subquery_id))
+impl<Q: Queriable> QueriableContainer for Vec<Q> {
+    type Idx = usize;
+    type SubqueryId = Q::FieldId;
+    fn get_item(&self, idx: &usize) -> Option<&Q> {
+        self.get(*idx)
     }
 }
 
-/// Type that makes BTreeMap Queriable if its value is Queriable. Uses `key`
-/// to query into a map. Uses `subquery_id` to query into the selected value.
-#[derive(Clone, Debug, PartialEq)]
-pub struct BTreeMapFieldId<K, F: FieldId> {
-    /// None is only for listing variants and otherwise invalid.
-    pub key: Option<K>,
-    pub subquery_id: F,
-}
+pub type VecFieldId<Q> = QueriableContainerFieldId<Vec<Q>>;
 
-impl<K: Ord, F: FieldId> FieldId for BTreeMapFieldId<K, F>
-where
-    <F as FieldId>::Queriable: Sized,
-{
-    type Queriable = BTreeMap<K, F::Queriable>;
-}
-
-impl<K, F: FieldId + Sequence> DelegatedSequence for BTreeMapFieldId<K, F> {
-    type Delegate = F;
-    fn get_delegate(&self) -> &Self::Delegate {
-        &self.subquery_id
-    }
-    fn from_delegate(delegate: Self::Delegate) -> Self {
-        Self {
-            key: None,
-            subquery_id: delegate,
-        }
+impl<K: Ord, Q: Queriable> QueriableContainer for BTreeMap<K, Q> {
+    type Idx = K;
+    type SubqueryId = Q::FieldId;
+    const IDX_PLACEHOLDER: &'static str = "<key>.";
+    fn get_item(&self, idx: &K) -> Option<&Q> {
+        self.get(idx)
     }
 }
 
-impl<K, F: FieldId + Sequence> Sequence for BTreeMapFieldId<K, F> {
-    impl_sequence_for_delegated_sequence!();
-}
-
-impl<K: ToString, F: FieldId + ToString> ToString for BTreeMapFieldId<K, F> {
-    fn to_string(&self) -> String {
-        match &self.key {
-            Some(key) => format!("{}.{}", key.to_string(), self.subquery_id.to_string()),
-            None => format!("<key>.{}", self.subquery_id.to_string()),
-        }
-    }
-}
-
-impl<K: FromStr, F: FieldId + FromStr> FromStr for BTreeMapFieldId<K, F>
-where
-    <K as FromStr>::Err: Into<anyhow::Error>,
-    <F as FromStr>::Err: Into<anyhow::Error>,
-{
-    type Err = anyhow::Error;
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        // Only works with keys that don't contain dot
-        if let Some(dot_idx) = s.find('.') {
-            Ok(Self {
-                key: Some(K::from_str(&s[..dot_idx]).map_err(Into::into)?),
-                subquery_id: F::from_str(&s[dot_idx + 1..]).map_err(Into::into)?,
-            })
-        } else {
-            Err(anyhow!(
-                "Unable to find a variant of the given enum matching string `{}`.",
-                s,
-            ))
-        }
-    }
-}
-
-impl<K: Ord, Q: Queriable> Queriable for BTreeMap<K, Q> {
-    type FieldId = BTreeMapFieldId<K, Q::FieldId>;
-    fn query(&self, field_id: &Self::FieldId) -> Option<Field> {
-        self.get(field_id.key.as_ref()?)
-            .and_then(|f| f.query(&field_id.subquery_id))
-    }
-}
+pub type BTreeMapFieldId<K, Q> = QueriableContainerFieldId<BTreeMap<K, Q>>;
 
 pub struct NetworkStats<'a> {
     net: &'a procfs::NetStat,
@@ -652,7 +602,7 @@ mod tests {
         get_sample_model();
     }
 
-    #[derive(Clone, Default, Debug, below_derive::Queriable)]
+    #[::below_derive::queriable_derives]
     pub struct TestModel {
         pub msg: String,
     }
@@ -660,14 +610,8 @@ mod tests {
     #[test]
     fn test_vec_field_id() {
         let query_str = "1.msg";
-        let query = <VecFieldId<TestModelFieldId>>::from_str(query_str).expect("bad query str");
-        assert_eq!(
-            query,
-            VecFieldId {
-                idx: Some(1),
-                subquery_id: TestModelFieldId::Msg,
-            }
-        );
+        let query = <VecFieldId<TestModel>>::from_str(query_str).expect("bad query str");
+        assert_eq!(query, VecFieldId::new(Some(1), TestModelFieldId::Msg),);
         assert_eq!(query.to_string(), query_str);
     }
 
@@ -682,10 +626,7 @@ mod tests {
             },
         ];
         assert_eq!(
-            data.query(&VecFieldId {
-                idx: Some(1),
-                subquery_id: TestModelFieldId::Msg,
-            }),
+            data.query(&VecFieldId::new(Some(1), TestModelFieldId::Msg,)),
             Some(Field::Str("world".to_owned()))
         );
     }
@@ -693,14 +634,11 @@ mod tests {
     #[test]
     fn test_btreemap_field_id() {
         let query_str = "hello.msg";
-        let query = <BTreeMapFieldId<String, TestModelFieldId>>::from_str(query_str)
-            .expect("bad query str");
+        let query =
+            <BTreeMapFieldId<String, TestModel>>::from_str(query_str).expect("bad query str");
         assert_eq!(
             query,
-            BTreeMapFieldId {
-                key: Some("hello".to_owned()),
-                subquery_id: TestModelFieldId::Msg,
-            }
+            BTreeMapFieldId::new(Some("hello".to_owned()), TestModelFieldId::Msg)
         );
         assert_eq!(query.to_string(), query_str);
     }
@@ -721,10 +659,10 @@ mod tests {
             },
         );
         assert_eq!(
-            data.query(&BTreeMapFieldId {
-                key: Some("hello".to_owned()),
-                subquery_id: TestModelFieldId::Msg,
-            }),
+            data.query(&BTreeMapFieldId::new(
+                Some("hello".to_owned()),
+                TestModelFieldId::Msg,
+            )),
             Some(Field::Str("world".to_owned()))
         );
     }

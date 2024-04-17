@@ -97,12 +97,12 @@ fn record_replay_integration() {
     restored_sample
         .cgroup
         .data
-        .io_total
+        .pressure
         .as_ref()
-        .expect("missing io.stat")
-        .rbytes_per_sec
+        .expect("missing memory.pressure")
+        .memory_full_pct
         .as_ref()
-        .expect("missing io stat read bytes per second");
+        .expect("missing memory.pressure.total");
     assert!(restored_sample.process.processes.len() == nr_procs);
     assert!(restored_sample.system.hostname == hostname);
     assert!(

@@ -25,6 +25,7 @@ from os import path
 # Paths to crates relative to repository root
 # NB: Order the list based on dependencies: least deps first, most deps last
 PACKAGES = [
+    "below/ethtool",
     "below/cgroupfs",
     "below/procfs",
     "below/common",
@@ -32,6 +33,7 @@ PACKAGES = [
     "below/gpu_stats",
     "below/config",
     "below/below_derive",
+    "below/resctrlfs",
     "below/model",
     "below/render",
     "below/store",

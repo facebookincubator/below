@@ -30,7 +30,7 @@ macro_rules! fold_optionals {
     };
 }
 
-#[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct ProcessModel {
     #[queriable(subquery)]
     pub processes: BTreeMap<i32, SingleProcessModel>,
@@ -60,7 +60,7 @@ impl Nameable for ProcessModel {
     }
 }
 
-#[derive(Default, Clone, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct SingleProcessModel {
     pub pid: Option<i32>,
     pub ppid: Option<i32>,
@@ -136,7 +136,7 @@ impl Nameable for SingleProcessModel {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct ProcessIoModel {
     pub rbytes_per_sec: Option<f64>,
     pub wbytes_per_sec: Option<f64>,
@@ -167,7 +167,7 @@ impl ProcessIoModel {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct ProcessCpuModel {
     pub usage_pct: Option<f64>,
     pub user_pct: Option<f64>,
@@ -199,7 +199,7 @@ impl ProcessCpuModel {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct ProcessMemoryModel {
     pub minorfaults_per_sec: Option<f64>,
     pub majorfaults_per_sec: Option<f64>,

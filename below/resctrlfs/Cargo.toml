@@ -2,7 +2,7 @@
 
 [package]
 name = "resctrlfs"
-version = "0.8.0"
+version = "0.8.1"
 authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
 edition = "2021"
 description = "A crate for reading resctrl fs data"

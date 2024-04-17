@@ -192,6 +192,21 @@ fn get_queriable_field_props(field: &Field) -> syn::Result<QueriableFieldProps> 
     })
 }
 
+pub fn queriable_derives_impl(input: TokenStream) -> TokenStream {
+    quote! {
+        #[derive(
+            Clone,
+            Debug,
+            Default,
+            PartialEq,
+            Serialize,
+            Deserialize,
+            ::below_derive::Queriable,
+        )]
+        #input
+    }
+}
+
 pub fn queriable_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream> {
     let struct_props = get_queriable_struct_props(ast)?;
     let input_ident = struct_props.ident;
