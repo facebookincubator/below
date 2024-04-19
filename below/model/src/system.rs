@@ -398,7 +398,11 @@ impl SingleSlabModel {
             num_slabs: slabinfo.num_slabs,
             active_caches: slabinfo.active_objs.map(
                 |active_objs| {
-                    if active_objs > 0 { 1 } else { 0 }
+                    if active_objs > 0 {
+                        1
+                    } else {
+                        0
+                    }
                 },
             ),
             num_caches: Some(1),
@@ -436,7 +440,11 @@ pub struct SingleDiskModel {
 
 impl Recursive for SingleDiskModel {
     fn get_depth(&self) -> usize {
-        if self.minor == Some(0) { 0 } else { 1 }
+        if self.minor == Some(0) {
+            0
+        } else {
+            1
+        }
     }
 }
 

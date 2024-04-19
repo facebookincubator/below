@@ -152,16 +152,21 @@ mod test {
 
         let handle = thread::spawn(move || {
             futures::executor::block_on(collector.collect_and_update()).unwrap();
+
             // Test overwriting sample
             futures::executor::block_on(collector.collect_and_update()).unwrap();
             c.wait(); // <-- 1
+
             // Consumer checking overwritten sample
             c.wait(); // <-- 2
+
             // Test sending None
             futures::executor::block_on(collector.collect_and_update()).unwrap();
             c.wait(); // <-- 3
+
             // Consumer checking None
             c.wait(); // <-- 4
+
             // Test sending error. Will fail on both collector and consumer threads.
             let is_error = matches!(
                 futures::executor::block_on(collector.collect_and_update()),
@@ -170,14 +175,17 @@ mod test {
             c.wait(); // <-- 5
             assert!(is_error, "Collector did not return an error");
         });
+
         // Collector overwriting sample
         barrier.wait(); // <-- 1
         assert_eq!(Some(2), consumer.try_take().unwrap());
         barrier.wait(); // <-- 2
+
         // Collector sending None
         barrier.wait(); // <-- 3
         assert_eq!(None, consumer.try_take().unwrap());
         barrier.wait(); // <-- 4
+
         // Collector sending error
         barrier.wait(); // <-- 5
         assert!(matches!(consumer.try_take(), Err(_)));

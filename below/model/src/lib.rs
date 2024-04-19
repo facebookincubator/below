@@ -326,7 +326,11 @@ pub fn sort_queriables<T: Queriable>(queriables: &mut [&T], field_id: &T::FieldI
             .query(field_id)
             .partial_cmp(&rhs.query(field_id))
             .unwrap_or(std::cmp::Ordering::Equal);
-        if reverse { order.reverse() } else { order }
+        if reverse {
+            order.reverse()
+        } else {
+            order
+        }
     });
 }
 
