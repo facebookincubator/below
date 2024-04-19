@@ -8,6 +8,14 @@ on:
   workflow_dispatch:
 
 jobs:
+  rustfmt:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run linter
+      run: >
+        cargo fmt --check
+
   build_test:
     runs-on: ubuntu-22.04
     steps:
