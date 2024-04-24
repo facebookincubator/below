@@ -68,8 +68,12 @@ struct task_struct___post516 {
   struct thread_info___post516 thread_info;
 } __attribute__((preserve_access_index));
 
+struct mm_rss_stat___pre62 {
+	atomic_long_t count[4];
+} __attribute__((preserve_access_index));
+
 struct mm_struct___pre62 {
-	struct mm_rss_stat rss_stat;
+	struct mm_rss_stat___pre62 rss_stat;
 } __attribute__((preserve_access_index));
 
 struct mm_struct___post62 {
