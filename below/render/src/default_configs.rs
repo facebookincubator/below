@@ -1555,3 +1555,183 @@ impl HasRenderConfig for model::CgroupProperties {
         }
     }
 }
+
+impl HasRenderConfig for model::SingleTcModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::SingleTcModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            Interface => rc.title("Interface"),
+            Kind => rc.title("Kind"),
+            Qlen => rc.title("Queue Length"),
+            Bps => rc.title("Bps").format(ReadableSize).suffix("/s"),
+            Pps => rc.title("Pps").suffix("/s"),
+            BytesPerSec => rc.title("Bytes").format(ReadableSize).suffix("/s"),
+            PacketsPerSec => rc.title("Packets").suffix("/s"),
+            BacklogPerSec => rc.title("Backlog").suffix("/s"),
+            DropsPerSec => rc.title("Drops").suffix("/s"),
+            RequeuesPerSec => rc.title("Requeues").suffix("/s"),
+            OverlimitsPerSec => rc.title("Overlimits").suffix("/s"),
+            Qdisc(field_id) => model::QDiscModel::get_render_config_builder(field_id),
+            Xstats(field_id) => model::XStatsModel::get_render_config_builder(field_id),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::SingleTcModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::SingleTcModelFieldId::*;
+        let gauge = gauge()
+            .label("interface", &self.interface)
+            .label("qdisc", &self.kind);
+        match field_id {
+            Interface => None,
+            Kind => None,
+            Qlen => Some(gauge),
+            Bps => Some(gauge.unit("bytes_per_second")),
+            Pps => Some(gauge.unit("packets_per_second")),
+            BytesPerSec => Some(gauge.unit("bytes_per_second")),
+            PacketsPerSec => Some(gauge.unit("packets_per_second")),
+            BacklogPerSec => Some(gauge.unit("packets_per_second")),
+            DropsPerSec => Some(gauge.unit("packets_per_second")),
+            RequeuesPerSec => Some(gauge.unit("packets_per_second")),
+            OverlimitsPerSec => Some(gauge.unit("packets_per_second")),
+            Qdisc(field_id) => self
+                .qdisc
+                .as_ref()
+                .and_then(|qdisc| qdisc.get_openmetrics_config_for_dump(field_id)),
+            Xstats(field_id) => self
+                .xstats
+                .as_ref()
+                .and_then(|xstats| xstats.get_openmetrics_config_for_dump(field_id)),
+        }
+    }
+}
+
+impl HasRenderConfig for model::QDiscModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::QDiscModelFieldId::*;
+        match field_id {
+            FqCodel(field_id) => model::FqCodelQDiscModel::get_render_config_builder(field_id),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::QDiscModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::QDiscModelFieldId::*;
+        match field_id {
+            FqCodel(field_id) => self
+                .fq_codel
+                .as_ref()
+                .and_then(|fq_codel| fq_codel.get_openmetrics_config_for_dump(field_id)),
+        }
+    }
+}
+
+impl HasRenderConfig for model::FqCodelQDiscModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::FqCodelQDiscModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            Target => rc.title("Target"),
+            Limit => rc.title("Limit"),
+            Interval => rc.title("Interval"),
+            Ecn => rc.title("Ecn"),
+            Quantum => rc.title("Quantum"),
+            CeThreshold => rc.title("CeThreshold"),
+            DropBatchSize => rc.title("DropBatchSize"),
+            MemoryLimit => rc.title("MemoryLimit"),
+            FlowsPerSec => rc.title("Flows").suffix("/s"),
+        }
+    }
+}
+
+impl HasRenderConfig for model::XStatsModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::XStatsModelFieldId::*;
+        match field_id {
+            FqCodel(field_id) => model::FqCodelXStatsModel::get_render_config_builder(field_id),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::XStatsModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::XStatsModelFieldId::*;
+        match field_id {
+            FqCodel(field_id) => self
+                .fq_codel
+                .as_ref()
+                .and_then(|fq_codel| fq_codel.get_openmetrics_config_for_dump(field_id)),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::FqCodelQDiscModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::FqCodelQDiscModelFieldId::*;
+        match field_id {
+            Target => Some(gauge()),
+            Limit => Some(gauge()),
+            Interval => Some(gauge()),
+            Ecn => Some(gauge()),
+            Quantum => Some(gauge()),
+            CeThreshold => Some(gauge()),
+            DropBatchSize => Some(gauge()),
+            MemoryLimit => Some(gauge()),
+            FlowsPerSec => Some(gauge()),
+        }
+    }
+}
+
+impl HasRenderConfig for model::FqCodelXStatsModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::FqCodelXStatsModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            Maxpacket => rc.title("MaxPacket"),
+            EcnMark => rc.title("EcnMark"),
+            NewFlowsLen => rc.title("NewFlowsLen"),
+            OldFlowsLen => rc.title("OldFlowsLen"),
+            CeMark => rc.title("CeMark"),
+            DropOverlimitPerSec => rc.title("DropOverlimit").suffix("/s"),
+            NewFlowCountPerSec => rc.title("NewFlowCount").suffix("/s"),
+            MemoryUsagePerSec => rc.title("MemoryUsage").suffix("/s"),
+            DropOvermemoryPerSec => rc.title("DropOvermemory").suffix("/s"),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::FqCodelXStatsModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::FqCodelXStatsModelFieldId::*;
+        let gauge = gauge();
+        match field_id {
+            Maxpacket => Some(gauge),
+            EcnMark => Some(gauge),
+            NewFlowsLen => Some(gauge),
+            OldFlowsLen => Some(gauge),
+            CeMark => Some(gauge),
+            DropOverlimitPerSec => Some(gauge),
+            NewFlowCountPerSec => Some(gauge),
+            MemoryUsagePerSec => Some(gauge),
+            DropOvermemoryPerSec => Some(gauge),
+        }
+    }
+}

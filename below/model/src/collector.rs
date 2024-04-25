@@ -31,11 +31,14 @@ pub struct CollectorOptions {
     pub enable_btrfs_stats: bool,
     pub enable_ethtool_stats: bool,
     pub enable_resctrl_stats: bool,
+    pub enable_tc_stats: bool,
     pub btrfs_samples: u64,
     pub btrfs_min_pct: f64,
     pub cgroup_re: Option<Regex>,
     pub gpu_stats_receiver:
         Option<collector_plugin::Consumer<crate::gpu_stats_collector_plugin::SampleType>>,
+    pub tc_stats_receiver:
+        Option<collector_plugin::Consumer<crate::tc_collector_plugin::SampleType>>,
 }
 
 impl Default for CollectorOptions {
@@ -48,10 +51,12 @@ impl Default for CollectorOptions {
             enable_btrfs_stats: false,
             enable_ethtool_stats: false,
             enable_resctrl_stats: false,
+            enable_tc_stats: false,
             btrfs_samples: btrfs::DEFAULT_SAMPLES,
             btrfs_min_pct: btrfs::DEFAULT_MIN_PCT,
             cgroup_re: None,
             gpu_stats_receiver: None,
+            tc_stats_receiver: None,
         }
     }
 }
@@ -306,6 +311,16 @@ fn collect_sample(
                 }
             }
         },
+        tc: if let Some(tc_stats_receiver) = &options.tc_stats_receiver {
+            Some(
+                tc_stats_receiver
+                    .try_take()
+                    .context("TC stats collector had an error")?
+                    .unwrap_or_default(),
+            )
+        } else {
+            None
+        },
     })
 }
 
@@ -464,6 +479,13 @@ macro_rules! count_per_sec {
             if a <= b {
                 ret = Some((b - a) as f64 / $delta.as_secs_f64());
             }
+        }
+        ret
+    }};
+    ($a:ident, $b:ident, $delta:expr, $target_type:ty) => {{
+        let mut ret = None;
+        if $a <= $b {
+            ret = Some((($b - $a) as f64 / $delta.as_secs_f64()).ceil() as $target_type);
         }
         ret
     }};
