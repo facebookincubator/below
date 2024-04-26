@@ -40,6 +40,7 @@ impl HasRenderConfig for model::Model {
             Network(field_id) => model::NetworkModel::get_render_config_builder(field_id),
             Gpu(_) => rc,
             Resctrl(_) => rc,
+            Tc(_) => rc,
         }
     }
 }
