@@ -105,7 +105,7 @@ mod process_view;
 mod render;
 pub mod stats_view;
 mod status_bar;
-mod system_view;
+mod summary_view;
 mod tab_view;
 
 pub struct View {
@@ -195,7 +195,7 @@ pub enum ViewMode {
 // periodically (during live mode)
 fn refresh(c: &mut Cursive) {
     status_bar::refresh(c);
-    system_view::refresh(c);
+    summary_view::refresh(c);
     let current_state = c
         .user_data::<ViewState>()
         .expect("No data stored in Cursive object!")
@@ -403,7 +403,7 @@ impl View {
         let init_warnings = get_last_log_to_display();
 
         let status_bar = status_bar::new(&mut self.inner);
-        let system_view = system_view::new(&mut self.inner);
+        let summary_view = summary_view::new(&mut self.inner);
         let cgroup_view = cgroup_view::CgroupView::new(&mut self.inner, &viewrc);
         let process_view = process_view::ProcessView::new(&mut self.inner);
         let core_view = core_view::CoreView::new(&mut self.inner);
@@ -440,7 +440,7 @@ impl View {
             .add_fullscreen_layer(ResizedView::with_full_screen(
                 LinearLayout::vertical()
                     .child(Panel::new(status_bar))
-                    .child(Panel::new(system_view))
+                    .child(Panel::new(summary_view))
                     .child(
                         OnEventView::new(screens_view.with_name("main_view_screens"))
                             .with_name("dynamic_view"),

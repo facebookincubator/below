@@ -33,9 +33,9 @@ mod render_impl {
     use crate::render::ViewItem;
 
     /// Renders corresponding Fields From SystemModel.
-    type SystemViewItem = ViewItem<model::SystemModelFieldId>;
+    type SummaryViewItem = ViewItem<model::SystemModelFieldId>;
 
-    static SYS_CPU_ITEMS: Lazy<Vec<SystemViewItem>> = Lazy::new(|| {
+    static SYS_CPU_ITEMS: Lazy<Vec<SummaryViewItem>> = Lazy::new(|| {
         use model::SingleCpuModelFieldId::SystemPct;
         use model::SingleCpuModelFieldId::UsagePct;
         use model::SingleCpuModelFieldId::UserPct;
@@ -47,7 +47,7 @@ mod render_impl {
         ]
     });
 
-    static SYS_MEM_ITEMS: Lazy<Vec<SystemViewItem>> = Lazy::new(|| {
+    static SYS_MEM_ITEMS: Lazy<Vec<SummaryViewItem>> = Lazy::new(|| {
         use model::MemoryModelFieldId::Anon;
         use model::MemoryModelFieldId::File;
         use model::MemoryModelFieldId::Free;
@@ -61,7 +61,7 @@ mod render_impl {
         ]
     });
 
-    static SYS_VM_ITEMS: Lazy<Vec<SystemViewItem>> = Lazy::new(|| {
+    static SYS_VM_ITEMS: Lazy<Vec<SummaryViewItem>> = Lazy::new(|| {
         use model::SystemModelFieldId::Vm;
         use model::VmModelFieldId::PgpginPerSec;
         use model::VmModelFieldId::PgpgoutPerSec;
@@ -189,8 +189,8 @@ fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
 
 pub fn refresh(c: &mut Cursive) {
     let mut v = c
-        .find_name::<LinearLayout>("system_view")
-        .expect("No system_view view found!");
+        .find_name::<LinearLayout>("summary_view")
+        .expect("No summary_view view found!");
 
     fill_content(c, &mut v);
 }
@@ -198,5 +198,5 @@ pub fn refresh(c: &mut Cursive) {
 pub fn new(c: &mut Cursive) -> impl View {
     let mut view = LinearLayout::vertical();
     fill_content(c, &mut view);
-    view.with_name("system_view")
+    view.with_name("summary_view")
 }
