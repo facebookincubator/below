@@ -470,7 +470,7 @@ pub struct NetworkStats<'a> {
     ethtool: &'a Option<ethtool::EthtoolStats>,
 }
 
-#[derive(Serialize, Deserialize, below_derive::Queriable)]
+#[derive(Clone, Serialize, Deserialize, below_derive::Queriable)]
 pub struct Model {
     #[queriable(ignore)]
     pub time_elapsed: Duration,

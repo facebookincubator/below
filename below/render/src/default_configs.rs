@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use model::ProcessModelFieldId;
 use model::SingleCgroupModelFieldId;
 use model::SingleProcessModelFieldId;
 use RenderFormat::Duration;
@@ -23,6 +24,25 @@ use RenderFormat::ReadableSize;
 use RenderFormat::SectorReadableSize;
 
 use super::*;
+
+impl HasRenderConfig for model::Model {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::ModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            System(field_id) => model::SystemModel::get_render_config_builder(field_id),
+            Cgroup(field_id) => {
+                model::SingleCgroupModel::get_render_config_builder(&field_id.subquery_id.0)
+            }
+            Process(ProcessModelFieldId::Processes(field_id)) => {
+                model::SingleProcessModel::get_render_config_builder(&field_id.subquery_id.0)
+            }
+            Network(field_id) => model::NetworkModel::get_render_config_builder(field_id),
+            Gpu(_) => rc,
+            Resctrl(_) => rc,
+        }
+    }
+}
 
 impl HasRenderConfig for model::SingleCgroupModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {

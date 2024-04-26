@@ -92,6 +92,8 @@ impl HasViewStyle for model::MemoryModel {
     }
 }
 
+impl HasViewStyle for model::Model {}
+
 impl HasViewStyle for model::SingleCpuModel {}
 
 impl HasViewStyle for model::VmModel {}

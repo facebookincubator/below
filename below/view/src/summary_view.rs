@@ -21,9 +21,13 @@ use crate::ViewState;
 
 mod render_impl {
     use std::collections::BTreeMap;
+    use std::str::FromStr;
 
+    use base_render::RenderConfig;
     use base_render::RenderConfigBuilder as Rc;
     use cursive::utils::markup::StyledString;
+    use model::Model;
+    use model::ModelFieldId;
     use model::Queriable;
     use model::SingleDiskModel;
     use model::SingleNetModel;
@@ -31,6 +35,7 @@ mod render_impl {
     use once_cell::sync::Lazy;
 
     use crate::render::ViewItem;
+    use crate::viewrc::ViewRc;
 
     /// Renders corresponding Fields From SystemModel.
     type SummaryViewItem = ViewItem<model::SystemModelFieldId>;
@@ -101,6 +106,21 @@ mod render_impl {
         row
     }
 
+    pub fn render_extra_row(extra_row: &SummaryViewExtraRow, model: &Model) -> StyledString {
+        let mut row = StyledString::new();
+        if let Some(title) = &extra_row.title {
+            row.append(title.clone());
+        }
+        for item in &extra_row.items {
+            if !row.is_empty() {
+                row.append(" | ");
+            }
+            row.append(format!("{} ", item.config.render_config.get_title()));
+            row.append(item.render_tight(model));
+        }
+        row
+    }
+
     pub fn render_read_write_models_row<'a, T: 'a + Queriable>(
         name: &'static str,
         models: impl Iterator<Item = (&'a String, &'a T)>,
@@ -162,6 +182,39 @@ mod render_impl {
             ViewItem::from_default(TxBytesPerSec),
         )
     }
+
+    pub struct SummaryViewExtraRow {
+        pub title: Option<String>,
+        pub items: Vec<ViewItem<model::ModelFieldId>>,
+    }
+
+    pub fn get_summary_view_extra_rows(viewrc: &ViewRc) -> Vec<SummaryViewExtraRow> {
+        if let Some(viewrc_rows) = viewrc.summary_view_extra_rows.as_ref() {
+            viewrc_rows
+                .iter()
+                .map(|viewrc_row| SummaryViewExtraRow {
+                    title: viewrc_row.title.clone(),
+                    items: viewrc_row
+                        .items
+                        .iter()
+                        // Skip invalid field ids
+                        .filter_map(|item| {
+                            ModelFieldId::from_str(&item.field_id)
+                                .map(|field_id| {
+                                    ViewItem::from_default(field_id).update(RenderConfig {
+                                        title: item.alias.clone(),
+                                        ..Default::default()
+                                    })
+                                })
+                                .ok()
+                        })
+                        .collect(),
+                })
+                .collect()
+        } else {
+            vec![]
+        }
+    }
 }
 
 fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
@@ -183,6 +236,15 @@ fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
     view.add_child(TextView::new(vm_row));
     view.add_child(TextView::new(io_row));
     view.add_child(TextView::new(iface_row));
+
+    let model = view_state.model.borrow();
+    // TODO: Save the parsed extra rows in a struct and reuse
+    let extra_rows = render_impl::get_summary_view_extra_rows(&view_state.viewrc);
+    for extra_row in extra_rows {
+        view.add_child(TextView::new(render_impl::render_extra_row(
+            &extra_row, &model,
+        )));
+    }
 
     *v = view;
 }

@@ -240,6 +240,8 @@ pub struct ViewState {
     /// can certainly go higher (b/c of a loaded system or other delays).
     pub lowest_time_elapsed: Duration,
     pub timestamp: SystemTime,
+    // TODO: Replace other fields with model
+    pub model: Rc<RefCell<Model>>,
     pub system: Rc<RefCell<SystemModel>>,
     pub cgroup: Rc<RefCell<CgroupModel>>,
     pub process: Rc<RefCell<ProcessModel>>,
@@ -262,6 +264,7 @@ impl ViewState {
             self.lowest_time_elapsed = model.time_elapsed;
         }
         self.timestamp = model.timestamp;
+        self.model.replace(model.clone());
         self.system.replace(model.system);
         self.cgroup.replace(model.cgroup);
         self.process.replace(model.process);
@@ -281,6 +284,7 @@ impl ViewState {
             time_elapsed: model.time_elapsed,
             lowest_time_elapsed: model.time_elapsed,
             timestamp: model.timestamp,
+            model: Rc::new(RefCell::new(model.clone())),
             system: Rc::new(RefCell::new(model.system)),
             cgroup: Rc::new(RefCell::new(model.cgroup)),
             process: Rc::new(RefCell::new(model.process)),

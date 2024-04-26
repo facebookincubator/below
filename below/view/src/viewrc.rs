@@ -28,6 +28,18 @@ pub enum DefaultFrontView {
     System,
 }
 
+#[derive(Default, Deserialize)]
+pub struct SummaryViewExtraRowItem {
+    pub alias: Option<String>,
+    pub field_id: String,
+}
+
+#[derive(Default, Deserialize)]
+pub struct SummaryViewExtraRow {
+    pub title: Option<String>,
+    pub items: Vec<SummaryViewExtraRowItem>,
+}
+
 /// Runtime configuration on the below view.
 #[derive(Default, Deserialize)]
 pub struct ViewRc {
@@ -39,6 +51,8 @@ pub struct ViewRc {
     pub collapse_cgroups: Option<bool>,
     // Overrides cgroup name column width.
     pub cgroup_name_width: Option<usize>,
+    // Extra rows to add in the summary view.
+    pub summary_view_extra_rows: Option<Vec<SummaryViewExtraRow>>,
 }
 
 impl ViewRc {
