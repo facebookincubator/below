@@ -37,7 +37,7 @@ fn set_cp_filter(c: &mut Cursive, field_info: Option<(String, String)>) {
     match state {
         MainViewState::Cgroup => crate::cgroup_view::ViewType::cp_filter(c, field_info),
         MainViewState::Process(_) => crate::process_view::ViewType::cp_filter(c, field_info),
-        MainViewState::Core => crate::core_view::ViewType::cp_filter(c, field_info),
+        MainViewState::System => crate::system_view::ViewType::cp_filter(c, field_info),
         #[cfg(fbcode_build)]
         MainViewState::Gpu => crate::gpu_view::ViewType::cp_filter(c, field_info),
     }

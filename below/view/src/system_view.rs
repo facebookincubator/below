@@ -33,31 +33,31 @@ use model::SingleDiskModelFieldId;
 use model::SingleSlabModelFieldId;
 use model::VmModelFieldId;
 
-use crate::core_tabs::*;
 use crate::stats_view::ColumnTitles;
 use crate::stats_view::StateCommon;
 use crate::stats_view::StatsView;
 use crate::stats_view::ViewBridge;
+use crate::system_tabs::*;
 use crate::ViewState;
 
-pub type ViewType = StatsView<CoreView>;
+pub type ViewType = StatsView<SystemView>;
 
-use crate::core_view::default_tabs::CORE_BTRFS_TAB;
+use crate::system_view::default_tabs::SYSTEM_BTRFS_TAB;
 
-// TODO(T123679020): Ideally we want to decouple states for core view tabs.
-// Each core view tab really deserves its own view and state
+// TODO(T123679020): Ideally we want to decouple states for system view tabs.
+// Each system view tab really deserves its own view and state
 #[derive(Default)]
-pub struct CoreState {
-    pub filter_info: Option<(CoreStateFieldId, String)>,
+pub struct SystemState {
+    pub filter_info: Option<(SystemStateFieldId, String)>,
     pub collapsed_disk: HashSet<String>,
     pub model: Rc<RefCell<SystemModel>>,
-    pub sort_order: Option<CoreStateFieldId>,
-    pub sort_tags: HashMap<String, default_tabs::CoreTabs>,
+    pub sort_order: Option<SystemStateFieldId>,
+    pub sort_tags: HashMap<String, default_tabs::SystemTabs>,
     pub reverse: bool,
 }
 
 #[derive(PartialEq)]
-pub enum CoreStateFieldId {
+pub enum SystemStateFieldId {
     Disk(SingleDiskModelFieldId),
     Btrfs(BtrfsModelFieldId),
     Cpu(SingleCpuModelFieldId),
@@ -66,7 +66,7 @@ pub enum CoreStateFieldId {
     Slab(SingleSlabModelFieldId),
 }
 
-impl std::string::ToString for CoreStateFieldId {
+impl std::string::ToString for SystemStateFieldId {
     fn to_string(&self) -> String {
         match self {
             Self::Disk(field) => field.to_string(),
@@ -79,9 +79,9 @@ impl std::string::ToString for CoreStateFieldId {
     }
 }
 
-impl StateCommon for CoreState {
+impl StateCommon for SystemState {
     type ModelType = SystemModel;
-    type TagType = CoreStateFieldId;
+    type TagType = SystemStateFieldId;
     type KeyType = String;
 
     fn get_filter_info(&self) -> &Option<(Self::TagType, String)> {
@@ -89,7 +89,7 @@ impl StateCommon for CoreState {
     }
 
     fn is_filter_supported_from_tab_idx(&self, _tab: &str, idx: usize) -> bool {
-        // we only enable str filtering for first col for Core View
+        // we only enable str filtering for first col for System View
         if idx == 0 {
             return true;
         }
@@ -99,13 +99,13 @@ impl StateCommon for CoreState {
     fn get_tag_from_tab_idx(&self, tab: &str, idx: usize) -> Self::TagType {
         match tab {
             "Btrfs" => {
-                let core_tab = self
+                let system_tab = self
                     .sort_tags
                     .get(tab)
                     .unwrap_or_else(|| panic!("Fail to find tab: {}", tab));
-                let default_tabs::CoreTabs::Btrfs(core_tab) = core_tab;
+                let default_tabs::SystemTabs::Btrfs(system_tab) = system_tab;
                 Self::TagType::Btrfs(
-                    core_tab
+                    system_tab
                         .view_items
                         .get(idx)
                         .expect("Out of title scope")
@@ -113,15 +113,15 @@ impl StateCommon for CoreState {
                         .to_owned(),
                 )
             }
-            "CPU" => CoreStateFieldId::Cpu(SingleCpuModelFieldId::Idx),
-            "Disk" => CoreStateFieldId::Disk(SingleDiskModelFieldId::Name),
+            "CPU" => SystemStateFieldId::Cpu(SingleCpuModelFieldId::Idx),
+            "Disk" => SystemStateFieldId::Disk(SingleDiskModelFieldId::Name),
             // tabs Mem and Vm have two columns 'Field' and 'Value'. 'Field' contains
             // a list of all the FieldIds in MemoryModel and VmModel respectively.
             // the field given to filter_info don't matter for these tabs because
             // they don't use FieldId as column titles/selected col (it isn't used to filter)
-            "Mem" => CoreStateFieldId::Mem(MemoryModelFieldId::Total),
-            "Vm" => CoreStateFieldId::Vm(VmModelFieldId::PgpginPerSec),
-            "Slab" => CoreStateFieldId::Slab(
+            "Mem" => SystemStateFieldId::Mem(MemoryModelFieldId::Total),
+            "Vm" => SystemStateFieldId::Vm(VmModelFieldId::PgpginPerSec),
+            "Slab" => SystemStateFieldId::Slab(
                 enum_iterator::all::<SingleSlabModelFieldId>()
                     .nth(idx)
                     .expect("Tag out of range"),
@@ -170,7 +170,7 @@ impl StateCommon for CoreState {
     fn set_sort_string(&mut self, selection: &str, reverse: &mut bool) -> bool {
         use std::str::FromStr;
         match BtrfsModelFieldId::from_str(selection) {
-            Ok(field_id) => self.set_sort_tag(CoreStateFieldId::Btrfs(field_id), reverse),
+            Ok(field_id) => self.set_sort_tag(SystemStateFieldId::Btrfs(field_id), reverse),
             Err(_) => false,
         }
     }
@@ -187,7 +187,7 @@ impl StateCommon for CoreState {
         let mut sort_tags = HashMap::new();
         sort_tags.insert(
             "Btrfs".into(),
-            default_tabs::CoreTabs::Btrfs(&*CORE_BTRFS_TAB),
+            default_tabs::SystemTabs::Btrfs(&*SYSTEM_BTRFS_TAB),
         );
         Self {
             sort_order: None,
@@ -199,20 +199,20 @@ impl StateCommon for CoreState {
     }
 }
 
-pub enum CoreView {
-    Cpu(CoreCpu),
-    Mem(CoreMem),
-    Vm(CoreVm),
-    Slab(CoreSlab),
-    Disk(CoreDisk),
-    Btrfs(CoreBtrfs),
+pub enum SystemView {
+    Cpu(SystemCpu),
+    Mem(SystemMem),
+    Vm(SystemVm),
+    Slab(SystemSlab),
+    Disk(SystemDisk),
+    Btrfs(SystemBtrfs),
 }
 
-impl CoreView {
+impl SystemView {
     pub fn new(c: &mut Cursive) -> NamedView<ViewType> {
         let mut list = SelectView::<String>::new();
         list.set_on_submit(|c, idx: &String| {
-            let mut view = CoreView::get_core_view(c);
+            let mut view = SystemView::get_system_view(c);
             // We only care about disk not partition
             if view.get_tab_view().get_cur_selected() == "Disk" && idx.ends_with(".0") {
                 if view.state.borrow_mut().collapsed_disk.contains(idx) {
@@ -236,22 +236,22 @@ impl CoreView {
             "Disk".into(),
             "Btrfs".into(),
         ];
-        let mut tabs_map: HashMap<String, CoreView> = HashMap::new();
-        tabs_map.insert("CPU".into(), CoreView::Cpu(Default::default()));
-        tabs_map.insert("Mem".into(), CoreView::Mem(Default::default()));
-        tabs_map.insert("Vm".into(), CoreView::Vm(Default::default()));
-        tabs_map.insert("Slab".into(), CoreView::Slab(Default::default()));
-        tabs_map.insert("Disk".into(), CoreView::Disk(Default::default()));
-        tabs_map.insert("Btrfs".into(), CoreView::Btrfs(Default::default()));
+        let mut tabs_map: HashMap<String, SystemView> = HashMap::new();
+        tabs_map.insert("CPU".into(), SystemView::Cpu(Default::default()));
+        tabs_map.insert("Mem".into(), SystemView::Mem(Default::default()));
+        tabs_map.insert("Vm".into(), SystemView::Vm(Default::default()));
+        tabs_map.insert("Slab".into(), SystemView::Slab(Default::default()));
+        tabs_map.insert("Disk".into(), SystemView::Disk(Default::default()));
+        tabs_map.insert("Btrfs".into(), SystemView::Btrfs(Default::default()));
         let user_data = c
             .user_data::<ViewState>()
             .expect("No data stored in Cursive Object!");
         StatsView::new(
-            "core",
+            "system",
             tabs,
             tabs_map,
             list,
-            CoreState::new(user_data.system.clone()),
+            SystemState::new(user_data.system.clone()),
             user_data.event_controllers.clone(),
             user_data.cmd_controllers.clone(),
         )
@@ -259,15 +259,15 @@ impl CoreView {
         .with_name(Self::get_view_name())
     }
 
-    pub fn get_core_view(c: &mut Cursive) -> ViewRef<ViewType> {
+    pub fn get_system_view(c: &mut Cursive) -> ViewRef<ViewType> {
         ViewType::get_view(c)
     }
 
     pub fn refresh(c: &mut Cursive) {
-        Self::get_core_view(c).refresh(c);
+        Self::get_system_view(c).refresh(c);
     }
 
-    fn get_inner(&self) -> Box<dyn CoreTab> {
+    fn get_inner(&self) -> Box<dyn SystemTab> {
         match self {
             Self::Cpu(inner) => Box::new(inner.clone()),
             Self::Mem(inner) => Box::new(inner.clone()),
@@ -279,10 +279,10 @@ impl CoreView {
     }
 }
 
-impl ViewBridge for CoreView {
-    type StateType = CoreState;
+impl ViewBridge for SystemView {
+    type StateType = SystemState;
     fn get_view_name() -> &'static str {
-        "core_view"
+        "system_view"
     }
     fn get_titles(&self) -> ColumnTitles {
         self.get_inner().get_titles()

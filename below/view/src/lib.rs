@@ -95,8 +95,6 @@ open_source_shim!();
 mod cgroup_tabs;
 pub mod cgroup_view;
 pub mod command_palette;
-mod core_tabs;
-mod core_view;
 mod default_styles;
 mod filter_popup;
 mod help_menu;
@@ -106,6 +104,8 @@ mod render;
 pub mod stats_view;
 mod status_bar;
 mod summary_view;
+mod system_tabs;
+mod system_view;
 mod tab_view;
 
 pub struct View {
@@ -146,7 +146,7 @@ macro_rules! view_warn {
             crate::MainViewState::Cgroup => crate::cgroup_view::ViewType::cp_warn($c, &msg),
             crate::MainViewState::Process(_) =>
                 crate::process_view::ViewType::cp_warn($c, &msg),
-            crate::MainViewState::Core => crate::core_view::ViewType::cp_warn($c, &msg),
+            crate::MainViewState::System => crate::system_view::ViewType::cp_warn($c, &msg),
             #[cfg(fbcode_build)]
             crate::MainViewState::Gpu => crate::gpu_view::ViewType::cp_warn($c, &msg),
         }
@@ -170,7 +170,7 @@ pub enum ProcessZoomState {
 pub enum MainViewState {
     Cgroup,
     Process(ProcessZoomState),
-    Core,
+    System,
     #[cfg(fbcode_build)]
     Gpu,
 }
@@ -204,7 +204,7 @@ fn refresh(c: &mut Cursive) {
     match current_state {
         MainViewState::Cgroup => cgroup_view::CgroupView::refresh(c),
         MainViewState::Process(_) => process_view::ProcessView::refresh(c),
-        MainViewState::Core => core_view::CoreView::refresh(c),
+        MainViewState::System => system_view::SystemView::refresh(c),
         #[cfg(fbcode_build)]
         MainViewState::Gpu => gpu_view::GpuView::refresh(c),
     }
@@ -406,7 +406,7 @@ impl View {
         let summary_view = summary_view::new(&mut self.inner);
         let cgroup_view = cgroup_view::CgroupView::new(&mut self.inner, &viewrc);
         let process_view = process_view::ProcessView::new(&mut self.inner);
-        let core_view = core_view::CoreView::new(&mut self.inner);
+        let system_view = system_view::SystemView::new(&mut self.inner);
         #[cfg(fbcode_build)]
         let gpu_view = gpu_view::GpuView::new(&mut self.inner);
 
@@ -427,8 +427,8 @@ impl View {
             ))),
         );
         main_view_screens.insert(
-            "core_view_panel".to_owned(),
-            screens_view.add_screen(BoxedView::boxed(ResizedView::with_full_screen(core_view))),
+            "system_view_panel".to_owned(),
+            screens_view.add_screen(BoxedView::boxed(ResizedView::with_full_screen(system_view))),
         );
         #[cfg(fbcode_build)]
         main_view_screens.insert(
@@ -468,8 +468,8 @@ impl View {
                     set_active_screen(&mut self.inner, "process_view_panel")
                 }
                 viewrc::DefaultFrontView::System => {
-                    *main_view_state = MainViewState::Core;
-                    set_active_screen(&mut self.inner, "core_view_panel")
+                    *main_view_state = MainViewState::System;
+                    set_active_screen(&mut self.inner, "system_view_panel")
                 }
             }
         }
@@ -538,7 +538,7 @@ pub mod fake_view {
             user_data.main_view_screens = [
                 ("cgroup_view_panel".to_owned(), 0),
                 ("process_view_panel".to_owned(), 0),
-                ("core_view_panel".to_owned(), 0),
+                ("system_view_panel".to_owned(), 0),
             ]
             .into();
             inner.set_user_data(user_data);
