@@ -20,7 +20,7 @@ use super::get_belowrc_view_section_key;
 /// Enum of supported front view.
 // We didn't re-use the MainViewState because we don't want to
 // expose internal state like Process(ProcessZoomState::Cgroup)
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum DefaultFrontView {
     Cgroup,

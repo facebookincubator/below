@@ -39,7 +39,6 @@ use crate::stats_view::ColumnTitles;
 use crate::stats_view::StateCommon;
 use crate::stats_view::StatsView;
 use crate::stats_view::ViewBridge;
-use crate::viewrc::ViewRc;
 use crate::ViewState;
 
 pub type ViewType = StatsView<CgroupView>;
@@ -200,7 +199,7 @@ pub struct CgroupView {
 }
 
 impl CgroupView {
-    pub fn new(c: &mut Cursive, viewrc: &ViewRc) -> NamedView<ViewType> {
+    pub fn new(c: &mut Cursive) -> NamedView<ViewType> {
         let mut list = SelectView::new();
         list.set_on_submit(|c, cgroup: &String| {
             let mut view = CgroupView::get_cgroup_view(c);
@@ -241,8 +240,11 @@ impl CgroupView {
             view.refresh(c);
         });
 
+        let user_data = c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive Object!");
         let cgroup_name_config = base_render::RenderConfig {
-            width: viewrc.cgroup_name_width,
+            width: user_data.viewrc.cgroup_name_width,
             ..Default::default()
         };
         let tabs = vec![
@@ -290,11 +292,8 @@ impl CgroupView {
                 tab: CgroupTab::new(default_tabs::get_properties_items(), &cgroup_name_config),
             },
         );
-        let user_data = c
-            .user_data::<ViewState>()
-            .expect("No data stored in Cursive Object!");
         let mut cgroup_state = CgroupState::new(user_data.cgroup.clone());
-        if viewrc.collapse_cgroups == Some(true) {
+        if user_data.viewrc.collapse_cgroups == Some(true) {
             cgroup_state.collapse_all_top_level_cgroup = true;
         }
         StatsView::new(

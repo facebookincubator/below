@@ -88,6 +88,7 @@ use model::ProcessModel;
 use model::SystemModel;
 use store::Advance;
 use toml::value::Value;
+use viewrc::ViewRc;
 extern crate render as base_render;
 
 open_source_shim!();
@@ -248,6 +249,8 @@ pub struct ViewState {
     pub main_view_state: MainViewState,
     pub main_view_screens: HashMap<String, ScreenId>,
     pub mode: ViewMode,
+    pub viewrc: ViewRc,
+    pub viewrc_error: Option<String>,
     pub event_controllers: Rc<RefCell<HashMap<Event, controllers::Controllers>>>,
     pub cmd_controllers: Rc<RefCell<HashMap<&'static str, controllers::Controllers>>>,
 }
@@ -267,7 +270,13 @@ impl ViewState {
         self.gpu.replace(model.gpu);
     }
 
-    pub fn new_with_advance(main_view_state: MainViewState, model: Model, mode: ViewMode) -> Self {
+    pub fn new_with_advance(
+        main_view_state: MainViewState,
+        model: Model,
+        mode: ViewMode,
+        viewrc: ViewRc,
+        viewrc_error: Option<String>,
+    ) -> Self {
         Self {
             time_elapsed: model.time_elapsed,
             lowest_time_elapsed: model.time_elapsed,
@@ -281,6 +290,8 @@ impl ViewState {
             main_view_state,
             main_view_screens: HashMap::new(),
             mode,
+            viewrc,
+            viewrc_error,
             event_controllers: Rc::new(RefCell::new(HashMap::new())),
             cmd_controllers: Rc::new(RefCell::new(controllers::make_cmd_controller_map())),
         }
@@ -312,10 +323,13 @@ impl View {
             execute!(std::io::stdout(), DisableMouseCapture).expect("Failed to disable mouse.");
             backend
         });
+        let (viewrc, viewrc_error) = viewrc::ViewRc::new();
         inner.set_user_data(ViewState::new_with_advance(
             MainViewState::Cgroup,
             model,
             mode,
+            viewrc,
+            viewrc_error,
         ));
         View { inner }
     }
@@ -352,8 +366,6 @@ impl View {
     }
 
     pub fn run(&mut self) -> Result<()> {
-        let (viewrc, viewrc_error) = viewrc::ViewRc::new();
-
         let mut theme = self.inner.current_theme().clone();
         theme.palette[PaletteColor::Background] = Color::TerminalDefault;
         theme.palette[PaletteColor::View] = Color::TerminalDefault;
@@ -404,7 +416,7 @@ impl View {
 
         let status_bar = status_bar::new(&mut self.inner);
         let summary_view = summary_view::new(&mut self.inner);
-        let cgroup_view = cgroup_view::CgroupView::new(&mut self.inner, &viewrc);
+        let cgroup_view = cgroup_view::CgroupView::new(&mut self.inner);
         let process_view = process_view::ProcessView::new(&mut self.inner);
         let system_view = system_view::SystemView::new(&mut self.inner);
         #[cfg(fbcode_build)]
@@ -452,7 +464,14 @@ impl View {
             .expect("Could not set focus at initialization!");
 
         // Set default view from viewrc
-        if let Some(view) = &viewrc.default_view {
+        if let Some(view) = self
+            .inner
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .viewrc
+            .default_view
+            .clone()
+        {
             let main_view_state = &mut self
                 .inner
                 .user_data::<ViewState>()
@@ -476,7 +495,13 @@ impl View {
 
         // Raise warning message if failed to map the customized command.
         Self::generate_event_controller_map(&mut self.inner, get_belowrc_filename());
-        if let Some(msg) = viewrc_error {
+        if let Some(msg) = &self
+            .inner
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .viewrc_error
+        {
+            let msg = msg.clone();
             let c = &mut self.inner;
             view_warn!(c, "{}", msg);
         }
@@ -502,6 +527,7 @@ pub mod fake_view {
     use model::Collector;
     use store::advance::new_advance_local;
 
+    use self::viewrc::ViewRc;
     use super::*;
     use crate::cgroup_view::CgroupView;
     use crate::command_palette::CommandPalette;
@@ -529,6 +555,8 @@ pub mod fake_view {
                 MainViewState::Cgroup,
                 model,
                 ViewMode::Live(Rc::new(RefCell::new(advance))),
+                ViewRc::default(),
+                None,
             );
             // Dummy screen to make switching panel no-op except state changes.
             inner.add_layer(
@@ -547,7 +575,7 @@ pub mod fake_view {
         }
 
         pub fn add_cgroup_view(&mut self) {
-            let cgroup_view = CgroupView::new(&mut self.inner, &Default::default());
+            let cgroup_view = CgroupView::new(&mut self.inner);
             self.inner.add_layer(cgroup_view);
         }
 
