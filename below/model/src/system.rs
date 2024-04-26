@@ -415,7 +415,11 @@ impl SingleSlabModel {
             num_slabs: slabinfo.num_slabs,
             active_caches: slabinfo.active_objs.map(
                 |active_objs| {
-                    if active_objs > 0 { 1 } else { 0 }
+                    if active_objs > 0 {
+                        1
+                    } else {
+                        0
+                    }
                 },
             ),
             num_caches: Some(1),
