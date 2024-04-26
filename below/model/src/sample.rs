@@ -22,12 +22,16 @@ pub struct Sample {
     pub netstats: procfs::NetStat,
     pub gpus: Option<gpu_stats::GpuSample>,
     pub ethtool: Option<ethtool::EthtoolStats>,
+    pub resctrl: Option<resctrlfs::ResctrlSample>,
+    pub tc: Option<tc::TcStats>,
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct CgroupSample {
     pub cpu_stat: Option<cgroupfs::CpuStat>,
     pub io_stat: Option<BTreeMap<String, cgroupfs::IoStat>>,
+    pub tids_current: Option<u64>,
+    pub tids_max: Option<i64>,
     pub memory_current: Option<i64>,
     pub memory_stat: Option<cgroupfs::MemoryStat>,
     pub pressure: Option<cgroupfs::Pressure>,
@@ -59,6 +63,8 @@ pub struct SystemSample {
     pub stat: procfs::Stat,
     pub meminfo: procfs::MemInfo,
     pub vmstat: procfs::VmStat,
+    #[serde(default)]
+    pub slabinfo: procfs::SlabInfoMap,
     pub hostname: String,
     pub disks: procfs::DiskMap,
     pub btrfs: Option<btrfs::BtrfsMap>,

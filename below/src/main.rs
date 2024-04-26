@@ -51,8 +51,9 @@ use slog::warn;
 use tar::Archive;
 use tar::Builder as TarBuilder;
 use tempfile::TempDir;
-use users::get_current_uid;
-use users::get_user_by_uid;
+use tokio::runtime::Builder as TB;
+use uzers::get_current_uid;
+use uzers::get_user_by_uid;
 
 mod exitstat;
 #[cfg(test)]
@@ -431,7 +432,11 @@ pub fn start_gpu_stats_thread_and_get_stats_receiver(
             let mut interval = target_interval;
             loop {
                 let collect_instant = Instant::now();
-                match futures::executor::block_on(collector.collect_and_update()) {
+                let rt = TB::new_current_thread()
+                    .thread_name("create_fburl")
+                    .build()
+                    .expect("Failed to build tokio runtime.");
+                match rt.block_on(collector.collect_and_update()) {
                     Ok(_) => {
                         interval = target_interval;
                     }
@@ -467,6 +472,70 @@ pub fn start_gpu_stats_thread_and_get_stats_receiver(
             }
         })
         .expect("Failed to spawn thread");
+    Ok(receiver)
+}
+
+fn start_tc_stats_thread_and_get_stats_receiver(
+    logger: slog::Logger,
+    interval: Duration,
+) -> Result<model::collector_plugin::Consumer<model::tc_collector_plugin::SampleType>> {
+    let tc_collector = model::tc_collector_plugin::TcStatsCollectorPlugin::new(logger.clone())
+        .context("Failed to initialize TC stats collector")?;
+    let (mut collector, receiver) = model::collector_plugin::collector_consumer(tc_collector);
+
+    // Start a thread to collect TC stats
+    let target_interval = interval.clone();
+    thread::Builder::new()
+        .name("tc_stats_collector".to_owned())
+        .spawn(move || {
+            // Exponential backoff on unrecoverable errors
+            const EXP_BACKOFF_FACTOR: u32 = 2;
+            const MAX_BACKOFF_SECS: u64 = 900;
+            let max_backoff = Duration::from_secs(MAX_BACKOFF_SECS);
+            let mut interval = target_interval;
+            loop {
+                let collect_instant = Instant::now();
+                let rt = TB::new_current_thread()
+                    .thread_name("create_fburl")
+                    .build()
+                    .expect("Failed to build tokio runtime.");
+                match rt.block_on(collector.collect_and_update()) {
+                    Ok(_) => {
+                        interval = target_interval;
+                    }
+                    Err(e) => {
+                        interval = std::cmp::min(
+                            interval
+                                .saturating_mul(EXP_BACKOFF_FACTOR),
+                            max_backoff,
+                        );
+                        error!(
+                            logger,
+                            "TC stats collection backing off {:?} because of unrecoverable error: {:?}",
+                            interval,
+                            e
+                        );
+                    }
+                }
+                let collect_duration = Instant::now().duration_since(collect_instant);
+
+                const COLLECT_DURATION_WARN_THRESHOLD: u64 = 2;
+                if collect_duration > Duration::from_secs(COLLECT_DURATION_WARN_THRESHOLD) {
+                    warn!(
+                        logger,
+                        "TC collection took {} > {}",
+                        collect_duration.as_secs_f64(),
+                        COLLECT_DURATION_WARN_THRESHOLD
+                    );
+                }
+                if interval > collect_duration {
+                    let sleep_duration = interval - collect_duration;
+                    std::thread::sleep(sleep_duration);
+                }
+            }
+        })
+        .expect("Failed to spawn thread");
+
     Ok(receiver)
 }
 
@@ -968,7 +1037,7 @@ fn record(
         compress_opts.to_compression_mode()?,
         store::Format::Cbor,
     )?;
-    let mut stats = statistics::Statistics::new();
+    let mut stats = statistics::Statistics::new(init.clone());
 
     let (exit_buffer, bpf_errs) = if disable_exitstats {
         (Arc::new(Mutex::new(procfs::PidMap::new())), None)
@@ -997,7 +1066,16 @@ fn record(
         None
     };
 
-    let collector = model::Collector::new(
+    let tc_stats_receiver = if below_config.enable_tc_stats {
+        Some(start_tc_stats_thread_and_get_stats_receiver(
+            logger.clone(),
+            interval,
+        )?)
+    } else {
+        None
+    };
+
+    let mut collector = model::Collector::new(
         logger.clone(),
         model::CollectorOptions {
             cgroup_root: below_config.cgroup_root.clone(),
@@ -1006,10 +1084,13 @@ fn record(
             disable_disk_stat,
             enable_btrfs_stats: below_config.enable_btrfs_stats,
             enable_ethtool_stats: below_config.enable_ethtool_stats,
+            enable_resctrl_stats: below_config.enable_resctrl_stats,
+            enable_tc_stats: below_config.enable_tc_stats,
             btrfs_samples: below_config.btrfs_samples,
             btrfs_min_pct: below_config.btrfs_min_pct,
             cgroup_re,
             gpu_stats_receiver,
+            tc_stats_receiver,
         },
     );
 
@@ -1052,12 +1133,16 @@ fn record(
 
         match collected_sample {
             Ok(s) => {
-                match store.put(post_collect_sys_time, &DataFrame { sample: s }) {
+                let frame = DataFrame { sample: s };
+                match store.put(post_collect_sys_time, &frame) {
                     Ok(/* new shard */ true) => {
                         cleanup_store(&store, &logger, store_size_limit, /* retention */ None)?
                     }
                     Ok(/* new shard */ false) => {}
                     Err(e) => error!(logger, "{:#}", e),
+                }
+                if below_config.enable_gpu_stats {
+                    stats.report_nr_accelerators(&frame.sample);
                 }
             }
             Err(e) => {
@@ -1130,6 +1215,7 @@ fn live_local(
             exit_data: exit_buffer,
             enable_btrfs_stats: below_config.enable_btrfs_stats,
             enable_ethtool_stats: below_config.enable_ethtool_stats,
+            enable_resctrl_stats: below_config.enable_resctrl_stats,
             btrfs_samples: below_config.btrfs_samples,
             btrfs_min_pct: below_config.btrfs_min_pct,
             gpu_stats_receiver,

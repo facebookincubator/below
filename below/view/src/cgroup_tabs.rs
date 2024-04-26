@@ -14,6 +14,7 @@
 
 use std::collections::HashSet;
 
+use base_render::RenderConfig;
 use cursive::utils::markup::StyledString;
 use model::sort_queriables;
 use model::CgroupModel;
@@ -34,13 +35,27 @@ type CgroupViewItem = ViewItem<model::SingleCgroupModelFieldId>;
 #[derive(Clone)]
 pub struct CgroupTab {
     pub view_items: Vec<CgroupViewItem>,
+    cgroup_name: CgroupViewItem,
+    cgroup_name_collapsed: CgroupViewItem,
 }
 
 /// Defines how to iterate through the cgroup and generate get_rows function for ViewBridge
 /// First ViewItem is always Name so it's not included in the view_items Vec.
 impl CgroupTab {
-    fn new(view_items: Vec<CgroupViewItem>) -> Self {
-        Self { view_items }
+    pub fn new(view_items: Vec<CgroupViewItem>, cgroup_name_config: &RenderConfig) -> Self {
+        use base_render::RenderConfigBuilder as Rc;
+        use common::util::get_prefix;
+        let cgroup_name_item = ViewItem::from_default(SingleCgroupModelFieldId::Name);
+        Self {
+            view_items,
+            cgroup_name: cgroup_name_item
+                .clone()
+                .update(cgroup_name_config.clone())
+                .update(Rc::new().indented_prefix(get_prefix(false))),
+            cgroup_name_collapsed: cgroup_name_item
+                .update(cgroup_name_config.clone())
+                .update(Rc::new().indented_prefix(get_prefix(true))),
+        }
     }
 
     fn get_line(
@@ -51,9 +66,9 @@ impl CgroupTab {
         recreated: bool,
     ) -> StyledString {
         let mut line = if collapsed {
-            &*default_tabs::CGROUP_NAME_ITEM_COLLAPSED
+            &self.cgroup_name_collapsed
         } else {
-            &*default_tabs::CGROUP_NAME_ITEM
+            &self.cgroup_name
         }
         .render_indented(model);
         line.append_plain(" ");
@@ -75,7 +90,7 @@ impl CgroupTab {
 
     pub fn get_titles(&self) -> ColumnTitles {
         ColumnTitles {
-            titles: std::iter::once(&*default_tabs::CGROUP_NAME_ITEM)
+            titles: std::iter::once(&self.cgroup_name)
                 .chain(self.view_items.iter())
                 .map(|item| item.config.render_title())
                 .collect(),
@@ -119,10 +134,10 @@ impl CgroupTab {
             let mut children = Vec::from_iter(&cgroup.children);
             if let Some(sort_order) = state.sort_order.as_ref() {
                 // field_id that query its own data
-                let field_id = CgroupModelFieldId {
-                    path: Some(vec![]),
-                    subquery_id: sort_order.clone(),
-                };
+                let field_id = CgroupModelFieldId::new(
+                    Some(model::CgroupPath { path: vec![] }),
+                    sort_order.clone(),
+                );
                 sort_queriables(&mut children, &field_id, state.reverse);
             }
 
@@ -220,7 +235,6 @@ pub fn calculate_filtered_set(
 
 pub mod default_tabs {
     use base_render::RenderConfigBuilder as Rc;
-    use common::util::get_prefix;
     use model::CgroupCpuModelFieldId::NrPeriodsPerSec;
     use model::CgroupCpuModelFieldId::NrThrottledPerSec;
     use model::CgroupCpuModelFieldId::SystemPct;
@@ -253,6 +267,7 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::FileWriteback;
     use model::CgroupMemoryModelFieldId::InactiveAnon;
     use model::CgroupMemoryModelFieldId::InactiveFile;
+    use model::CgroupMemoryModelFieldId::Kernel;
     use model::CgroupMemoryModelFieldId::KernelStack;
     use model::CgroupMemoryModelFieldId::Pgactivate;
     use model::CgroupMemoryModelFieldId::Pgdeactivate;
@@ -282,6 +297,7 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::WorkingsetRestoreFile;
     use model::CgroupMemoryModelFieldId::Zswap;
     use model::CgroupMemoryModelFieldId::Zswapped;
+    use model::CgroupPidsModelFieldId::TidsCurrent;
     use model::CgroupPressureModelFieldId::CpuFullPct;
     use model::CgroupPressureModelFieldId::CpuSomePct;
     use model::CgroupPressureModelFieldId::IoFullPct;
@@ -300,28 +316,21 @@ pub mod default_tabs {
     use model::CgroupPropertiesFieldId::MemoryMin;
     use model::CgroupPropertiesFieldId::MemorySwapMax;
     use model::CgroupPropertiesFieldId::MemoryZswapMax;
+    use model::CgroupPropertiesFieldId::TidsMax;
     use model::CgroupStatModelFieldId::NrDescendants;
     use model::CgroupStatModelFieldId::NrDyingDescendants;
     use model::SingleCgroupModelFieldId::CgroupStat;
     use model::SingleCgroupModelFieldId::Cpu;
     use model::SingleCgroupModelFieldId::Io;
     use model::SingleCgroupModelFieldId::Mem;
-    use model::SingleCgroupModelFieldId::Name;
+    use model::SingleCgroupModelFieldId::Pids;
     use model::SingleCgroupModelFieldId::Pressure;
     use model::SingleCgroupModelFieldId::Props;
-    use once_cell::sync::Lazy;
 
     use super::*;
 
-    pub static CGROUP_NAME_ITEM: Lazy<CgroupViewItem> = Lazy::new(|| {
-        ViewItem::from_default(Name).update(Rc::new().indented_prefix(get_prefix(false)))
-    });
-    pub static CGROUP_NAME_ITEM_COLLAPSED: Lazy<CgroupViewItem> = Lazy::new(|| {
-        ViewItem::from_default(Name).update(Rc::new().indented_prefix(get_prefix(true)))
-    });
-
-    pub static CGROUP_GENERAL_TAB: Lazy<CgroupTab> = Lazy::new(|| {
-        CgroupTab::new(vec![
+    pub fn get_general_items() -> Vec<ViewItem<SingleCgroupModelFieldId>> {
+        vec![
             ViewItem::from_default(Cpu(UsagePct)).update(Rc::new().title("CPU")),
             ViewItem::from_default(Mem(Total)),
             ViewItem::from_default(Pressure(CpuFullPct)),
@@ -332,26 +341,28 @@ pub mod default_tabs {
             ViewItem::from_default(Io(RwbytesPerSec)),
             ViewItem::from_default(CgroupStat(NrDescendants)),
             ViewItem::from_default(CgroupStat(NrDyingDescendants)),
-        ])
-    });
+            ViewItem::from_default(Pids(TidsCurrent)),
+        ]
+    }
 
-    pub static CGROUP_CPU_TAB: Lazy<CgroupTab> = Lazy::new(|| {
-        CgroupTab::new(vec![
+    pub fn get_cpu_items() -> Vec<ViewItem<SingleCgroupModelFieldId>> {
+        vec![
             ViewItem::from_default(Cpu(UsagePct)),
             ViewItem::from_default(Cpu(UserPct)),
             ViewItem::from_default(Cpu(SystemPct)),
             ViewItem::from_default(Cpu(NrPeriodsPerSec)),
             ViewItem::from_default(Cpu(NrThrottledPerSec)),
             ViewItem::from_default(Cpu(ThrottledPct)),
-        ])
-    });
+        ]
+    }
 
-    pub static CGROUP_MEM_TAB: Lazy<CgroupTab> = Lazy::new(|| {
-        CgroupTab::new(vec![
+    pub fn get_mem_items() -> Vec<ViewItem<SingleCgroupModelFieldId>> {
+        vec![
             ViewItem::from_default(Mem(Total)),
             ViewItem::from_default(Mem(Swap)),
             ViewItem::from_default(Mem(Anon)),
             ViewItem::from_default(Mem(File)),
+            ViewItem::from_default(Mem(Kernel)),
             ViewItem::from_default(Mem(KernelStack)),
             ViewItem::from_default(Mem(Slab)),
             ViewItem::from_default(Mem(Sock)),
@@ -392,11 +403,11 @@ pub mod default_tabs {
             ViewItem::from_default(Mem(EventsMax)),
             ViewItem::from_default(Mem(EventsOom)),
             ViewItem::from_default(Mem(EventsOomKill)),
-        ])
-    });
+        ]
+    }
 
-    pub static CGROUP_IO_TAB: Lazy<CgroupTab> = Lazy::new(|| {
-        CgroupTab::new(vec![
+    pub fn get_io_items() -> Vec<ViewItem<SingleCgroupModelFieldId>> {
+        vec![
             ViewItem::from_default(Io(RbytesPerSec)),
             ViewItem::from_default(Io(WbytesPerSec)),
             ViewItem::from_default(Io(DbytesPerSec)),
@@ -408,22 +419,22 @@ pub mod default_tabs {
             ViewItem::from_default(Io(CostWaitPct)),
             ViewItem::from_default(Io(CostIndebtPct)),
             ViewItem::from_default(Io(CostIndelayPct)),
-        ])
-    });
+        ]
+    }
 
-    pub static CGROUP_PRESSURE_TAB: Lazy<CgroupTab> = Lazy::new(|| {
-        CgroupTab::new(vec![
+    pub fn get_pressure_items() -> Vec<ViewItem<SingleCgroupModelFieldId>> {
+        vec![
             ViewItem::from_default(Pressure(CpuSomePct)),
             ViewItem::from_default(Pressure(CpuFullPct)),
             ViewItem::from_default(Pressure(MemorySomePct)),
             ViewItem::from_default(Pressure(MemoryFullPct)),
             ViewItem::from_default(Pressure(IoSomePct)),
             ViewItem::from_default(Pressure(IoFullPct)),
-        ])
-    });
+        ]
+    }
 
-    pub static CGROUP_PROPERTIES_TAB: Lazy<CgroupTab> = Lazy::new(|| {
-        CgroupTab::new(vec![
+    pub fn get_properties_items() -> Vec<ViewItem<SingleCgroupModelFieldId>> {
+        vec![
             ViewItem::from_default(Props(MemoryMin)),
             ViewItem::from_default(Props(MemoryLow)),
             ViewItem::from_default(Props(MemoryHigh)),
@@ -435,7 +446,8 @@ pub mod default_tabs {
             ViewItem::from_default(Props(CpuWeight)),
             ViewItem::from_default(Props(CpusetCpus)),
             ViewItem::from_default(Props(CpusetCpusEffective)),
+            ViewItem::from_default(Props(TidsMax)),
             ViewItem::from_default(Props(CgroupControllers)),
-        ])
-    });
+        ]
+    }
 }

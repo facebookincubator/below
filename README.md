@@ -122,7 +122,7 @@ $ below replay -t "3m ago"
 
 `below` has basic support for Prometheus/Grafana through the `dump` interface.
 
-See https://github.com/danobi/below-grafana for more details.
+See [contrib/grafana/](contrib/grafana) for more details.
 
 ## Comparison with alternative tools
 

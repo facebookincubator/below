@@ -87,6 +87,11 @@ impl ViewConfig {
         self.apply_style(rendered, field)
     }
 
+    pub fn render_tight(&self, field: Option<Field>) -> StyledString {
+        let rendered = self.render_config.render(field.clone(), false);
+        self.apply_style(rendered, field)
+    }
+
     pub fn render_indented(&self, field: Option<Field>, depth: usize) -> StyledString {
         let rendered = self
             .render_config
@@ -137,6 +142,10 @@ impl<F: FieldId> ViewItem<F> {
 
     pub fn render(&self, model: &F::Queriable) -> StyledString {
         self.config.render(model.query(&self.field_id))
+    }
+
+    pub fn render_tight(&self, model: &F::Queriable) -> StyledString {
+        self.config.render_tight(model.query(&self.field_id))
     }
 }
 

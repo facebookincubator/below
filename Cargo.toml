@@ -12,6 +12,9 @@ members = [
   "below/model",
   "below/procfs",
   "below/render",
+  "below/resctrlfs",
   "below/store",
+  "below/tc",
   "below/view",
 ]
+resolver = "2"

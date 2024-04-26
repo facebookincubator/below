@@ -88,6 +88,7 @@ use model::ProcessModel;
 use model::SystemModel;
 use store::Advance;
 use toml::value::Value;
+use viewrc::ViewRc;
 extern crate render as base_render;
 
 open_source_shim!();
@@ -95,8 +96,6 @@ open_source_shim!();
 mod cgroup_tabs;
 pub mod cgroup_view;
 pub mod command_palette;
-mod core_tabs;
-mod core_view;
 mod default_styles;
 mod filter_popup;
 mod help_menu;
@@ -105,6 +104,8 @@ mod process_view;
 mod render;
 pub mod stats_view;
 mod status_bar;
+mod summary_view;
+mod system_tabs;
 mod system_view;
 mod tab_view;
 
@@ -146,7 +147,7 @@ macro_rules! view_warn {
             crate::MainViewState::Cgroup => crate::cgroup_view::ViewType::cp_warn($c, &msg),
             crate::MainViewState::Process(_) =>
                 crate::process_view::ViewType::cp_warn($c, &msg),
-            crate::MainViewState::Core => crate::core_view::ViewType::cp_warn($c, &msg),
+            crate::MainViewState::System => crate::system_view::ViewType::cp_warn($c, &msg),
             #[cfg(fbcode_build)]
             crate::MainViewState::Gpu => crate::gpu_view::ViewType::cp_warn($c, &msg),
         }
@@ -170,7 +171,7 @@ pub enum ProcessZoomState {
 pub enum MainViewState {
     Cgroup,
     Process(ProcessZoomState),
-    Core,
+    System,
     #[cfg(fbcode_build)]
     Gpu,
 }
@@ -195,7 +196,7 @@ pub enum ViewMode {
 // periodically (during live mode)
 fn refresh(c: &mut Cursive) {
     status_bar::refresh(c);
-    system_view::refresh(c);
+    summary_view::refresh(c);
     let current_state = c
         .user_data::<ViewState>()
         .expect("No data stored in Cursive object!")
@@ -204,7 +205,7 @@ fn refresh(c: &mut Cursive) {
     match current_state {
         MainViewState::Cgroup => cgroup_view::CgroupView::refresh(c),
         MainViewState::Process(_) => process_view::ProcessView::refresh(c),
-        MainViewState::Core => core_view::CoreView::refresh(c),
+        MainViewState::System => system_view::SystemView::refresh(c),
         #[cfg(fbcode_build)]
         MainViewState::Gpu => gpu_view::GpuView::refresh(c),
     }
@@ -239,6 +240,8 @@ pub struct ViewState {
     /// can certainly go higher (b/c of a loaded system or other delays).
     pub lowest_time_elapsed: Duration,
     pub timestamp: SystemTime,
+    // TODO: Replace other fields with model
+    pub model: Rc<RefCell<Model>>,
     pub system: Rc<RefCell<SystemModel>>,
     pub cgroup: Rc<RefCell<CgroupModel>>,
     pub process: Rc<RefCell<ProcessModel>>,
@@ -248,6 +251,8 @@ pub struct ViewState {
     pub main_view_state: MainViewState,
     pub main_view_screens: HashMap<String, ScreenId>,
     pub mode: ViewMode,
+    pub viewrc: ViewRc,
+    pub viewrc_error: Option<String>,
     pub event_controllers: Rc<RefCell<HashMap<Event, controllers::Controllers>>>,
     pub cmd_controllers: Rc<RefCell<HashMap<&'static str, controllers::Controllers>>>,
 }
@@ -259,6 +264,7 @@ impl ViewState {
             self.lowest_time_elapsed = model.time_elapsed;
         }
         self.timestamp = model.timestamp;
+        self.model.replace(model.clone());
         self.system.replace(model.system);
         self.cgroup.replace(model.cgroup);
         self.process.replace(model.process);
@@ -267,11 +273,18 @@ impl ViewState {
         self.gpu.replace(model.gpu);
     }
 
-    pub fn new_with_advance(main_view_state: MainViewState, model: Model, mode: ViewMode) -> Self {
+    pub fn new_with_advance(
+        main_view_state: MainViewState,
+        model: Model,
+        mode: ViewMode,
+        viewrc: ViewRc,
+        viewrc_error: Option<String>,
+    ) -> Self {
         Self {
             time_elapsed: model.time_elapsed,
             lowest_time_elapsed: model.time_elapsed,
             timestamp: model.timestamp,
+            model: Rc::new(RefCell::new(model.clone())),
             system: Rc::new(RefCell::new(model.system)),
             cgroup: Rc::new(RefCell::new(model.cgroup)),
             process: Rc::new(RefCell::new(model.process)),
@@ -281,6 +294,8 @@ impl ViewState {
             main_view_state,
             main_view_screens: HashMap::new(),
             mode,
+            viewrc,
+            viewrc_error,
             event_controllers: Rc::new(RefCell::new(HashMap::new())),
             cmd_controllers: Rc::new(RefCell::new(controllers::make_cmd_controller_map())),
         }
@@ -312,10 +327,13 @@ impl View {
             execute!(std::io::stdout(), DisableMouseCapture).expect("Failed to disable mouse.");
             backend
         });
+        let (viewrc, viewrc_error) = viewrc::ViewRc::new();
         inner.set_user_data(ViewState::new_with_advance(
             MainViewState::Cgroup,
             model,
             mode,
+            viewrc,
+            viewrc_error,
         ));
         View { inner }
     }
@@ -332,13 +350,9 @@ impl View {
         // Verify belowrc file format
         let cmdrc_opt = match std::fs::read_to_string(filename) {
             Ok(belowrc_str) => match belowrc_str.parse::<Value>() {
-                Ok(belowrc) => {
-                    if let Some(cmdrc) = belowrc.get(get_belowrc_cmd_section_key()) {
-                        Some(cmdrc.to_owned())
-                    } else {
-                        None
-                    }
-                }
+                Ok(belowrc) => belowrc
+                    .get(get_belowrc_cmd_section_key())
+                    .map(|cmdrc| cmdrc.to_owned()),
                 Err(e) => {
                     view_warn!(c, "Failed to parse belowrc: {}", e);
                     None
@@ -405,10 +419,10 @@ impl View {
         let init_warnings = get_last_log_to_display();
 
         let status_bar = status_bar::new(&mut self.inner);
-        let system_view = system_view::new(&mut self.inner);
+        let summary_view = summary_view::new(&mut self.inner);
         let cgroup_view = cgroup_view::CgroupView::new(&mut self.inner);
         let process_view = process_view::ProcessView::new(&mut self.inner);
-        let core_view = core_view::CoreView::new(&mut self.inner);
+        let system_view = system_view::SystemView::new(&mut self.inner);
         #[cfg(fbcode_build)]
         let gpu_view = gpu_view::GpuView::new(&mut self.inner);
 
@@ -429,8 +443,8 @@ impl View {
             ))),
         );
         main_view_screens.insert(
-            "core_view_panel".to_owned(),
-            screens_view.add_screen(BoxedView::boxed(ResizedView::with_full_screen(core_view))),
+            "system_view_panel".to_owned(),
+            screens_view.add_screen(BoxedView::boxed(ResizedView::with_full_screen(system_view))),
         );
         #[cfg(fbcode_build)]
         main_view_screens.insert(
@@ -442,7 +456,7 @@ impl View {
             .add_fullscreen_layer(ResizedView::with_full_screen(
                 LinearLayout::vertical()
                     .child(Panel::new(status_bar))
-                    .child(Panel::new(system_view))
+                    .child(Panel::new(summary_view))
                     .child(
                         OnEventView::new(screens_view.with_name("main_view_screens"))
                             .with_name("dynamic_view"),
@@ -453,9 +467,48 @@ impl View {
             .focus_name("dynamic_view")
             .expect("Could not set focus at initialization!");
 
+        // Set default view from viewrc
+        if let Some(view) = self
+            .inner
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .viewrc
+            .default_view
+            .clone()
+        {
+            let main_view_state = &mut self
+                .inner
+                .user_data::<ViewState>()
+                .expect("No data stored in Cursive object!")
+                .main_view_state;
+            match view {
+                viewrc::DefaultFrontView::Cgroup => {
+                    *main_view_state = MainViewState::Cgroup;
+                    set_active_screen(&mut self.inner, "cgroup_view_panel")
+                }
+                viewrc::DefaultFrontView::Process => {
+                    *main_view_state = MainViewState::Process(ProcessZoomState::NoZoom);
+                    set_active_screen(&mut self.inner, "process_view_panel")
+                }
+                viewrc::DefaultFrontView::System => {
+                    *main_view_state = MainViewState::System;
+                    set_active_screen(&mut self.inner, "system_view_panel")
+                }
+            }
+        }
+
         // Raise warning message if failed to map the customized command.
         Self::generate_event_controller_map(&mut self.inner, get_belowrc_filename());
-        viewrc::ViewRc::process(&mut self.inner);
+        if let Some(msg) = &self
+            .inner
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .viewrc_error
+        {
+            let msg = msg.clone();
+            let c = &mut self.inner;
+            view_warn!(c, "{}", msg);
+        }
         if let Some(msg) = init_warnings {
             let c = &mut self.inner;
             view_warn!(c, "{}", msg);
@@ -478,6 +531,7 @@ pub mod fake_view {
     use model::Collector;
     use store::advance::new_advance_local;
 
+    use self::viewrc::ViewRc;
     use super::*;
     use crate::cgroup_view::CgroupView;
     use crate::command_palette::CommandPalette;
@@ -505,6 +559,8 @@ pub mod fake_view {
                 MainViewState::Cgroup,
                 model,
                 ViewMode::Live(Rc::new(RefCell::new(advance))),
+                ViewRc::default(),
+                None,
             );
             // Dummy screen to make switching panel no-op except state changes.
             inner.add_layer(
@@ -514,7 +570,7 @@ pub mod fake_view {
             user_data.main_view_screens = [
                 ("cgroup_view_panel".to_owned(), 0),
                 ("process_view_panel".to_owned(), 0),
-                ("core_view_panel".to_owned(), 0),
+                ("system_view_panel".to_owned(), 0),
             ]
             .into();
             inner.set_user_data(user_data);

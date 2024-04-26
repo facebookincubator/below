@@ -131,6 +131,24 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
             "pgscan_direct": 0,
             "oom_kill": 0
         },
+        "slab": {
+            "task_struct": {
+                "name": "task_group",
+                "active_objs": 13000,
+                "num_objs": 14000,
+                "obj_size": 6000,
+                "obj_per_slab": 5,
+                "num_slabs": 3000
+            },
+            "vmap_area": {
+                "name": "vmap_area",
+                "active_objs": 4000000,
+                "num_objs": 6000000,
+                "obj_size": 64,
+                "obj_per_slab": 64,
+                "num_slabs": 100000
+            }
+        },
         "disks": {
             "vda": {
                 "name": "vda",
@@ -908,6 +926,49 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
             "in_csum_errors": 0,
             "ignored_multi": 0
         }
+    },
+    "tc": {
+        "tc": [
+            {
+                "interface": "eth0",
+                "kind": "fq_codel",
+                "qlen": 42,
+                "bps": 420,
+                "pps": 1337,
+                "bytes_per_sec": 299792458,
+                "packets_per_sec": 314,
+                "backlog_per_sec": 2718281828,
+                "drops_per_sec": 8675309,
+                "requeues_per_sec": 12345,
+                "overlimits_per_sec": 314159,
+                "qdisc": {
+                    "fq_codel": {
+                        "target": 2701,
+                        "limit": 7,
+                        "interval": 3,
+                        "ecn": 6,
+                        "quantum": 42,
+                        "ce_threshold": 101,
+                        "drop_batch_size": 9000,
+                        "memory_limit": 123456,
+                        "flows_per_sec": 31415
+                    }
+                },
+                "xstats": {
+                    "fq_codel": {
+                        "maxpacket": 8675309,
+                        "ecn_mark": 299792458,
+                        "new_flows_len": 314,
+                        "old_flows_len": 1729,
+                        "ce_mark": 42,
+                        "drop_overlimit_per_sec": 420,
+                        "new_flow_count_per_sec": 1337,
+                        "memory_usage_per_sec": 2718281828,
+                        "drop_overmemory_per_sec": 27182
+                    }
+                }
+            }
+        ]
     }
 }
 "#;

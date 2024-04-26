@@ -127,10 +127,10 @@ impl Dumper for Cgroup {
             //sort
             if let Some(field_id) = &handle.select {
                 // field_id that queries its own data
-                let field_id = CgroupModelFieldId {
-                    path: Some(vec![]),
-                    subquery_id: field_id.to_owned(),
-                };
+                let field_id = CgroupModelFieldId::new(
+                    Some(model::CgroupPath { path: vec![] }),
+                    field_id.to_owned(),
+                );
                 if handle.opts.sort {
                     model::sort_queriables(&mut children, &field_id, false);
                 }

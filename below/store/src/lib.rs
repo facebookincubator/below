@@ -94,6 +94,7 @@ pub const MAX_CHUNK_COMPRESS_SIZE: u32 = 1 << MAX_CHUNK_COMPRESS_SIZE_PO2;
 const_assert_eq!(MAX_CHUNK_COMPRESS_SIZE, 32768);
 
 bitflags! {
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     struct IndexEntryFlags: u32 {
         /// If set, data item is compressed with zstd.
         const COMPRESSED = 0x1;
@@ -122,7 +123,7 @@ bitflags! {
 
 impl IndexEntryFlags {
     fn get_chunk_compress_size_po2(&self) -> u32 {
-        (self.bits & Self::CHUNK_COMPRESS_SIZE_PO2.bits) >> CHUNK_COMPRESS_SHIFT
+        (self.bits() & Self::CHUNK_COMPRESS_SIZE_PO2.bits()) >> CHUNK_COMPRESS_SHIFT
     }
 
     fn set_chunk_compress_size_po2(&mut self, chunk_compress_size_po2: u32) -> Result<()> {
@@ -132,7 +133,7 @@ impl IndexEntryFlags {
                 MAX_CHUNK_COMPRESS_SIZE_PO2
             );
         }
-        self.bits |= chunk_compress_size_po2 << CHUNK_COMPRESS_SHIFT;
+        *self |= IndexEntryFlags::from_bits_retain(chunk_compress_size_po2 << CHUNK_COMPRESS_SHIFT);
         Ok(())
     }
 }

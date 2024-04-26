@@ -222,7 +222,7 @@ make_event_controller!(
     vec![Event::Char('s')],
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
-        set_active_screen(c, "core_view_panel");
+        set_active_screen(c, "system_view_panel");
 
         let current_state = c
             .user_data::<ViewState>()
@@ -239,7 +239,7 @@ make_event_controller!(
         }
         c.user_data::<ViewState>()
             .expect("No data stored in Cursive object!")
-            .main_view_state = MainViewState::Core;
+            .main_view_state = MainViewState::System;
     }
 );
 
@@ -307,7 +307,7 @@ make_event_controller!(
                 // Bring cgroup_view to front
                 set_active_screen(c, "cgroup_view_panel");
             }
-            MainViewState::Core => {}
+            MainViewState::System => {}
             #[cfg(fbcode_build)]
             MainViewState::Gpu => {}
         }

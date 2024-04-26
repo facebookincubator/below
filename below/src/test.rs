@@ -30,7 +30,7 @@ use store::CompressionMode;
 use store::DataFrame;
 use tempfile::TempDir;
 
-#[test]
+#[cfg_attr(not(feature = "vmtest"), test)]
 fn record_replay_integration() {
     let logger = get_logger();
     let dir = TempDir::with_prefix("below_record_replay_test.").expect("tempdir failed");
@@ -97,12 +97,12 @@ fn record_replay_integration() {
     restored_sample
         .cgroup
         .data
-        .io_total
+        .pressure
         .as_ref()
-        .expect("missing io.stat")
-        .rbytes_per_sec
+        .expect("missing memory.pressure")
+        .memory_full_pct
         .as_ref()
-        .expect("missing io stat read bytes per second");
+        .expect("missing memory.pressure.total");
     assert!(restored_sample.process.processes.len() == nr_procs);
     assert!(restored_sample.system.hostname == hostname);
     assert!(
@@ -120,7 +120,7 @@ fn record_replay_integration() {
     );
 }
 
-#[test]
+#[cfg_attr(not(feature = "vmtest"), test)]
 fn advance_forward_and_reverse() {
     let logger = get_logger();
     let dir = TempDir::with_prefix("below_record_replay_test.").expect("tempdir failed");
@@ -183,7 +183,7 @@ fn advance_forward_and_reverse() {
     );
 }
 
-#[test]
+#[cfg_attr(not(feature = "vmtest"), test)]
 fn disable_io_stat() {
     let logger = get_logger();
     let sample = Collector::new(
@@ -200,7 +200,7 @@ fn disable_io_stat() {
     assert_eq!(sample.cgroup.io_stat, None);
 }
 
-#[test]
+#[cfg_attr(not(feature = "vmtest"), test)]
 fn disable_disk_stat() {
     let logger = get_logger();
     let sample = Collector::new(
@@ -216,7 +216,7 @@ fn disable_disk_stat() {
     assert!(sample.system.disks.is_empty());
 }
 
-#[test]
+#[cfg_attr(not(feature = "vmtest"), test)]
 /// For cgroup io stat that's empty, make sure we report zero's instead of None
 fn default_cgroup_io_model() {
     let mut sample: Sample = Default::default();
@@ -238,7 +238,7 @@ fn default_cgroup_io_model() {
     assert_eq!(io_total.dios_per_sec, Some(0.0));
 }
 
-#[test]
+#[cfg_attr(not(feature = "vmtest"), test)]
 /// When at least one of IO stat sample is None, the IO model should also be.
 fn no_cgroup_io_model() {
     let mut sample: Sample = Default::default();
@@ -257,7 +257,7 @@ fn no_cgroup_io_model() {
     }
 }
 
-#[test]
+#[cfg_attr(not(feature = "vmtest"), test)]
 fn calculate_cpu_usage() {
     let mut sample: Sample = Default::default();
     let mut last_sample: Sample = Default::default();
@@ -298,7 +298,7 @@ fn calculate_cpu_usage() {
     assert_eq!(total_cpu.system_pct, Some(30.0));
 }
 
-#[test]
+#[cfg_attr(not(feature = "vmtest"), test)]
 fn calculate_pressure() {
     let mut sample: Sample = Default::default();
     let mut last_sample: Sample = Default::default();
@@ -363,7 +363,7 @@ fn calculate_pressure() {
     );
 }
 
-#[test]
+#[cfg_attr(not(feature = "vmtest"), test)]
 fn testing_fold_string() {
     assert_eq!(fold_string("demacia", 0, 0, |_| true), "demacia");
     assert_eq!(fold_string("demacia", 3, 0, |_| true), "demacia");

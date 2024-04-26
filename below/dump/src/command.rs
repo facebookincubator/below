@@ -26,6 +26,7 @@ use model::SingleDiskModelFieldId;
 use model::SingleNetModelFieldId;
 use model::SingleProcessModelFieldId;
 use model::SingleQueueModelFieldId;
+use model::SingleTcModelFieldId;
 use model::SystemModelFieldId;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -549,6 +550,7 @@ pub enum CgroupAggField {
     Cpu,
     Mem,
     Io,
+    Pids,
     Pressure,
 }
 
@@ -557,6 +559,7 @@ impl AggField<SingleCgroupModelFieldId> for CgroupAggField {
         use model::CgroupCpuModelFieldId as Cpu;
         use model::CgroupIoModelFieldId as Io;
         use model::CgroupMemoryModelFieldId as Mem;
+        use model::CgroupPidsModelFieldId as Pid;
         use model::CgroupPressureModelFieldId as Pressure;
         use model::SingleCgroupModelFieldId as FieldId;
 
@@ -565,6 +568,7 @@ impl AggField<SingleCgroupModelFieldId> for CgroupAggField {
                 Self::Cpu => enum_iterator::all::<Cpu>().map(FieldId::Cpu).collect(),
                 Self::Mem => enum_iterator::all::<Mem>().map(FieldId::Mem).collect(),
                 Self::Io => enum_iterator::all::<Io>().map(FieldId::Io).collect(),
+                Self::Pids => enum_iterator::all::<Pid>().map(FieldId::Pids).collect(),
                 Self::Pressure => enum_iterator::all::<Pressure>()
                     .map(FieldId::Pressure)
                     .collect(),
@@ -575,6 +579,7 @@ impl AggField<SingleCgroupModelFieldId> for CgroupAggField {
                 Self::Cpu => vec![FieldId::Cpu(Cpu::UsagePct)],
                 Self::Mem => vec![FieldId::Mem(Mem::Total)],
                 Self::Io => vec![FieldId::Io(Io::RbytesPerSec), FieldId::Io(Io::WbytesPerSec)],
+                Self::Pids => vec![FieldId::Pids(Pid::TidsCurrent)],
                 Self::Pressure => vec![
                     FieldId::Pressure(Pressure::CpuSomePct),
                     FieldId::Pressure(Pressure::MemoryFullPct),
@@ -1032,6 +1037,81 @@ $ below dump ethtool-queue -b "08:30:00" -e "08:30:30" -O json
     )
 });
 
+/// Represents the fields of the tc model.
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    below_derive::EnumFromStr,
+    below_derive::EnumToString
+)]
+pub enum TcAggField {
+    Stats,
+    XStats,
+    QDisc,
+}
+
+impl AggField<SingleTcModelFieldId> for TcAggField {
+    fn expand(&self, _detail: bool) -> Vec<SingleTcModelFieldId> {
+        use model::SingleTcModelFieldId as FieldId;
+
+        match self {
+            Self::Stats => vec![
+                FieldId::Interface,
+                FieldId::Kind,
+                FieldId::Qlen,
+                FieldId::Bps,
+                FieldId::Pps,
+                FieldId::BytesPerSec,
+                FieldId::PacketsPerSec,
+                FieldId::BacklogPerSec,
+                FieldId::DropsPerSec,
+                FieldId::RequeuesPerSec,
+                FieldId::OverlimitsPerSec,
+            ],
+            Self::XStats => enum_iterator::all::<model::XStatsModelFieldId>()
+                .map(FieldId::Xstats)
+                .collect::<Vec<_>>(),
+            Self::QDisc => enum_iterator::all::<model::QDiscModelFieldId>()
+                .map(FieldId::Qdisc)
+                .collect::<Vec<_>>(),
+        }
+    }
+}
+
+pub type TcOptionField = DumpOptionField<SingleTcModelFieldId, TcAggField>;
+
+pub static DEFAULT_TC_FIELDS: &[TcOptionField] = &[
+    DumpOptionField::Unit(DumpField::Common(CommonField::Datetime)),
+    DumpOptionField::Agg(TcAggField::Stats),
+    DumpOptionField::Agg(TcAggField::XStats),
+    DumpOptionField::Agg(TcAggField::QDisc),
+    DumpOptionField::Unit(DumpField::Common(CommonField::Timestamp)),
+];
+
+const TC_ABOUT: &str = "Dump the tc related stats with qdiscs";
+
+/// Generated about message for tc (traffic control) dump so supported fields are up-to-date.
+static TC_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+    format!(
+        r#"{about}
+********************** Available fields **********************
+{common_fields}, {tc_fields}.
+********************** Aggregated fields **********************
+* --detail: no effect.
+* --default: includes [{default_fields}].
+* --everything: includes everything (equivalent to --default --detail).
+********************** Example Commands **********************
+Example:
+$ below dump tc -b "08:30:00" -e "08:30:30" -O json
+"#,
+        about = TC_ABOUT,
+        common_fields = join(enum_iterator::all::<CommonField>()),
+        tc_fields = join(enum_iterator::all::<SingleTcModelFieldId>()),
+        default_fields = join(DEFAULT_TC_FIELDS.to_owned()),
+    )
+});
+
 make_option! (OutputFormat {
     "raw": Raw,
     "csv": Csv,
@@ -1212,6 +1292,17 @@ pub enum DumpCommand {
         #[clap(flatten)]
         opts: GeneralOpt,
         /// Saved pattern in the dumprc file under [ethtool] section.
+        #[clap(long, short, conflicts_with("fields"))]
+        pattern: Option<String>,
+    },
+    #[clap(about = TC_ABOUT, long_about = TC_LONG_ABOUT.as_str())]
+    Tc {
+        /// Select which fields to display and in what order.
+        #[clap(short, long)]
+        fields: Option<Vec<TcOptionField>>,
+        #[clap(flatten)]
+        opts: GeneralOpt,
+        /// Saved pattern in the dumprc file under [tc] section.
         #[clap(long, short, conflicts_with("fields"))]
         pattern: Option<String>,
     },
