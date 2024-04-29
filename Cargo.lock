@@ -327,13 +327,12 @@ dependencies = [
 
 [[package]]
 name = "below-tc"
-version = "0.0.1"
+version = "0.8.1"
 dependencies = [
  "netlink-packet-core",
  "netlink-packet-route",
- "netlink-packet-utils",
  "netlink-sys",
- "nix 0.27.1",
+ "nix 0.25.0",
  "serde",
  "thiserror",
 ]
@@ -477,7 +476,7 @@ dependencies = [
  "iana-time-zone",
  "num-traits",
  "serde",
- "windows-targets",
+ "windows-targets 0.48.0",
 ]
 
 [[package]]
@@ -507,9 +506,9 @@ dependencies = [
 
 [[package]]
 name = "clap_complete"
-version = "4.5.1"
+version = "4.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "885e4d7d5af40bfb99ae6f9433e292feac98d452dcb3ec3d25dfe7552b77da8c"
+checksum = "dd79504325bf38b10165b02e89b4347300f855f273c4cb30c4a3209e6583275e"
 dependencies = [
  "clap",
 ]
@@ -598,7 +597,7 @@ dependencies = [
  "autocfg",
  "cfg-if",
  "crossbeam-utils",
- "memoffset 0.6.5",
+ "memoffset",
  "scopeguard",
 ]
 
@@ -924,7 +923,6 @@ checksum = "25cbce373ec4653f1a01a31e8a5e5ec0c622dc27ff9c4e6606eefef5cbbed4a5"
 name = "fb_procfs"
 version = "0.8.1"
 dependencies = [
- "below-common",
  "lazy_static",
  "libc",
  "nix 0.25.0",
@@ -1357,15 +1355,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "memoffset"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
-dependencies = [
- "autocfg",
-]
-
-[[package]]
 name = "miniz_oxide"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1444,7 +1433,7 @@ dependencies = [
  "bitflags 1.3.2",
  "cfg-if",
  "libc",
- "memoffset 0.6.5",
+ "memoffset",
  "pin-utils",
 ]
 
@@ -1457,7 +1446,6 @@ dependencies = [
  "bitflags 2.4.0",
  "cfg-if",
  "libc",
- "memoffset 0.9.1",
 ]
 
 [[package]]
