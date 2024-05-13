@@ -133,6 +133,15 @@ pub struct MemoryEvents {
 }
 
 #[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub struct MemoryEventsLocal {
+    pub low: Option<u64>,
+    pub high: Option<u64>,
+    pub max: Option<u64>,
+    pub oom: Option<u64>,
+    pub oom_kill: Option<u64>,
+}
+
+#[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct CgroupStat {
     pub nr_descendants: Option<u32>,
     pub nr_dying_descendants: Option<u32>,

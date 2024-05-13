@@ -460,6 +460,11 @@ pub struct CgroupMemoryModel {
     pub events_max: Option<u64>,
     pub events_oom: Option<u64>,
     pub events_oom_kill: Option<u64>,
+    pub events_local_low: Option<u64>,
+    pub events_local_high: Option<u64>,
+    pub events_local_max: Option<u64>,
+    pub events_local_oom: Option<u64>,
+    pub events_local_oom_kill: Option<u64>,
 }
 
 impl std::ops::Add for CgroupMemoryModel {
@@ -533,6 +538,11 @@ impl std::ops::Add for CgroupMemoryModel {
             events_max: opt_add(self.events_max, other.events_max),
             events_oom: opt_add(self.events_oom, other.events_oom),
             events_oom_kill: opt_add(self.events_oom_kill, other.events_oom_kill),
+            events_local_low: opt_add(self.events_local_low, other.events_local_low),
+            events_local_high: opt_add(self.events_local_high, other.events_local_high),
+            events_local_max: opt_add(self.events_local_max, other.events_local_max),
+            events_local_oom: opt_add(self.events_local_oom, other.events_local_oom),
+            events_local_oom_kill: opt_add(self.events_local_oom_kill, other.events_local_oom_kill),
         }
     }
 }
@@ -554,6 +564,13 @@ impl CgroupMemoryModel {
             model.events_max = events.max;
             model.events_oom = events.oom;
             model.events_oom_kill = events.oom_kill;
+        }
+        if let Some(events_local) = &sample.memory_events_local {
+            model.events_local_low = events_local.low;
+            model.events_local_high = events_local.high;
+            model.events_local_max = events_local.max;
+            model.events_local_oom = events_local.oom;
+            model.events_local_oom_kill = events_local.oom_kill;
         }
         if let Some(stat) = &sample.memory_stat {
             model.anon = stat.anon;

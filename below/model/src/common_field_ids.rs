@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 449] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 454] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -209,6 +209,11 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 449] = [
     "cgroup.[path:/<cgroup_path>/.]mem.events_max",
     "cgroup.[path:/<cgroup_path>/.]mem.events_oom",
     "cgroup.[path:/<cgroup_path>/.]mem.events_oom_kill",
+    "cgroup.[path:/<cgroup_path>/.]mem.events_local_low",
+    "cgroup.[path:/<cgroup_path>/.]mem.events_local_high",
+    "cgroup.[path:/<cgroup_path>/.]mem.events_local_max",
+    "cgroup.[path:/<cgroup_path>/.]mem.events_local_oom",
+    "cgroup.[path:/<cgroup_path>/.]mem.events_local_oom_kill",
     "cgroup.[path:/<cgroup_path>/.]io_details.<key>.rbytes_per_sec",
     "cgroup.[path:/<cgroup_path>/.]io_details.<key>.wbytes_per_sec",
     "cgroup.[path:/<cgroup_path>/.]io_details.<key>.rios_per_sec",

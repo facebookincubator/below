@@ -45,6 +45,7 @@ pub struct CgroupSample {
     pub memory_swap_max: Option<i64>,
     pub memory_zswap_max: Option<i64>,
     pub memory_events: Option<cgroupfs::MemoryEvents>,
+    pub memory_events_local: Option<cgroupfs::MemoryEventsLocal>,
     pub inode_number: Option<i64>,
     pub cgroup_stat: Option<cgroupfs::CgroupStat>,
     pub memory_numa_stat: Option<BTreeMap<u32, cgroupfs::MemoryNumaStat>>,

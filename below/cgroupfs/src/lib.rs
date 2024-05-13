@@ -428,6 +428,10 @@ impl CgroupReader {
         MemoryEvents::read(self)
     }
 
+    pub fn read_memory_events_local(&self) -> Result<MemoryEventsLocal> {
+        MemoryEventsLocal::read(self)
+    }
+
     pub fn read_cgroup_stat(&self) -> Result<CgroupStat> {
         CgroupStat::read(self)
     }
@@ -706,6 +710,14 @@ key_values_format!(MemoryStat; memory.stat; [
 ]);
 
 key_values_format!(MemoryEvents; memory.events; [
+    low,
+    high,
+    max,
+    oom,
+    oom_kill
+]);
+
+key_values_format!(MemoryEventsLocal; memory.events.local; [
     low,
     high,
     max,
