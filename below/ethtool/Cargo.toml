@@ -5,7 +5,7 @@ name = "below-ethtool"
 version = "0.8.1"
 authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
 edition = "2021"
-description = "Model crate for below"
+description = "ethtool crate for below"
 repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
