@@ -3,7 +3,7 @@
 [package]
 name = "below"
 version = "0.8.1"
-authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
+authors = ["Meta Platforms, Inc. and affiliates"]
 edition = "2021"
 description = "An interactive tool to view and record historical system data"
 readme = "../README.md"

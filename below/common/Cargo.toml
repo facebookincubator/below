@@ -3,7 +3,7 @@
 [package]
 name = "below-common"
 version = "0.8.1"
-authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
+authors = ["Meta Platforms, Inc. and affiliates"]
 edition = "2021"
 description = "Common below code"
 repository = "https://github.com/facebookincubator/below"

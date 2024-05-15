@@ -3,7 +3,7 @@
 [package]
 name = "cgroupfs"
 version = "0.8.1"
-authors = ["Daniel Xu <dlxu@fb.com>", "Facebook"]
+authors = ["Meta Platforms, Inc. and affiliates"]
 edition = "2021"
 description = "A crate for reading cgroupv2 data"
 readme = "README"
