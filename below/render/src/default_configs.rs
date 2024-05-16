@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use model::ProcessModelFieldId;
 use model::SingleCgroupModelFieldId;
 use model::SingleProcessModelFieldId;
 use RenderFormat::Duration;
@@ -24,6 +25,26 @@ use RenderFormat::SectorReadableSize;
 
 use super::*;
 
+impl HasRenderConfig for model::Model {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::ModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            System(field_id) => model::SystemModel::get_render_config_builder(field_id),
+            Cgroup(field_id) => {
+                model::SingleCgroupModel::get_render_config_builder(&field_id.subquery_id.0)
+            }
+            Process(ProcessModelFieldId::Processes(field_id)) => {
+                model::SingleProcessModel::get_render_config_builder(&field_id.subquery_id.0)
+            }
+            Network(field_id) => model::NetworkModel::get_render_config_builder(field_id),
+            Gpu(_) => rc,
+            Resctrl(_) => rc,
+            Tc(_) => rc,
+        }
+    }
+}
+
 impl HasRenderConfig for model::SingleCgroupModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         use model::SingleCgroupModelFieldId::*;
@@ -35,15 +56,16 @@ impl HasRenderConfig for model::SingleCgroupModel {
             Cpu(field_id) => model::CgroupCpuModel::get_render_config_builder(field_id),
             Io(field_id) => model::CgroupIoModel::get_render_config_builder(field_id),
             IoDetails(field_id) => {
-                model::CgroupIoModel::get_render_config_builder(&field_id.subquery_id)
+                model::CgroupIoModel::get_render_config_builder(&field_id.subquery_id.0)
             }
             Mem(field_id) => model::CgroupMemoryModel::get_render_config_builder(field_id),
             Pressure(field_id) => model::CgroupPressureModel::get_render_config_builder(field_id),
             CgroupStat(field_id) => model::CgroupStatModel::get_render_config_builder(field_id),
             MemNuma(field_id) => {
-                model::CgroupMemoryNumaModel::get_render_config_builder(&field_id.subquery_id)
+                model::CgroupMemoryNumaModel::get_render_config_builder(&field_id.subquery_id.0)
             }
             Props(field_id) => model::CgroupProperties::get_render_config_builder(field_id),
+            Pids(field_id) => model::CgroupPidsModel::get_render_config_builder(field_id),
         }
     }
 }
@@ -154,6 +176,7 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
         use model::CgroupCpuModelFieldId::*;
         use model::CgroupIoModelFieldId::*;
         use model::CgroupMemoryModelFieldId::*;
+        use model::CgroupPidsModelFieldId::*;
         use model::CgroupPressureModelFieldId::*;
         use model::CgroupStatModelFieldId::*;
         use model::SingleCgroupModelFieldId::*;
@@ -174,6 +197,9 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
                 NrPeriodsPerSec => Some(gauge),
                 NrThrottledPerSec => Some(gauge),
                 ThrottledPct => Some(gauge.unit("percent")),
+            },
+            Pids(field_id) => match field_id {
+                TidsCurrent => Some(counter.unit("count")),
             },
             Io(field_id) => match field_id {
                 RbytesPerSec => Some(gauge.unit("bytes_per_second")),
@@ -200,6 +226,7 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
                 EventsOomKill => Some(counter),
                 Anon => Some(gauge.unit("bytes")),
                 File => Some(gauge.unit("bytes")),
+                Kernel => Some(gauge.unit("bytes")),
                 KernelStack => Some(gauge.unit("bytes")),
                 Slab => Some(gauge.unit("bytes")),
                 Sock => Some(gauge.unit("bytes")),
@@ -275,6 +302,16 @@ impl HasRenderConfig for model::CgroupCpuModel {
     }
 }
 
+impl HasRenderConfig for model::CgroupPidsModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::CgroupPidsModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            TidsCurrent => rc.title("Tids Current").format(Precision(1)),
+        }
+    }
+}
+
 impl HasRenderConfig for model::CgroupIoModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         use model::CgroupIoModelFieldId::*;
@@ -309,6 +346,7 @@ impl HasRenderConfig for model::CgroupMemoryModel {
             EventsOomKill => rc.title("Events Kill"),
             Anon => rc.title("Anon").format(ReadableSize),
             File => rc.title("File").format(ReadableSize),
+            Kernel => rc.title("Kernel").format(ReadableSize),
             KernelStack => rc.title("Kernel Stack").format(ReadableSize),
             Slab => rc.title("Slab").format(ReadableSize),
             Sock => rc.title("Sock").format(ReadableSize),
@@ -377,7 +415,7 @@ impl HasRenderConfig for model::NetworkModel {
         use model::NetworkModelFieldId::*;
         match field_id {
             Interfaces(field_id) => {
-                model::SingleNetModel::get_render_config_builder(&field_id.subquery_id)
+                model::SingleNetModel::get_render_config_builder(&field_id.subquery_id.0)
             }
             Tcp(field_id) => model::TcpModel::get_render_config_builder(field_id),
             Ip(field_id) => model::IpModel::get_render_config_builder(field_id),
@@ -795,7 +833,7 @@ impl HasRenderConfigForDump for model::SingleNetModel {
 impl HasRenderConfig for Vec<model::SingleQueueModel> {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         let mut rc =
-            model::SingleQueueModel::get_render_config_builder(&field_id.subquery_id).get();
+            model::SingleQueueModel::get_render_config_builder(&field_id.subquery_id.0).get();
         rc.title = rc.title.map(|title| title.to_string());
         rc.into()
     }
@@ -810,7 +848,7 @@ impl HasRenderConfigForDump for Vec<model::SingleQueueModel> {
             .idx
             .expect("VecFieldId without index should not have render config");
         self.get(idx)
-            .map(|queue| queue.get_openmetrics_config_for_dump(&field_id.subquery_id))?
+            .map(|queue| queue.get_openmetrics_config_for_dump(&field_id.subquery_id.0))?
     }
 }
 
@@ -1024,10 +1062,15 @@ impl HasRenderConfig for model::SystemModel {
             }
             Mem(field_id) => model::MemoryModel::get_render_config_builder(field_id),
             Vm(field_id) => model::VmModel::get_render_config_builder(field_id),
-            Disks(field_id) => {
-                model::SingleDiskModel::get_render_config_builder(&field_id.subquery_id)
+            Slab(field_id) => {
+                model::SingleSlabModel::get_render_config_builder(&field_id.subquery_id.0)
             }
-            Btrfs(field_id) => model::BtrfsModel::get_render_config_builder(&field_id.subquery_id),
+            Disks(field_id) => {
+                model::SingleDiskModel::get_render_config_builder(&field_id.subquery_id.0)
+            }
+            Btrfs(field_id) => {
+                model::BtrfsModel::get_render_config_builder(&field_id.subquery_id.0)
+            }
         }
     }
 }
@@ -1050,6 +1093,7 @@ impl HasRenderConfigForDump for model::SystemModel {
             Cpus(field_id) => self.cpus.get_openmetrics_config_for_dump(field_id),
             Mem(field_id) => self.mem.get_openmetrics_config_for_dump(field_id),
             Vm(field_id) => self.vm.get_openmetrics_config_for_dump(field_id),
+            Slab(_) => None,
             // Same as with NetworkModel, we leave disk dumping to `disk` category
             Disks(_) => None,
             // Same as with above, we leave btrfs dumping to `btrfs` category
@@ -1138,12 +1182,13 @@ impl HasRenderConfigForDump for model::SingleCpuModel {
 
 impl HasRenderConfig for BTreeMap<u32, model::SingleCpuModel> {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
-        let mut rc = model::SingleCpuModel::get_render_config_builder(&field_id.subquery_id).get();
+        let mut rc =
+            model::SingleCpuModel::get_render_config_builder(&field_id.subquery_id.0).get();
         rc.title = rc.title.map(|title| {
             format!(
                 "CPU {} {}",
                 field_id
-                    .key
+                    .idx
                     .expect("BTreeMapFieldId without key should not have render config"),
                 title
             )
@@ -1158,10 +1203,10 @@ impl HasRenderConfigForDump for BTreeMap<u32, model::SingleCpuModel> {
         field_id: &Self::FieldId,
     ) -> Option<RenderOpenMetricsConfigBuilder> {
         let key = field_id
-            .key
+            .idx
             .expect("BTreeMapFieldId without key should not have render config");
         self.get(&key)
-            .map(|cpu| cpu.get_openmetrics_config_for_dump(&field_id.subquery_id))?
+            .map(|cpu| cpu.get_openmetrics_config_for_dump(&field_id.subquery_id.0))?
     }
 }
 
@@ -1293,6 +1338,46 @@ impl HasRenderConfigForDump for model::VmModel {
             PgscanKswapd => Some(counter()),
             PgscanDirect => Some(counter()),
             OomKill => Some(counter()),
+        }
+    }
+}
+
+impl HasRenderConfig for model::SingleSlabModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::SingleSlabModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            Name => rc.title("Name").width(25),
+            ActiveObjs => rc.title("ActiveObjs"),
+            NumObjs => rc.title("TotalObjs"),
+            ObjSize => rc.title("ObjSize").format(ReadableSize),
+            ObjPerSlab => rc.title("Obj/Slab"),
+            NumSlabs => rc.title("Slabs"),
+            ActiveCaches => rc.title("ActiveCaches"),
+            NumCaches => rc.title("TotalCaches"),
+            ActiveSize => rc.title("ActiveSize").format(ReadableSize),
+            TotalSize => rc.title("TotalSize").format(ReadableSize),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::SingleSlabModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::SingleSlabModelFieldId::*;
+        match field_id {
+            Name => None,
+            ActiveObjs => Some(counter()),
+            NumObjs => Some(counter()),
+            ObjSize => Some(counter()),
+            ObjPerSlab => Some(counter()),
+            NumSlabs => Some(counter()),
+            ActiveCaches => Some(counter()),
+            NumCaches => Some(counter()),
+            ActiveSize => Some(counter()),
+            TotalSize => Some(counter()),
         }
     }
 }
@@ -1474,6 +1559,7 @@ impl HasRenderConfig for model::CgroupProperties {
             // "cpu cpuset hugetlb io memory pids" is 33 chars
             CgroupControllers => rc.title("Controllers").width(35),
             CgroupSubtreeControl => rc.title("SubtreeControl").width(35),
+            TidsMax => rc.title("Tids Max").format(MaxOrReadableSize),
             MemoryMin => rc.title("Mem Min").format(MaxOrReadableSize),
             MemoryLow => rc.title("Mem Low").format(MaxOrReadableSize),
             MemoryHigh => rc.title("Mem High").format(MaxOrReadableSize),
@@ -1487,6 +1573,186 @@ impl HasRenderConfig for model::CgroupProperties {
             CpusetMemsEffective => rc.title("Effective Mem Nodes"),
             CpuMaxUsec => rc.title("CPU Max").format(MaxOrDuration),
             CpuMaxPeriodUsec => rc.title("CPU Max Period").format(Duration),
+        }
+    }
+}
+
+impl HasRenderConfig for model::SingleTcModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::SingleTcModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            Interface => rc.title("Interface"),
+            Kind => rc.title("Kind"),
+            Qlen => rc.title("Queue Length"),
+            Bps => rc.title("Bps").format(ReadableSize).suffix("/s"),
+            Pps => rc.title("Pps").suffix("/s"),
+            BytesPerSec => rc.title("Bytes").format(ReadableSize).suffix("/s"),
+            PacketsPerSec => rc.title("Packets").suffix("/s"),
+            BacklogPerSec => rc.title("Backlog").suffix("/s"),
+            DropsPerSec => rc.title("Drops").suffix("/s"),
+            RequeuesPerSec => rc.title("Requeues").suffix("/s"),
+            OverlimitsPerSec => rc.title("Overlimits").suffix("/s"),
+            Qdisc(field_id) => model::QDiscModel::get_render_config_builder(field_id),
+            Xstats(field_id) => model::XStatsModel::get_render_config_builder(field_id),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::SingleTcModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::SingleTcModelFieldId::*;
+        let gauge = gauge()
+            .label("interface", &self.interface)
+            .label("qdisc", &self.kind);
+        match field_id {
+            Interface => None,
+            Kind => None,
+            Qlen => Some(gauge),
+            Bps => Some(gauge.unit("bytes_per_second")),
+            Pps => Some(gauge.unit("packets_per_second")),
+            BytesPerSec => Some(gauge.unit("bytes_per_second")),
+            PacketsPerSec => Some(gauge.unit("packets_per_second")),
+            BacklogPerSec => Some(gauge.unit("packets_per_second")),
+            DropsPerSec => Some(gauge.unit("packets_per_second")),
+            RequeuesPerSec => Some(gauge.unit("packets_per_second")),
+            OverlimitsPerSec => Some(gauge.unit("packets_per_second")),
+            Qdisc(field_id) => self
+                .qdisc
+                .as_ref()
+                .and_then(|qdisc| qdisc.get_openmetrics_config_for_dump(field_id)),
+            Xstats(field_id) => self
+                .xstats
+                .as_ref()
+                .and_then(|xstats| xstats.get_openmetrics_config_for_dump(field_id)),
+        }
+    }
+}
+
+impl HasRenderConfig for model::QDiscModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::QDiscModelFieldId::*;
+        match field_id {
+            FqCodel(field_id) => model::FqCodelQDiscModel::get_render_config_builder(field_id),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::QDiscModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::QDiscModelFieldId::*;
+        match field_id {
+            FqCodel(field_id) => self
+                .fq_codel
+                .as_ref()
+                .and_then(|fq_codel| fq_codel.get_openmetrics_config_for_dump(field_id)),
+        }
+    }
+}
+
+impl HasRenderConfig for model::FqCodelQDiscModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::FqCodelQDiscModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            Target => rc.title("Target"),
+            Limit => rc.title("Limit"),
+            Interval => rc.title("Interval"),
+            Ecn => rc.title("Ecn"),
+            Quantum => rc.title("Quantum"),
+            CeThreshold => rc.title("CeThreshold"),
+            DropBatchSize => rc.title("DropBatchSize"),
+            MemoryLimit => rc.title("MemoryLimit"),
+            FlowsPerSec => rc.title("Flows").suffix("/s"),
+        }
+    }
+}
+
+impl HasRenderConfig for model::XStatsModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::XStatsModelFieldId::*;
+        match field_id {
+            FqCodel(field_id) => model::FqCodelXStatsModel::get_render_config_builder(field_id),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::XStatsModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::XStatsModelFieldId::*;
+        match field_id {
+            FqCodel(field_id) => self
+                .fq_codel
+                .as_ref()
+                .and_then(|fq_codel| fq_codel.get_openmetrics_config_for_dump(field_id)),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::FqCodelQDiscModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::FqCodelQDiscModelFieldId::*;
+        match field_id {
+            Target => Some(gauge()),
+            Limit => Some(gauge()),
+            Interval => Some(gauge()),
+            Ecn => Some(gauge()),
+            Quantum => Some(gauge()),
+            CeThreshold => Some(gauge()),
+            DropBatchSize => Some(gauge()),
+            MemoryLimit => Some(gauge()),
+            FlowsPerSec => Some(gauge()),
+        }
+    }
+}
+
+impl HasRenderConfig for model::FqCodelXStatsModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::FqCodelXStatsModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            Maxpacket => rc.title("MaxPacket"),
+            EcnMark => rc.title("EcnMark"),
+            NewFlowsLen => rc.title("NewFlowsLen"),
+            OldFlowsLen => rc.title("OldFlowsLen"),
+            CeMark => rc.title("CeMark"),
+            DropOverlimitPerSec => rc.title("DropOverlimit").suffix("/s"),
+            NewFlowCountPerSec => rc.title("NewFlowCount").suffix("/s"),
+            MemoryUsagePerSec => rc.title("MemoryUsage").suffix("/s"),
+            DropOvermemoryPerSec => rc.title("DropOvermemory").suffix("/s"),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::FqCodelXStatsModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::FqCodelXStatsModelFieldId::*;
+        let gauge = gauge();
+        match field_id {
+            Maxpacket => Some(gauge),
+            EcnMark => Some(gauge),
+            NewFlowsLen => Some(gauge),
+            OldFlowsLen => Some(gauge),
+            CeMark => Some(gauge),
+            DropOverlimitPerSec => Some(gauge),
+            NewFlowCountPerSec => Some(gauge),
+            MemoryUsagePerSec => Some(gauge),
+            DropOvermemoryPerSec => Some(gauge),
         }
     }
 }

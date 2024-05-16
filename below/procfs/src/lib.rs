@@ -394,6 +394,35 @@ impl ProcReader {
         }
     }
 
+    pub fn read_slabinfo(&self) -> Result<SlabInfoMap> {
+        let path = self.path.join("slabinfo");
+        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
+        let buf_reader = BufReader::new(file);
+        let mut slab_info_map: SlabInfoMap = Default::default();
+
+        // The first line is version, second line is headers:
+        //
+        // slabinfo - version: 2.1
+        // # name            <active_objs> <num_objs> <objsize> <objperslab> <pagesperslab> : tunables <limit> <batchcount> <sharedfactor> : slabdata <active_slabs> <num_slabs> <sharedavail>
+        //
+        for line in buf_reader.lines().skip(2) {
+            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
+            let mut items = line.split_whitespace();
+            let mut slab_info: SlabInfo = Default::default();
+            let name = items.next().unwrap().to_owned();
+            slab_info.name = Some(name.clone());
+            slab_info.active_objs = parse_item!(path, items.next(), u64, line)?;
+            slab_info.num_objs = parse_item!(path, items.next(), u64, line)?;
+            slab_info.obj_size = parse_item!(path, items.next(), u64, line)?;
+            slab_info.obj_per_slab = parse_item!(path, items.next(), u64, line)?;
+            slab_info.pages_per_slab = parse_item!(path, items.next(), u64, line)?;
+            slab_info.active_slabs = parse_item!(path, items.nth(7), u64, line)?;
+            slab_info.num_slabs = parse_item!(path, items.next(), u64, line)?;
+            slab_info_map.insert(name, slab_info);
+        }
+        Ok(slab_info_map)
+    }
+
     fn read_disk_fsinfo(&self, mount_info: &MountInfo) -> Option<(f32, u64)> {
         if let Some(mount_point) = &mount_info.mount_point {
             if let Ok(stat) = sys::statvfs::statvfs(Path::new(&mount_point)) {
@@ -1310,10 +1339,15 @@ impl NetReader {
     }
 
     pub fn read_netstat(&self) -> Result<NetStat> {
-        let netstat_map = handle_io_error(&self.logger, self.read_kv_diff_line("netstat"))?;
-        let snmp_map = handle_io_error(&self.logger, self.read_kv_diff_line("snmp"))?;
-        let snmp6_map = handle_io_error(&self.logger, self.read_kv_same_line("snmp6"))?;
-        let iface_map = handle_io_error(&self.logger, self.read_net_map())?;
+        // Any of these files could be missing, however unlikely.
+        // An interface file could be missing if it is deleted while reading the directory.
+        // For example, if ipv6 is disabled, /proc/net/snmp6 won't exist.
+        // Similarly, one could even disable ipv4, in which case /proc/net/snmp won't exist.
+        // Thus, we handle ENOENT errors by setting corresponding fields to `None`.
+        let netstat_map = handle_enoent(&self.logger, self.read_kv_diff_line("netstat"))?;
+        let snmp_map = handle_enoent(&self.logger, self.read_kv_diff_line("snmp"))?;
+        let snmp6_map = handle_enoent(&self.logger, self.read_kv_same_line("snmp6"))?;
+        let iface_map = handle_enoent(&self.logger, self.read_net_map())?;
 
         Ok(NetStat {
             interfaces: iface_map,
@@ -1330,15 +1364,19 @@ impl NetReader {
     }
 }
 
-fn handle_io_error<K, V>(
+/// Wraps the result into an `Option` if the result is not an error.
+/// If the error is of type `ENOENT`, it is returned as `Ok(None)`.
+/// Else, the error itself is returned.
+fn handle_enoent<K, V>(
     logger: &slog::Logger,
     result: Result<BTreeMap<K, V>>,
 ) -> Result<Option<BTreeMap<K, V>>> {
-    let netstat_map = if let Err(Error::IoError(_, err)) = result {
-        debug!(logger, "{:?}", err);
-        None
-    } else {
-        Some(result?)
-    };
-    Ok(netstat_map)
+    match result {
+        Ok(map) => Ok(Some(map)),
+        Err(Error::IoError(_, err)) if err.kind() == ErrorKind::NotFound => {
+            debug!(logger, "{:?}", err);
+            Ok(None)
+        }
+        Err(err) => Err(err),
+    }
 }

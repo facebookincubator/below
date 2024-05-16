@@ -32,13 +32,9 @@ use model::CgroupModel;
 use model::Queriable;
 use model::SingleCgroupModelFieldId;
 
-use crate::cgroup_tabs::default_tabs::CGROUP_CPU_TAB;
-use crate::cgroup_tabs::default_tabs::CGROUP_GENERAL_TAB;
-use crate::cgroup_tabs::default_tabs::CGROUP_IO_TAB;
-use crate::cgroup_tabs::default_tabs::CGROUP_MEM_TAB;
-use crate::cgroup_tabs::default_tabs::CGROUP_PRESSURE_TAB;
-use crate::cgroup_tabs::default_tabs::CGROUP_PROPERTIES_TAB;
+use crate::cgroup_tabs::default_tabs;
 use crate::cgroup_tabs::CgroupTab;
+use crate::render::ViewItem;
 use crate::stats_view::ColumnTitles;
 use crate::stats_view::StateCommon;
 use crate::stats_view::StatsView;
@@ -59,7 +55,7 @@ pub struct CgroupState {
     pub cgroup_to_focus: Option<String>,
     pub filter_info: Option<(SingleCgroupModelFieldId, String)>,
     pub sort_order: Option<SingleCgroupModelFieldId>,
-    pub sort_tags: HashMap<String, &'static CgroupTab>,
+    pub sort_tags: HashMap<String, Vec<ViewItem<SingleCgroupModelFieldId>>>,
     pub reverse: bool,
     pub model: Rc<RefCell<CgroupModel>>,
     pub collapse_all_top_level_cgroup: bool,
@@ -89,7 +85,6 @@ impl StateCommon for CgroupState {
                 .sort_tags
                 .get(tab)
                 .unwrap_or_else(|| panic!("Fail to find tab: {}", tab))
-                .view_items
                 .get(idx - 1)
                 .expect("Out of title scope")
                 .field_id
@@ -145,12 +140,12 @@ impl StateCommon for CgroupState {
 
     fn new(model: Rc<RefCell<Self::ModelType>>) -> Self {
         let mut sort_tags = HashMap::new();
-        sort_tags.insert("General".into(), &*CGROUP_GENERAL_TAB);
-        sort_tags.insert("CPU".into(), &*CGROUP_CPU_TAB);
-        sort_tags.insert("Mem".into(), &*CGROUP_MEM_TAB);
-        sort_tags.insert("I/O".into(), &*CGROUP_IO_TAB);
-        sort_tags.insert("Pressure".into(), &*CGROUP_PRESSURE_TAB);
-        sort_tags.insert("Properties".into(), &*CGROUP_PROPERTIES_TAB);
+        sort_tags.insert("General".into(), default_tabs::get_general_items());
+        sort_tags.insert("CPU".into(), default_tabs::get_cpu_items());
+        sort_tags.insert("Mem".into(), default_tabs::get_mem_items());
+        sort_tags.insert("I/O".into(), default_tabs::get_io_items());
+        sort_tags.insert("Pressure".into(), default_tabs::get_pressure_items());
+        sort_tags.insert("Properties".into(), default_tabs::get_properties_items());
         Self {
             collapsed_cgroups: Rc::new(RefCell::new(HashSet::new())),
             current_selected_cgroup: "<root>".into(),
@@ -200,7 +195,7 @@ impl CgroupState {
 
 // TODO: Make CgroupView a collection of CgroupTab
 pub struct CgroupView {
-    tab: &'static CgroupTab,
+    tab: CgroupTab,
 }
 
 impl CgroupView {
@@ -245,6 +240,13 @@ impl CgroupView {
             view.refresh(c);
         });
 
+        let user_data = c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive Object!");
+        let cgroup_name_config = base_render::RenderConfig {
+            width: user_data.viewrc.cgroup_name_width,
+            ..Default::default()
+        };
         let tabs = vec![
             "General".into(),
             "CPU".into(),
@@ -257,48 +259,49 @@ impl CgroupView {
         tabs_map.insert(
             "General".into(),
             CgroupView {
-                tab: &*CGROUP_GENERAL_TAB,
+                tab: CgroupTab::new(default_tabs::get_general_items(), &cgroup_name_config),
             },
         );
         tabs_map.insert(
             "CPU".into(),
             CgroupView {
-                tab: &*CGROUP_CPU_TAB,
+                tab: CgroupTab::new(default_tabs::get_cpu_items(), &cgroup_name_config),
             },
         );
         tabs_map.insert(
             "Mem".into(),
             CgroupView {
-                tab: &*CGROUP_MEM_TAB,
+                tab: CgroupTab::new(default_tabs::get_mem_items(), &cgroup_name_config),
             },
         );
         tabs_map.insert(
             "I/O".into(),
             CgroupView {
-                tab: &*CGROUP_IO_TAB,
+                tab: CgroupTab::new(default_tabs::get_io_items(), &cgroup_name_config),
             },
         );
         tabs_map.insert(
             "Pressure".into(),
             CgroupView {
-                tab: &*CGROUP_PRESSURE_TAB,
+                tab: CgroupTab::new(default_tabs::get_pressure_items(), &cgroup_name_config),
             },
         );
         tabs_map.insert(
             "Properties".into(),
             CgroupView {
-                tab: &*CGROUP_PROPERTIES_TAB,
+                tab: CgroupTab::new(default_tabs::get_properties_items(), &cgroup_name_config),
             },
         );
-        let user_data = c
-            .user_data::<ViewState>()
-            .expect("No data stored in Cursive Object!");
+        let mut cgroup_state = CgroupState::new(user_data.cgroup.clone());
+        if user_data.viewrc.collapse_cgroups == Some(true) {
+            cgroup_state.collapse_all_top_level_cgroup = true;
+        }
         StatsView::new(
             "Cgroup",
             tabs,
             tabs_map,
             list,
-            CgroupState::new(user_data.cgroup.clone()),
+            cgroup_state,
             user_data.event_controllers.clone(),
             user_data.cmd_controllers.clone(),
         )

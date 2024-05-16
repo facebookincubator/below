@@ -344,6 +344,16 @@ impl CgroupReader {
         self.read_singleline_controllers("cgroup.subtree_control")
     }
 
+    /// Read pids.current - returning current cgroup number of processes
+    pub fn read_pids_current(&self) -> Result<u64> {
+        self.read_singleline_file("pids.current")
+    }
+
+    /// Read pids.max - returning max cgroup number of processes
+    pub fn read_pids_max(&self) -> Result<i64> {
+        self.read_singleline_integer_or_max_stat_file("pids.max")
+    }
+
     /// Read memory.min - returning memory.min limit in bytes
     /// Will return -1 if the content is max
     pub fn read_memory_min(&self) -> Result<i64> {
@@ -657,6 +667,7 @@ key_values_format!(CpuStat; cpu.stat; [
 key_values_format!(MemoryStat; memory.stat; [
     anon,
     file,
+    kernel,
     kernel_stack,
     slab,
     sock,

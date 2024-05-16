@@ -30,11 +30,15 @@ pub struct CollectorOptions {
     pub disable_disk_stat: bool,
     pub enable_btrfs_stats: bool,
     pub enable_ethtool_stats: bool,
+    pub enable_resctrl_stats: bool,
+    pub enable_tc_stats: bool,
     pub btrfs_samples: u64,
     pub btrfs_min_pct: f64,
     pub cgroup_re: Option<Regex>,
     pub gpu_stats_receiver:
         Option<collector_plugin::Consumer<crate::gpu_stats_collector_plugin::SampleType>>,
+    pub tc_stats_receiver:
+        Option<collector_plugin::Consumer<crate::tc_collector_plugin::SampleType>>,
 }
 
 impl Default for CollectorOptions {
@@ -46,10 +50,13 @@ impl Default for CollectorOptions {
             disable_disk_stat: false,
             enable_btrfs_stats: false,
             enable_ethtool_stats: false,
+            enable_resctrl_stats: false,
+            enable_tc_stats: false,
             btrfs_samples: btrfs::DEFAULT_SAMPLES,
             btrfs_min_pct: btrfs::DEFAULT_MIN_PCT,
             cgroup_re: None,
             gpu_stats_receiver: None,
+            tc_stats_receiver: None,
         }
     }
 }
@@ -57,6 +64,7 @@ impl Default for CollectorOptions {
 /// Collects data samples and maintains the latest data
 pub struct Collector {
     logger: slog::Logger,
+    proc_reader: procfs::ProcReader,
     prev_sample: Option<(Sample, Instant)>,
     collector_options: CollectorOptions,
 }
@@ -65,13 +73,14 @@ impl Collector {
     pub fn new(logger: slog::Logger, collector_options: CollectorOptions) -> Self {
         Self {
             logger,
+            proc_reader: procfs::ProcReader::new(),
             prev_sample: None,
             collector_options,
         }
     }
 
-    pub fn collect_sample(&self) -> Result<Sample> {
-        collect_sample(&self.logger, &self.collector_options)
+    pub fn collect_sample(&mut self) -> Result<Sample> {
+        collect_sample(&self.logger, &mut self.proc_reader, &self.collector_options)
     }
 
     /// Collect a new `Sample`, returning an updated Model
@@ -169,8 +178,11 @@ fn is_all_zero_disk_stats(disk_stats: &procfs::DiskStat) -> bool {
         && disk_stats.time_spend_discard_ms == Some(0)
 }
 
-fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<Sample> {
-    let mut reader = procfs::ProcReader::new();
+fn collect_sample(
+    logger: &slog::Logger,
+    reader: &mut procfs::ProcReader,
+    options: &CollectorOptions,
+) -> Result<Sample> {
     let btrfs_reader =
         btrfs::BtrfsReader::new(options.btrfs_samples, options.btrfs_min_pct, logger.clone());
     let ethtool_reader = ethtool::EthtoolReader::new();
@@ -192,25 +204,19 @@ fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<S
             logger,
             &options.cgroup_re,
         )?,
-        processes: merge_procfs_and_exit_data(
-            reader
-                .read_all_pids()?
-                .into_iter()
-                .map(|(k, v)| (k, v.into()))
-                .collect(),
-            exit_pidmap,
-        ),
+        processes: merge_procfs_and_exit_data(reader.read_all_pids()?, exit_pidmap),
         netstats: match procfs::NetReader::new(logger.clone()).and_then(|v| v.read_netstat()) {
-            Ok(ns) => ns.into(),
+            Ok(ns) => ns,
             Err(e) => {
                 error!(logger, "{:#}", e);
                 Default::default()
             }
         },
         system: SystemSample {
-            stat: reader.read_stat()?.into(),
-            meminfo: reader.read_meminfo()?.into(),
-            vmstat: reader.read_vmstat()?.into(),
+            stat: reader.read_stat()?,
+            meminfo: reader.read_meminfo()?,
+            vmstat: reader.read_vmstat()?,
+            slabinfo: reader.read_slabinfo().unwrap_or_default(),
             hostname: get_hostname()?,
             kernel_version: match reader.read_kernel_version() {
                 Ok(k) => Some(k),
@@ -287,6 +293,34 @@ fn collect_sample(logger: &slog::Logger, options: &CollectorOptions) -> Result<S
                 }
             }
         },
+        resctrl: if !options.enable_resctrl_stats {
+            None
+        } else {
+            match resctrlfs::ResctrlReader::root() {
+                Ok(resctrl_reader) => match resctrl_reader.read_all() {
+                    Ok(resctrl) => Some(resctrl),
+                    Err(e) => {
+                        error!(logger, "{:#}", e);
+                        None
+                    }
+                },
+                Err(_e) => {
+                    // ResctrlReader only fails to initialize if resctrlfs is
+                    // not mounted. In this case we ignore.
+                    None
+                }
+            }
+        },
+        tc: if let Some(tc_stats_receiver) = &options.tc_stats_receiver {
+            Some(
+                tc_stats_receiver
+                    .try_take()
+                    .context("TC stats collector had an error")?
+                    .unwrap_or_default(),
+            )
+        } else {
+            None
+        },
     })
 }
 
@@ -356,6 +390,8 @@ fn collect_cgroup_sample(
     Ok(CgroupSample {
         cpu_stat: wrap(reader.read_cpu_stat())?.map(Into::into),
         io_stat,
+        tids_current: wrap(reader.read_pids_current())?,
+        tids_max: wrap(reader.read_pids_max())?,
         memory_current: wrap(reader.read_memory_current().map(|v| v as i64))?,
         memory_stat: wrap(reader.read_memory_stat())?.map(Into::into),
         pressure: pressure_wrap(reader.read_pressure())?.map(Into::into),
@@ -443,6 +479,13 @@ macro_rules! count_per_sec {
             if a <= b {
                 ret = Some((b - a) as f64 / $delta.as_secs_f64());
             }
+        }
+        ret
+    }};
+    ($a:ident, $b:ident, $delta:expr, $target_type:ty) => {{
+        let mut ret = None;
+        if $a <= $b {
+            ret = Some((($b - $a) as f64 / $delta.as_secs_f64()).ceil() as $target_type);
         }
         ret
     }};

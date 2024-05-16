@@ -14,7 +14,7 @@
 
 use super::*;
 
-#[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct NetworkModel {
     #[queriable(subquery)]
     pub interfaces: BTreeMap<String, SingleNetModel>,
@@ -155,7 +155,7 @@ impl Nameable for NetworkModel {
     }
 }
 
-#[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct TcpModel {
     pub active_opens_per_sec: Option<u64>,
     pub passive_opens_per_sec: Option<u64>,
@@ -192,7 +192,7 @@ impl TcpModel {
     }
 }
 
-#[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct IpModel {
     pub forwarding_pkts_per_sec: Option<u64>,
     pub in_receives_pkts_per_sec: Option<u64>,
@@ -248,7 +248,7 @@ impl IpModel {
     }
 }
 
-#[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct Ip6Model {
     pub in_receives_pkts_per_sec: Option<u64>,
     pub in_hdr_errors: Option<u64>,
@@ -293,7 +293,7 @@ impl Ip6Model {
     }
 }
 
-#[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct IcmpModel {
     pub in_msgs_per_sec: Option<u64>,
     pub in_errors: Option<u64>,
@@ -319,7 +319,7 @@ impl IcmpModel {
     }
 }
 
-#[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct Icmp6Model {
     pub in_msgs_per_sec: Option<u64>,
     pub in_errors: Option<u64>,
@@ -345,7 +345,7 @@ impl Icmp6Model {
     }
 }
 
-#[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct UdpModel {
     pub in_datagrams_pkts_per_sec: Option<u64>,
     pub no_ports: Option<u64>,
@@ -370,7 +370,7 @@ impl UdpModel {
     }
 }
 
-#[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct Udp6Model {
     pub in_datagrams_pkts_per_sec: Option<u64>,
     pub no_ports: Option<u64>,
@@ -400,7 +400,7 @@ impl Udp6Model {
     }
 }
 
-#[derive(Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct SingleNetModel {
     pub interface: String,
     pub rx_bytes_per_sec: Option<f64>,
@@ -570,7 +570,7 @@ impl Nameable for SingleNetModel {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize, below_derive::Queriable)]
+#[::below_derive::queriable_derives]
 pub struct SingleQueueModel {
     pub interface: String,
     pub queue_id: u32,

@@ -92,7 +92,7 @@ fn get_description(controller: &Controllers) -> &'static str {
         Controllers::Help => "Toggle help menu.",
         Controllers::Process => "Show process view.",
         Controllers::Cgroup => "Show cgroup view.",
-        Controllers::System => "Show system core view.",
+        Controllers::System => "Show system view.",
         Controllers::Gpu => "Show GPU view.",
         Controllers::GpuZoom => "Zoom into process view filtered by selected GPU.",
         Controllers::GpuProcess => "Zoom into process view for all GPU processes.",
@@ -102,7 +102,6 @@ fn get_description(controller: &Controllers) -> &'static str {
         Controllers::Fold => "Fold processes (post filter) and display aggregated values.",
         Controllers::NextPage => "Scroll down 15 lines primary display.",
         Controllers::PrevPage => "Scroll up 15 lines primary display.",
-        Controllers::Url => "Show Corresponding Below Web URL.",
         _ => "Unknown",
     }
 }

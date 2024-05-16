@@ -20,20 +20,22 @@ use model::system::BtrfsModelFieldId;
 use model::system::MemoryModelFieldId;
 use model::system::SingleCpuModelFieldId;
 use model::system::SingleDiskModelFieldId;
+use model::system::SingleSlabModelFieldId;
 use model::system::VmModelFieldId;
 use model::BtrfsModel;
 use model::Queriable;
+use model::SingleSlabModel;
 
-use crate::core_view::CoreState;
-use crate::core_view::CoreStateFieldId;
 use crate::render::ViewItem;
 use crate::stats_view::ColumnTitles;
 use crate::stats_view::StateCommon;
+use crate::system_view::SystemState;
+use crate::system_view::SystemStateFieldId;
 
 const FIELD_NAME_WIDTH: usize = 20;
 const FIELD_WIDTH: usize = 20;
 
-pub trait CoreTab {
+pub trait SystemTab {
     fn get_titles(&self) -> ColumnTitles {
         ColumnTitles {
             titles: vec![
@@ -44,13 +46,13 @@ pub trait CoreTab {
         }
     }
 
-    fn get_rows(&self, state: &CoreState, offset: Option<usize>) -> Vec<(StyledString, String)>;
+    fn get_rows(&self, state: &SystemState, offset: Option<usize>) -> Vec<(StyledString, String)>;
 }
 
 #[derive(Default, Clone)]
-pub struct CoreCpu;
+pub struct SystemCpu;
 
-impl CoreTab for CoreCpu {
+impl SystemTab for SystemCpu {
     fn get_titles(&self) -> ColumnTitles {
         ColumnTitles {
             titles: enum_iterator::all::<SingleCpuModelFieldId>()
@@ -60,13 +62,13 @@ impl CoreTab for CoreCpu {
         }
     }
 
-    fn get_rows(&self, state: &CoreState, offset: Option<usize>) -> Vec<(StyledString, String)> {
+    fn get_rows(&self, state: &SystemState, offset: Option<usize>) -> Vec<(StyledString, String)> {
         let model = state.get_model();
         model
             .cpus
             .values()
             .filter(|scm| {
-                if let Some((CoreStateFieldId::Cpu(field), filter)) = &state.filter_info {
+                if let Some((SystemStateFieldId::Cpu(field), filter)) = &state.filter_info {
                     match scm.query(field) {
                         None => true,
                         Some(value) => value.to_string().starts_with(filter),
@@ -103,10 +105,10 @@ impl CoreTab for CoreCpu {
 }
 
 #[derive(Default, Clone)]
-pub struct CoreMem;
+pub struct SystemMem;
 
-impl CoreTab for CoreMem {
-    fn get_rows(&self, state: &CoreState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
+impl SystemTab for SystemMem {
+    fn get_rows(&self, state: &SystemState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
         let model = state.get_model();
 
         enum_iterator::all::<MemoryModelFieldId>()
@@ -132,10 +134,10 @@ impl CoreTab for CoreMem {
 }
 
 #[derive(Default, Clone)]
-pub struct CoreVm;
+pub struct SystemVm;
 
-impl CoreTab for CoreVm {
-    fn get_rows(&self, state: &CoreState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
+impl SystemTab for SystemVm {
+    fn get_rows(&self, state: &SystemState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
         let model = state.get_model();
 
         enum_iterator::all::<VmModelFieldId>()
@@ -161,9 +163,54 @@ impl CoreTab for CoreVm {
 }
 
 #[derive(Default, Clone)]
-pub struct CoreDisk;
+pub struct SystemSlab;
 
-impl CoreTab for CoreDisk {
+impl SystemTab for SystemSlab {
+    fn get_titles(&self) -> ColumnTitles {
+        ColumnTitles {
+            titles: enum_iterator::all::<SingleSlabModelFieldId>()
+                .map(|field_id| ViewItem::from_default(field_id).config.render_title())
+                .collect(),
+            pinned_titles: 1,
+        }
+    }
+
+    fn get_rows(&self, state: &SystemState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
+        let model = state.get_model();
+        let mut slab: Vec<&SingleSlabModel> = model.slab.values().collect();
+
+        if let Some(SystemStateFieldId::Slab(sort_order)) = state.sort_order.as_ref() {
+            model::sort_queriables(&mut slab, sort_order, state.reverse);
+        }
+
+        slab.into_iter()
+            .map(|ssm| {
+                enum_iterator::all::<SingleSlabModelFieldId>().fold(
+                    StyledString::new(),
+                    |mut line, field_id| {
+                        let view_item = ViewItem::from_default(field_id.clone());
+                        line.append(view_item.render(ssm));
+                        line.append_plain(" ");
+                        line
+                    },
+                )
+            })
+            .filter(|s| {
+                if let Some((_, filter)) = &state.filter_info {
+                    s.source().contains(filter)
+                } else {
+                    true
+                }
+            })
+            .map(|s| (s.clone(), "".into()))
+            .collect()
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct SystemDisk;
+
+impl SystemTab for SystemDisk {
     fn get_titles(&self) -> ColumnTitles {
         ColumnTitles {
             titles: enum_iterator::all::<SingleDiskModelFieldId>()
@@ -173,7 +220,7 @@ impl CoreTab for CoreDisk {
         }
     }
 
-    fn get_rows(&self, state: &CoreState, offset: Option<usize>) -> Vec<(StyledString, String)> {
+    fn get_rows(&self, state: &SystemState, offset: Option<usize>) -> Vec<(StyledString, String)> {
         state
             .get_model()
             .disks
@@ -221,17 +268,17 @@ impl CoreTab for CoreDisk {
 type BtrfsViewItem = ViewItem<model::BtrfsModelFieldId>;
 
 #[derive(Default, Clone)]
-pub struct CoreBtrfs {
+pub struct SystemBtrfs {
     pub view_items: Vec<BtrfsViewItem>,
 }
 
-impl CoreBtrfs {
+impl SystemBtrfs {
     fn new(view_items: Vec<BtrfsViewItem>) -> Self {
         Self { view_items }
     }
 }
 
-impl CoreTab for CoreBtrfs {
+impl SystemTab for SystemBtrfs {
     fn get_titles(&self) -> ColumnTitles {
         ColumnTitles {
             titles: enum_iterator::all::<BtrfsModelFieldId>()
@@ -241,18 +288,18 @@ impl CoreTab for CoreBtrfs {
         }
     }
 
-    fn get_rows(&self, state: &CoreState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
+    fn get_rows(&self, state: &SystemState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
         if let Some(btrfs_model) = state.get_model().btrfs.as_ref() {
             let mut subvolumes: Vec<&BtrfsModel> = btrfs_model.values().collect();
 
-            if let Some(CoreStateFieldId::Btrfs(sort_order)) = state.sort_order.as_ref() {
+            if let Some(SystemStateFieldId::Btrfs(sort_order)) = state.sort_order.as_ref() {
                 model::sort_queriables(&mut subvolumes, sort_order, state.reverse);
             }
 
             subvolumes
                 .iter()
                 .filter(|bmodel| {
-                    if let Some((CoreStateFieldId::Btrfs(field), filter)) = &state.filter_info {
+                    if let Some((SystemStateFieldId::Btrfs(field), filter)) = &state.filter_info {
                         match bmodel.query(field) {
                             None => true,
                             Some(value) => value.to_string().contains(filter),
@@ -291,14 +338,14 @@ pub mod default_tabs {
 
     use super::*;
 
-    pub static CORE_BTRFS_TAB: Lazy<CoreBtrfs> = Lazy::new(|| {
-        CoreBtrfs::new(vec![
+    pub static SYSTEM_BTRFS_TAB: Lazy<SystemBtrfs> = Lazy::new(|| {
+        SystemBtrfs::new(vec![
             ViewItem::from_default(Name),
             ViewItem::from_default(DiskFraction),
             ViewItem::from_default(DiskBytes),
         ])
     });
-    pub enum CoreTabs {
-        Btrfs(&'static CoreBtrfs),
+    pub enum SystemTabs {
+        Btrfs(&'static SystemBtrfs),
     }
 }

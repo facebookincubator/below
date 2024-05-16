@@ -12,29 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fs::create_dir_all;
-use std::path::Path;
+use std::env;
+use std::path::PathBuf;
 
 use libbpf_cargo::SkeletonBuilder;
 
 const SRC: &str = "./src/bpf/exitstat.bpf.c";
 
 fn main() {
-    // It's unfortunate we cannot use `OUT_DIR` to store the generated skeleton.
-    // Reasons are because the generated skeleton contains compiler attributes
-    // that cannot be `include!()`ed via macro. And we cannot use the `#[path = "..."]`
-    // trick either because you cannot yet `concat!(env!("OUT_DIR"), "/skel.rs")` inside
-    // the path attribute either (see https://github.com/rust-lang/rust/pull/83366).
-    //
-    // However, there is hope! When the above feature stabilizes we can clean this
-    // all up.
-    create_dir_all("./src/bpf/.output").unwrap();
-    let skel = Path::new("./src/bpf/.output/exitstat.skel.rs");
+    let mut out =
+        PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR must be set in build script"));
+    out.push("exitstat.skel.rs");
+
     let mut builder = SkeletonBuilder::new();
     builder.source(SRC);
     if let Some(clang) = option_env!("CLANG") {
         builder.clang(clang);
     }
-    builder.build_and_generate(&skel).unwrap();
+    builder.build_and_generate(out).unwrap();
     println!("cargo:rerun-if-changed={}", SRC);
+
+    #[cfg(all(feature = "no-vendor", feature = "default"))]
+    compile_error!(
+        "In order to build without vendored dependencies please disable default features"
+    );
 }

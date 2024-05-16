@@ -14,15 +14,7 @@
 
 use super::*;
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct SystemModel {
     pub hostname: String,
     pub kernel_version: Option<String>,
@@ -38,6 +30,8 @@ pub struct SystemModel {
     pub mem: MemoryModel,
     #[queriable(subquery)]
     pub vm: VmModel,
+    #[queriable(subquery)]
+    pub slab: BTreeMap<String, SingleSlabModel>,
     #[queriable(subquery)]
     pub disks: BTreeMap<String, SingleDiskModel>,
     #[queriable(subquery)]
@@ -95,6 +89,31 @@ impl SystemModel {
         let vm = last
             .map(|(last, duration)| VmModel::new(&last.vmstat, &sample.vmstat, duration))
             .unwrap_or_default();
+
+        let mut slab = sample
+            .slabinfo
+            .iter()
+            .map(|(name, slab_info)| (name.to_owned(), SingleSlabModel::new(slab_info)))
+            .collect::<BTreeMap<String, SingleSlabModel>>();
+
+        let slab_total = slab.iter().fold(
+            SingleSlabModel {
+                name: Some(String::from("TOTAL")),
+                ..Default::default()
+            },
+            |mut acc, (_, slabinfo)| {
+                acc.active_objs = opt_add(acc.active_objs, slabinfo.active_objs);
+                acc.num_objs = opt_add(acc.num_objs, slabinfo.num_objs);
+                acc.num_slabs = opt_add(acc.num_slabs, slabinfo.num_slabs);
+                acc.active_caches = opt_add(acc.active_caches, slabinfo.active_caches);
+                acc.num_caches = opt_add(acc.num_caches, slabinfo.num_caches);
+                acc.active_size = opt_add(acc.active_size, slabinfo.active_size);
+                acc.total_size = opt_add(acc.total_size, slabinfo.total_size);
+                acc
+            },
+        );
+        slab.insert(String::from("TOTAL"), slab_total);
+
         let mut disks: BTreeMap<String, SingleDiskModel> = BTreeMap::new();
         sample.disks.iter().for_each(|(disk_name, end_disk_stat)| {
             disks.insert(
@@ -138,6 +157,7 @@ impl SystemModel {
             cpus,
             mem,
             vm,
+            slab,
             disks,
             btrfs,
         }
@@ -150,15 +170,7 @@ impl Nameable for SystemModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct ProcStatModel {
     pub total_interrupt_ct: Option<u64>,
     pub context_switches: Option<u64>,
@@ -181,15 +193,7 @@ impl ProcStatModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct SingleCpuModel {
     pub idx: i32,
     pub usage_pct: Option<f64>,
@@ -272,15 +276,7 @@ impl SingleCpuModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct MemoryModel {
     pub total: Option<u64>,
     pub free: Option<u64>,
@@ -365,15 +361,7 @@ impl MemoryModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct VmModel {
     pub pgpgin_per_sec: Option<f64>,
     pub pgpgout_per_sec: Option<f64>,
@@ -402,15 +390,46 @@ impl VmModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
+pub struct SingleSlabModel {
+    pub name: Option<String>,
+    pub active_objs: Option<u64>,
+    pub num_objs: Option<u64>,
+    pub obj_size: Option<u64>,
+    pub obj_per_slab: Option<u64>,
+    pub num_slabs: Option<u64>,
+    pub active_caches: Option<u64>,
+    pub num_caches: Option<u64>,
+    pub active_size: Option<u64>,
+    pub total_size: Option<u64>,
+}
+
+impl SingleSlabModel {
+    fn new(slabinfo: &procfs::SlabInfo) -> SingleSlabModel {
+        SingleSlabModel {
+            name: slabinfo.name.clone(),
+            active_objs: slabinfo.active_objs,
+            num_objs: slabinfo.num_objs,
+            obj_size: slabinfo.obj_size,
+            obj_per_slab: slabinfo.obj_per_slab,
+            num_slabs: slabinfo.num_slabs,
+            active_caches: slabinfo.active_objs.map(
+                |active_objs| {
+                    if active_objs > 0 {
+                        1
+                    } else {
+                        0
+                    }
+                },
+            ),
+            num_caches: Some(1),
+            active_size: opt_multiply(slabinfo.obj_size, slabinfo.active_objs),
+            total_size: opt_multiply(slabinfo.obj_size, slabinfo.num_objs),
+        }
+    }
+}
+
+#[::below_derive::queriable_derives]
 pub struct SingleDiskModel {
     pub name: Option<String>,
     pub disk_usage: Option<f32>,
@@ -494,15 +513,7 @@ impl Nameable for SingleDiskModel {
     }
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    below_derive::Queriable
-)]
+#[::below_derive::queriable_derives]
 pub struct BtrfsModel {
     pub name: Option<String>,
     pub disk_fraction: Option<f64>,
@@ -541,6 +552,7 @@ mod test {
             "cpus": {},
             "mem": {},
             "vm": {},
+            "slab": {},
             "disks": {
                 "sda": {
                     "name": "sda",
