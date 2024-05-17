@@ -1004,6 +1004,10 @@ fn test_dump_queue_content() {
         hostname: "h".to_string(),
     };
 
+    // we are dumping timestamps assuming they are local time
+    // so the timezone needs to be set to the expected TZ
+    std::env::set_var("TZ", "US/Pacific");
+
     let result = queue_dumper
         .dump_model(&ctx, &model, &mut queue_content, &mut round, false)
         .expect("Failed to dump queue model");
