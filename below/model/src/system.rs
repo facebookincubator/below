@@ -33,6 +33,8 @@ pub struct SystemModel {
     #[queriable(subquery)]
     pub slab: BTreeMap<String, SingleSlabModel>,
     #[queriable(subquery)]
+    pub ksm: Option<KsmModel>,
+    #[queriable(subquery)]
     pub disks: BTreeMap<String, SingleDiskModel>,
     #[queriable(subquery)]
     pub btrfs: Option<BTreeMap<String, BtrfsModel>>,
@@ -97,6 +99,8 @@ impl SystemModel {
         );
         slab.insert(String::from("TOTAL"), slab_total);
 
+        let ksm = sample.ksm.as_ref().map(KsmModel::new);
+
         let mut disks: BTreeMap<String, SingleDiskModel> = BTreeMap::new();
         sample.disks.iter().for_each(|(disk_name, end_disk_stat)| {
             disks.insert(
@@ -141,6 +145,7 @@ impl SystemModel {
             mem,
             vm,
             slab,
+            ksm,
             disks,
             btrfs,
         }
@@ -409,6 +414,65 @@ impl SingleSlabModel {
 }
 
 #[::below_derive::queriable_derives]
+pub struct KsmModel {
+    pub advisor_max_cpu: Option<u64>,
+    pub advisor_max_pages_to_scan: Option<u64>,
+    pub advisor_min_pages_to_scan: Option<u64>,
+    pub advisor_mode: Option<String>,
+    pub advisor_target_scan_time: Option<u64>,
+    pub full_scans: Option<u64>,
+    pub general_profit: Option<i64>,
+    pub ksm_zero_pages: Option<i64>,
+    pub max_page_sharing: Option<u64>,
+    pub merge_across_nodes: Option<u64>,
+    pub pages_scanned: Option<u64>,
+    pub pages_shared: Option<u64>,
+    pub pages_sharing: Option<u64>,
+    pub pages_skipped: Option<u64>,
+    pub pages_to_scan: Option<u64>,
+    pub pages_unshared: Option<u64>,
+    pub pages_volatile: Option<u64>,
+    pub run: Option<u64>,
+    pub sleep_millisecs: Option<u64>,
+    pub smart_scan: Option<u64>,
+    pub stable_node_chains: Option<u64>,
+    pub stable_node_chains_prune_millisecs: Option<u64>,
+    pub stable_node_dups: Option<u64>,
+    pub use_zero_pages: Option<u64>,
+}
+
+impl KsmModel {
+    fn new(ksm: &procfs::Ksm) -> KsmModel {
+        KsmModel {
+            advisor_max_cpu: ksm.advisor_max_cpu,
+            advisor_max_pages_to_scan: ksm.advisor_max_pages_to_scan,
+            advisor_min_pages_to_scan: ksm.advisor_min_pages_to_scan,
+            advisor_mode: ksm.advisor_mode.clone(),
+            advisor_target_scan_time: ksm.advisor_target_scan_time,
+            full_scans: ksm.full_scans,
+            general_profit: ksm.general_profit,
+            ksm_zero_pages: ksm.ksm_zero_pages,
+            max_page_sharing: ksm.max_page_sharing,
+            merge_across_nodes: ksm.merge_across_nodes,
+            pages_scanned: ksm.pages_scanned,
+            pages_shared: ksm.pages_shared,
+            pages_sharing: ksm.pages_sharing,
+            pages_skipped: ksm.pages_skipped,
+            pages_to_scan: ksm.pages_to_scan,
+            pages_unshared: ksm.pages_unshared,
+            pages_volatile: ksm.pages_volatile,
+            run: ksm.run,
+            sleep_millisecs: ksm.sleep_millisecs,
+            smart_scan: ksm.smart_scan,
+            stable_node_chains: ksm.stable_node_chains,
+            stable_node_chains_prune_millisecs: ksm.stable_node_chains_prune_millisecs,
+            stable_node_dups: ksm.stable_node_dups,
+            use_zero_pages: ksm.use_zero_pages,
+        }
+    }
+}
+
+#[::below_derive::queriable_derives]
 pub struct SingleDiskModel {
     pub name: Option<String>,
     pub disk_usage: Option<f32>,
@@ -528,6 +592,7 @@ mod test {
             "mem": {},
             "vm": {},
             "slab": {},
+            "ksm": {},
             "disks": {
                 "sda": {
                     "name": "sda",

@@ -1075,6 +1075,7 @@ impl HasRenderConfig for model::SystemModel {
             Slab(field_id) => {
                 model::SingleSlabModel::get_render_config_builder(&field_id.subquery_id.0)
             }
+            Ksm(field_id) => model::KsmModel::get_render_config_builder(field_id),
             Disks(field_id) => {
                 model::SingleDiskModel::get_render_config_builder(&field_id.subquery_id.0)
             }
@@ -1104,6 +1105,7 @@ impl HasRenderConfigForDump for model::SystemModel {
             Mem(field_id) => self.mem.get_openmetrics_config_for_dump(field_id),
             Vm(field_id) => self.vm.get_openmetrics_config_for_dump(field_id),
             Slab(_) => None,
+            Ksm(_) => None,
             // Same as with NetworkModel, we leave disk dumping to `disk` category
             Disks(_) => None,
             // Same as with above, we leave btrfs dumping to `btrfs` category
@@ -1388,6 +1390,74 @@ impl HasRenderConfigForDump for model::SingleSlabModel {
             NumCaches => Some(counter()),
             ActiveSize => Some(counter()),
             TotalSize => Some(counter()),
+        }
+    }
+}
+
+impl HasRenderConfig for model::KsmModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::KsmModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            AdvisorMaxCpu => rc.title("AdvisorMaxCpu"),
+            AdvisorMaxPagesToScan => rc.title("AdvisorMaxPagesToScan"),
+            AdvisorMinPagesToScan => rc.title("AdvisorMinPagesToScan"),
+            AdvisorMode => rc.title("AdvisorMode"),
+            AdvisorTargetScanTime => rc.title("AdvisorTargetScanTime"),
+            FullScans => rc.title("FullScans"),
+            GeneralProfit => rc.title("GeneralProfit"),
+            KsmZeroPages => rc.title("KsmZeroPages"),
+            MaxPageSharing => rc.title("MaxPageSharing"),
+            MergeAcrossNodes => rc.title("MergeAcrossNodes"),
+            PagesScanned => rc.title("PagesScanned"),
+            PagesShared => rc.title("PagesShared"),
+            PagesSharing => rc.title("PagesSharing"),
+            PagesSkipped => rc.title("PagesSkipped"),
+            PagesToScan => rc.title("PagesToScan"),
+            PagesUnshared => rc.title("PagesUnshared"),
+            PagesVolatile => rc.title("PagesVolatile"),
+            Run => rc.title("Run"),
+            SleepMillisecs => rc.title("SleepMillisecs"),
+            SmartScan => rc.title("SmartScan"),
+            StableNodeChains => rc.title("StableNodeChains"),
+            StableNodeChainsPruneMillisecs => rc.title("StableNodeChainsPruneMillisecs"),
+            StableNodeDups => rc.title("StableNodeDups"),
+            UseZeroPages => rc.title("UseZeroPages"),
+        }
+    }
+}
+
+impl HasRenderConfigForDump for model::KsmModel {
+    fn get_openmetrics_config_for_dump(
+        &self,
+        field_id: &Self::FieldId,
+    ) -> Option<RenderOpenMetricsConfigBuilder> {
+        use model::KsmModelFieldId::*;
+        match field_id {
+            AdvisorMaxCpu => Some(counter()),
+            AdvisorMaxPagesToScan => Some(counter()),
+            AdvisorMinPagesToScan => Some(counter()),
+            AdvisorMode => Some(counter()),
+            AdvisorTargetScanTime => Some(counter()),
+            FullScans => Some(counter()),
+            GeneralProfit => Some(counter()),
+            KsmZeroPages => Some(counter()),
+            MaxPageSharing => Some(counter()),
+            MergeAcrossNodes => Some(counter()),
+            PagesScanned => Some(counter()),
+            PagesShared => Some(counter()),
+            PagesSharing => Some(counter()),
+            PagesSkipped => Some(counter()),
+            PagesToScan => Some(counter()),
+            PagesUnshared => Some(counter()),
+            PagesVolatile => Some(counter()),
+            Run => Some(counter()),
+            SleepMillisecs => Some(counter()),
+            SmartScan => Some(counter()),
+            StableNodeChains => Some(counter()),
+            StableNodeChainsPruneMillisecs => Some(counter()),
+            StableNodeDups => Some(counter()),
+            UseZeroPages => Some(counter()),
         }
     }
 }

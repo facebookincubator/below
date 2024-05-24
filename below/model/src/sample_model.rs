@@ -149,6 +149,32 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                 "num_slabs": 100000
             }
         },
+        "ksm": {
+            "advisor_max_cpu": 70,
+            "advisor_max_pages_to_scan": 30000,
+            "advisor_min_pages_to_scan": 500,
+            "advisor_mode": "scan-time",
+            "advisor_target_scan_time": 200,
+            "full_scans": 25,
+            "general_profit": 0,
+            "ksm_zero_pages": 0,
+            "max_page_sharing": 256,
+            "merge_across_nodes": 1,
+            "pages_scanned": 5149,
+            "pages_shared": 0,
+            "pages_sharing": 0,
+            "pages_skipped": 25,
+            "pages_to_scan": 100,
+            "pages_unshared": 0,
+            "pages_volatile": 0,
+            "run": 1,
+            "sleep_millisecs": 20,
+            "smart_scan": 1,
+            "stable_node_chains": 1,
+            "stable_node_chains_prune_millisecs": 2000,
+            "stable_node_dups": 0,
+            "use_zero_pages": 0
+        },
         "disks": {
             "vda": {
                 "name": "vda",
