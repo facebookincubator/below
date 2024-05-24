@@ -30,6 +30,7 @@ pub struct CollectorOptions {
     pub disable_disk_stat: bool,
     pub enable_btrfs_stats: bool,
     pub enable_ethtool_stats: bool,
+    pub enable_ksm_stats: bool,
     pub enable_resctrl_stats: bool,
     pub enable_tc_stats: bool,
     pub btrfs_samples: u64,
@@ -50,6 +51,7 @@ impl Default for CollectorOptions {
             disable_disk_stat: false,
             enable_btrfs_stats: false,
             enable_ethtool_stats: false,
+            enable_ksm_stats: false,
             enable_resctrl_stats: false,
             enable_tc_stats: false,
             btrfs_samples: btrfs::DEFAULT_SAMPLES,
@@ -186,6 +188,7 @@ fn collect_sample(
     let btrfs_reader =
         btrfs::BtrfsReader::new(options.btrfs_samples, options.btrfs_min_pct, logger.clone());
     let ethtool_reader = ethtool::EthtoolReader::new();
+    let ksm_reader = procfs::KsmReader::new();
 
     // Take mutex, then take all values out of shared map and replace with default map
     //
@@ -217,6 +220,11 @@ fn collect_sample(
             meminfo: reader.read_meminfo()?,
             vmstat: reader.read_vmstat()?,
             slabinfo: reader.read_slabinfo().unwrap_or_default(),
+            ksm: if !options.enable_ksm_stats {
+                None
+            } else {
+                Some(ksm_reader.read_ksm())
+            },
             hostname: get_hostname()?,
             kernel_version: match reader.read_kernel_version() {
                 Ok(k) => Some(k),

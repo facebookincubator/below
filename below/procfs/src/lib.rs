@@ -22,6 +22,7 @@ use std::io::ErrorKind;
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::RecvTimeoutError;
 use std::time::Duration;
@@ -39,6 +40,7 @@ pub use types::*;
 #[cfg(test)]
 mod test;
 
+pub const KSM_SYSFS: &str = "/sys/kernel/mm/ksm";
 pub const NET_SYSFS: &str = "/sys/class/net/";
 pub const NET_PROCFS: &str = "/proc/net";
 
@@ -1360,6 +1362,80 @@ impl NetReader {
             udp: snmp_map.as_ref().map(Self::read_udp_stat),
             udp6: snmp6_map.as_ref().map(Self::read_udp6_stat),
         })
+    }
+}
+
+pub struct KsmReader {
+    path: PathBuf,
+}
+
+impl Default for KsmReader {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl KsmReader {
+    pub fn new() -> KsmReader {
+        KsmReader {
+            path: Path::new(KSM_SYSFS).to_path_buf(),
+        }
+    }
+
+    pub fn new_with_custom_path(path: PathBuf) -> KsmReader {
+        KsmReader { path }
+    }
+
+    pub fn read_ksm(&self) -> Ksm {
+        Ksm {
+            advisor_max_cpu: self.read("advisor_max_cpu"),
+            advisor_max_pages_to_scan: self.read("advisor_max_pages_to_scan"),
+            advisor_min_pages_to_scan: self.read("advisor_min_pages_to_scan"),
+            advisor_mode: self.read_selection("advisor_mode"),
+            advisor_target_scan_time: self.read("advisor_target_scan_time"),
+            full_scans: self.read("full_scans"),
+            general_profit: self.read("general_profit"),
+            ksm_zero_pages: self.read("ksm_zero_pages"),
+            max_page_sharing: self.read("max_page_sharing"),
+            merge_across_nodes: self.read("merge_across_nodes"),
+            pages_scanned: self.read("pages_scanned"),
+            pages_shared: self.read("pages_shared"),
+            pages_sharing: self.read("pages_sharing"),
+            pages_skipped: self.read("pages_skipped"),
+            pages_to_scan: self.read("pages_to_scan"),
+            pages_unshared: self.read("pages_unshared"),
+            pages_volatile: self.read("pages_volatile"),
+            run: self.read("run"),
+            sleep_millisecs: self.read("sleep_millisecs"),
+            smart_scan: self.read("smart_scan"),
+            stable_node_chains: self.read("stable_node_chains"),
+            stable_node_chains_prune_millisecs: self.read("stable_node_chains_prune_millisecs"),
+            stable_node_dups: self.read("stable_node_dups"),
+            use_zero_pages: self.read("use_zero_pages"),
+        }
+    }
+
+    fn read<F>(&self, name: &str) -> Option<F>
+    where
+        F: FromStr,
+    {
+        std::fs::read_to_string(self.path.join(name))
+            .ok()?
+            .trim()
+            .parse()
+            .ok()
+    }
+
+    // parses from string representing one selection out of some choices
+    // i.e. "one [two] three" -> returns "two"
+    fn read_selection(&self, name: &str) -> Option<String> {
+        let val: String = self.read(name)?;
+        let left_bracket_idx = val.find('[')?;
+        let right_bracket_idx = val.rfind(']')?;
+        if left_bracket_idx >= right_bracket_idx {
+            return None;
+        }
+        Some(val[left_bracket_idx + 1..right_bracket_idx].to_string())
     }
 }
 

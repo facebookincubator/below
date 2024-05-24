@@ -21,6 +21,7 @@ use slog::Drain;
 use tempfile::TempDir;
 
 use crate::types::*;
+use crate::KsmReader;
 use crate::NetReader;
 use crate::ProcReader;
 use crate::PAGE_SIZE;
@@ -42,6 +43,10 @@ impl TestProcfs {
 
     fn get_reader(&self) -> ProcReader {
         ProcReader::new_with_custom_procfs(self.path().to_path_buf())
+    }
+
+    fn get_ksm_reader(&self) -> KsmReader {
+        KsmReader::new_with_custom_path(self.path().to_path_buf())
     }
 
     fn create_dir<P: AsRef<Path>>(&self, p: P) {
@@ -576,6 +581,70 @@ fn test_read_slabinfo() {
         ),
     ]);
     assert_eq!(slabinfo, expected_slabinfo);
+}
+
+#[test]
+fn test_ksm() {
+    let ksm_inputs = std::collections::BTreeMap::from([
+        ("advisor_max_cpu", "70"),
+        ("advisor_max_pages_to_scan", "30000"),
+        ("advisor_min_pages_to_scan", "500"),
+        ("advisor_mode", "none [scan-time]"),
+        ("advisor_target_scan_time", "200"),
+        ("full_scans", "25"),
+        ("general_profit", "0"),
+        ("ksm_zero_pages", "0"),
+        ("max_page_sharing", "256"),
+        ("merge_across_nodes", "1"),
+        ("pages_scanned", "5149"),
+        ("pages_shared", "0"),
+        ("pages_sharing", "0"),
+        ("pages_skipped", "25"),
+        ("pages_to_scan", "100"),
+        ("pages_unshared", "0"),
+        ("pages_volatile", "0"),
+        ("run", "1"),
+        ("sleep_millisecs", "20"),
+        ("smart_scan", "1"),
+        ("stable_node_chains", "1"),
+        ("stable_node_chains_prune_millisecs", "2000"),
+        ("stable_node_dups", "0"),
+        ("use_zero_pages", "0"),
+    ]);
+
+    let procfs = TestProcfs::new();
+
+    for (key, val) in ksm_inputs.iter() {
+        procfs.create_file_with_content(key, val.as_bytes());
+    }
+
+    let reader = procfs.get_ksm_reader();
+    let ksm = reader.read_ksm();
+
+    assert_eq!(ksm.advisor_max_cpu, Some(70));
+    assert_eq!(ksm.advisor_max_pages_to_scan, Some(30000));
+    assert_eq!(ksm.advisor_min_pages_to_scan, Some(500));
+    assert_eq!(ksm.advisor_mode, Some(String::from("scan-time")));
+    assert_eq!(ksm.advisor_target_scan_time, Some(200));
+    assert_eq!(ksm.full_scans, Some(25));
+    assert_eq!(ksm.general_profit, Some(0));
+    assert_eq!(ksm.ksm_zero_pages, Some(0));
+    assert_eq!(ksm.max_page_sharing, Some(256));
+    assert_eq!(ksm.merge_across_nodes, Some(1));
+    assert_eq!(ksm.pages_scanned, Some(5149));
+    assert_eq!(ksm.pages_shared, Some(0));
+    assert_eq!(ksm.pages_sharing, Some(0));
+    assert_eq!(ksm.pages_skipped, Some(25));
+    assert_eq!(ksm.pages_to_scan, Some(100));
+    assert_eq!(ksm.pages_unshared, Some(0));
+    assert_eq!(ksm.pages_volatile, Some(0));
+    assert_eq!(ksm.run, Some(1));
+    assert_eq!(ksm.sleep_millisecs, Some(20));
+    assert_eq!(ksm.smart_scan, Some(1));
+    assert_eq!(ksm.stable_node_chains, Some(1));
+    assert_eq!(ksm.stable_node_chains_prune_millisecs, Some(2000));
+    assert_eq!(ksm.stable_node_dups, Some(0));
+    assert_eq!(ksm.use_zero_pages, Some(0));
 }
 
 #[test]

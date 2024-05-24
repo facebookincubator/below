@@ -285,6 +285,34 @@ pub struct SlabInfo {
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct Ksm {
+    pub advisor_max_cpu: Option<u64>,
+    pub advisor_max_pages_to_scan: Option<u64>,
+    pub advisor_min_pages_to_scan: Option<u64>,
+    pub advisor_mode: Option<String>,
+    pub advisor_target_scan_time: Option<u64>,
+    pub full_scans: Option<u64>,
+    pub general_profit: Option<i64>,
+    pub ksm_zero_pages: Option<i64>,
+    pub max_page_sharing: Option<u64>,
+    pub merge_across_nodes: Option<u64>,
+    pub pages_scanned: Option<u64>,
+    pub pages_shared: Option<u64>,
+    pub pages_sharing: Option<u64>,
+    pub pages_skipped: Option<u64>,
+    pub pages_to_scan: Option<u64>,
+    pub pages_unshared: Option<u64>,
+    pub pages_volatile: Option<u64>,
+    pub run: Option<u64>,
+    pub sleep_millisecs: Option<u64>,
+    pub smart_scan: Option<u64>,
+    pub stable_node_chains: Option<u64>,
+    pub stable_node_chains_prune_millisecs: Option<u64>,
+    pub stable_node_dups: Option<u64>,
+    pub use_zero_pages: Option<u64>,
+}
+
+#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct MountInfo {
     pub mnt_id: Option<i32>,
     pub parent_mnt_id: Option<i32>,
