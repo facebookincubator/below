@@ -27,6 +27,7 @@ use cursive::views::ViewRef;
 use cursive::Cursive;
 use model::system::SystemModel;
 use model::BtrfsModelFieldId;
+use model::KsmModelFieldId;
 use model::MemoryModelFieldId;
 use model::SingleCpuModelFieldId;
 use model::SingleDiskModelFieldId;
@@ -64,6 +65,7 @@ pub enum SystemStateFieldId {
     Mem(MemoryModelFieldId),
     Vm(VmModelFieldId),
     Slab(SingleSlabModelFieldId),
+    Ksm(KsmModelFieldId),
 }
 
 impl std::string::ToString for SystemStateFieldId {
@@ -75,6 +77,7 @@ impl std::string::ToString for SystemStateFieldId {
             Self::Mem(field) => field.to_string(),
             Self::Vm(field) => field.to_string(),
             Self::Slab(field) => field.to_string(),
+            Self::Ksm(field) => field.to_string(),
         }
     }
 }
@@ -126,6 +129,7 @@ impl StateCommon for SystemState {
                     .nth(idx)
                     .expect("Tag out of range"),
             ),
+            "Ksm" => SystemStateFieldId::Ksm(KsmModelFieldId::FullScans),
             _ => panic!("bug: got unsupported tab {}", tab),
         }
     }
@@ -204,6 +208,7 @@ pub enum SystemView {
     Mem(SystemMem),
     Vm(SystemVm),
     Slab(SystemSlab),
+    Ksm(SystemKsm),
     Disk(SystemDisk),
     Btrfs(SystemBtrfs),
 }
@@ -233,6 +238,7 @@ impl SystemView {
             "Mem".into(),
             "Vm".into(),
             "Slab".into(),
+            "Ksm".into(),
             "Disk".into(),
             "Btrfs".into(),
         ];
@@ -241,6 +247,7 @@ impl SystemView {
         tabs_map.insert("Mem".into(), SystemView::Mem(Default::default()));
         tabs_map.insert("Vm".into(), SystemView::Vm(Default::default()));
         tabs_map.insert("Slab".into(), SystemView::Slab(Default::default()));
+        tabs_map.insert("Ksm".into(), SystemView::Ksm(Default::default()));
         tabs_map.insert("Disk".into(), SystemView::Disk(Default::default()));
         tabs_map.insert("Btrfs".into(), SystemView::Btrfs(Default::default()));
         let user_data = c
@@ -273,6 +280,7 @@ impl SystemView {
             Self::Mem(inner) => Box::new(inner.clone()),
             Self::Vm(inner) => Box::new(inner.clone()),
             Self::Slab(inner) => Box::new(inner.clone()),
+            Self::Ksm(inner) => Box::new(inner.clone()),
             Self::Disk(inner) => Box::new(inner.clone()),
             Self::Btrfs(inner) => Box::new(inner.clone()),
         }

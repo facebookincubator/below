@@ -17,6 +17,7 @@ use base_render::RenderConfigBuilder as Rc;
 use common::util::get_prefix;
 use cursive::utils::markup::StyledString;
 use model::system::BtrfsModelFieldId;
+use model::system::KsmModelFieldId;
 use model::system::MemoryModelFieldId;
 use model::system::SingleCpuModelFieldId;
 use model::system::SingleDiskModelFieldId;
@@ -204,6 +205,37 @@ impl SystemTab for SystemSlab {
             })
             .map(|s| (s.clone(), "".into()))
             .collect()
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct SystemKsm;
+
+impl SystemTab for SystemKsm {
+    fn get_rows(&self, state: &SystemState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
+        if let Some(ksm_model) = state.get_model().ksm.as_ref() {
+            enum_iterator::all::<KsmModelFieldId>()
+                .map(|field_id| {
+                    let mut line = StyledString::new();
+                    let item =
+                        ViewItem::from_default(field_id).update(Rc::new().width(FIELD_NAME_WIDTH));
+                    line.append_plain(item.config.render_title());
+                    line.append_plain(" ");
+                    line.append(item.update(Rc::new().width(FIELD_WIDTH)).render(ksm_model));
+                    line
+                })
+                .filter(|s| {
+                    if let Some((_, filter)) = &state.filter_info {
+                        s.source().contains(filter)
+                    } else {
+                        true
+                    }
+                })
+                .map(|s| (s.clone(), "".into()))
+                .collect()
+        } else {
+            Vec::new()
+        }
     }
 }
 
