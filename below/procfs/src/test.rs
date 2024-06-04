@@ -867,12 +867,10 @@ fn test_disk_stat() {
 
 #[test]
 fn test_pid_stat() {
-    let uptime = b"1631826.55 37530838.66";
     let stat = b"74718 (((bash process)) D 44786 74718 74718 34820 3561868 4194304 31346884 614468259 3 23315 14474 10887 1967513 339861 20 0 1 0 102803 224440320 12725 18446744073709551615 93972706258944 93972707333076 140732465518320 0 0 0 65536 3670020 1266777851 0 0 0 17 12 0 0 7 0 0 93972709432552 93972709479876 93972709523456 140732465525073 140732465525079 140732465525079 140732465528814 0";
 
     let procfs = TestProcfs::new();
     procfs.create_pid_file_with_content(74718, "stat", stat);
-    procfs.create_file_with_content("uptime", uptime);
     let mut reader = procfs.get_reader();
     let pidstat = reader
         .read_pid_stat(74718)
@@ -889,7 +887,7 @@ fn test_pid_stat() {
     assert_eq!(pidstat.user_usecs, Some(144740000));
     assert_eq!(pidstat.system_usecs, Some(108870000));
     assert_eq!(pidstat.num_threads, Some(1));
-    assert_eq!(pidstat.running_secs, Some(1631827 /* rounded up */ - 1028));
+    // uptime is used in running_secs, but uptime is not read from procfs, so we don't check it
     assert_eq!(pidstat.rss_bytes, Some(12725 * *PAGE_SIZE));
     assert_eq!(pidstat.processor, Some(12));
 }
@@ -1110,7 +1108,6 @@ cancelled_write_bytes: 5431947264
 
     let cgroup = b"0::/user.slice/user-119756.slice/session-3.scope
 ";
-    let uptime = b"1631826.45 37530838.66";
 
     let status = b"Name:	below
 Umask:	0022
@@ -1182,7 +1179,6 @@ nonvoluntary_ctxt_switches:	37733";
     procfs.create_pid_file_with_content(1025, "io", io);
     procfs.create_pid_file_with_content(1025, "cgroup", cgroup);
     procfs.create_pid_file_with_content(1025, "cmdline", cmdline);
-    procfs.create_file_with_content("uptime", uptime);
     let mut reader = procfs.get_reader();
 
     let pidmap = reader.read_all_pids().expect("Failed to get all pids");

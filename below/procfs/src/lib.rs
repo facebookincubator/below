@@ -28,6 +28,9 @@ use std::sync::mpsc::RecvTimeoutError;
 use std::time::Duration;
 
 use lazy_static::lazy_static;
+use libc::clock_gettime;
+use libc::timespec;
+use libc::CLOCK_BOOTTIME;
 use nix::sys;
 use openat::Dir;
 use slog::debug;
@@ -93,6 +96,8 @@ pub enum Error {
     },
     #[error("Unexpected line ({1}) in file: {0:?}")]
     UnexpectedLine(PathBuf, String),
+    #[error("Error when reading uptime")]
+    UptimeError,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -201,14 +206,13 @@ impl ProcReader {
     }
 
     fn read_uptime_secs(&mut self) -> Result<u64> {
-        let path = self.path.join("uptime");
-        let content = self.read_file_to_str(&path)?;
-        let mut items = content.split_whitespace();
-
-        match parse_item!(path, items.next(), f64, content) {
-            Ok(Some(uptime)) => Ok(uptime.round() as u64),
-            Ok(None) => Err(Error::InvalidFileFormat(path)),
-            Err(e) => Err(e),
+        unsafe {
+            let mut ts: timespec = std::mem::zeroed();
+            if clock_gettime(CLOCK_BOOTTIME, &mut ts) == 0 {
+                Ok(ts.tv_sec as u64)
+            } else {
+                Err(Error::UptimeError)
+            }
         }
     }
 
