@@ -169,7 +169,7 @@ impl ProcReader {
         reader
     }
 
-    fn read_file_to_string(&mut self, path: &Path) -> Result<String> {
+    fn read_file_to_str(&mut self, path: &Path) -> Result<&str> {
         let mut file = File::open(path).map_err(|e| Error::IoError(path.to_path_buf(), e))?;
         let mut total_read = 0;
 
@@ -196,12 +196,13 @@ impl ProcReader {
             }
         }
 
-        Ok(String::from_utf8_lossy(&self.buffer[..total_read]).to_string())
+        std::str::from_utf8(&self.buffer[..total_read])
+            .map_err(|_| Error::InvalidFileFormat(path.to_path_buf()))
     }
 
     fn read_uptime_secs(&mut self) -> Result<u64> {
         let path = self.path.join("uptime");
-        let content = self.read_file_to_string(&path)?;
+        let content = self.read_file_to_str(&path)?;
         let mut items = content.split_whitespace();
 
         match parse_item!(path, items.next(), f64, content) {
@@ -235,13 +236,13 @@ impl ProcReader {
 
     pub fn read_kernel_version(&mut self) -> Result<String> {
         let path = self.path.join("sys/kernel/osrelease");
-        let content = self.read_file_to_string(&path)?;
+        let content = self.read_file_to_str(&path)?;
         Ok(content.trim_matches('\n').trim().into())
     }
 
     pub fn read_stat(&mut self) -> Result<Stat> {
         let path = self.path.join("stat");
-        let content = self.read_file_to_string(&path)?;
+        let content = self.read_file_to_str(&path)?;
         let mut stat: Stat = Default::default();
         let mut cpus_map = BTreeMap::new();
 
@@ -295,7 +296,7 @@ impl ProcReader {
 
     pub fn read_meminfo(&mut self) -> Result<MemInfo> {
         let path = self.path.join("meminfo");
-        let content = self.read_file_to_string(&path)?;
+        let content = self.read_file_to_str(&path)?;
         let mut meminfo: MemInfo = Default::default();
 
         for line in content.lines() {
@@ -377,7 +378,7 @@ impl ProcReader {
 
     pub fn read_vmstat(&mut self) -> Result<VmStat> {
         let path = self.path.join("vmstat");
-        let content = self.read_file_to_string(&path)?;
+        let content = self.read_file_to_str(&path)?;
         let mut vmstat: VmStat = Default::default();
 
         for line in content.lines() {
@@ -415,7 +416,7 @@ impl ProcReader {
 
     pub fn read_slabinfo(&mut self) -> Result<SlabInfoMap> {
         let path = self.path.join("slabinfo");
-        let content = self.read_file_to_string(&path)?;
+        let content = self.read_file_to_str(&path)?;
         let mut slab_info_map: SlabInfoMap = Default::default();
 
         // The first line is version, second line is headers:
@@ -457,7 +458,7 @@ impl ProcReader {
         // mount of each mount source. The first mount is what shows in
         // the 'df' command and reflects the usage of the device.
         let path = self.path.join("self/mountinfo");
-        let content = self.read_file_to_string(&path)?;
+        let content = self.read_file_to_str(&path)?.to_string();
         let mut mount_info_map: HashMap<String, MountInfo> = HashMap::new();
 
         for line in content.lines() {
@@ -500,7 +501,7 @@ impl ProcReader {
 
     pub fn read_disk_stats_and_fsinfo(&mut self) -> Result<DiskMap> {
         let path = self.path.join("diskstats");
-        let content = self.read_file_to_string(&path)?;
+        let content = self.read_file_to_str(&path)?.to_string();
         let mut disk_map: DiskMap = Default::default();
         let mount_info_map = self.read_mount_info_map().unwrap_or_default();
 
@@ -555,10 +556,10 @@ impl ProcReader {
 
     fn read_pid_stat_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<PidStat> {
         let path = path.as_ref().join("stat");
-        let content = self.read_file_to_string(&path)?;
+        let content = self.read_file_to_str(&path)?;
         let mut pidstat: PidStat = Default::default();
 
-        let mut line = content.clone();
+        let mut line = content.to_string();
         {
             let b_opt = line.find('(');
             let e_opt = line.rfind(')');
@@ -614,7 +615,7 @@ impl ProcReader {
 
     fn read_pid_status_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<PidStatus> {
         let path = path.as_ref().join("status");
-        let content = self.read_file_to_string(&path)?;
+        let content = self.read_file_to_str(&path)?;
         let mut pidstatus: PidStatus = Default::default();
 
         for line in content.lines() {
@@ -648,7 +649,7 @@ impl ProcReader {
 
     fn read_pid_io_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<PidIo> {
         let path = path.as_ref().join("io");
-        let content = self.read_file_to_string(&path)?;
+        let content = self.read_file_to_str(&path)?;
         let mut pidio: PidIo = Default::default();
 
         for line in content.lines() {
@@ -675,7 +676,7 @@ impl ProcReader {
 
     fn read_pid_cgroup_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<String> {
         let path = path.as_ref().join("cgroup");
-        let content = self.read_file_to_string(&path)?;
+        let content = self.read_file_to_str(&path)?;
 
         let mut cgroup_path = None;
         for line in content.lines() {
