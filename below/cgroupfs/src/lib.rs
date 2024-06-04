@@ -758,31 +758,32 @@ macro_rules! name_key_equal_value_format {
                         }
                         r.io_error(file_name.clone(), e)
                     })?;
-                    let items = line.split_whitespace().collect::<Vec<_>>();
                     // as an example, io.stat looks like:
                     // 253:0 rbytes=531745786880 wbytes=1623798909952 ...
+                    let mut items = line.split_whitespace();
                     let mut s = $struct::default();
-                    for item in items.iter().skip(1) {
-                        let kv = item.split("=").collect::<Vec<_>>();
-                        if kv.len() != 2 {
+                    if let Some(first_item) = items.next() {
+                        for item in items {
+                            let mut kv = item.splitn(2, "=");
+                            let key = kv.next().ok_or_else(|| r.invalid_file_format(file_name.clone()))?;
+                            let value = kv.next().ok_or_else(|| r.invalid_file_format(file_name.clone()))?;
+                            // Certain keys such as cost.usage cannot be struct fields so must use cost_usage
+                            let key = key.replace(".", "_");
+                            parse_and_set_fields!(
+                                s;
+                                key.as_ref();
+                                value.parse().map_err(|_| r.unexpected_line(file_name.clone(), line.clone()))?;
+                                [ $($field,)* ]
+                            )
+                        }
+                        if s == $struct::default() {
                             return Err(r.invalid_file_format(file_name));
                         }
-                        // Certain keys such as cost.usage can not be struct fields so must use cost_usage
-                        let key = kv[0].replace(".", "_");
-                        parse_and_set_fields!(
-                            s;
-                            key.as_ref();
-                            kv[1].parse().map_err(|_| r.unexpected_line(file_name.clone(), line.clone()))?;
-                            [ $($field,)* ]
-                        )
-                    };
-                    if s == $struct::default() {
-                        return Err(r.invalid_file_format(file_name))
+                        map.insert(first_item.to_string(), s);
                     }
-                    map.insert(items[0].to_string(), s);
                 }
                 if !$allows_empty.0 && map.is_empty() {
-                     Err(r.invalid_file_format(file_name))
+                    Err(r.invalid_file_format(file_name))
                 } else {
                     Ok(map)
                 }
