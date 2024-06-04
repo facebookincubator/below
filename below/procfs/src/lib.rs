@@ -693,14 +693,15 @@ impl ProcReader {
             // A line starting with "0::" would be an entry for cgroup v2.
             // Otherwise, the line containing "pids" controller is what we want
             // for cgroup v1.
-            let parts: Vec<_> = line.splitn(3, ':').collect();
-            if parts.len() == 3 {
-                if parts[0] == "0" && parts[1] == "" {
-                    cgroup_path = Some(parts[2].to_owned());
-                    // cgroup v2 takes precedence
-                    break;
-                } else if parts[1].split(',').any(|c| c == "pids") {
-                    cgroup_path = Some(parts[2].to_owned());
+            let mut parts = line.splitn(3, ':');
+            if let (Some(hierarchy_id), Some(controller_list), Some(path)) =
+                (parts.next(), parts.next(), parts.next())
+            {
+                if hierarchy_id == "0" && controller_list.is_empty() {
+                    return Ok(path.to_owned());
+                } else if controller_list.split(',').any(|c| c == "pids") {
+                    // Not return, since if cgroup v2 is found it takes precedence
+                    cgroup_path = Some(path.to_owned());
                 }
             }
         }
