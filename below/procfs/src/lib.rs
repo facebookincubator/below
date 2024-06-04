@@ -569,31 +569,39 @@ impl ProcReader {
             }
         }
 
-        let items: Vec<_> = line.split_whitespace().collect();
-        pidstat.pid = parse_item!(path, items.get(0), i32, line)?;
-        if let Some(c) = parse_item!(path, items.get(1), char, line)? {
-            if let Some(state) = PidState::from_char(c) {
-                pidstat.state = Some(state);
-            } else {
-                return Err(Error::InvalidPidState(path, c));
+        for (index, item) in line.split_whitespace().enumerate() {
+            match index {
+                0 => pidstat.pid = parse_item!(path, Some(item), i32, line)?,
+                1 => {
+                    if let Some(c) = parse_item!(path, Some(item), char, line)? {
+                        if let Some(state) = PidState::from_char(c) {
+                            pidstat.state = Some(state);
+                        } else {
+                            return Err(Error::InvalidPidState(path, c));
+                        }
+                    }
+                }
+                2 => pidstat.ppid = parse_item!(path, Some(item), i32, line)?,
+                3 => pidstat.pgrp = parse_item!(path, Some(item), i32, line)?,
+                4 => pidstat.session = parse_item!(path, Some(item), i32, line)?,
+                8 => pidstat.minflt = parse_item!(path, Some(item), u64, line)?,
+                10 => pidstat.majflt = parse_item!(path, Some(item), u64, line)?,
+                12 => pidstat.user_usecs = parse_usec!(path, Some(item), line)?,
+                13 => pidstat.system_usecs = parse_usec!(path, Some(item), line)?,
+                18 => pidstat.num_threads = parse_item!(path, Some(item), u64, line)?,
+                20 => {
+                    let uptime = self.read_uptime_secs()?;
+                    pidstat.running_secs = parse_sec!(path, Some(item), line)?
+                        .map(|running_secs_since_boot| (uptime - running_secs_since_boot) as u64);
+                }
+                22 => {
+                    pidstat.rss_bytes =
+                        parse_item!(path, Some(item), u64, line)?.map(|pages| pages * *PAGE_SIZE)
+                }
+                37 => pidstat.processor = parse_item!(path, Some(item), i32, line)?,
+                _ => {}
             }
         }
-        pidstat.ppid = parse_item!(path, items.get(2), i32, line)?;
-        pidstat.pgrp = parse_item!(path, items.get(3), i32, line)?;
-        pidstat.session = parse_item!(path, items.get(4), i32, line)?;
-        pidstat.minflt = parse_item!(path, items.get(8), u64, line)?;
-        pidstat.majflt = parse_item!(path, items.get(10), u64, line)?;
-        pidstat.user_usecs = parse_usec!(path, items.get(12), line)?;
-        pidstat.system_usecs = parse_usec!(path, items.get(13), line)?;
-        pidstat.num_threads = parse_item!(path, items.get(18), u64, line)?;
-
-        let uptime = self.read_uptime_secs()?;
-        pidstat.running_secs = parse_sec!(path, items.get(20), line)?
-            .map(|running_secs_since_boot| (uptime - running_secs_since_boot) as u64);
-
-        pidstat.rss_bytes =
-            parse_item!(path, items.get(22), u64, line)?.map(|pages| pages * *PAGE_SIZE);
-        pidstat.processor = parse_item!(path, items.get(37), i32, line)?;
 
         if pidstat == Default::default() {
             Err(Error::InvalidFileFormat(path))
