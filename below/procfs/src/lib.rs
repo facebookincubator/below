@@ -148,14 +148,18 @@ macro_rules! parse_kb {
 pub struct ProcReader {
     path: PathBuf,
     threadpool: ThreadPool,
+    buffer: Vec<u8>,
 }
 
 impl ProcReader {
+    const BUFFER_CHUNK_SIZE: usize = 1 << 16;
+
     pub fn new() -> ProcReader {
         ProcReader {
             path: Path::new("/proc").to_path_buf(),
             // 5 threads max
             threadpool: ThreadPool::with_name("procreader_worker".to_string(), 5),
+            buffer: Vec::with_capacity(Self::BUFFER_CHUNK_SIZE),
         }
     }
 
@@ -165,25 +169,49 @@ impl ProcReader {
         reader
     }
 
-    fn read_uptime_secs(&self) -> Result<u64> {
+    fn read_file_to_string(&mut self, path: &Path) -> Result<String> {
+        let mut file = File::open(path).map_err(|e| Error::IoError(path.to_path_buf(), e))?;
+        let mut total_read = 0;
+
+        loop {
+            // Not .reserve(), since we need it initialised for the slice
+            if self.buffer.len() < total_read + Self::BUFFER_CHUNK_SIZE {
+                self.buffer
+                    .resize(self.buffer.len() + Self::BUFFER_CHUNK_SIZE, 0);
+            }
+
+            // We don't use .read_to_end() because of perverse heuristics that interact poorly with
+            // procfs
+            match file.read(&mut self.buffer[total_read..]) {
+                Ok(0) => break,
+                Ok(n) => {
+                    total_read += n;
+                    // procfs doesn't do partial reads, so we're done if we didn't saturate
+                    if n < Self::BUFFER_CHUNK_SIZE {
+                        break;
+                    }
+                }
+                Err(e) if e.kind() == ErrorKind::Interrupted => continue,
+                Err(e) => return Err(Error::IoError(path.to_path_buf(), e)),
+            }
+        }
+
+        Ok(String::from_utf8_lossy(&self.buffer[..total_read]).to_string())
+    }
+
+    fn read_uptime_secs(&mut self) -> Result<u64> {
         let path = self.path.join("uptime");
-        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
-        let mut buf_reader = BufReader::new(file);
-        let mut line = String::new();
-        buf_reader
-            .read_line(&mut line)
-            .map_err(|e| Error::IoError(path.clone(), e))?;
+        let content = self.read_file_to_string(&path)?;
+        let mut items = content.split_whitespace();
 
-        let mut items = line.split_whitespace();
-
-        match parse_item!(path, items.next(), f64, line) {
+        match parse_item!(path, items.next(), f64, content) {
             Ok(Some(uptime)) => Ok(uptime.round() as u64),
             Ok(None) => Err(Error::InvalidFileFormat(path)),
             Err(e) => Err(e),
         }
     }
 
-    fn process_cpu_stat(path: &PathBuf, line: &String) -> Result<CpuStat> {
+    fn process_cpu_stat(path: &PathBuf, line: &str) -> Result<CpuStat> {
         // Format is like "cpu9 6124418 452468 3062529 230073290 216237 0 45647 0 0 0"
         let mut items = line.split_whitespace();
         let mut cpu: CpuStat = Default::default();
@@ -205,23 +233,19 @@ impl ProcReader {
         Ok(cpu)
     }
 
-    pub fn read_kernel_version(&self) -> Result<String> {
+    pub fn read_kernel_version(&mut self) -> Result<String> {
         let path = self.path.join("sys/kernel/osrelease");
-        match std::fs::read_to_string(&path) {
-            Ok(kernel_version) => Ok(kernel_version.trim_matches('\n').trim().into()),
-            Err(e) => Err(Error::IoError(path, e)),
-        }
+        let content = self.read_file_to_string(&path)?;
+        Ok(content.trim_matches('\n').trim().into())
     }
 
-    pub fn read_stat(&self) -> Result<Stat> {
+    pub fn read_stat(&mut self) -> Result<Stat> {
         let path = self.path.join("stat");
-        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
-        let buf_reader = BufReader::new(file);
+        let content = self.read_file_to_string(&path)?;
         let mut stat: Stat = Default::default();
         let mut cpus_map = BTreeMap::new();
-        for line in buf_reader.lines() {
-            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
 
+        for line in content.lines() {
             let mut items = line.split_whitespace();
             if let Some(item) = items.next() {
                 match item {
@@ -243,15 +267,15 @@ impl ProcReader {
                     }
                     x => {
                         if x == "cpu" {
-                            stat.total_cpu = Some(Self::process_cpu_stat(&path, &line)?);
+                            stat.total_cpu = Some(Self::process_cpu_stat(&path, line)?);
                         } else if let Some(cpu_suffix) = x.strip_prefix("cpu") {
                             let cpu_id =
                                 parse_item!(&path, Some(cpu_suffix.to_owned()), u32, line)?
                                     .unwrap();
                             let existing =
-                                cpus_map.insert(cpu_id, Self::process_cpu_stat(&path, &line)?);
+                                cpus_map.insert(cpu_id, Self::process_cpu_stat(&path, line)?);
                             if existing.is_some() {
-                                return Err(Error::UnexpectedLine(path, line));
+                                return Err(Error::UnexpectedLine(path, line.to_string()));
                             }
                         }
                     }
@@ -269,15 +293,12 @@ impl ProcReader {
         }
     }
 
-    pub fn read_meminfo(&self) -> Result<MemInfo> {
+    pub fn read_meminfo(&mut self) -> Result<MemInfo> {
         let path = self.path.join("meminfo");
-        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
-        let buf_reader = BufReader::new(file);
+        let content = self.read_file_to_string(&path)?;
         let mut meminfo: MemInfo = Default::default();
 
-        for line in buf_reader.lines() {
-            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
-
+        for line in content.lines() {
             let mut items = line.split_whitespace();
             if let Some(item) = items.next() {
                 match item {
@@ -354,15 +375,12 @@ impl ProcReader {
         }
     }
 
-    pub fn read_vmstat(&self) -> Result<VmStat> {
+    pub fn read_vmstat(&mut self) -> Result<VmStat> {
         let path = self.path.join("vmstat");
-        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
-        let buf_reader = BufReader::new(file);
+        let content = self.read_file_to_string(&path)?;
         let mut vmstat: VmStat = Default::default();
 
-        for line in buf_reader.lines() {
-            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
-
+        for line in content.lines() {
             let mut items = line.split_whitespace();
             if let Some(item) = items.next() {
                 match item {
@@ -395,10 +413,9 @@ impl ProcReader {
         }
     }
 
-    pub fn read_slabinfo(&self) -> Result<SlabInfoMap> {
+    pub fn read_slabinfo(&mut self) -> Result<SlabInfoMap> {
         let path = self.path.join("slabinfo");
-        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
-        let buf_reader = BufReader::new(file);
+        let content = self.read_file_to_string(&path)?;
         let mut slab_info_map: SlabInfoMap = Default::default();
 
         // The first line is version, second line is headers:
@@ -406,8 +423,7 @@ impl ProcReader {
         // slabinfo - version: 2.1
         // # name            <active_objs> <num_objs> <objsize> <objperslab> <pagesperslab> : tunables <limit> <batchcount> <sharedfactor> : slabdata <active_slabs> <num_slabs> <sharedavail>
         //
-        for line in buf_reader.lines().skip(2) {
-            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
+        for line in content.lines().skip(2) {
             let mut items = line.split_whitespace();
             let mut slab_info: SlabInfo = Default::default();
             let name = items.next().unwrap().to_owned();
@@ -436,18 +452,16 @@ impl ProcReader {
         None
     }
 
-    fn read_mount_info_map(&self) -> Result<HashMap<String, MountInfo>> {
+    fn read_mount_info_map(&mut self) -> Result<HashMap<String, MountInfo>> {
         // Map contains a MountInfo object corresponding to the first
         // mount of each mount source. The first mount is what shows in
         // the 'df' command and reflects the usage of the device.
         let path = self.path.join("self/mountinfo");
-        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
-        let buf_reader = BufReader::new(file);
+        let content = self.read_file_to_string(&path)?;
         let mut mount_info_map: HashMap<String, MountInfo> = HashMap::new();
 
-        for line in buf_reader.lines() {
-            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
-            if let Ok(mount_info) = self.process_mount_info(&path, &line) {
+        for line in content.lines() {
+            if let Ok(mount_info) = self.process_mount_info(&path, line) {
                 if let Some(mount_source) = mount_info.mount_source.clone() {
                     mount_info_map.entry(mount_source).or_insert(mount_info);
                 }
@@ -484,16 +498,13 @@ impl ProcReader {
         }
     }
 
-    pub fn read_disk_stats_and_fsinfo(&self) -> Result<DiskMap> {
+    pub fn read_disk_stats_and_fsinfo(&mut self) -> Result<DiskMap> {
         let path = self.path.join("diskstats");
-        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
-        let buf_reader = BufReader::new(file);
+        let content = self.read_file_to_string(&path)?;
         let mut disk_map: DiskMap = Default::default();
         let mount_info_map = self.read_mount_info_map().unwrap_or_default();
 
-        for line in buf_reader.lines() {
-            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
-
+        for line in content.lines() {
             let stats_vec: Vec<&str> = line.split(' ').filter(|item| !item.is_empty()).collect();
             let mut stats_iter = stats_vec.iter();
             let mut disk_stat = DiskStat {
@@ -542,17 +553,12 @@ impl ProcReader {
         }
     }
 
-    fn read_pid_stat_from_path<P: AsRef<Path>>(&self, path: P) -> Result<PidStat> {
+    fn read_pid_stat_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<PidStat> {
         let path = path.as_ref().join("stat");
-        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
-        let mut buf_reader = BufReader::new(file);
+        let content = self.read_file_to_string(&path)?;
         let mut pidstat: PidStat = Default::default();
 
-        let mut line = String::new();
-        buf_reader
-            .read_line(&mut line)
-            .map_err(|e| Error::IoError(path.clone(), e))?;
-
+        let mut line = content.clone();
         {
             let b_opt = line.find('(');
             let e_opt = line.rfind(')');
@@ -595,27 +601,23 @@ impl ProcReader {
         }
     }
 
-    pub fn read_pid_stat(&self, pid: u32) -> Result<PidStat> {
+    pub fn read_pid_stat(&mut self, pid: u32) -> Result<PidStat> {
         self.read_pid_stat_from_path(self.path.join(pid.to_string()))
     }
 
-    pub fn read_tid_stat(&self, tid: u32) -> Result<PidStat> {
+    pub fn read_tid_stat(&mut self, tid: u32) -> Result<PidStat> {
         let mut p = self.path.join(tid.to_string());
         p.push("task");
         p.push(tid.to_string());
         self.read_pid_stat_from_path(p)
     }
 
-    fn read_pid_status_from_path<P: AsRef<Path>>(&self, path: P) -> Result<PidStatus> {
+    fn read_pid_status_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<PidStatus> {
         let path = path.as_ref().join("status");
-
-        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
-        let buf_reader = BufReader::new(file);
+        let content = self.read_file_to_string(&path)?;
         let mut pidstatus: PidStatus = Default::default();
 
-        for line in buf_reader.lines() {
-            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
-
+        for line in content.lines() {
             let mut items = line.split(':');
             if let Some(item) = items.next() {
                 let mut values = items.flat_map(|s| s.split_whitespace());
@@ -640,19 +642,16 @@ impl ProcReader {
         Ok(pidstatus)
     }
 
-    pub fn read_pid_mem(&self, pid: u32) -> Result<PidStatus> {
+    pub fn read_pid_mem(&mut self, pid: u32) -> Result<PidStatus> {
         self.read_pid_status_from_path(self.path.join(pid.to_string()))
     }
 
-    fn read_pid_io_from_path<P: AsRef<Path>>(path: P) -> Result<PidIo> {
+    fn read_pid_io_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<PidIo> {
         let path = path.as_ref().join("io");
-        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
-        let buf_reader = BufReader::new(file);
+        let content = self.read_file_to_string(&path)?;
         let mut pidio: PidIo = Default::default();
 
-        for line in buf_reader.lines() {
-            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
-
+        for line in content.lines() {
             let mut items = line.split_whitespace();
             if let Some(item) = items.next() {
                 match item {
@@ -670,18 +669,16 @@ impl ProcReader {
         }
     }
 
-    pub fn read_pid_io(&self, pid: u32) -> Result<PidIo> {
-        Self::read_pid_io_from_path(self.path.join(pid.to_string()))
+    pub fn read_pid_io(&mut self, pid: u32) -> Result<PidIo> {
+        self.read_pid_io_from_path(self.path.join(pid.to_string()))
     }
 
-    fn read_pid_cgroup_from_path<P: AsRef<Path>>(path: P) -> Result<String> {
+    fn read_pid_cgroup_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<String> {
         let path = path.as_ref().join("cgroup");
-        let file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
-        let buf_reader = BufReader::new(file);
+        let content = self.read_file_to_string(&path)?;
 
         let mut cgroup_path = None;
-        for line in buf_reader.lines() {
-            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
+        for line in content.lines() {
             // Lines contain three colon separated fields:
             //   hierarchy-ID:controller-list:cgroup-path
             // A line starting with "0::" would be an entry for cgroup v2.
@@ -701,8 +698,8 @@ impl ProcReader {
         cgroup_path.ok_or_else(|| Error::InvalidFileFormat(path))
     }
 
-    pub fn read_pid_cgroup(&self, pid: u32) -> Result<String> {
-        Self::read_pid_cgroup_from_path(self.path.join(pid.to_string()))
+    pub fn read_pid_cgroup(&mut self, pid: u32) -> Result<String> {
+        self.read_pid_cgroup_from_path(self.path.join(pid.to_string()))
     }
 
     pub fn read_pid_cmdline(&mut self, pid: u32) -> Result<Option<Vec<String>>> {
@@ -760,15 +757,15 @@ impl ProcReader {
         }
     }
 
-    fn read_pid_exe_path_from_path<P: AsRef<Path>>(path: P) -> Result<String> {
+    fn read_pid_exe_path_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<String> {
         let path = path.as_ref().join("exe");
         std::fs::read_link(path.clone())
             .map_err(|e| Error::IoError(path, e))
             .map(|p| p.to_string_lossy().into_owned())
     }
 
-    pub fn read_pid_exe_path(&self, pid: u32) -> Result<String> {
-        Self::read_pid_exe_path_from_path(self.path.join(pid.to_string()))
+    pub fn read_pid_exe_path(&mut self, pid: u32) -> Result<String> {
+        self.read_pid_exe_path_from_path(self.path.join(pid.to_string()))
     }
 
     pub fn read_all_pids(&mut self) -> Result<PidMap> {
@@ -827,7 +824,7 @@ impl ProcReader {
                 res => pidinfo.status = res?,
             }
 
-            match Self::read_pid_io_from_path(entry.path()) {
+            match self.read_pid_io_from_path(entry.path()) {
                 Err(Error::IoError(_, ref e))
                     if e.raw_os_error().map_or(false, |ec| {
                         ec == 2 || ec == 3 /* ENOENT or ESRCH */
@@ -845,7 +842,7 @@ impl ProcReader {
                 res => pidinfo.io = res?,
             }
 
-            match Self::read_pid_cgroup_from_path(entry.path()) {
+            match self.read_pid_cgroup_from_path(entry.path()) {
                 Err(Error::IoError(_, ref e))
                     if e.raw_os_error()
                         .map_or(false, |ec| ec == 2 || ec == 3 /* ENOENT or ESRCH */) =>
@@ -868,7 +865,7 @@ impl ProcReader {
             // Swallow the error since reading the /proc/pid/exe
             // 1. will need root permission to trace link
             // 2. Even with root permission, some exe will have broken link, kworker for example.
-            if let Ok(s) = Self::read_pid_exe_path_from_path(entry.path()) {
+            if let Ok(s) = self.read_pid_exe_path_from_path(entry.path()) {
                 pidinfo.exe_path = Some(s);
             }
 

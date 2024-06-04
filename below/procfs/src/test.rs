@@ -140,7 +140,7 @@ fn test_kernel_version() {
     let procfs = TestProcfs::new();
     procfs.create_dir("sys/kernel");
     procfs.create_file_with_content("sys/kernel/osrelease", version);
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
     let kernel_version = reader
         .read_kernel_version()
         .expect("Fail to read kernel version");
@@ -184,7 +184,7 @@ softirq 15518280031 0 3506477306 138437 1090758178 117192437 0 24543 800441241 9
 
     let procfs = TestProcfs::new();
     procfs.create_file_with_content("stat", stat);
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
     let stat = reader.read_stat().expect("Failed to read stat file");
     let total_cpu = stat.total_cpu.expect("Did not read total cpu");
 
@@ -269,7 +269,7 @@ DirectMap1G:     2097152 kB
 ";
     let procfs = TestProcfs::new();
     procfs.create_file_with_content("meminfo", meminfo);
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
 
     let meminfo = reader.read_meminfo().expect("Failed to read meminfo");
 
@@ -454,7 +454,7 @@ swap_ra_hit 139012
 
     let procfs = TestProcfs::new();
     procfs.create_file_with_content("vmstat", vmstat);
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
     let vmstat = reader.read_vmstat().expect("Failed to read vmstat file");
 
     assert_eq!(vmstat.pgpgin, Some(5_245_063_123));
@@ -482,7 +482,7 @@ fn test_read_slabinfo() {
 ";
     let procfs = TestProcfs::new();
     procfs.create_file_with_content("slabinfo", slabinfo);
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
     let slabinfo = reader
         .read_slabinfo()
         .expect("Failed to read slabinfo file");
@@ -800,7 +800,7 @@ fn test_disk_stat() {
 
     let procfs = TestProcfs::new();
     procfs.create_file_with_content("diskstats", diskstats);
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
     let diskmap = reader
         .read_disk_stats_and_fsinfo()
         .expect("Failed to read diskstats file");
@@ -873,7 +873,7 @@ fn test_pid_stat() {
     let procfs = TestProcfs::new();
     procfs.create_pid_file_with_content(74718, "stat", stat);
     procfs.create_file_with_content("uptime", uptime);
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
     let pidstat = reader
         .read_pid_stat(74718)
         .expect("Failed to read pid stat file");
@@ -954,7 +954,7 @@ nonvoluntary_ctxt_switches:	37733";
 
     let procfs = TestProcfs::new();
     procfs.create_pid_file_with_content(93041, "status", status);
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
     let pidmem = reader
         .read_pid_mem(93041)
         .expect("Failed to read pid status file");
@@ -984,7 +984,7 @@ cancelled_write_bytes: 5431947264
 
     let procfs = TestProcfs::new();
     procfs.create_pid_file_with_content(1024, "io", io);
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
     let pidio = reader
         .read_pid_io(1024)
         .expect("Failed to read pid stat file");
@@ -1000,7 +1000,7 @@ fn test_pid_cgroupv2() {
 
     let procfs = TestProcfs::new();
     procfs.create_pid_file_with_content(1024, "cgroup", cgroup);
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
     let cgroup = reader
         .read_pid_cgroup(1024)
         .expect("Failed to read pid cgroup file");
@@ -1024,7 +1024,7 @@ fn test_pid_cgroupv1() {
 
     let procfs = TestProcfs::new();
     procfs.create_pid_file_with_content(1024, "cgroup", cgroup);
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
     let cgroup = reader
         .read_pid_cgroup(1024)
         .expect("Failed to read pid cgroup file");
@@ -1049,7 +1049,7 @@ fn test_pid_cgroupv1and2() {
 
     let procfs = TestProcfs::new();
     procfs.create_pid_file_with_content(1024, "cgroup", cgroup);
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
     let cgroup = reader
         .read_pid_cgroup(1024)
         .expect("Failed to read pid cgroup file");
@@ -1594,7 +1594,7 @@ fn verify_interfaces(netstat: &NetStat) {
 fn test_read_pid_exec() {
     let procfs = TestProcfs::new();
     let res = procfs.create_pid_file_with_link(1234, "exe_path", "exe");
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
     let exe_path = reader
         .read_pid_exe_path(1234)
         .expect("Failed to read pid exe file");
@@ -1613,7 +1613,7 @@ fn test_read_mountinfo() {
     procfs.create_dir("self");
     procfs.create_file_with_content("self/mountinfo", mountinfo);
 
-    let reader = procfs.get_reader();
+    let mut reader = procfs.get_reader();
     let mount_info_map = reader
         .read_mount_info_map()
         .expect("Failed to read mount info file");
