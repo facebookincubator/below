@@ -249,7 +249,7 @@ impl SingleCpuModel {
                     system_pct: Some(system_usec as f64 * 100.0 / total_usec as f64),
                     nice_pct: Some(nice_usec as f64 * 100.0 / total_usec as f64),
                     iowait_pct: Some(iowait_usec as f64 * 100.0 / total_usec as f64),
-                    irq_pct: Some(iowait_usec as f64 * 100.0 / total_usec as f64),
+                    irq_pct: Some(irq_usec as f64 * 100.0 / total_usec as f64),
                     softirq_pct: Some(softirq_usec as f64 * 100.0 / total_usec as f64),
                     stolen_pct: Some(stolen_usec as f64 * 100.0 / total_usec as f64),
                     guest_pct: Some(guest_usec as f64 * 100.0 / total_usec as f64),
