@@ -785,9 +785,13 @@ impl ProcReader {
                 }
                 ent => ent.map_err(|e| Error::IoError(self.path.clone(), e))?,
             };
-            match entry.metadata() {
-                Ok(ref m) if m.is_dir() => {}
-                _ => continue,
+
+            if !entry
+                .file_type()
+                .map_err(|e| Error::IoError(self.path.clone(), e))?
+                .is_dir()
+            {
+                continue;
             }
 
             let mut is_pid = true;
