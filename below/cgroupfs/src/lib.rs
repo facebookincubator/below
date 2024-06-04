@@ -638,13 +638,14 @@ macro_rules! key_values_format {
                 let buf_reader = BufReader::new(file);
                 for line in buf_reader.lines() {
                     let line = line.map_err(|e| r.io_error(file_name, e))?;
-                    let items = line.split_whitespace().collect::<Vec<_>>();
-                    if items.len() != 2 {
+                    let mut items = line.split_whitespace();
+                    let key = items.next().ok_or_else(|| r.unexpected_line(file_name, line.clone()))?;
+                    let val_str = items.next().ok_or_else(|| r.unexpected_line(file_name, line.clone()))?;
+                    if items.next().is_some() {
                         return Err(r.unexpected_line(file_name, line));
                     }
-                    let key = items[0];
-                    let val = items[1].parse::<_>().map_err(|_| r.unexpected_line(file_name, line.clone()))?;
-                    match key.as_ref() {
+                    let val = val_str.parse::<_>().map_err(|_| r.unexpected_line(file_name, line.clone()))?;
+                    match key {
                         $(stringify!($field) => s.$field = Some(val),)*
                         _ => (),
                     };
