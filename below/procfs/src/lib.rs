@@ -712,29 +712,27 @@ impl ProcReader {
     fn read_pid_cmdline_from_path_blocking<P: AsRef<Path>>(path: P) -> Result<Option<Vec<String>>> {
         let path = path.as_ref().join("cmdline");
         let mut file = File::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
-        let mut buf = Vec::new();
-        match file
-            .read_to_end(&mut buf)
-            .map_err(|e| Error::IoError(path.clone(), e))?
-        {
+        let mut buf = [0; 4096];
+        let bytes_read = file
+            .read(&mut buf)
+            .map_err(|e| Error::IoError(path.clone(), e))?;
+
+        if bytes_read == 0 {
             // It's a zombie process and those don't have cmdlines
-            0 => Ok(None),
-            _ => {
-                Ok(Some(
-                    buf
-                        // /proc/pid/cmdline is split by nul bytes
-                        .split(|c| *c == 0)
-                        .filter(|s| !s.is_empty())
-                        .map(|s| {
-                            // Choose not to error on invalid utf8 b/c it's a process's
-                            // right to do crazy things if they want. No need for us to
-                            // erorr on it.
-                            String::from_utf8_lossy(s).to_string()
-                        })
-                        .collect::<Vec<String>>(),
-                ))
-            }
+            return Ok(None);
         }
+
+        Ok(Some(
+            buf[..bytes_read]
+                // /proc/pid/cmdline is split by nul bytes
+                .split(|c| *c == 0)
+                .filter(|s| !s.is_empty())
+                .map(|s| {
+                    // It's a process' right to put invalid UTF8 here
+                    String::from_utf8_lossy(s).to_string()
+                })
+                .collect::<Vec<String>>(),
+        ))
     }
 
     /// Do /proc/pid/cmdline reads off-thread in a threadpool b/c kernel needs
