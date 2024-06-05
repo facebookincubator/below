@@ -20,6 +20,7 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::io::ErrorKind;
 use std::io::Read;
+use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -782,6 +783,19 @@ impl ProcReader {
         self.read_pid_exe_path_from_path(self.path.join(pid.to_string()))
     }
 
+    fn ascii_digits_to_i32(digits: &[u8]) -> Option<i32> {
+        let mut result = 0i32;
+        for digit in digits {
+            let value = digit.wrapping_sub(b'0');
+            if value <= 9 {
+                result = result * 10 + value as i32;
+            } else {
+                return None;
+            }
+        }
+        Some(result)
+    }
+
     pub fn read_all_pids(&mut self) -> Result<PidMap> {
         let mut pidmap: PidMap = Default::default();
         for entry in
@@ -805,16 +819,10 @@ impl ProcReader {
                 continue;
             }
 
-            let mut is_pid = true;
-            for c in entry.file_name().to_string_lossy().chars() {
-                if !c.is_ascii_digit() {
-                    is_pid = false;
-                    break;
-                }
-            }
-            if !is_pid {
-                continue;
-            }
+            let pid = match Self::ascii_digits_to_i32(entry.file_name().as_bytes()) {
+                Some(pid) => pid,
+                None => continue,
+            };
 
             let mut pidinfo: PidInfo = Default::default();
 
@@ -883,14 +891,6 @@ impl ProcReader {
                 pidinfo.exe_path = Some(s);
             }
 
-            let file_name = entry.file_name();
-            let pid_str = file_name.to_string_lossy();
-            let pid = pid_str.parse::<i32>().map_err(|_| Error::ParseError {
-                line: String::new(),
-                item: pid_str.to_string(),
-                type_name: "pid".to_string(),
-                path: self.path.clone(),
-            })?;
             pidmap.insert(pid, pidinfo);
         }
 
