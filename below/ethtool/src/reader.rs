@@ -33,7 +33,16 @@ fn ioctl(
         ifr_ifru: libc::__c_anonymous_ifr_ifru { ifru_data: data },
     };
 
-    let exit_code = unsafe { libc::ioctl(fd.as_raw_fd(), nix::libc::SIOCETHTOOL, &ifr) };
+    // The SIOCETHTOOL conversion is necessary because POSIX (and thus libcs like musl) defines the
+    // `ioctl` request argument as `c_int`, while glibc and nix::libc use `c_ulong`. In C, this
+    // discrepancy is hidden behind typeless #defines, but in Rust, it becomes a type mismatch.
+    //
+    // By converting `libc::SIOCETHTOOL` (likely defined as `c_ulong`) to the libc's native type,
+    // we ensure portability across different libc implementations. On glibc this does nothing, but
+    // this conversion prevents type errors on libcs that use `c_int` for the request argument,
+    // such as musl.
+    #[allow(clippy::useless_conversion)]
+    let exit_code = unsafe { libc::ioctl(fd.as_raw_fd(), libc::SIOCETHTOOL as _, &ifr) };
     if exit_code != 0 {
         return Err(Errno::from_i32(exit_code));
     }
