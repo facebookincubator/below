@@ -46,6 +46,8 @@ pub use types::*;
 #[cfg(test)]
 mod test;
 
+use common::util;
+
 pub const KSM_SYSFS: &str = "/sys/kernel/mm/ksm";
 pub const NET_SYSFS: &str = "/sys/class/net/";
 pub const NET_PROCFS: &str = "/proc/net";
@@ -160,14 +162,12 @@ pub struct ProcReader {
 }
 
 impl ProcReader {
-    const BUFFER_CHUNK_SIZE: usize = 1 << 16;
-
     pub fn new() -> ProcReader {
         ProcReader {
             path: Path::new("/proc").to_path_buf(),
             // 5 threads max
             threadpool: ThreadPool::with_name("procreader_worker".to_string(), 5),
-            buffer: RefCell::new(Vec::with_capacity(Self::BUFFER_CHUNK_SIZE)),
+            buffer: RefCell::new(Vec::new()),
         }
     }
 
@@ -178,37 +178,9 @@ impl ProcReader {
     }
 
     fn read_file_to_str(&self, path: &Path) -> Result<RefMut<'_, str>> {
-        let mut buffer = self.buffer.borrow_mut();
-        let mut file = File::open(path).map_err(|e| Error::IoError(path.to_path_buf(), e))?;
-        let mut total_read = 0;
-
-        loop {
-            let buf_len = buffer.len();
-            // Not .reserve(), since we need it initialised for the slice
-            if buf_len < total_read + Self::BUFFER_CHUNK_SIZE {
-                buffer.resize(buf_len + Self::BUFFER_CHUNK_SIZE, 0);
-            }
-
-            // We don't use .read_to_end() because of perverse heuristics that interact poorly with
-            // procfs
-            match file.read(&mut buffer[total_read..]) {
-                Ok(0) => break,
-                Ok(n) => {
-                    total_read += n;
-                    // procfs doesn't do partial reads, so we're done if we didn't saturate
-                    if n < Self::BUFFER_CHUNK_SIZE {
-                        break;
-                    }
-                }
-                Err(e) if e.kind() == ErrorKind::Interrupted => continue,
-                Err(e) => return Err(Error::IoError(path.to_path_buf(), e)),
-            }
-        }
-
-        RefMut::filter_map(buffer, |vec| {
-            std::str::from_utf8_mut(&mut vec[..total_read]).ok()
-        })
-        .map_err(|_| Error::InvalidFileFormat(path.to_path_buf()))
+        File::open(path)
+            .and_then(|file| util::read_kern_file_to_internal_buffer(&self.buffer, file))
+            .map_err(|e| Error::IoError(path.to_path_buf(), e))
     }
 
     fn read_uptime_secs(&self) -> Result<u64> {

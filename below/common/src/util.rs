@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cell::RefCell;
+use std::cell::RefMut;
+use std::io;
+use std::io::Read;
 use std::time::Duration;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
@@ -166,6 +170,40 @@ pub fn get_belowrc_cmd_section_key() -> &'static str {
 /// The view section key for belowrc
 pub fn get_belowrc_view_section_key() -> &'static str {
     "view"
+}
+
+pub fn read_kern_file_to_internal_buffer<R: Read>(
+    buffer: &RefCell<Vec<u8>>,
+    mut reader: R,
+) -> io::Result<RefMut<'_, str>> {
+    const BUFFER_CHUNK_SIZE: usize = 1 << 16;
+
+    let mut buffer = buffer.borrow_mut();
+    let mut total_read = 0;
+
+    loop {
+        let buf_len = buffer.len();
+        if buf_len < total_read + BUFFER_CHUNK_SIZE {
+            buffer.resize(buf_len + BUFFER_CHUNK_SIZE, 0);
+        }
+
+        match reader.read(&mut buffer[total_read..]) {
+            Ok(0) => break,
+            Ok(n) => {
+                total_read += n;
+                if n < BUFFER_CHUNK_SIZE {
+                    break;
+                }
+            }
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e),
+        }
+    }
+
+    RefMut::filter_map(buffer, |vec| {
+        std::str::from_utf8_mut(&mut vec[..total_read]).ok()
+    })
+    .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid UTF-8 data"))
 }
 
 #[cfg(test)]
