@@ -13,9 +13,12 @@
 // limitations under the License.
 
 #![deny(clippy::all)]
+use std::cell::RefCell;
+use std::cell::RefMut;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::ffi::OsStr;
+use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::ErrorKind;
@@ -35,6 +38,8 @@ pub use types::*;
 
 #[cfg(test)]
 mod test;
+
+use common::util;
 
 pub const DEFAULT_CG_ROOT: &str = "/sys/fs/cgroup";
 
@@ -57,6 +62,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub struct CgroupReader {
     relative_path: PathBuf,
     dir: Dir,
+    buffer: RefCell<Vec<u8>>,
 }
 
 fn parse_integer_or_max(s: &str) -> std::result::Result<i64, String> {
@@ -259,7 +265,11 @@ impl CgroupReader {
             }
         }
 
-        Ok(CgroupReader { relative_path, dir })
+        Ok(CgroupReader {
+            relative_path,
+            dir,
+            buffer: RefCell::new(Vec::new()),
+        })
     }
 
     pub fn root() -> Result<CgroupReader> {
@@ -270,6 +280,15 @@ impl CgroupReader {
     /// Invoking this on the root cgroup will return an empty path
     pub fn name(&self) -> &Path {
         &self.relative_path
+    }
+
+    fn read_file_to_str(
+        &self,
+        file_name: impl AsRef<Path>,
+        file: &File,
+    ) -> Result<RefMut<'_, str>> {
+        util::read_kern_file_to_internal_buffer(&self.buffer, file)
+            .map_err(|e| self.io_error(file_name.as_ref(), e))
     }
 
     pub fn read_inode_number(&self) -> Result<u64> {
@@ -287,14 +306,10 @@ impl CgroupReader {
             .dir
             .open_file(file_name)
             .map_err(|e| self.io_error(file_name, e))?;
-        let buf_reader = BufReader::new(file);
-        let line = buf_reader
-            .lines()
-            .next()
-            .unwrap_or_else(|| Ok("".to_owned()));
-        let line = line.map_err(|e| self.io_error(file_name, e))?;
+        let content = self.read_file_to_str(file_name, &file)?;
+        let line = content.lines().next().unwrap_or("");
         line.parse::<T>()
-            .map_err(move |_| self.unexpected_line(file_name, line))
+            .map_err(move |_| self.unexpected_line(file_name, line.to_string()))
     }
 
     /// Read a value from a file that has a single line. If the file is empty,
@@ -304,12 +319,11 @@ impl CgroupReader {
             .dir
             .open_file(file_name)
             .map_err(|e| self.io_error(file_name, e))?;
-        let buf_reader = BufReader::new(file);
-        if let Some(line) = buf_reader.lines().next() {
-            let line = line.map_err(|e| self.io_error(file_name, e))?;
+        let content = self.read_file_to_str(file_name, &file)?;
+        if let Some(line) = content.lines().next() {
             return line
                 .parse::<T>()
-                .map_err(move |_| self.unexpected_line(file_name, line));
+                .map_err(move |_| self.unexpected_line(file_name, line.to_string()));
         }
         Err(self.invalid_file_format(file_name))
     }
@@ -505,30 +519,29 @@ impl CgroupReader {
             .dir
             .open_file(file_name)
             .map_err(|e| self.io_error(file_name, e))?;
-        let buf_reader = BufReader::new(file);
-        for line in buf_reader.lines() {
-            let line = line.map_err(|e| self.io_error(file_name, e))?;
+        let content = self.read_file_to_str(file_name, &file)?;
+        for line in content.lines() {
             let items = line.split_whitespace().collect::<Vec<_>>();
             // Need to have at least the field name + at least one N0=val item
             if items.len() < 2 {
-                return Err(self.unexpected_line(file_name, line));
+                return Err(self.unexpected_line(file_name, line.to_string()));
             }
             let field = items[0];
             for item in items.iter().skip(1) {
                 let kv = item.split('=').collect::<Vec<_>>();
                 if kv.len() != 2 || kv[0].len() < 2 || !kv[0].starts_with('N') {
-                    return Err(self.unexpected_line(file_name, line));
+                    return Err(self.unexpected_line(file_name, line.to_string()));
                 }
                 let mut kchars = kv[0].chars();
                 kchars.next();
                 let numa_node = kchars
                     .as_str()
                     .parse::<u32>()
-                    .map_err(|_| self.unexpected_line(file_name, line.clone()))?;
+                    .map_err(|_| self.unexpected_line(file_name, line.to_string()))?;
                 parse_and_set_fields!(
                     s.entry(numa_node).or_default();
                     field;
-                    kv[1].parse().map_err(|_| self.unexpected_line(file_name, line.clone()))?;
+                    kv[1].parse().map_err(|_| self.unexpected_line(file_name, line.to_string()))?;
                     [
                         anon,
                         file,
@@ -588,7 +601,11 @@ impl CgroupReader {
                     };
                     let mut relative_path = self.relative_path.clone();
                     relative_path.push(entry.file_name());
-                    Some(CgroupReader { relative_path, dir })
+                    Some(CgroupReader {
+                        relative_path,
+                        dir,
+                        buffer: RefCell::new(Vec::new()),
+                    })
                 }
                 _ => None,
             }))
