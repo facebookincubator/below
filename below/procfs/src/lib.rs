@@ -13,6 +13,8 @@
 // limitations under the License.
 
 #![deny(clippy::all)]
+use std::cell::RefCell;
+use std::cell::RefMut;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fs::File;
@@ -154,7 +156,7 @@ macro_rules! parse_kb {
 pub struct ProcReader {
     path: PathBuf,
     threadpool: ThreadPool,
-    buffer: Vec<u8>,
+    buffer: RefCell<Vec<u8>>,
 }
 
 impl ProcReader {
@@ -165,7 +167,7 @@ impl ProcReader {
             path: Path::new("/proc").to_path_buf(),
             // 5 threads max
             threadpool: ThreadPool::with_name("procreader_worker".to_string(), 5),
-            buffer: Vec::with_capacity(Self::BUFFER_CHUNK_SIZE),
+            buffer: RefCell::new(Vec::with_capacity(Self::BUFFER_CHUNK_SIZE)),
         }
     }
 
@@ -175,20 +177,21 @@ impl ProcReader {
         reader
     }
 
-    fn read_file_to_str(&mut self, path: &Path) -> Result<&str> {
+    fn read_file_to_str(&self, path: &Path) -> Result<RefMut<'_, str>> {
+        let mut buffer = self.buffer.borrow_mut();
         let mut file = File::open(path).map_err(|e| Error::IoError(path.to_path_buf(), e))?;
         let mut total_read = 0;
 
         loop {
+            let buf_len = buffer.len();
             // Not .reserve(), since we need it initialised for the slice
-            if self.buffer.len() < total_read + Self::BUFFER_CHUNK_SIZE {
-                self.buffer
-                    .resize(self.buffer.len() + Self::BUFFER_CHUNK_SIZE, 0);
+            if buf_len < total_read + Self::BUFFER_CHUNK_SIZE {
+                buffer.resize(buf_len + Self::BUFFER_CHUNK_SIZE, 0);
             }
 
             // We don't use .read_to_end() because of perverse heuristics that interact poorly with
             // procfs
-            match file.read(&mut self.buffer[total_read..]) {
+            match file.read(&mut buffer[total_read..]) {
                 Ok(0) => break,
                 Ok(n) => {
                     total_read += n;
@@ -202,11 +205,13 @@ impl ProcReader {
             }
         }
 
-        std::str::from_utf8(&self.buffer[..total_read])
-            .map_err(|_| Error::InvalidFileFormat(path.to_path_buf()))
+        RefMut::filter_map(buffer, |vec| {
+            std::str::from_utf8_mut(&mut vec[..total_read]).ok()
+        })
+        .map_err(|_| Error::InvalidFileFormat(path.to_path_buf()))
     }
 
-    fn read_uptime_secs(&mut self) -> Result<u64> {
+    fn read_uptime_secs(&self) -> Result<u64> {
         unsafe {
             let mut ts: timespec = std::mem::zeroed();
             if clock_gettime(CLOCK_BOOTTIME, &mut ts) == 0 {
@@ -239,13 +244,13 @@ impl ProcReader {
         Ok(cpu)
     }
 
-    pub fn read_kernel_version(&mut self) -> Result<String> {
+    pub fn read_kernel_version(&self) -> Result<String> {
         let path = self.path.join("sys/kernel/osrelease");
         let content = self.read_file_to_str(&path)?;
         Ok(content.trim_matches('\n').trim().into())
     }
 
-    pub fn read_stat(&mut self) -> Result<Stat> {
+    pub fn read_stat(&self) -> Result<Stat> {
         let path = self.path.join("stat");
         let content = self.read_file_to_str(&path)?;
         let mut stat: Stat = Default::default();
@@ -299,7 +304,7 @@ impl ProcReader {
         }
     }
 
-    pub fn read_meminfo(&mut self) -> Result<MemInfo> {
+    pub fn read_meminfo(&self) -> Result<MemInfo> {
         let path = self.path.join("meminfo");
         let content = self.read_file_to_str(&path)?;
         let mut meminfo: MemInfo = Default::default();
@@ -381,7 +386,7 @@ impl ProcReader {
         }
     }
 
-    pub fn read_vmstat(&mut self) -> Result<VmStat> {
+    pub fn read_vmstat(&self) -> Result<VmStat> {
         let path = self.path.join("vmstat");
         let content = self.read_file_to_str(&path)?;
         let mut vmstat: VmStat = Default::default();
@@ -419,7 +424,7 @@ impl ProcReader {
         }
     }
 
-    pub fn read_slabinfo(&mut self) -> Result<SlabInfoMap> {
+    pub fn read_slabinfo(&self) -> Result<SlabInfoMap> {
         let path = self.path.join("slabinfo");
         let content = self.read_file_to_str(&path)?;
         let mut slab_info_map: SlabInfoMap = Default::default();
@@ -458,7 +463,7 @@ impl ProcReader {
         None
     }
 
-    fn read_mount_info_map(&mut self) -> Result<HashMap<String, MountInfo>> {
+    fn read_mount_info_map(&self) -> Result<HashMap<String, MountInfo>> {
         // Map contains a MountInfo object corresponding to the first
         // mount of each mount source. The first mount is what shows in
         // the 'df' command and reflects the usage of the device.
@@ -504,7 +509,7 @@ impl ProcReader {
         }
     }
 
-    pub fn read_disk_stats_and_fsinfo(&mut self) -> Result<DiskMap> {
+    pub fn read_disk_stats_and_fsinfo(&self) -> Result<DiskMap> {
         let path = self.path.join("diskstats");
         let content = self.read_file_to_str(&path)?.to_string();
         let mut disk_map: DiskMap = Default::default();
@@ -559,7 +564,7 @@ impl ProcReader {
         }
     }
 
-    fn read_pid_stat_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<PidStat> {
+    fn read_pid_stat_from_path<P: AsRef<Path>>(&self, path: P) -> Result<PidStat> {
         let path = path.as_ref().join("stat");
         let content = self.read_file_to_str(&path)?;
         let mut pidstat: PidStat = Default::default();
@@ -615,18 +620,18 @@ impl ProcReader {
         }
     }
 
-    pub fn read_pid_stat(&mut self, pid: u32) -> Result<PidStat> {
+    pub fn read_pid_stat(&self, pid: u32) -> Result<PidStat> {
         self.read_pid_stat_from_path(self.path.join(pid.to_string()))
     }
 
-    pub fn read_tid_stat(&mut self, tid: u32) -> Result<PidStat> {
+    pub fn read_tid_stat(&self, tid: u32) -> Result<PidStat> {
         let mut p = self.path.join(tid.to_string());
         p.push("task");
         p.push(tid.to_string());
         self.read_pid_stat_from_path(p)
     }
 
-    fn read_pid_status_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<PidStatus> {
+    fn read_pid_status_from_path<P: AsRef<Path>>(&self, path: P) -> Result<PidStatus> {
         let path = path.as_ref().join("status");
         let content = self.read_file_to_str(&path)?;
         let mut pidstatus: PidStatus = Default::default();
@@ -656,11 +661,11 @@ impl ProcReader {
         Ok(pidstatus)
     }
 
-    pub fn read_pid_mem(&mut self, pid: u32) -> Result<PidStatus> {
+    pub fn read_pid_mem(&self, pid: u32) -> Result<PidStatus> {
         self.read_pid_status_from_path(self.path.join(pid.to_string()))
     }
 
-    fn read_pid_io_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<PidIo> {
+    fn read_pid_io_from_path<P: AsRef<Path>>(&self, path: P) -> Result<PidIo> {
         let path = path.as_ref().join("io");
         let content = self.read_file_to_str(&path)?;
         let mut pidio: PidIo = Default::default();
@@ -683,11 +688,11 @@ impl ProcReader {
         }
     }
 
-    pub fn read_pid_io(&mut self, pid: u32) -> Result<PidIo> {
+    pub fn read_pid_io(&self, pid: u32) -> Result<PidIo> {
         self.read_pid_io_from_path(self.path.join(pid.to_string()))
     }
 
-    fn read_pid_cgroup_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<String> {
+    fn read_pid_cgroup_from_path<P: AsRef<Path>>(&self, path: P) -> Result<String> {
         let path = path.as_ref().join("cgroup");
         let content = self.read_file_to_str(&path)?;
 
@@ -713,11 +718,11 @@ impl ProcReader {
         cgroup_path.ok_or_else(|| Error::InvalidFileFormat(path))
     }
 
-    pub fn read_pid_cgroup(&mut self, pid: u32) -> Result<String> {
+    pub fn read_pid_cgroup(&self, pid: u32) -> Result<String> {
         self.read_pid_cgroup_from_path(self.path.join(pid.to_string()))
     }
 
-    pub fn read_pid_cmdline(&mut self, pid: u32) -> Result<Option<Vec<String>>> {
+    pub fn read_pid_cmdline(&self, pid: u32) -> Result<Option<Vec<String>>> {
         self.read_pid_cmdline_from_path(self.path.join(pid.to_string()))
     }
 
@@ -751,10 +756,7 @@ impl ProcReader {
     /// to take the target process's mmap_sem semaphore and could block for a long
     /// time. This way, we don't suffer a priority inversion (b/c this crate can be
     /// run from a high priority binary).
-    fn read_pid_cmdline_from_path<P: AsRef<Path>>(
-        &mut self,
-        path: P,
-    ) -> Result<Option<Vec<String>>> {
+    fn read_pid_cmdline_from_path<P: AsRef<Path>>(&self, path: P) -> Result<Option<Vec<String>>> {
         let path = path.as_ref().to_owned();
         let (tx, rx) = channel();
         self.threadpool.execute(move || {
@@ -772,14 +774,14 @@ impl ProcReader {
         }
     }
 
-    fn read_pid_exe_path_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<String> {
+    fn read_pid_exe_path_from_path<P: AsRef<Path>>(&self, path: P) -> Result<String> {
         let path = path.as_ref().join("exe");
         std::fs::read_link(path.clone())
             .map_err(|e| Error::IoError(path, e))
             .map(|p| p.to_string_lossy().into_owned())
     }
 
-    pub fn read_pid_exe_path(&mut self, pid: u32) -> Result<String> {
+    pub fn read_pid_exe_path(&self, pid: u32) -> Result<String> {
         self.read_pid_exe_path_from_path(self.path.join(pid.to_string()))
     }
 
@@ -796,7 +798,7 @@ impl ProcReader {
         Some(result)
     }
 
-    pub fn read_all_pids(&mut self) -> Result<PidMap> {
+    pub fn read_all_pids(&self) -> Result<PidMap> {
         let mut pidmap: PidMap = Default::default();
         for entry in
             std::fs::read_dir(&self.path).map_err(|e| Error::IoError(self.path.clone(), e))?
