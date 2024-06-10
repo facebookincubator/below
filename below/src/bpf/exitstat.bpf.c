@@ -144,8 +144,8 @@ int tracepoint__sched__sched_process_exit(
     } else if (bpf_core_type_matches(struct mm_struct___post62)) {
       const struct mm_struct___post62 *mms = mm;
       struct percpu_counter file_fbc = BPF_CORE_READ(mms, rss_stat[MM_FILEPAGES]);
-      struct percpu_counter anon_fbc = BPF_CORE_READ(mms, rss_stat[MM_FILEPAGES]);
-      struct percpu_counter shmem_fbc = BPF_CORE_READ(mms, rss_stat[MM_FILEPAGES]);
+      struct percpu_counter anon_fbc = BPF_CORE_READ(mms, rss_stat[MM_ANONPAGES]);
+      struct percpu_counter shmem_fbc = BPF_CORE_READ(mms, rss_stat[MM_SHMEMPAGES]);
       file_pages = percpu_counter_read_positive(&file_fbc);
       anon_pages = percpu_counter_read_positive(&anon_fbc);
       shmem_pages = percpu_counter_read_positive(&shmem_fbc);
