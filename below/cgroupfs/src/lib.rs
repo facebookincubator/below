@@ -521,7 +521,7 @@ impl CgroupReader {
             .map_err(|e| self.io_error(file_name, e))?;
         let content = self.read_file_to_str(file_name, &file)?;
         for line in content.lines() {
-            let items = line.split_whitespace().collect::<Vec<_>>();
+            let items = line.split_ascii_whitespace().collect::<Vec<_>>();
             // Need to have at least the field name + at least one N0=val item
             if items.len() < 2 {
                 return Err(self.unexpected_line(file_name, line.to_string()));
@@ -655,7 +655,7 @@ macro_rules! key_values_format {
                 let buf_reader = BufReader::new(file);
                 for line in buf_reader.lines() {
                     let line = line.map_err(|e| r.io_error(file_name, e))?;
-                    let mut items = line.split_whitespace();
+                    let mut items = line.split_ascii_whitespace();
                     let key = items.next().ok_or_else(|| r.unexpected_line(file_name, line.clone()))?;
                     let val_str = items.next().ok_or_else(|| r.unexpected_line(file_name, line.clone()))?;
                     if items.next().is_some() {
@@ -778,7 +778,7 @@ macro_rules! name_key_equal_value_format {
                     })?;
                     // as an example, io.stat looks like:
                     // 253:0 rbytes=531745786880 wbytes=1623798909952 ...
-                    let mut items = line.split_whitespace();
+                    let mut items = line.split_ascii_whitespace();
                     let mut s = $struct::default();
                     if let Some(first_item) = items.next() {
                         for item in items {

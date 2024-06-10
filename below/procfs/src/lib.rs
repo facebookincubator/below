@@ -128,7 +128,7 @@ macro_rules! parse_item {
     // Parse the second item of $line as type $t with the same
     // semantics as above
     ($path: expr, $line:ident, $t:tt) => {{
-        let mut items = $line.split_whitespace();
+        let mut items = $line.split_ascii_whitespace();
 
         // Advance past the name
         items.next();
@@ -196,7 +196,7 @@ impl ProcReader {
 
     fn process_cpu_stat(path: &PathBuf, line: &str) -> Result<CpuStat> {
         // Format is like "cpu9 6124418 452468 3062529 230073290 216237 0 45647 0 0 0"
-        let mut items = line.split_whitespace();
+        let mut items = line.split_ascii_whitespace();
         let mut cpu: CpuStat = Default::default();
 
         // Advance past "cpu*" item
@@ -229,7 +229,7 @@ impl ProcReader {
         let mut cpus_map = BTreeMap::new();
 
         for line in content.lines() {
-            let mut items = line.split_whitespace();
+            let mut items = line.split_ascii_whitespace();
             if let Some(item) = items.next() {
                 match item {
                     "intr" => {
@@ -282,7 +282,7 @@ impl ProcReader {
         let mut meminfo: MemInfo = Default::default();
 
         for line in content.lines() {
-            let mut items = line.split_whitespace();
+            let mut items = line.split_ascii_whitespace();
             if let Some(item) = items.next() {
                 match item {
                     "MemTotal:" => meminfo.total = parse_kb!(path, items.next(), line)?,
@@ -364,7 +364,7 @@ impl ProcReader {
         let mut vmstat: VmStat = Default::default();
 
         for line in content.lines() {
-            let mut items = line.split_whitespace();
+            let mut items = line.split_ascii_whitespace();
             if let Some(item) = items.next() {
                 match item {
                     "pgpgin" => vmstat.pgpgin = parse_item!(path, items.next(), u64, line)?,
@@ -407,7 +407,7 @@ impl ProcReader {
         // # name            <active_objs> <num_objs> <objsize> <objperslab> <pagesperslab> : tunables <limit> <batchcount> <sharedfactor> : slabdata <active_slabs> <num_slabs> <sharedavail>
         //
         for line in content.lines().skip(2) {
-            let mut items = line.split_whitespace();
+            let mut items = line.split_ascii_whitespace();
             let mut slab_info: SlabInfo = Default::default();
             let name = items.next().unwrap().to_owned();
             slab_info.name = Some(name.clone());
@@ -459,7 +459,7 @@ impl ProcReader {
     }
 
     fn process_mount_info(&self, path: &Path, line: &str) -> Result<MountInfo> {
-        let mut items = line.split_whitespace();
+        let mut items = line.split_ascii_whitespace();
         let mut mount_info = MountInfo {
             mnt_id: parse_item!(path, items.next(), i32, line)?,
             parent_mnt_id: parse_item!(path, items.next(), i32, line)?,
@@ -551,7 +551,7 @@ impl ProcReader {
             }
         }
 
-        for (index, item) in line.split_whitespace().enumerate() {
+        for (index, item) in line.split_ascii_whitespace().enumerate() {
             match index {
                 0 => pidstat.pid = parse_item!(path, Some(item), i32, line)?,
                 1 => {
@@ -611,7 +611,7 @@ impl ProcReader {
         for line in content.lines() {
             let mut items = line.split(':');
             if let Some(item) = items.next() {
-                let mut values = items.flat_map(|s| s.split_whitespace());
+                let mut values = items.flat_map(|s| s.split_ascii_whitespace());
                 match item {
                     "NStgid" => {
                         pidstatus.ns_tgid = Some(values.filter_map(|s| s.parse().ok()).collect());
@@ -643,7 +643,7 @@ impl ProcReader {
         let mut pidio: PidIo = Default::default();
 
         for line in content.lines() {
-            let mut items = line.split_whitespace();
+            let mut items = line.split_ascii_whitespace();
             if let Some(item) = items.next() {
                 match item {
                     "read_bytes:" => pidio.rbytes = parse_item!(path, items.next(), u64, line)?,
@@ -1085,8 +1085,8 @@ impl NetReader {
             }
 
             let key_header = fields[0];
-            let keys: Vec<&str> = fields[1].split_whitespace().collect();
-            let vals: Vec<&str> = vals[1].split_whitespace().collect();
+            let keys: Vec<&str> = fields[1].split_ascii_whitespace().collect();
+            let vals: Vec<&str> = vals[1].split_ascii_whitespace().collect();
 
             if keys.is_empty() && keys.len() != vals.len() {
                 return Err(Error::InvalidFileFormat(cur_path));
@@ -1133,7 +1133,7 @@ impl NetReader {
                 _ => continue,
             };
 
-            let kv = line.split_whitespace().collect::<Vec<&str>>();
+            let kv = line.split_ascii_whitespace().collect::<Vec<&str>>();
             if kv.len() != 2 {
                 return Err(Error::InvalidFileFormat(cur_path));
             }
