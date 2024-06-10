@@ -1597,6 +1597,10 @@ fn setup_log_on_panic(logger: slog::Logger) {
             },
         };
 
+        if logutil::get_current_log_target() == logutil::TargetLog::File {
+            logutil::set_current_log_target(logutil::TargetLog::All);
+        }
+
         match info.location() {
             Some(location) => {
                 error!(
