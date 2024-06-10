@@ -26,8 +26,7 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::mpsc::channel;
-use std::sync::mpsc::RecvTimeoutError;
+use std::sync::Arc;
 use std::time::Duration;
 
 use lazy_static::lazy_static;
@@ -36,6 +35,8 @@ use libc::timespec;
 use libc::CLOCK_BOOTTIME;
 use nix::sys;
 use openat::Dir;
+use parking_lot::Condvar;
+use parking_lot::Mutex;
 use slog::debug;
 use thiserror::Error;
 use threadpool::ThreadPool;
@@ -730,20 +731,23 @@ impl ProcReader {
     /// run from a high priority binary).
     fn read_pid_cmdline_from_path<P: AsRef<Path>>(&self, path: P) -> Result<Option<Vec<String>>> {
         let path = path.as_ref().to_owned();
-        let (tx, rx) = channel();
+        let cmdline_data = Arc::new((Mutex::new(None), Condvar::new()));
+        let cmdline_data_clone = Arc::clone(&cmdline_data);
+
         self.threadpool.execute(move || {
-            // This is OK to ignore. cmdline receiver hanging up is expected
-            // after timeout.
-            let _ = tx.send(Self::read_pid_cmdline_from_path_blocking(path));
+            let result = Self::read_pid_cmdline_from_path_blocking(path);
+            let (mutex, cvar) = &*cmdline_data_clone;
+            *mutex.lock() = Some(result);
+            cvar.notify_one();
         });
 
-        // 20ms should be more than enough for an in-memory procfs read and also high enough for a
-        // page fault
-        match rx.recv_timeout(Duration::from_millis(20)) {
-            Ok(c) => c,
-            Err(RecvTimeoutError::Timeout) => Ok(None),
-            Err(RecvTimeoutError::Disconnected) => panic!("cmdline sender hung up"),
+        let (mutex, cvar) = &*cmdline_data;
+        let mut data_lock = mutex.lock();
+        if data_lock.is_none() {
+            // 20ms should be more than enough for an in-memory procfs read or a page fault
+            cvar.wait_for(&mut data_lock, Duration::from_millis(20));
         }
+        data_lock.take().unwrap_or(Ok(None))
     }
 
     fn read_pid_exe_path_from_path<P: AsRef<Path>>(&self, path: P) -> Result<String> {
