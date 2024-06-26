@@ -248,8 +248,9 @@ fn no_cgroup_io_model() {
         (None, Some(BTreeMap::new())),
         (Some(BTreeMap::new()), None),
     ] {
-        sample.cgroup.io_stat = io_stat.clone();
-        last_sample.cgroup.io_stat = last_io_stat.clone();
+        sample.cgroup.io_stat.clone_from(io_stat);
+        last_sample.cgroup.io_stat.clone_from(last_io_stat);
+
         let duration = Duration::from_secs(5);
 
         let model = Model::new(SystemTime::now(), &sample, Some((&last_sample, duration)));
