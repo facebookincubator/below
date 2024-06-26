@@ -71,13 +71,7 @@ pub fn str_to_event(cmd: &str) -> Option<Event> {
 
     let cmd_vec = cmd.split('-').collect::<Vec<&str>>();
     match cmd_vec.len() {
-        1 => {
-            if let Some(k) = str_to_key(cmd_vec[0]) {
-                Some(Event::Key(k))
-            } else {
-                None
-            }
-        }
+        1 => str_to_key(cmd_vec[0]).map(Event::Key),
         2 => match cmd_vec[0].trim().to_lowercase().as_str() {
             "ctrl" if cmd_vec[1].len() == 1 => Some(Event::CtrlChar(
                 cmd_vec[1]
@@ -91,48 +85,12 @@ pub fn str_to_event(cmd: &str) -> Option<Event> {
                     .next()
                     .expect("Failed to parse first char from alt-command"),
             )),
-            "shift" => {
-                if let Some(k) = str_to_key(cmd_vec[1]) {
-                    Some(Event::Shift(k))
-                } else {
-                    None
-                }
-            }
-            "alt" => {
-                if let Some(k) = str_to_key(cmd_vec[1]) {
-                    Some(Event::Alt(k))
-                } else {
-                    None
-                }
-            }
-            "altshift" => {
-                if let Some(k) = str_to_key(cmd_vec[1]) {
-                    Some(Event::AltShift(k))
-                } else {
-                    None
-                }
-            }
-            "ctrl" => {
-                if let Some(k) = str_to_key(cmd_vec[1]) {
-                    Some(Event::Ctrl(k))
-                } else {
-                    None
-                }
-            }
-            "ctrlshift" => {
-                if let Some(k) = str_to_key(cmd_vec[1]) {
-                    Some(Event::CtrlShift(k))
-                } else {
-                    None
-                }
-            }
-            "ctrlalt" => {
-                if let Some(k) = str_to_key(cmd_vec[1]) {
-                    Some(Event::CtrlAlt(k))
-                } else {
-                    None
-                }
-            }
+            "shift" => str_to_key(cmd_vec[1]).map(Event::Shift),
+            "alt" => str_to_key(cmd_vec[1]).map(Event::Alt),
+            "altshift" => str_to_key(cmd_vec[1]).map(Event::AltShift),
+            "ctrl" => str_to_key(cmd_vec[1]).map(Event::Ctrl),
+            "ctrlshift" => str_to_key(cmd_vec[1]).map(Event::CtrlShift),
+            "ctrlalt" => str_to_key(cmd_vec[1]).map(Event::CtrlAlt),
             _ => None,
         },
         _ => None,

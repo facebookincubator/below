@@ -76,8 +76,7 @@ impl ProcessTab {
         let unknown = "?".to_string();
         let unknown_pid: i32 = -1;
         let process_model = state.get_model();
-        let mut processes: Vec<&SingleProcessModel> =
-            process_model.processes.iter().map(|(_, spm)| spm).collect();
+        let mut processes: Vec<&SingleProcessModel> = process_model.processes.values().collect();
 
         if let Some(sort_order) = state.sort_order.as_ref() {
             model::sort_queriables(&mut processes, sort_order, state.reverse);
@@ -117,13 +116,11 @@ impl ProcessTab {
             // Abuse batching() to conditionally fold iter
             .batching(|it| {
                 if state.fold {
-                    if let Some(first) = it.next() {
-                        Some(it.fold(first.clone(), |acc, spm| {
+                    it.next().map(|first| {
+                        it.fold(first.clone(), |acc, spm| {
                             SingleProcessModel::fold(&acc, spm)
-                        }))
-                    } else {
-                        None
-                    }
+                        })
+                    })
                 } else {
                     it.next().cloned()
                 }
