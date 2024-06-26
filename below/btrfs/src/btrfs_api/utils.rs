@@ -21,6 +21,12 @@ pub struct WithMemAfter<T, const N: usize> {
     extra: [u8; N],
 }
 
+impl<T: Sized, const N: usize> Default for WithMemAfter<T, N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T: Sized, const N: usize> WithMemAfter<T, N> {
     pub fn new() -> Self {
         unsafe {
@@ -62,12 +68,18 @@ impl<T: Sized, const N: usize> DerefMut for WithMemAfter<T, N> {
     }
 }
 
+/// # Safety
+///
+/// Refer to the documentation of `core::ptr::const_ptr::add()`.
 pub unsafe fn get_and_move(ptr: &mut *const u8, n: usize) -> *const u8 {
     let res = *ptr;
     *ptr = (*ptr).add(n);
     res
 }
 
+/// # Safety
+///
+/// Refer to the documentation of `get_and_move()`.
 pub unsafe fn get_and_move_typed<T: Sized>(ptr: &mut *const u8) -> *const T {
     get_and_move(ptr, std::mem::size_of::<T>()) as *const T
 }

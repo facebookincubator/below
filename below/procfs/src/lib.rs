@@ -162,6 +162,12 @@ pub struct ProcReader {
     buffer: RefCell<Vec<u8>>,
 }
 
+impl Default for ProcReader {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ProcReader {
     pub fn new() -> ProcReader {
         ProcReader {
@@ -195,7 +201,7 @@ impl ProcReader {
         }
     }
 
-    fn process_cpu_stat(path: &PathBuf, line: &str) -> Result<CpuStat> {
+    fn process_cpu_stat(path: &Path, line: &str) -> Result<CpuStat> {
         // Format is like "cpu9 6124418 452468 3062529 230073290 216237 0 45647 0 0 0"
         let mut items = line.split_ascii_whitespace();
         let mut cpu: CpuStat = Default::default();
@@ -429,6 +435,7 @@ impl ProcReader {
             if let Ok(stat) = sys::statvfs::statvfs(Path::new(&mount_point)) {
                 let disk_usage = ((stat.blocks() - stat.blocks_available()) as f32 * 100.0)
                     / stat.blocks() as f32;
+                #[allow(clippy::unnecessary_cast)]
                 let partition_size = stat.blocks() as u64 * stat.block_size() as u64;
                 return Some((disk_usage, partition_size));
             }
@@ -524,7 +531,7 @@ impl ProcReader {
                     disk_stat.disk_usage = Some(disk_usage);
                     disk_stat.partition_size = Some(partition_size);
                 }
-                disk_stat.filesystem_type = mount_info.fs_type.clone();
+                disk_stat.filesystem_type.clone_from(&mount_info.fs_type)
             }
 
             disk_map.insert(disk_name, disk_stat);
@@ -575,7 +582,7 @@ impl ProcReader {
                 20 => {
                     let uptime = self.read_uptime_secs()?;
                     pidstat.running_secs = parse_sec!(path, Some(item), line)?
-                        .map(|running_secs_since_boot| (uptime - running_secs_since_boot) as u64);
+                        .map(|running_secs_since_boot| (uptime - running_secs_since_boot));
                 }
                 22 => {
                     pidstat.rss_bytes =
@@ -960,7 +967,7 @@ impl NetReader {
 
     fn read_iface_stat(
         interface_dir: &Dir,
-        cur_path: &PathBuf,
+        cur_path: &Path,
         stat_item: &str,
     ) -> Result<Option<u64>> {
         let file = match interface_dir.open_file(stat_item) {
@@ -985,17 +992,17 @@ impl NetReader {
         }
     }
 
-    fn read_all_iface_stats(&self, interface: &str, cur_path: &PathBuf) -> Result<InterfaceStat> {
+    fn read_all_iface_stats(&self, interface: &str, cur_path: &Path) -> Result<InterfaceStat> {
         let interface_dir = self
             .interface_dir
             .read_link(interface)
-            .map_err(|e| Error::IoError(cur_path.clone(), e))?;
+            .map_err(|e| Error::IoError(cur_path.to_path_buf(), e))?;
         let stats_dir = self
             .interface_dir
             .sub_dir(interface_dir.as_path())
             .map_err(|e| Error::IoError(interface_dir, e))?
             .sub_dir("statistics")
-            .map_err(|e| Error::IoError(cur_path.clone(), e))?;
+            .map_err(|e| Error::IoError(cur_path.to_path_buf(), e))?;
         let cur_path = cur_path.join(interface).join("statistics");
         let mut net_stat: InterfaceStat = Default::default();
         parse_interface_stats!(

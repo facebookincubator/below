@@ -68,16 +68,16 @@ pub enum SystemStateFieldId {
     Ksm(KsmModelFieldId),
 }
 
-impl std::string::ToString for SystemStateFieldId {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for SystemStateFieldId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Disk(field) => field.to_string(),
-            Self::Btrfs(field) => field.to_string(),
-            Self::Cpu(field) => field.to_string(),
-            Self::Mem(field) => field.to_string(),
-            Self::Vm(field) => field.to_string(),
-            Self::Slab(field) => field.to_string(),
-            Self::Ksm(field) => field.to_string(),
+            Self::Disk(field) => write!(f, "{}", field),
+            Self::Btrfs(field) => write!(f, "{}", field),
+            Self::Cpu(field) => write!(f, "{}", field),
+            Self::Mem(field) => write!(f, "{}", field),
+            Self::Vm(field) => write!(f, "{}", field),
+            Self::Slab(field) => write!(f, "{}", field),
+            Self::Ksm(field) => write!(f, "{}", field),
         }
     }
 }
@@ -191,7 +191,7 @@ impl StateCommon for SystemState {
         let mut sort_tags = HashMap::new();
         sort_tags.insert(
             "Btrfs".into(),
-            default_tabs::SystemTabs::Btrfs(&*SYSTEM_BTRFS_TAB),
+            default_tabs::SystemTabs::Btrfs(&SYSTEM_BTRFS_TAB),
         );
         Self {
             sort_order: None,

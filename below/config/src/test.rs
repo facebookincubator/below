@@ -40,7 +40,7 @@ fn test_config_fs_failure() {
     let tempdir =
         TempDir::with_prefix("below_config_fs_failuer.").expect("Failed to create temp dir");
     let path = tempdir.path();
-    match BelowConfig::load(&path.to_path_buf()) {
+    match BelowConfig::load(path) {
         Ok(_) => panic!("Below should not load if the non existing path is not default path"),
         Err(e) => assert_eq!(
             format!("{}", e),

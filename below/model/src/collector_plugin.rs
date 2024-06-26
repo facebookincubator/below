@@ -163,10 +163,7 @@ mod test {
             // Consumer checking None
             c.wait(); // <-- 4
             // Test sending error. Will fail on both collector and consumer threads.
-            let is_error = matches!(
-                futures::executor::block_on(collector.collect_and_update()),
-                Err(_)
-            );
+            let is_error = futures::executor::block_on(collector.collect_and_update()).is_err();
             c.wait(); // <-- 5
             assert!(is_error, "Collector did not return an error");
         });
@@ -180,7 +177,7 @@ mod test {
         barrier.wait(); // <-- 4
         // Collector sending error
         barrier.wait(); // <-- 5
-        assert!(matches!(consumer.try_take(), Err(_)));
+        assert!(consumer.try_take().is_err());
 
         handle.join().unwrap();
     }

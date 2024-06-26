@@ -52,11 +52,12 @@ impl Dumper for Iface {
             .interfaces
             .iter()
             .filter(
+                #[allow(clippy::match_like_matches_macro)]
                 |(_, model)| match (self.select.as_ref(), self.opts.filter.as_ref()) {
                     (Some(field_id), Some(filter))
                         if !filter.is_match(
                             &model
-                                .query(&field_id)
+                                .query(field_id)
                                 .map_or("?".to_owned(), |v| v.to_string()),
                         ) =>
                     {
@@ -128,7 +129,7 @@ impl Dumper for Iface {
             (Some(OutputFormat::Json), true) => write!(output, ",{}", json_output)?,
             (Some(OutputFormat::Json), false) => write!(output, "{}", json_output)?,
             (Some(OutputFormat::OpenMetrics), _) => (),
-            _ => write!(output, "\n")?,
+            _ => writeln!(output)?,
         };
 
         Ok(IterExecResult::Success)

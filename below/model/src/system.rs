@@ -47,7 +47,7 @@ impl SystemModel {
             last.and_then(|(last, _)| last.stat.total_cpu.as_ref()),
             sample.stat.total_cpu.as_ref(),
         ) {
-            (Some(prev), Some(curr)) => SingleCpuModel::new(-1, &prev, &curr),
+            (Some(prev), Some(curr)) => SingleCpuModel::new(-1, prev, curr),
             _ => Default::default(),
         };
 
@@ -109,7 +109,7 @@ impl SystemModel {
                     Some((last_sample, duration)) if last_sample.disks.contains_key(disk_name) => {
                         SingleDiskModel::new(
                             last_sample.disks.get(disk_name).unwrap(),
-                            &end_disk_stat,
+                            end_disk_stat,
                             duration,
                         )
                     }
@@ -308,43 +308,43 @@ pub struct MemoryModel {
 impl MemoryModel {
     fn new(meminfo: &procfs::MemInfo) -> MemoryModel {
         MemoryModel {
-            total: meminfo.total.map(|v| v as u64),
-            free: meminfo.free.map(|v| v as u64),
-            available: meminfo.available.map(|v| v as u64),
-            buffers: meminfo.buffers.map(|v| v as u64),
-            cached: meminfo.cached.map(|v| v as u64),
-            swap_cached: meminfo.swap_cached.map(|v| v as u64),
-            active: meminfo.active.map(|v| v as u64),
-            inactive: meminfo.inactive.map(|v| v as u64),
-            anon: opt_add(meminfo.active_anon, meminfo.inactive_anon).map(|v| v as u64),
-            file: opt_add(meminfo.active_file, meminfo.inactive_file).map(|v| v as u64),
-            unevictable: meminfo.unevictable.map(|v| v as u64),
-            mlocked: meminfo.mlocked.map(|v| v as u64),
-            swap_total: meminfo.swap_total.map(|v| v as u64),
-            swap_free: meminfo.swap_free.map(|v| v as u64),
-            dirty: meminfo.dirty.map(|v| v as u64),
-            writeback: meminfo.writeback.map(|v| v as u64),
-            anon_pages: meminfo.anon_pages.map(|v| v as u64),
-            mapped: meminfo.mapped.map(|v| v as u64),
-            shmem: meminfo.shmem.map(|v| v as u64),
-            kreclaimable: meminfo.kreclaimable.map(|v| v as u64),
-            slab: meminfo.slab.map(|v| v as u64),
-            slab_reclaimable: meminfo.slab_reclaimable.map(|v| v as u64),
-            slab_unreclaimable: meminfo.slab_unreclaimable.map(|v| v as u64),
-            kernel_stack: meminfo.kernel_stack.map(|v| v as u64),
-            page_tables: meminfo.page_tables.map(|v| v as u64),
-            anon_huge_pages_bytes: meminfo.anon_huge_pages.map(|x| x as u64),
-            shmem_huge_pages_bytes: meminfo.shmem_huge_pages.map(|x| x as u64),
-            file_huge_pages_bytes: meminfo.file_huge_pages.map(|x| x as u64),
-            hugetlb: meminfo.hugetlb.map(|x| x as u64),
-            cma_total: meminfo.cma_total.map(|v| v as u64),
-            cma_free: meminfo.cma_free.map(|v| v as u64),
-            vmalloc_total: meminfo.vmalloc_total.map(|v| v as u64),
-            vmalloc_used: meminfo.vmalloc_used.map(|v| v as u64),
-            vmalloc_chunk: meminfo.vmalloc_chunk.map(|v| v as u64),
-            direct_map_4k: meminfo.direct_map_4k.map(|v| v as u64),
-            direct_map_2m: meminfo.direct_map_2m.map(|v| v as u64),
-            direct_map_1g: meminfo.direct_map_1g.map(|v| v as u64),
+            total: meminfo.total,
+            free: meminfo.free,
+            available: meminfo.available,
+            buffers: meminfo.buffers,
+            cached: meminfo.cached,
+            swap_cached: meminfo.swap_cached,
+            active: meminfo.active,
+            inactive: meminfo.inactive,
+            anon: opt_add(meminfo.active_anon, meminfo.inactive_anon),
+            file: opt_add(meminfo.active_file, meminfo.inactive_file),
+            unevictable: meminfo.unevictable,
+            mlocked: meminfo.mlocked,
+            swap_total: meminfo.swap_total,
+            swap_free: meminfo.swap_free,
+            dirty: meminfo.dirty,
+            writeback: meminfo.writeback,
+            anon_pages: meminfo.anon_pages,
+            mapped: meminfo.mapped,
+            shmem: meminfo.shmem,
+            kreclaimable: meminfo.kreclaimable,
+            slab: meminfo.slab,
+            slab_reclaimable: meminfo.slab_reclaimable,
+            slab_unreclaimable: meminfo.slab_unreclaimable,
+            kernel_stack: meminfo.kernel_stack,
+            page_tables: meminfo.page_tables,
+            anon_huge_pages_bytes: meminfo.anon_huge_pages,
+            shmem_huge_pages_bytes: meminfo.shmem_huge_pages,
+            file_huge_pages_bytes: meminfo.file_huge_pages,
+            hugetlb: meminfo.hugetlb,
+            cma_total: meminfo.cma_total,
+            cma_free: meminfo.cma_free,
+            vmalloc_total: meminfo.vmalloc_total,
+            vmalloc_used: meminfo.vmalloc_used,
+            vmalloc_chunk: meminfo.vmalloc_chunk,
+            direct_map_4k: meminfo.direct_map_4k,
+            direct_map_2m: meminfo.direct_map_2m,
+            direct_map_1g: meminfo.direct_map_1g,
         }
     }
 }
@@ -373,7 +373,7 @@ impl VmModel {
             pgsteal_direct: count_per_sec!(begin.pgsteal_direct, end.pgsteal_direct, duration, u64),
             pgscan_kswapd: count_per_sec!(begin.pgscan_kswapd, end.pgscan_kswapd, duration, u64),
             pgscan_direct: count_per_sec!(begin.pgscan_direct, end.pgscan_direct, duration, u64),
-            oom_kill: end.oom_kill.map(|v| v as u64),
+            oom_kill: end.oom_kill,
         }
     }
 }
@@ -516,8 +516,8 @@ impl SingleDiskModel {
             count_per_sec!(begin.write_sectors, end.write_sectors, duration).map(|val| val * 512.0);
         SingleDiskModel {
             name: end.name.clone(),
-            disk_usage: end.disk_usage.map(|v| v as f32),
-            partition_size: end.partition_size.map(|v| v as u64),
+            disk_usage: end.disk_usage,
+            partition_size: end.partition_size,
             filesystem_type: end.filesystem_type.clone(),
             read_bytes_per_sec,
             write_bytes_per_sec,
@@ -528,20 +528,20 @@ impl SingleDiskModel {
             )
             .map(|val| val * 512.0),
             disk_total_bytes_per_sec: opt_add(read_bytes_per_sec, write_bytes_per_sec),
-            read_completed: end.read_completed.map(|v| v as u64),
-            read_merged: end.read_merged.map(|v| v as u64),
-            read_sectors: end.read_sectors.map(|v| v as u64),
-            time_spend_read_ms: end.time_spend_read_ms.map(|v| v as u64),
-            write_completed: end.write_completed.map(|v| v as u64),
-            write_merged: end.write_merged.map(|v| v as u64),
-            write_sectors: end.write_sectors.map(|v| v as u64),
-            time_spend_write_ms: end.time_spend_write_ms.map(|v| v as u64),
-            discard_completed: end.discard_completed.map(|v| v as u64),
-            discard_merged: end.discard_merged.map(|v| v as u64),
-            discard_sectors: end.discard_sectors.map(|v| v as u64),
-            time_spend_discard_ms: end.time_spend_discard_ms.map(|v| v as u64),
-            major: end.major.map(|v| v as u64),
-            minor: end.minor.map(|v| v as u64),
+            read_completed: end.read_completed,
+            read_merged: end.read_merged,
+            read_sectors: end.read_sectors,
+            time_spend_read_ms: end.time_spend_read_ms,
+            write_completed: end.write_completed,
+            write_merged: end.write_merged,
+            write_sectors: end.write_sectors,
+            time_spend_write_ms: end.time_spend_write_ms,
+            discard_completed: end.discard_completed,
+            discard_merged: end.discard_merged,
+            discard_sectors: end.discard_sectors,
+            time_spend_discard_ms: end.time_spend_discard_ms,
+            major: end.major,
+            minor: end.minor,
         }
     }
 }
@@ -563,8 +563,8 @@ impl BtrfsModel {
     fn new(end: &btrfs::BtrfsStat) -> BtrfsModel {
         BtrfsModel {
             name: end.name.clone(),
-            disk_fraction: end.disk_fraction.map(|v| v as f64),
-            disk_bytes: end.disk_bytes.map(|v| v as u64),
+            disk_fraction: end.disk_fraction,
+            disk_bytes: end.disk_bytes,
         }
     }
 }

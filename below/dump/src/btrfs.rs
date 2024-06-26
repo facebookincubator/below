@@ -145,7 +145,7 @@ impl Dumper for Btrfs {
                     (Some(OutputFormat::Json), true) => write!(output, ",{}", json_output)?,
                     (Some(OutputFormat::Json), false) => write!(output, "{}", json_output)?,
                     (Some(OutputFormat::OpenMetrics), _) => (),
-                    _ => write!(output, "\n")?,
+                    _ => writeln!(output)?,
                 };
 
                 Ok(IterExecResult::Success)

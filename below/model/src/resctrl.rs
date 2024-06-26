@@ -268,7 +268,7 @@ impl ResctrlMonModel {
                     .l3_mon_stat
                     .as_ref()
                     .and_then(|v| v.get(l3))
-                    .map(|v| (v, delta.clone()))
+                    .map(|v| (v, *delta))
             } else {
                 None
             };

@@ -236,6 +236,7 @@ fn test_resctrlfs_read_simple() {
         ctrl_mon_1
             .create_file_with_content(OsStr::new("mon_data/mon_L3_12/mbm_local_bytes"), b"211\n");
 
+        #[allow(clippy::let_unit_value)]
         let _ctrl_mon_2 = resctrlfs
             .create_child_ctrl_mon(OsStr::new("ctrl_mon_2"))
             .initialize(b"4-5\n", b"exclusive\n");

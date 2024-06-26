@@ -33,7 +33,7 @@ fn get_content(c: &mut Cursive) -> impl Into<StyledString> {
     let datetime = DateTime::<Local>::from(view_state.timestamp);
     let mut header_str = StyledString::plain(format!(
         "{}{}",
-        datetime.format("%m/%d/%Y %H:%M:%S UTC%:z").to_string(),
+        datetime.format("%m/%d/%Y %H:%M:%S UTC%:z"),
         get_spacing()
     ));
 

@@ -100,9 +100,9 @@ impl Dumper for System {
             Some(OutputFormat::Json) => {
                 let par = print::dump_json(&fields, ctx, &model.system, self.opts.raw);
                 if comma_flag {
-                    write!(output, ",{}", par.to_string())?;
+                    write!(output, ",{}", par)?;
                 } else {
-                    write!(output, "{}", par.to_string())?;
+                    write!(output, "{}", par)?;
                 }
             }
             Some(OutputFormat::OpenMetrics) => write!(

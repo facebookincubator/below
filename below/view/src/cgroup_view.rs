@@ -404,6 +404,6 @@ impl ViewBridge for CgroupView {
             })
             .and_then(|model| model.data.query(&tag))
             .map_or("?".to_string(), |field| field.to_string());
-        format!(" {} : {} ", tag.to_string(), field_str)
+        format!(" {} : {} ", tag, field_str)
     }
 }
