@@ -1,3 +1,17 @@
+// Copyright (c) Facebook, Inc. and its affiliates.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use netlink_packet_route::tc;
 use netlink_packet_route::tc::TcAttribute;
 use netlink_packet_route::tc::TcFqCodelXstats;
@@ -42,7 +56,7 @@ impl TcStat {
 
         for attr in &tc_msg.attributes {
             match attr {
-                TcAttribute::Kind(name) => tc.kind = name.clone(),
+                TcAttribute::Kind(name) => tc.kind.clone_from(name),
                 TcAttribute::Options(tc_opts) => opts = tc_opts.to_vec(),
                 TcAttribute::Stats(tc_stats) => {
                     tc.stats.bps = Some(tc_stats.bps);
@@ -120,8 +134,8 @@ impl QDisc {
         if kind == FQ_CODEL {
             let mut fq_codel = FqCodelQDisc::default();
             for opt in opts {
-                match opt {
-                    TcOption::FqCodel(fq_codel_opt) => match fq_codel_opt {
+                if let TcOption::FqCodel(fq_codel_opt) = opt {
+                    match fq_codel_opt {
                         TcQdiscFqCodelOption::Target(target) => fq_codel.target = target,
                         TcQdiscFqCodelOption::Limit(limit) => fq_codel.limit = limit,
                         TcQdiscFqCodelOption::Interval(interval) => fq_codel.interval = interval,
@@ -138,8 +152,7 @@ impl QDisc {
                             fq_codel.memory_limit = memory_limit
                         }
                         _ => {}
-                    },
-                    _ => {}
+                    }
                 }
             }
             return Some(Self::FqCodel(fq_codel));
