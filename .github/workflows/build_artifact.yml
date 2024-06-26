@@ -1,0 +1,50 @@
+name: Publish build artifact and create PR
+
+on:
+  pull_request:
+    branches:
+      - main
+
+env:
+  NAME: below
+
+jobs:
+  build-upload:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build binary
+      run: |
+        docker build -t below .
+        mkdir -p output
+        docker run -v $(pwd)/output:/output --entrypoint /bin/bash below -c "cp /below /output"
+
+    - name: Build 18.04 debian
+      run: |
+        ./scripts/build_deb.sh 18.04
+
+    - name: Build 22.04 debian
+      run: |
+        ./scripts/build_deb.sh 22.04
+
+    - name: Rename binaries
+      run: |
+        mv below_*_amd64_18.04.deb below_amd64_18.04.deb
+        mv below_*_amd64_22.04.deb below_amd64_22.04.deb
+
+    - name: Validate
+      run: |
+        ls -l
+
+    # - name: Upload binary to Build Artifact Platform
+    #   uses: AviatrixTemplates/build-artifact.publish@v1
+    #   with:
+    #     files: |
+    #       ./below_amd64_18.04.deb
+    #       ./below_amd64_22.04.deb
+    #     name: ${{ env.NAME }}
+    #     version: v${{ steps.get_version.outputs.VERSION }}
+    #     github_token: ${{ steps.get_workflow_token.outputs.token }}
