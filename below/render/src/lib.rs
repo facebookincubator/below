@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![deny(clippy::all)]
+
 use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::fmt::Formatter;
