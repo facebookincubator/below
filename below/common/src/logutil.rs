@@ -162,10 +162,7 @@ where
             TargetLog::All => {
                 let term_res = self.1.lock().unwrap().write(buf);
                 let file_res = self.0.lock().unwrap().write(buf);
-                if let Err(e) = term_res {
-                    return Err(e);
-                }
-
+                term_res?;
                 file_res
             }
             TargetLog::File => self.0.lock().unwrap().write(buf),
@@ -176,10 +173,7 @@ where
     fn flush(&mut self) -> io::Result<()> {
         let term_res = self.1.lock().unwrap().flush();
         let file_res = self.0.lock().unwrap().flush();
-        if let Err(e) = term_res {
-            return Err(e);
-        }
-
+        term_res?;
         file_res
     }
 }

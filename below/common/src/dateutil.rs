@@ -148,13 +148,13 @@ impl HgTime {
                 Regex::new(r"(?i)(pm|am)$"),
             ) {
                 (Ok(relative_re), Ok(ampm_re)) => {
-                    relative_re.is_match(&date) && !ampm_re.is_match(&date)
+                    relative_re.is_match(date) && !ampm_re.is_match(date)
                 }
                 _ => false,
             } =>
             {
                 let date = date.to_ascii_lowercase();
-                let plus = date.starts_with("+") && !date.ends_with("ago");
+                let plus = date.starts_with('+') && !date.ends_with("ago");
                 let from_now = date.ends_with("from now");
                 // Trim past/future markers down to just date
                 let mut duration_str = if plus { &date[1..] } else { &date };
@@ -182,7 +182,7 @@ impl HgTime {
                 }
             }
             date if match Regex::new(r"^\d{10}$") {
-                Ok(systime_re) => systime_re.is_match(&date),
+                Ok(systime_re) => systime_re.is_match(date),
                 _ => false,
             } =>
             {
@@ -243,16 +243,16 @@ impl HgTime {
                     Self::from(date.and_hms_opt(23, 59, 59).unwrap()).use_default_offset() + 1;
                 Some(start..end)
             }
-            date if date.starts_with(">") => {
+            date if date.starts_with('>') => {
                 Self::parse(&date[1..]).map(|start| start..Self::max_value())
             }
             date if date.starts_with("since ") => {
                 Self::parse(&date[6..]).map(|start| start..Self::max_value())
             }
-            date if date.starts_with("<") => {
+            date if date.starts_with('<') => {
                 Self::parse(&date[1..]).map(|end| Self::min_value()..end)
             }
-            date if date.starts_with("-") => {
+            date if date.starts_with('-') => {
                 // This does not really make much sense. But is supported by hg
                 // (see 'hg help dates').
                 Self::parse_range(&format!("since {} days ago", &date[1..]))
@@ -264,7 +264,7 @@ impl HgTime {
                 let phrases: Vec<_> = date.split(" to ").collect();
                 if phrases.len() == 2 {
                     if let (Some(start), Some(end)) =
-                        (Self::parse(&phrases[0]), Self::parse(&phrases[1]))
+                        (Self::parse(phrases[0]), Self::parse(phrases[1]))
                     {
                         Some(start..end)
                     } else {
@@ -299,7 +299,7 @@ impl HgTime {
         let date = date.trim();
 
         // Hg internal format. "unixtime offset"
-        let parts: Vec<_> = date.split(" ").collect();
+        let parts: Vec<_> = date.split(' ').collect();
         if parts.len() == 2 {
             if let Ok(unixtime) = parts[0].parse() {
                 if let Ok(offset) = parts[1].parse() {
@@ -343,7 +343,7 @@ impl HgTime {
                         // For example, if the user only specified "month/day",
                         // then we should use the current "year", instead of
                         // year 0.
-                        let now = now.get_or_insert_with(|| Local::now());
+                        let now = now.get_or_insert_with(Local::now);
                         date_with_defaults +=
                             &format!(" @{}", now.format(&format!("%{}", format_char)));
                     } else {
@@ -501,7 +501,7 @@ pub fn set_default_offset(offset: i32) {
 
 fn is_valid_offset(offset: i32) -> bool {
     // UTC-12 to UTC+14.
-    offset >= -50400 && offset <= 43200
+    (-50400..=43200).contains(&offset)
 }
 
 /// Lower bound for default values in dates.
