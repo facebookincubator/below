@@ -81,7 +81,7 @@ fn test_dump_sys_content() {
                         ))
                         .to_owned(),
                     "Model value and json value do not match for field: {}",
-                    field_id.to_string(),
+                    field_id,
                 );
             }
         }
@@ -249,7 +249,7 @@ fn test_dump_process_content() {
                             ))
                             .to_owned(),
                         "Model value and json value do not match for field: {}",
-                        field_id.to_string(),
+                        field_id,
                     );
                 }
             }
@@ -421,7 +421,7 @@ fn traverse_cgroup_tree(model: &model::CgroupModel, jval: &Value) {
                         ))
                         .to_owned(),
                     "Model value and json value do not match for field: {}",
-                    field_id.to_string(),
+                    field_id,
                 );
             }
         }
@@ -619,7 +619,7 @@ fn test_dump_iface_content() {
                             ))
                             .to_owned(),
                         "Model value and json value do not match for field: {}",
-                        field_id.to_string(),
+                        field_id,
                     );
                 }
             }
@@ -729,7 +729,7 @@ fn test_dump_network_content() {
                         ))
                         .to_owned(),
                     "Model value and json value do not match for field: {}",
-                    field_id.to_string(),
+                    field_id,
                 );
             }
         }
@@ -850,7 +850,7 @@ fn test_dump_transport_content() {
                         ))
                         .to_owned(),
                     "Model value and json value do not match for field: {}",
-                    field_id.to_string(),
+                    field_id,
                 );
             }
         }
@@ -1120,7 +1120,7 @@ fn test_dump_disk_content() {
                             ))
                             .to_owned(),
                         "Model value and json value do not match for field: {}",
-                        field_id.to_string(),
+                        field_id,
                     );
                 }
             }
