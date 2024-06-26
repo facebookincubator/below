@@ -17,7 +17,14 @@ use serde::Serialize;
 
 // Open source gpu_stats not implemented yet
 
-pub type GpuMap = ();
+#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct GpuMap;
+
+impl std::fmt::Display for GpuMap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", "DisplayableUnit")
+    }
+}
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct GpuSample {
