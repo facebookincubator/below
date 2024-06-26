@@ -227,7 +227,7 @@ pub fn queriable_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream> {
 
     let mut all_field_props = Vec::new();
     for field in fields {
-        let field_props = get_queriable_field_props(&field)?;
+        let field_props = get_queriable_field_props(field)?;
         if !field_props.ignore {
             all_field_props.push(field_props);
         }
