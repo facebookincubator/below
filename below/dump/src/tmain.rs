@@ -114,9 +114,9 @@ pub fn dump_timeseries(
         }
 
         if json {
-            write!(output, "\n")?;
+            writeln!(output)?;
         } else if br.is_some() && !csv {
-            write!(output, "{}\n", br.as_ref().unwrap())?;
+            writeln!(output, "{}", br.as_ref().unwrap())?;
         }
     }
 

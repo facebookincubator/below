@@ -60,7 +60,7 @@ impl Dumper for Cgroup {
             let should_print = match (handle.select.as_ref(), handle.opts.filter.as_ref()) {
                 (Some(field_id), Some(filter)) => filter.is_match(
                     &cgroup
-                        .query(&field_id)
+                        .query(field_id)
                         .map_or("?".to_owned(), |v| v.to_string()),
                 ),
                 _ => true,
@@ -161,7 +161,7 @@ impl Dumper for Cgroup {
         }
         let json = self.opts.output_format == Some(OutputFormat::Json);
         let mut jval = json!({});
-        output_cgroup(&self, ctx, &model.cgroup, output, round, json, &mut jval)?;
+        output_cgroup(self, ctx, &model.cgroup, output, round, json, &mut jval)?;
         match (json, comma_flag) {
             (true, true) => write!(output, ",{}", jval)?,
             (true, false) => write!(output, "{}", jval)?,
