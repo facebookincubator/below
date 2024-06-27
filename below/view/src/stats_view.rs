@@ -306,7 +306,7 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             .tab_titles_map
             .get(&cur_tab)
             .unwrap_or_else(|| panic!("Fail to query title from tab {}", cur_tab));
-        title_view.tabs = tabs.titles.clone();
+        title_view.tabs.clone_from(&tabs.titles);
         title_view.fixed_tabs = tabs.pinned_titles;
         title_view.current_selected = 0;
         title_view.current_offset_idx = 0;
@@ -370,6 +370,7 @@ impl<V: 'static + ViewBridge> StatsView<V> {
     ) -> &mut ScrollView<NamedView<SelectView<<V::StateType as StateCommon>::KeyType>>> {
         let scroll_view = self.get_scroll_view();
 
+        #[allow(clippy::type_complexity)]
         let select_named: &mut ResizedView<
             ScrollView<NamedView<SelectView<<V::StateType as StateCommon>::KeyType>>>,
         > = scroll_view
@@ -452,17 +453,14 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             V::on_select_update_state(&mut self.state.borrow_mut(), selection.as_ref());
             // We should not override alert on refresh. Only selection should
             // override alert.
-            match (cmd_palette.is_alerting(), selection) {
-                (false, Some(selection)) => {
-                    let info_msg = V::on_select_update_cmd_palette(
-                        &self.state.borrow(),
-                        &selection,
-                        &cur_tab,
-                        selected_column,
-                    );
-                    cmd_palette.set_info(info_msg);
-                }
-                _ => {}
+            if let (false, Some(selection)) = (cmd_palette.is_alerting(), selection) {
+                let info_msg = V::on_select_update_cmd_palette(
+                    &self.state.borrow(),
+                    &selection,
+                    &cur_tab,
+                    selected_column,
+                );
+                cmd_palette.set_info(info_msg);
             }
         }
         self.get_list_scroll_view().scroll_to_important_area();
@@ -488,7 +486,7 @@ impl<V: 'static + ViewBridge> StatsView<V> {
 
     pub fn set_alert(&mut self, msg: &str) {
         self.get_cmd_palette()
-            .set_alert(CPMsgRecord::construct_msg(slog::Level::Warning, &msg));
+            .set_alert(CPMsgRecord::construct_msg(slog::Level::Warning, msg));
     }
 
     /// Convenience function to raise warning. Only to CommandPalette.
