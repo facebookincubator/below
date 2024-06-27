@@ -76,12 +76,12 @@ pub fn enum_to_string_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream>
         .collect::<syn::Result<Vec<_>>>()?;
 
     Ok(quote! {
-        impl ::std::string::ToString for #enum_name {
-            fn to_string(&self) -> ::std::string::String {
-                match self {
+        impl ::std::fmt::Display for #enum_name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", match self {
                     #(#variant_to_string_arms)*
                     _ => unreachable!(),
-                }
+                })
             }
         }
     })
