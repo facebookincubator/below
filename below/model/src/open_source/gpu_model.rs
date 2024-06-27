@@ -18,12 +18,23 @@ use serde::Serialize;
 
 use super::*;
 
+#[derive(Default, Clone, Serialize, Deserialize)]
+struct Never {}
+
+impl Display for Never {
+    fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
+        match *self {}
+    }
+}
+
 #[derive(Default, Clone, Serialize, Deserialize, below_derive::Queriable)]
-pub struct GpuModel {}
+pub struct GpuModel {
+    never: Never,
+}
 
 impl GpuModel {
     pub fn new(_sample: &gpu_stats::GpuMap, _last: Option<(&gpu_stats::GpuMap, Duration)>) -> Self {
         // Open source GPU Model not implemented yet
-        Self {}
+        Self { never: Never {} }
     }
 }

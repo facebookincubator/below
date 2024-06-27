@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![deny(clippy::all)]
+
 /// View Module defines how to render below inside terminal.
 ///
 /// ## High level architecture
@@ -178,10 +180,7 @@ pub enum MainViewState {
 
 impl MainViewState {
     pub fn is_process_zoom_state(&self) -> bool {
-        match &self {
-            &MainViewState::Process(zoom) if zoom != &ProcessZoomState::NoZoom => true,
-            _ => false,
-        }
+        matches!(&self, &MainViewState::Process(zoom) if zoom != &ProcessZoomState::NoZoom)
     }
 }
 
@@ -310,10 +309,7 @@ impl ViewState {
     }
 
     pub fn is_paused(&self) -> bool {
-        match self.mode {
-            ViewMode::Pause(_) => true,
-            _ => false,
-        }
+        matches!(self.mode, ViewMode::Pause(_))
     }
 }
 
@@ -544,6 +540,7 @@ pub mod fake_view {
         pub inner: CursiveRunnable,
     }
 
+    #[allow(clippy::new_without_default)]
     impl FakeView {
         pub fn new() -> Self {
             let time = SystemTime::now();

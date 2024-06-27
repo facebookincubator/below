@@ -44,7 +44,7 @@ impl ProcessModel {
             processes.insert(
                 *pid,
                 SingleProcessModel::new(
-                    &pidinfo,
+                    pidinfo,
                     last.and_then(|(p, d)| p.get(pid).map(|p| (p, d))),
                 ),
             );
@@ -95,10 +95,10 @@ impl SingleProcessModel {
                 .map(|v| v.iter().skip(1).cloned().collect()),
             comm: sample.stat.comm.clone(),
             state: sample.stat.state.clone(),
-            uptime_secs: sample.stat.running_secs.map(|s| s as u64),
+            uptime_secs: sample.stat.running_secs,
             cgroup: Some(sample.cgroup.clone()),
             io: last.map(|(l, d)| ProcessIoModel::new(&l.io, &sample.io, d)),
-            mem: last.map(|(l, d)| ProcessMemoryModel::new(&l, &sample, d)),
+            mem: last.map(|(l, d)| ProcessMemoryModel::new(l, sample, d)),
             cpu: last.map(|(l, d)| ProcessCpuModel::new(&l.stat, &sample.stat, d)),
             cmdline: if let Some(cmd_vec) = sample.cmdline_vec.as_ref() {
                 Some(cmd_vec.join(" "))
@@ -147,9 +147,8 @@ impl ProcessIoModel {
     fn new(begin: &procfs::PidIo, end: &procfs::PidIo, delta: Duration) -> ProcessIoModel {
         let rbytes_per_sec = count_per_sec!(begin.rbytes, end.rbytes, delta);
         let wbytes_per_sec = count_per_sec!(begin.wbytes, end.wbytes, delta);
-        let rwbytes_per_sec = Some(
-            rbytes_per_sec.clone().unwrap_or_default() + wbytes_per_sec.clone().unwrap_or_default(),
-        );
+        let rwbytes_per_sec =
+            Some(rbytes_per_sec.unwrap_or_default() + wbytes_per_sec.unwrap_or_default());
         ProcessIoModel {
             rbytes_per_sec,
             wbytes_per_sec,
@@ -179,12 +178,12 @@ impl ProcessCpuModel {
     fn new(begin: &procfs::PidStat, end: &procfs::PidStat, delta: Duration) -> ProcessCpuModel {
         let user_pct = usec_pct!(begin.user_usecs, end.user_usecs, delta);
         let system_pct = usec_pct!(begin.system_usecs, end.system_usecs, delta);
-        let usage_pct = collector::opt_add(user_pct.clone(), system_pct.clone());
+        let usage_pct = collector::opt_add(user_pct, system_pct);
         ProcessCpuModel {
             usage_pct,
             user_pct,
             system_pct,
-            num_threads: end.num_threads.map(|t| t as u64),
+            num_threads: end.num_threads,
         }
     }
 

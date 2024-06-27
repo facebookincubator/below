@@ -99,7 +99,7 @@ impl Dumper for Network {
 
         match &self.opts.output_format {
             Some(OutputFormat::Json) | Some(OutputFormat::OpenMetrics) => (),
-            _ => write!(output, "\n")?,
+            _ => writeln!(output)?,
         }
 
         Ok(IterExecResult::Success)

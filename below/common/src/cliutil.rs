@@ -29,7 +29,7 @@ const MISSING_SAMPLE_WARN_DURATION_S: u64 = 60;
 pub fn system_time_from_date(date: &str) -> Result<SystemTime> {
     Ok(UNIX_EPOCH
     + Duration::from_secs(
-        dateutil::HgTime::parse(&date)
+        dateutil::HgTime::parse(date)
             .ok_or_else(|| {
                 anyhow!(
                     "Unrecognized timestamp format\n\
@@ -152,9 +152,8 @@ mod tests {
 
     #[test]
     fn test_system_time_from_date_fail() {
-        match system_time_from_date("invalid") {
-            Ok(_) => panic!("Expected to fail but didn't"),
-            Err(_) => {}
+        if system_time_from_date("invalid").is_ok() {
+            panic!("Expected to fail but didn't")
         }
     }
 
@@ -180,9 +179,8 @@ mod tests {
 
     #[test]
     fn test_system_time_from_date_and_adjuster_fail() {
-        match system_time_from_date_and_adjuster("2006-02-01 13:00:30 UTC", Some("invalid")) {
-            Ok(_) => panic!("Expected fo fail as adjuster is invalid"),
-            Err(_) => {}
+        if system_time_from_date_and_adjuster("2006-02-01 13:00:30 UTC", Some("invalid")).is_ok() {
+            panic!("Expected fo fail as adjuster is invalid")
         }
     }
 

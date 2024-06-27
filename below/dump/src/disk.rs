@@ -54,7 +54,7 @@ impl Dumper for Disk {
                     (Some(field_id), Some(filter))
                         if !filter.is_match(
                             &model
-                                .query(&field_id)
+                                .query(field_id)
                                 .map_or("?".to_owned(), |v| v.to_string()),
                         ) =>
                     {
@@ -67,11 +67,11 @@ impl Dumper for Disk {
 
         if let Some(field_id) = &self.select {
             if self.opts.sort {
-                model::sort_queriables(&mut disks, &field_id, false);
+                model::sort_queriables(&mut disks, field_id, false);
             }
 
             if self.opts.rsort {
-                model::sort_queriables(&mut disks, &field_id, true);
+                model::sort_queriables(&mut disks, field_id, true);
             }
 
             if (self.opts.sort || self.opts.rsort) && self.opts.top != 0 {
@@ -145,7 +145,7 @@ impl Dumper for Disk {
             (Some(OutputFormat::Json), true) => write!(output, ",{}", json_output)?,
             (Some(OutputFormat::Json), false) => write!(output, "{}", json_output)?,
             (Some(OutputFormat::OpenMetrics), _) => (),
-            _ => write!(output, "\n")?,
+            _ => writeln!(output)?,
         };
 
         Ok(IterExecResult::Success)

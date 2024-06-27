@@ -81,7 +81,7 @@ impl TestProcfs {
         let pid_dir = self.path().join(pid.to_string());
         let src_path = pid_dir.join(src);
         let dst_path = pid_dir.join(dst);
-        symlink(&src_path, &dst_path).expect("Fail to create pid symlink");
+        symlink(&src_path, dst_path).expect("Fail to create pid symlink");
         src_path.to_string_lossy().into_owned()
     }
 
@@ -290,7 +290,7 @@ DirectMap1G:     2097152 kB
     assert_eq!(meminfo.swap_total, Some(20971512 * 1024));
     assert_eq!(meminfo.swap_free, Some(18537912 * 1024));
     assert_eq!(meminfo.dirty, Some(40896 * 1024));
-    assert_eq!(meminfo.writeback, Some(0 * 1024));
+    assert_eq!(meminfo.writeback, Some(0));
     assert_eq!(meminfo.anon_pages, Some(6844752 * 1024));
     assert_eq!(meminfo.mapped, Some(967552 * 1024));
     assert_eq!(meminfo.shmem, Some(14384 * 1024));
@@ -301,7 +301,7 @@ DirectMap1G:     2097152 kB
     assert_eq!(meminfo.kernel_stack, Some(58976 * 1024));
     assert_eq!(meminfo.page_tables, Some(157164 * 1024));
     assert_eq!(meminfo.anon_huge_pages, Some(49152 * 1024));
-    assert_eq!(meminfo.shmem_huge_pages, Some(0 * 1024));
+    assert_eq!(meminfo.shmem_huge_pages, Some(0));
     assert_eq!(meminfo.file_huge_pages, Some(6144 * 1024));
     assert_eq!(meminfo.total_huge_pages, Some(0));
     assert_eq!(meminfo.free_huge_pages, Some(0));

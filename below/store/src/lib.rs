@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![deny(clippy::all)]
+
 use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -937,7 +939,7 @@ mod tests {
 
         // States, (compression_mode, format), that we transition between when
         // writing
-        let states = vec![
+        let states = [
             (CompressionMode::None, Format::Cbor),
             (CompressionMode::Zstd, Format::Cbor),
             (
@@ -1517,7 +1519,7 @@ mod tests {
             for i in 0..n {
                 frame.sample.cgroup.memory_current = Some(n as i64 + i as i64);
                 writer
-                    .put(timestamp + Duration::from_secs(i as u64), &frame)
+                    .put(timestamp + Duration::from_secs(i), &frame)
                     .expect("Failed to store data");
             }
             let dir_size_after = get_dir_size(dir_path_buf.clone());
@@ -1528,7 +1530,7 @@ mod tests {
                 dir_size_after,
                 n,
             );
-            return dir_size_after - dir_size;
+            dir_size_after - dir_size
         };
 
         let num_shards = 7;
