@@ -180,14 +180,14 @@ impl TcpModel {
             passive_opens_per_sec: get_option_rate!(passive_opens, sample, last),
             attempt_fails_per_sec: get_option_rate!(attempt_fails, sample, last),
             estab_resets_per_sec: get_option_rate!(estab_resets, sample, last),
-            curr_estab_conn: sample.curr_estab.map(|s| s as u64),
+            curr_estab_conn: sample.curr_estab,
             in_segs_per_sec: get_option_rate!(in_segs, sample, last),
             out_segs_per_sec: get_option_rate!(out_segs, sample, last),
             retrans_segs_per_sec: get_option_rate!(retrans_segs, sample, last),
-            retrans_segs: sample.retrans_segs.map(|s| s as u64),
-            in_errs: sample.in_errs.map(|s| s as u64),
+            retrans_segs: sample.retrans_segs,
+            in_errs: sample.in_errs,
             out_rsts_per_sec: get_option_rate!(out_rsts, sample, last),
-            in_csum_errors: sample.in_csum_errors.map(|s| s as u64),
+            in_csum_errors: sample.in_csum_errors,
         }
     }
 }
@@ -273,9 +273,9 @@ impl Ip6Model {
     pub fn new(sample: &procfs::Ip6Stat, last: Option<(&procfs::Ip6Stat, Duration)>) -> Ip6Model {
         Ip6Model {
             in_receives_pkts_per_sec: get_option_rate!(in_receives, sample, last),
-            in_hdr_errors: sample.in_hdr_errors.map(|s| s as u64),
+            in_hdr_errors: sample.in_hdr_errors,
             in_no_routes_pkts_per_sec: get_option_rate!(in_no_routes, sample, last),
-            in_addr_errors: sample.in_addr_errors.map(|s| s as u64),
+            in_addr_errors: sample.in_addr_errors,
             in_discards_pkts_per_sec: get_option_rate!(in_discards, sample, last),
             in_delivers_pkts_per_sec: get_option_rate!(in_delivers, sample, last),
             out_forw_datagrams_per_sec: get_option_rate!(out_forw_datagrams, sample, last),
@@ -310,11 +310,11 @@ impl IcmpModel {
     ) -> IcmpModel {
         IcmpModel {
             in_msgs_per_sec: get_option_rate!(in_msgs, sample, last),
-            in_errors: sample.in_errors.map(|s| s as u64),
-            in_dest_unreachs: sample.in_dest_unreachs.map(|s| s as u64),
+            in_errors: sample.in_errors,
+            in_dest_unreachs: sample.in_dest_unreachs,
             out_msgs_per_sec: get_option_rate!(out_msgs, sample, last),
-            out_errors: sample.out_errors.map(|s| s as u64),
-            out_dest_unreachs: sample.out_dest_unreachs.map(|s| s as u64),
+            out_errors: sample.out_errors,
+            out_dest_unreachs: sample.out_dest_unreachs,
         }
     }
 }
@@ -336,11 +336,11 @@ impl Icmp6Model {
     ) -> Icmp6Model {
         Icmp6Model {
             in_msgs_per_sec: get_option_rate!(in_msgs, sample, last),
-            in_errors: sample.in_errors.map(|s| s as u64),
-            in_dest_unreachs: sample.in_dest_unreachs.map(|s| s as u64),
+            in_errors: sample.in_errors,
+            in_dest_unreachs: sample.in_dest_unreachs,
             out_msgs_per_sec: get_option_rate!(out_msgs, sample, last),
-            out_errors: sample.out_errors.map(|s| s as u64),
-            out_dest_unreachs: sample.out_dest_unreachs.map(|s| s as u64),
+            out_errors: sample.out_errors,
+            out_dest_unreachs: sample.out_dest_unreachs,
         }
     }
 }
@@ -360,12 +360,12 @@ impl UdpModel {
     pub fn new(sample: &procfs::UdpStat, last: Option<(&procfs::UdpStat, Duration)>) -> UdpModel {
         UdpModel {
             in_datagrams_pkts_per_sec: get_option_rate!(in_datagrams, sample, last),
-            no_ports: sample.no_ports.map(|s| s as u64),
-            in_errors: sample.in_errors.map(|s| s as u64),
+            no_ports: sample.no_ports,
+            in_errors: sample.in_errors,
             out_datagrams_pkts_per_sec: get_option_rate!(out_datagrams, sample, last),
-            rcvbuf_errors: sample.rcvbuf_errors.map(|s| s as u64),
-            sndbuf_errors: sample.sndbuf_errors.map(|s| s as u64),
-            ignored_multi: sample.ignored_multi.map(|s| s as u64),
+            rcvbuf_errors: sample.rcvbuf_errors,
+            sndbuf_errors: sample.sndbuf_errors,
+            ignored_multi: sample.ignored_multi,
         }
     }
 }
@@ -389,13 +389,13 @@ impl Udp6Model {
     ) -> Udp6Model {
         Udp6Model {
             in_datagrams_pkts_per_sec: get_option_rate!(in_datagrams, sample, last),
-            no_ports: sample.no_ports.map(|s| s as u64),
-            in_errors: sample.in_errors.map(|s| s as u64),
+            no_ports: sample.no_ports,
+            in_errors: sample.in_errors,
             out_datagrams_pkts_per_sec: get_option_rate!(out_datagrams, sample, last),
-            rcvbuf_errors: sample.rcvbuf_errors.map(|s| s as u64),
-            sndbuf_errors: sample.sndbuf_errors.map(|s| s as u64),
-            in_csum_errors: sample.in_csum_errors.map(|s| s as u64),
-            ignored_multi: sample.ignored_multi.map(|s| s as u64),
+            rcvbuf_errors: sample.rcvbuf_errors,
+            sndbuf_errors: sample.sndbuf_errors,
+            in_csum_errors: sample.in_csum_errors,
+            ignored_multi: sample.ignored_multi,
         }
     }
 }
@@ -451,22 +451,10 @@ impl SingleNetModel {
         last: Option<(&procfs::InterfaceStat, Duration)>,
     ) {
         let rx_bytes_per_sec = last
-            .map(|(l, d)| {
-                count_per_sec!(
-                    l.rx_bytes.map(|s| s as u64),
-                    sample.rx_bytes.map(|s| s as u64),
-                    d
-                )
-            })
+            .map(|(l, d)| count_per_sec!(l.rx_bytes, sample.rx_bytes, d))
             .unwrap_or_default();
         let tx_bytes_per_sec = last
-            .map(|(l, d)| {
-                count_per_sec!(
-                    l.tx_bytes.map(|s| s as u64),
-                    sample.tx_bytes.map(|s| s as u64),
-                    d
-                )
-            })
+            .map(|(l, d)| count_per_sec!(l.tx_bytes, sample.tx_bytes, d))
             .unwrap_or_default();
         let throughput_per_sec =
             Some(rx_bytes_per_sec.unwrap_or_default() + tx_bytes_per_sec.unwrap_or_default());
@@ -793,7 +781,7 @@ mod test {
         let nic_raw_stat = iface_model.raw_stats.get("stat0").unwrap();
         assert_eq!(*nic_raw_stat, 10);
 
-        let queue_model = iface_model.queues.get(0).unwrap();
+        let queue_model = iface_model.queues.first().unwrap();
         assert_eq!(queue_model.rx_bytes_per_sec, Some(10));
         // for raw stats, we just take the latest value (not the difference)
         let queue_raw_stat = queue_model.raw_stats.get("stat1").unwrap();
