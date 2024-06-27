@@ -30,6 +30,12 @@ fn code_to_err(code: zstd_safe::ErrorCode) -> Error {
     anyhow!(zstd_safe::get_error_name(code))
 }
 
+impl Default for Compressor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct Compressor {
     cctx: zstd_safe::CCtx<'static>,
     dict_loaded: bool,
@@ -87,6 +93,12 @@ pub struct Decompressor<K> {
     dctx: zstd_safe::DCtx<'static>,
     dict: Bytes,
     dict_key: Option<K>,
+}
+
+impl<K> Default for Decompressor<K> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<K> Decompressor<K> {
