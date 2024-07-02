@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::fmt::Display;
 use std::str::FromStr;
 
 use anyhow::bail;
@@ -86,12 +87,12 @@ impl<F: FieldId + FromStr, A: AggField<F> + FromStr> FromStr for DumpOptionField
 }
 
 /// Used for generating help string that lists all supported fields.
-impl<F: FieldId + ToString, A: AggField<F> + ToString> ToString for DumpOptionField<F, A> {
-    fn to_string(&self) -> String {
+impl<F: FieldId + Display, A: AggField<F> + Display> Display for DumpOptionField<F, A> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Unit(DumpField::Common(common)) => common.to_string(),
-            Self::Unit(DumpField::FieldId(field_id)) => field_id.to_string(),
-            Self::Agg(agg) => agg.to_string(),
+            Self::Unit(DumpField::Common(common)) => write!(f, "{}", common),
+            Self::Unit(DumpField::FieldId(field_id)) => write!(f, "{}", field_id),
+            Self::Agg(agg) => write!(f, "{}", agg),
         }
     }
 }

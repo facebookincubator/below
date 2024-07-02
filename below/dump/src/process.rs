@@ -53,7 +53,7 @@ impl Dumper for Process {
                 |(_, spm)| match (self.select.as_ref(), self.opts.filter.as_ref()) {
                     (Some(field_id), Some(filter))
                         if !filter.is_match(
-                            &spm.query(&field_id)
+                            &spm.query(field_id)
                                 .map_or("?".to_owned(), |v| v.to_string()),
                         ) =>
                     {
@@ -71,11 +71,11 @@ impl Dumper for Process {
 
         if let Some(field_id) = self.select.as_ref() {
             if self.opts.sort {
-                model::sort_queriables(&mut processes, &field_id, false);
+                model::sort_queriables(&mut processes, field_id, false);
             }
 
             if self.opts.rsort {
-                model::sort_queriables(&mut processes, &field_id, true);
+                model::sort_queriables(&mut processes, field_id, true);
             }
 
             if (self.opts.sort || self.opts.rsort) && self.opts.top != 0 {
@@ -149,7 +149,7 @@ impl Dumper for Process {
             (Some(OutputFormat::Json), true) => write!(output, ",{}", json_output)?,
             (Some(OutputFormat::Json), false) => write!(output, "{}", json_output)?,
             (Some(OutputFormat::OpenMetrics), _) => (),
-            _ => write!(output, "\n")?,
+            _ => writeln!(output)?,
         };
 
         Ok(IterExecResult::Success)
