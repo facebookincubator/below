@@ -251,19 +251,16 @@ pub fn find_root_backref(fd: i32, root_id: u64) -> Result<Option<(String, u64)>>
         BTRFS_ROOT_TREE_OBJECTID as u64,
         SearchKey::range_fixed_id_type(root_id, BTRFS_ROOT_BACKREF_KEY as u8),
         |sh, data| {
-            match sh.type_ {
-                BTRFS_ROOT_BACKREF_KEY => {
-                    let mut data_ptr = data.as_ptr();
-                    let root_ref = unsafe { get_and_move_typed::<btrfs_root_ref>(&mut data_ptr) };
-                    let name = unsafe {
-                        std::str::from_utf8_unchecked(std::slice::from_raw_parts(
-                            data_ptr,
-                            (*root_ref).name_len as usize,
-                        ))
-                    };
-                    res = Some((name.to_owned(), sh.offset));
-                }
-                _ => {}
+            if sh.type_ == BTRFS_ROOT_BACKREF_KEY {
+                let mut data_ptr = data.as_ptr();
+                let root_ref = unsafe { get_and_move_typed::<btrfs_root_ref>(&mut data_ptr) };
+                let name = unsafe {
+                    std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                        data_ptr,
+                        (*root_ref).name_len as usize,
+                    ))
+                };
+                res = Some((name.to_owned(), sh.offset));
             };
         },
     )?;

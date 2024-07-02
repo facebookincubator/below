@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![deny(clippy::all)]
+
 use std::collections::HashMap;
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
@@ -88,10 +90,7 @@ impl SampleTree {
     fn add<'a>(&mut self, mut path: impl Iterator<Item = &'a str>) {
         if let Some(p) = path.next() {
             self.total += 1;
-            self.children
-                .entry(p.to_string())
-                .or_insert(SampleTree::new())
-                .add(path);
+            self.children.entry(p.to_string()).or_default().add(path);
         }
     }
 
@@ -242,19 +241,16 @@ impl BtrfsReader {
             btrfs_api::BTRFS_CHUNK_TREE_OBJECTID as u64,
             btrfs_api::SearchKey::ALL,
             |sh, data| {
-                match sh.type_ {
-                    btrfs_api::BTRFS_CHUNK_ITEM_KEY => {
-                        let chunk = unsafe { &*(data.as_ptr() as *const btrfs_api::btrfs_chunk) };
-                        chunks.push(ChunkInfo {
-                            pos: total_chunk_length,
-                            chunk_offset: sh.offset,
-                            chunk_length: chunk.length,
-                            chunk_type: chunk.type_,
-                        });
-                        chunks_size += 1;
-                        total_chunk_length += chunk.length;
-                    }
-                    _ => {}
+                if sh.type_ == btrfs_api::BTRFS_CHUNK_ITEM_KEY {
+                    let chunk = unsafe { &*(data.as_ptr() as *const btrfs_api::btrfs_chunk) };
+                    chunks.push(ChunkInfo {
+                        pos: total_chunk_length,
+                        chunk_offset: sh.offset,
+                        chunk_length: chunk.length,
+                        chunk_type: chunk.type_,
+                    });
+                    chunks_size += 1;
+                    total_chunk_length += chunk.length;
                 };
             },
         )
@@ -338,7 +334,7 @@ impl BtrfsReader {
         sample_tree.convert(
             total_samples,
             total_chunk_length,
-            Some(self.min_pct as f64 / 100.0),
+            Some(self.min_pct / 100.0),
         )
     }
 
