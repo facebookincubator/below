@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![deny(clippy::all)]
+
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::fmt;
@@ -80,7 +82,7 @@ impl From<Field> for u64 {
     fn from(field: Field) -> u64 {
         match field {
             Field::U32(v) => v as u64,
-            Field::U64(v) => v as u64,
+            Field::U64(v) => v,
             _ => panic!("Operation for unsupported types"),
         }
     }
@@ -90,7 +92,7 @@ impl From<Field> for i64 {
     fn from(field: Field) -> i64 {
         match field {
             Field::I32(v) => v as i64,
-            Field::I64(v) => v as i64,
+            Field::I64(v) => v,
             _ => panic!("Operation for unsupported types"),
         }
     }
@@ -408,15 +410,20 @@ where
     }
 }
 
-impl<C: QueriableContainer> ToString for QueriableContainerFieldId<C>
+impl<C: QueriableContainer> std::fmt::Display for QueriableContainerFieldId<C>
 where
     C::Idx: ToString,
     C::SubqueryId: ToString,
 {
-    fn to_string(&self) -> String {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.idx.as_ref() {
-            Some(idx) => format!("{}.{}", idx.to_string(), self.subquery_id.0.to_string()),
-            None => format!("{}{}", C::IDX_PLACEHOLDER, self.subquery_id.0.to_string()),
+            Some(idx) => write!(f, "{}.{}", idx.to_string(), self.subquery_id.0.to_string()),
+            None => write!(
+                f,
+                "{}{}",
+                C::IDX_PLACEHOLDER,
+                self.subquery_id.0.to_string()
+            ),
         }
     }
 }
