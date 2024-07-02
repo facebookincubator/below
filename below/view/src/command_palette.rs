@@ -303,7 +303,7 @@ impl CommandPalette {
         self.mode == CPMode::Alert
     }
 
-    pub fn get_content<'a>(&'a self) -> &'a str {
+    pub fn get_content(&self) -> &str {
         &self.content
     }
 }
