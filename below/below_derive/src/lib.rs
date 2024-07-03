@@ -21,7 +21,7 @@ mod helper;
 mod qenum;
 mod queriable;
 
-/// Implements std::string::ToString for enum, which must only contain unit
+/// Implements std::fmt::Display for enum, which must only contain unit
 /// variants or variants with single unnamed field, e.g. Some(T). Unit variants
 /// are converted to their snake case representations. Nested variants works
 /// similarly by joining the variant name and field representation with dot ".".

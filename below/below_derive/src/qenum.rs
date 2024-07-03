@@ -75,16 +75,29 @@ pub fn enum_to_string_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream>
         })
         .collect::<syn::Result<Vec<_>>>()?;
 
-    Ok(quote! {
-        impl ::std::string::ToString for #enum_name {
-            fn to_string(&self) -> ::std::string::String {
-                match self {
-                    #(#variant_to_string_arms)*
-                    _ => unreachable!(),
+    if variant_to_string_arms.is_empty() {
+        // If we don't special-case the case with no match arms and use the
+        // other branch below, `match self {...}` will return () which does not
+        // implement `std::fmt::Display`.
+        Ok(quote! {
+            impl ::std::fmt::Display for #enum_name {
+                fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                    unreachable!()
                 }
             }
-        }
-    })
+        })
+    } else {
+        Ok(quote! {
+            impl ::std::fmt::Display for #enum_name {
+                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                    write!(f, "{}", match self {
+                        #(#variant_to_string_arms)*
+                        _ => unreachable!(),
+                    })
+                }
+            }
+        })
+    }
 }
 
 pub fn enum_from_str_derive_impl(ast: &DeriveInput) -> syn::Result<TokenStream> {
