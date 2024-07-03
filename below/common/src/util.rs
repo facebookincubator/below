@@ -127,7 +127,7 @@ where
 
 /// Convert system timestamp to human readable datetime.
 pub fn timestamp_to_datetime(timestamp: &i64) -> String {
-    let naive = NaiveDateTime::from_timestamp_opt(timestamp.clone(), 0).unwrap();
+    let naive = NaiveDateTime::from_timestamp_opt(*timestamp, 0).unwrap();
     let datetime = naive.and_utc();
     datetime
         .with_timezone(&Local)
