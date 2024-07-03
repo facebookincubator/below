@@ -127,13 +127,12 @@ mod render_impl {
         read_item: ViewItem<T::FieldId>,
         write_item: ViewItem<T::FieldId>,
     ) -> StyledString {
-        let mut count = 0;
         let read_item = read_item.update(Rc::new().width(ROW_FIELD_WIDTH_HALVED));
         let write_item = write_item.update(Rc::new().width(ROW_FIELD_WIDTH_HALVED));
 
         let mut row = StyledString::new();
         row.append(base_render::get_fixed_width(name, ROW_NAME_WIDTH));
-        for (name, model) in models {
+        for (count, (name, model)) in models.enumerate() {
             if count >= MAX_IO_DEVICES {
                 row.append(base_render::get_fixed_width(name, ROW_FIELD_NAME_WIDTH));
                 row.append_plain("[...]");
@@ -144,7 +143,6 @@ mod render_impl {
             row.append(read_item.render(model));
             row.append_plain("|");
             row.append(write_item.render(model));
-            count += 1;
         }
         row
     }

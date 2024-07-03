@@ -44,26 +44,28 @@ pub fn advance_helper(
 
     // Jump for duration
     match (input.parse::<humantime::Duration>(), direction) {
-        (Ok(d), Direction::Forward) => match adv.borrow_mut().jump_sample_forward(d) {
-            Some(data) => c
-                .user_data::<ViewState>()
-                .expect("No user data set")
-                .update(data),
-            // This will be unlikely to happen: Only if there's no recorded data.
-            // But when execution reaches here, there should be at least one sample. So
-            // silently doing nothing.
-            None => {}
-        },
-        (Ok(d), Direction::Reverse) => match adv.borrow_mut().jump_sample_backward(d) {
-            Some(data) => c
-                .user_data::<ViewState>()
-                .expect("No user data set")
-                .update(data),
-            // This will be unlikely to happen: Only if there's no recorded data.
-            // But when execution reaches here, there should be at least one sample. So
-            // silently doing nothing.
-            None => {}
-        },
+        (Ok(d), Direction::Forward) => {
+            if let Some(data) = adv.borrow_mut().jump_sample_forward(d) {
+                c.user_data::<ViewState>()
+                    .expect("No user data set")
+                    .update(data)
+            } else {
+                // This will be unlikely to happen: Only if there's no recorded data.
+                // But when execution reaches here, there should be at least one sample. So
+                // silently doing nothing.
+            }
+        }
+        (Ok(d), Direction::Reverse) => {
+            if let Some(data) = adv.borrow_mut().jump_sample_backward(d) {
+                c.user_data::<ViewState>()
+                    .expect("No user data set")
+                    .update(data)
+            } else {
+                // This will be unlikely to happen: Only if there's no recorded data.
+                // But when execution reaches here, there should be at least one sample. So
+                // silently doing nothing.
+            }
+        }
         _ => match dateutil::HgTime::parse_time_of_day(input) {
             Some(time_of_day) => {
                 // If an absolute time without date is provided, the viewing date will be used
@@ -129,7 +131,7 @@ pub fn new(adv: Rc<RefCell<Advance>>, direction: Direction) -> impl View {
                     .child(
                         EditView::new()
                             .on_submit(move |c, input| {
-                                advance_helper(&adv, direction, c, &input);
+                                advance_helper(&adv, direction, c, input);
                                 c.pop_layer();
                             })
                             .with_name("jump_popup"),

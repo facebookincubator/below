@@ -349,6 +349,6 @@ impl ViewBridge for ProcessView {
             .get(selected_key /* pid */)
             .and_then(|spm| spm.query(&tag))
             .map_or("?".to_string(), |field| field.to_string());
-        format!(" {} : {} ", tag.to_string(), field_str)
+        format!(" {} : {} ", tag, field_str)
     }
 }
