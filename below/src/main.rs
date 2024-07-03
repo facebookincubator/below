@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![deny(clippy::all)]
+#![allow(clippy::too_many_arguments)]
 #![recursion_limit = "256"]
 
 use std::cell::RefCell;
@@ -418,7 +420,7 @@ pub fn start_gpu_stats_thread_and_get_stats_receiver(
     logger: slog::Logger,
     interval: Duration,
 ) -> Result<model::collector_plugin::Consumer<model::gpu_stats_collector_plugin::SampleType>> {
-    let target_interval = interval.clone();
+    let target_interval = interval;
     let gpu_collector = gpu_stats::get_gpu_stats_collector_plugin(init, logger.clone())
         .context("Failed to initialize GPU stats collector")?;
     let (mut collector, receiver) = model::collector_plugin::collector_consumer(gpu_collector);
@@ -484,7 +486,7 @@ fn start_tc_stats_thread_and_get_stats_receiver(
     let (mut collector, receiver) = model::collector_plugin::collector_consumer(tc_collector);
 
     // Start a thread to collect TC stats
-    let target_interval = interval.clone();
+    let target_interval = interval;
     thread::Builder::new()
         .name("tc_stats_collector".to_owned())
         .spawn(move || {
@@ -623,7 +625,7 @@ where
     let logger = logging::setup(init, log_dir, debug, redirect);
     setup_log_on_panic(logger.clone());
 
-    match Signals::new(&[signal_hook::consts::SIGINT, signal_hook::consts::SIGTERM]) {
+    match Signals::new([signal_hook::consts::SIGINT, signal_hook::consts::SIGTERM]) {
         Ok(mut signals) => {
             let logger = logger.clone();
             let err_sender = err_sender.clone();
@@ -723,7 +725,7 @@ fn real_main(init: init::InitToken) {
             ref port,
         } => {
             let host = host.clone();
-            let port = port.clone();
+            let port = *port;
             run(
                 init,
                 debug,
@@ -735,7 +737,7 @@ fn real_main(init: init::InitToken) {
                         init,
                         logger,
                         errs,
-                        Duration::from_secs(*interval_s as u64),
+                        Duration::from_secs(*interval_s),
                         debug,
                         below_config,
                         host,
@@ -767,9 +769,9 @@ fn real_main(init: init::InitToken) {
                         init,
                         logger,
                         errs,
-                        Duration::from_secs(*interval_s as u64),
+                        Duration::from_secs(*interval_s),
                         below_config,
-                        retain_for_s.map(|r| Duration::from_secs(r as u64)),
+                        retain_for_s.map(Duration::from_secs),
                         *store_size_limit,
                         *collect_io_stat,
                         Duration::from_millis(*skew_detection_threshold_ms),
@@ -790,7 +792,7 @@ fn real_main(init: init::InitToken) {
         } => {
             let time = time.clone();
             let host = host.clone();
-            let port = port.clone();
+            let port = *port;
             let days_adjuster = yesterdays.clone();
             let snapshot = snapshot.clone();
             run(
@@ -826,7 +828,7 @@ fn real_main(init: init::InitToken) {
             let duration = duration.clone();
             let output = output.clone();
             let host = host.clone();
-            let port = port.clone();
+            let port = *port;
             run(
                 init,
                 debug,
@@ -850,7 +852,7 @@ fn real_main(init: init::InitToken) {
         Command::Debug { ref cmd } => match cmd {
             DebugCommand::DumpStore { ref time, ref json } => {
                 let time = time.clone();
-                let json = json.clone();
+                let json = *json;
                 run(
                     init,
                     debug,
@@ -876,7 +878,7 @@ fn real_main(init: init::InitToken) {
                 let from_store_dir = from_store_dir.clone();
                 let to_store_dir = to_store_dir.clone();
                 let host = host.clone();
-                let port = port.clone();
+                let port = *port;
                 run(
                     init,
                     debug,
@@ -908,7 +910,7 @@ fn real_main(init: init::InitToken) {
         } => {
             let store_dir = below_config.store_dir.clone();
             let host = host.clone();
-            let port = port.clone();
+            let port = *port;
             let snapshot = snapshot.clone();
             let cmd = cmd.clone();
             run(
@@ -926,7 +928,7 @@ fn real_main(init: init::InitToken) {
             ref shell,
             ref output,
         } => {
-            generate_completions(shell.clone(), output.clone())
+            generate_completions(*shell, output.clone())
                 .unwrap_or_else(|_| panic!("Failed to generate completions for {:?}", shell));
             0
         }
@@ -954,7 +956,7 @@ fn replay(
         (Some(host), None) => new_advance_remote(logger.clone(), host, port, timestamp)?,
         (None, Some(snapshot)) => {
             let mut tarball =
-                Archive::new(fs::File::open(&snapshot).context("Failed to open snapshot file")?);
+                Archive::new(fs::File::open(snapshot).context("Failed to open snapshot file")?);
             let mut snapshot_dir = TempDir::with_prefix("snapshot_replay.")?.into_path();
             tarball.unpack(&snapshot_dir)?;
             // Find and append the name of the original snapshot directory
@@ -1037,7 +1039,7 @@ fn record(
         compress_opts.to_compression_mode()?,
         store::Format::Cbor,
     )?;
-    let mut stats = statistics::Statistics::new(init.clone());
+    let mut stats = statistics::Statistics::new(init);
 
     let (exit_buffer, bpf_errs) = if disable_exitstats {
         (Arc::new(Mutex::new(procfs::PidMap::new())), None)
@@ -1148,12 +1150,10 @@ fn record(
             }
             Err(e) => {
                 // Handle cgroupfs errors
-                match e.downcast_ref::<cgroupfs::Error>() {
+                if let Some(cgroupfs::Error::NotCgroup2(_)) = e.downcast_ref::<cgroupfs::Error>() {
                     // Unrecoverable error -- below only supports cgroup2
-                    Some(cgroupfs::Error::NotCgroup2(_)) => bail!(e),
-                    _ => {}
-                };
-
+                    bail!(e)
+                }
                 error!(logger, "{:#}", e);
             }
         };
@@ -1183,17 +1183,14 @@ fn live_local(
     debug: bool,
     below_config: &BelowConfig,
 ) -> Result<()> {
-    match bump_memlock_rlimit() {
-        Err(e) => {
-            warn!(
-                logger,
-                #"V",
-                "Failed to initialize BPF: {}. Data collection will be degraded. \
-                You can ignore this warning or try to run with sudo.",
-                &e
-            );
-        }
-        _ => {}
+    if let Err(e) = bump_memlock_rlimit() {
+        warn!(
+            logger,
+            #"V",
+            "Failed to initialize BPF: {}. Data collection will be degraded. \
+            You can ignore this warning or try to run with sudo.",
+            &e
+        );
     };
 
     let (exit_buffer, bpf_errs) = start_exitstat(logger.clone(), debug);
@@ -1343,9 +1340,8 @@ fn live_remote(
                     let view_state = s.user_data::<ViewState>().expect("user data not set");
 
                     if let view::ViewMode::Live(adv) = view_state.mode.clone() {
-                        match adv.borrow_mut().advance(store::Direction::Forward) {
-                            Some(data) => view_state.update(data),
-                            None => {}
+                        if let Some(data) = adv.borrow_mut().advance(store::Direction::Forward) {
+                            view_state.update(data)
                         }
                     }
                 });
@@ -1525,7 +1521,7 @@ fn snapshot(
 
     // Create a directory for the output files
     // Format: snapshot_<timestamp_begin>_<timestamp_end>
-    let temp_folder = TempDir::with_prefix(&format!(
+    let temp_folder = TempDir::with_prefix(format!(
         "snapshot_{:011}_{:011}.",
         timestamp_begin, timestamp_end
     ))
