@@ -53,7 +53,7 @@ fn is_btrfs(base_path: &Path) -> bool {
 fn logical_ino_test() {
     let base_path = Path::new(&"/");
     if is_btrfs(base_path) {
-        let f = File::open(&base_path).expect("Failed to open file");
+        let f = File::open(base_path).expect("Failed to open file");
         let fd = f.as_raw_fd();
         logical_ino(fd, 0, false, |res| match res {
             Ok(_) => {}
@@ -74,7 +74,7 @@ fn ino_lookup_test() {
     let meta = fs::metadata(base_path).expect("Could not find inode");
     let inode = meta.ino();
     if is_btrfs(base_path) {
-        let f = File::open(&base_path).expect("Failed to open file");
+        let f = File::open(base_path).expect("Failed to open file");
         let fd = f.as_raw_fd();
         ino_lookup(fd, BTRFS_FS_TREE_OBJECTID as u64, inode, |res| {
             res.expect("ino lookup failed");
