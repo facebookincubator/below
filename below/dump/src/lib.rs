@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![deny(clippy::all)]
+#![allow(clippy::too_many_arguments)]
+
 use std::fs;
 use std::fs::File;
 use std::io;
@@ -140,7 +143,7 @@ fn get_advance(
         (Some(host), None) => new_advance_remote(logger.clone(), host, port, time_begin)?,
         (None, Some(snapshot)) => {
             let mut tarball =
-                Archive::new(fs::File::open(&snapshot).context("Failed to open snapshot file")?);
+                Archive::new(fs::File::open(snapshot).context("Failed to open snapshot file")?);
             let mut snapshot_dir = TempDir::with_prefix("snapshot_replay.")?.into_path();
             tarball.unpack(&snapshot_dir)?;
             // Find and append the name of the original snapshot directory
@@ -204,7 +207,7 @@ pub fn parse_pattern<T: FromStr>(
                         panic!("Failed to parse field key {} into string", field)
                     }),
                 )
-                .or_else(|_| Err(format!("Failed to parse field key: {}", field)))
+                .map_err(|_| format!("Failed to parse field key: {}", field))
                 .unwrap()
             })
             .collect(),
