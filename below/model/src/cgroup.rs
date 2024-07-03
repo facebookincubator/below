@@ -77,9 +77,9 @@ pub struct CgroupPath {
     pub path: Vec<String>,
 }
 
-impl ToString for CgroupPath {
-    fn to_string(&self) -> String {
-        format!("path:/{}/", self.path.join("/"))
+impl std::fmt::Display for CgroupPath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "path:/{}/", self.path.join("/"))
     }
 }
 
@@ -175,7 +175,7 @@ impl CgroupModel {
                             begin.get(device_name).map(|begin_io_stat| {
                                 (
                                     device_name.clone(),
-                                    CgroupIoModel::new(&begin_io_stat, &end_io_stat, delta),
+                                    CgroupIoModel::new(begin_io_stat, end_io_stat, delta),
                                 )
                             })
                         })
@@ -199,10 +199,7 @@ impl CgroupModel {
 
         let pids = Some(CgroupPidsModel::new(sample));
 
-        let pressure = sample
-            .pressure
-            .as_ref()
-            .map(|p| CgroupPressureModel::new(p));
+        let pressure = sample.pressure.as_ref().map(CgroupPressureModel::new);
 
         let cgroup_stat = sample.cgroup_stat.as_ref().map(CgroupStatModel::new);
 
@@ -237,7 +234,7 @@ impl CgroupModel {
                     child_name.clone(),
                     format!("{}/{}", full_path, child_name),
                     depth + 1,
-                    &child_sample,
+                    child_sample,
                     last.and_then(|(last, delta)| {
                         last.children
                             .as_ref()
@@ -358,7 +355,7 @@ impl CgroupIoModel {
     pub fn new(begin: &cgroupfs::IoStat, end: &cgroupfs::IoStat, delta: Duration) -> CgroupIoModel {
         let rbytes_per_sec = count_per_sec!(begin.rbytes, end.rbytes, delta);
         let wbytes_per_sec = count_per_sec!(begin.wbytes, end.wbytes, delta);
-        let rwbytes_per_sec = opt_add(rbytes_per_sec.clone(), wbytes_per_sec.clone());
+        let rwbytes_per_sec = opt_add(rbytes_per_sec, wbytes_per_sec);
         CgroupIoModel {
             rbytes_per_sec,
             wbytes_per_sec,
