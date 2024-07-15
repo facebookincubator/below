@@ -977,7 +977,7 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                         "ce_threshold": 101,
                         "drop_batch_size": 9000,
                         "memory_limit": 123456,
-                        "flows_per_sec": 31415
+                        "flows": 1024
                     }
                 },
                 "xstats": {

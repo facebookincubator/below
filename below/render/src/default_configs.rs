@@ -1749,7 +1749,7 @@ impl HasRenderConfig for model::FqCodelQDiscModel {
             CeThreshold => rc.title("CeThreshold"),
             DropBatchSize => rc.title("DropBatchSize"),
             MemoryLimit => rc.title("MemoryLimit"),
-            FlowsPerSec => rc.title("Flows").suffix("/s"),
+            Flows => rc.title("Flows"),
         }
     }
 }
@@ -1793,7 +1793,7 @@ impl HasRenderConfigForDump for model::FqCodelQDiscModel {
             CeThreshold => Some(gauge()),
             DropBatchSize => Some(gauge()),
             MemoryLimit => Some(gauge()),
-            FlowsPerSec => Some(gauge()),
+            Flows => Some(gauge()),
         }
     }
 }

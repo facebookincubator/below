@@ -1270,7 +1270,7 @@ fn test_tc_titles() {
         "qdisc.fq_codel.ce_threshold",
         "qdisc.fq_codel.drop_batch_size",
         "qdisc.fq_codel.memory_limit",
-        "qdisc.fq_codel.flows_per_sec",
+        "qdisc.fq_codel.flows",
     ];
     assert_eq!(titles, expected_titles);
 }
@@ -1315,7 +1315,7 @@ fn test_dump_tc_content() {
                     ce_threshold: 101,
                     drop_batch_size: 9000,
                     memory_limit: 123456,
-                    flows_per_sec: Some(31415),
+                    flows: 1024,
                 }),
             }),
             xstats: Some(model::XStatsModel {
@@ -1424,7 +1424,7 @@ fn test_dump_tc_content() {
             "CeThreshold": "101",
             "DropBatchSize": "9000",
             "MemoryLimit": "123456",
-            "Flows": "31415/s",
+            "Flows": "1024",
             "MaxPacket": "8675309",
             "EcnMark": "299792458",
             "NewFlowsLen": "314",

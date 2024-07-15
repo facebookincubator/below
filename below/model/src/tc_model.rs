@@ -149,7 +149,7 @@ pub struct FqCodelQDiscModel {
     pub ce_threshold: u32,
     pub drop_batch_size: u32,
     pub memory_limit: u32,
-    pub flows_per_sec: Option<u32>,
+    pub flows: u32,
 }
 
 impl FqCodelQDiscModel {
@@ -163,12 +163,7 @@ impl FqCodelQDiscModel {
             ce_threshold: sample.ce_threshold,
             drop_batch_size: sample.drop_batch_size,
             memory_limit: sample.memory_limit,
-            flows_per_sec: {
-                last.and_then(|l| {
-                    let last = Some(l);
-                    rate!(flows, sample, last, u32)
-                })
-            },
+            flows: sample.flows,
         }
     }
 }
