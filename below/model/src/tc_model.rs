@@ -107,9 +107,7 @@ impl SingleTcModel {
         }
 
         if let Some(sample) = sample.qdisc.as_ref() {
-            let last = last.and_then(|(last, d)| last.qdisc.as_ref().map(|l| (l, d)));
-
-            tc_model.qdisc = Some(QDiscModel::new(sample, last));
+            tc_model.qdisc = Some(QDiscModel::new(sample));
         }
 
         tc_model
@@ -123,17 +121,10 @@ pub struct QDiscModel {
 }
 
 impl QDiscModel {
-    fn new(sample: &QDisc, last: Option<(&QDisc, Duration)>) -> Self {
+    fn new(sample: &QDisc) -> Self {
         match sample {
             QDisc::FqCodel(sample) => Self {
-                fq_codel: {
-                    last.map(|(l, d)| match l {
-                        QDisc::FqCodel(last) => {
-                            let last = Some((last, d));
-                            FqCodelQDiscModel::new(sample, last)
-                        }
-                    })
-                },
+                fq_codel: Some(FqCodelQDiscModel::new(sample)),
             },
         }
     }
@@ -149,11 +140,11 @@ pub struct FqCodelQDiscModel {
     pub ce_threshold: u32,
     pub drop_batch_size: u32,
     pub memory_limit: u32,
-    pub flows_per_sec: Option<u32>,
+    pub flows: u32,
 }
 
 impl FqCodelQDiscModel {
-    fn new(sample: &tc::FqCodelQDisc, last: Option<(&tc::FqCodelQDisc, Duration)>) -> Self {
+    fn new(sample: &tc::FqCodelQDisc) -> Self {
         Self {
             target: sample.target,
             limit: sample.limit,
@@ -163,12 +154,7 @@ impl FqCodelQDiscModel {
             ce_threshold: sample.ce_threshold,
             drop_batch_size: sample.drop_batch_size,
             memory_limit: sample.memory_limit,
-            flows_per_sec: {
-                last.and_then(|l| {
-                    let last = Some(l);
-                    rate!(flows, sample, last, u32)
-                })
-            },
+            flows: sample.flows,
         }
     }
 }

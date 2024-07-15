@@ -485,7 +485,7 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 478] = [
     "tc.tc.<idx>.qdisc.fq_codel.ce_threshold",
     "tc.tc.<idx>.qdisc.fq_codel.drop_batch_size",
     "tc.tc.<idx>.qdisc.fq_codel.ecn",
-    "tc.tc.<idx>.qdisc.fq_codel.flows_per_sec",
+    "tc.tc.<idx>.qdisc.fq_codel.flows",
     "tc.tc.<idx>.qdisc.fq_codel.interval",
     "tc.tc.<idx>.qdisc.fq_codel.limit",
     "tc.tc.<idx>.qdisc.fq_codel.memory_limit",
