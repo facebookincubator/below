@@ -652,7 +652,7 @@ where
     }
 
     #[cfg(fbcode_build)]
-    facebook::init(
+    let _guard = facebook::init(
         init,
         logger.clone(),
         _service,
