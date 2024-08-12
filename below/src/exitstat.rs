@@ -14,6 +14,7 @@
 
 use core::time::Duration;
 use std::ffi::CStr;
+use std::mem::MaybeUninit;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -152,8 +153,10 @@ impl ExitstatDriver {
     pub fn drive(&mut self) -> Result<()> {
         let mut skel_builder = ExitstatSkelBuilder::default();
         skel_builder.obj_builder.debug(self.debug);
+
+        let mut object = MaybeUninit::uninit();
         let mut skel = skel_builder
-            .open()
+            .open(&mut object)
             .context("Failed to open BPF program")?
             .load()
             .context("Failed to load BPF program")?;
@@ -162,7 +165,7 @@ impl ExitstatDriver {
         // Set up perf ring buffer
         let buffer = self.get_buffer();
         let logger_clone = self.logger.clone();
-        let perf = libbpf_rs::PerfBufferBuilder::new(skel.maps().events())
+        let perf = libbpf_rs::PerfBufferBuilder::new(&skel.maps.events)
             .sample_cb(move |_, data: &[u8]| Self::handle_event(&buffer, data))
             .lost_cb(move |cpu, count| Self::handle_lost_events(&logger_clone, cpu, count))
             .build()?;
