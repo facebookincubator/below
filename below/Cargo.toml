@@ -20,7 +20,7 @@ unit-name = "below"
 unit-scripts = "../etc"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 cgroupfs = { version = "0.8.1", path = "cgroupfs" }
 clap = { version = "4.5.11", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 clap_complete = "4.5.11"
