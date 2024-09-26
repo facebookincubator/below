@@ -108,11 +108,8 @@ impl QueriableContainer for CgroupModel {
         Some((&s[..idx_end + 1], &s[idx_end + 2..]))
     }
     fn get_item(&self, idx: &Self::Idx) -> Option<&SingleCgroupModel> {
-        let mut model = self;
-        for part in idx.path.iter() {
-            model = model.children.get(part.as_str())?;
-        }
-        Some(&model.data)
+        self.get_by_path_iter(idx.path.iter())
+            .map(|model| &model.data)
     }
 }
 
@@ -273,6 +270,17 @@ impl CgroupModel {
             opt_add(acc, model.data.memory.clone())
         });
         self
+    }
+
+    fn get_by_path_iter(
+        &self,
+        mut path: impl Iterator<Item = impl AsRef<str>>,
+    ) -> Option<&CgroupModel> {
+        path.try_fold(self, |cur, p| cur.children.get(p.as_ref()))
+    }
+
+    pub fn get_by_path_str(&self, path: &str) -> Option<&CgroupModel> {
+        self.get_by_path_iter(path.split('/').filter(|x| !x.is_empty()))
     }
 }
 

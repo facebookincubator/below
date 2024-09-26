@@ -191,6 +191,17 @@ impl CgroupState {
         self.uncollapse_cgroup(cgroup.as_str());
         self.cgroup_to_focus = Some(cgroup);
     }
+
+    pub fn collapse_selected_cgroup_children(&mut self) {
+        if let Some(cur) = self
+            .get_model()
+            .get_by_path_str(&self.current_selected_cgroup)
+        {
+            self.collapsed_cgroups
+                .borrow_mut()
+                .extend(cur.children.iter().map(|c| &c.data.full_path).cloned());
+        }
+    }
 }
 
 // TODO: Make CgroupView a collection of CgroupTab
@@ -336,6 +347,11 @@ impl CgroupView {
             view.state.borrow_mut().set_reverse(true);
             view.refresh(c)
         })
+        .on_event('=', |c| {
+            let mut view = Self::get_cgroup_view(c);
+            view.state.borrow_mut().collapse_selected_cgroup_children();
+            view.refresh(c);
+        })
         .with_name(Self::get_view_name())
     }
 
@@ -394,14 +410,10 @@ impl ViewBridge for CgroupView {
         } else {
             view.get_tag_from_tab_idx(current_tab, selected_column)
         };
-        let field_str = selected_key
-            .split('/')
-            // Ignore leading slash
-            .skip(1)
-            // Traverse cgroup model tree to find matching model, or None
-            .try_fold(view.model.borrow(), |model, cgroup_name| {
-                Ref::filter_map(model, |model| model.children.get(cgroup_name)).ok()
-            })
+        let field_str = view
+            .model
+            .borrow()
+            .get_by_path_str(selected_key)
             .and_then(|model| model.data.query(&tag))
             .map_or("?".to_string(), |field| field.to_string());
         format!(" {} : {} ", tag, field_str)
