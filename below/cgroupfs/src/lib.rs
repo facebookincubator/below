@@ -777,28 +777,32 @@ macro_rules! name_key_equal_value_format {
                         r.io_error(file_name.clone(), e)
                     })?;
                     // as an example, io.stat looks like:
+                    // 7:0
                     // 253:0 rbytes=531745786880 wbytes=1623798909952 ...
-                    let mut items = line.split_ascii_whitespace();
-                    let mut s = $struct::default();
-                    if let Some(first_item) = items.next() {
-                        for item in items {
-                            let mut kv = item.splitn(2, "=");
-                            let key = kv.next().ok_or_else(|| r.invalid_file_format(file_name.clone()))?;
-                            let value = kv.next().ok_or_else(|| r.invalid_file_format(file_name.clone()))?;
-                            // Certain keys such as cost.usage cannot be struct fields so must use cost_usage
-                            let key = key.replace(".", "_");
-                            parse_and_set_fields!(
-                                s;
-                                key.as_ref();
-                                value.parse().map_err(|_| r.unexpected_line(file_name.clone(), line.clone()))?;
-                                [ $($field,)* ]
-                            )
-                        }
-                        if s == $struct::default() {
-                            return Err(r.invalid_file_format(file_name));
-                        }
-                        map.insert(first_item.to_string(), s);
+                    let mut items = line.split_terminator(' ').peekable();
+                    let Some(first_item) = items.next() else {
+                      continue
+                    };
+                    // Skip lines with no kv pairs
+                    if items.peek().is_none() {
+                      continue
                     }
+                    let mut s = $struct::default();
+                    for item in items {
+                        let (key, value) = item.split_once('=').ok_or_else(|| r.invalid_file_format(file_name.clone()))?;
+                        // Certain keys such as cost.usage cannot be struct fields so must use cost_usage
+                        let key = key.replace(".", "_");
+                        parse_and_set_fields!(
+                            s;
+                            key.as_ref();
+                            value.parse().map_err(|_| r.unexpected_line(file_name.clone(), line.clone()))?;
+                            [ $($field,)* ]
+                        )
+                    }
+                    if s == $struct::default() {
+                        return Err(r.invalid_file_format(file_name));
+                    }
+                    map.insert(first_item.to_string(), s);
                 }
                 if !$allows_empty.0 && map.is_empty() {
                     Err(r.invalid_file_format(file_name))
