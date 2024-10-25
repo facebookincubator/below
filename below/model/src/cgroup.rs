@@ -266,9 +266,42 @@ impl CgroupModel {
     }
 
     pub fn aggr_top_level_val(mut self) -> Self {
-        self.data.memory = self.children.iter().fold(Default::default(), |acc, model| {
-            opt_add(acc, model.data.memory.clone())
-        });
+        if let Some(memory) = &self.data.memory {
+            // If root model has the value, return it directly
+            if memory.total.is_some() {
+                return self;
+            }
+        }
+        // Manually aggregate specified fields from children
+        let mut aggregated_memory = CgroupMemoryModel::default();
+        for child in &self.children {
+            if let Some(child_memory) = &child.data.memory {
+                aggregated_memory.total = opt_add(aggregated_memory.total, child_memory.total);
+                aggregated_memory.swap = opt_add(aggregated_memory.swap, child_memory.swap);
+                aggregated_memory.events_low =
+                    opt_add(aggregated_memory.events_low, child_memory.events_low);
+                aggregated_memory.events_high =
+                    opt_add(aggregated_memory.events_high, child_memory.events_high);
+                aggregated_memory.events_max =
+                    opt_add(aggregated_memory.events_max, child_memory.events_max);
+                aggregated_memory.events_oom =
+                    opt_add(aggregated_memory.events_oom, child_memory.events_oom);
+                aggregated_memory.events_oom_kill = opt_add(
+                    aggregated_memory.events_oom_kill,
+                    child_memory.events_oom_kill,
+                );
+            }
+        }
+        // Assign aggregated values to root memory model
+        if let Some(memory) = &mut self.data.memory {
+            memory.total = aggregated_memory.total;
+            memory.swap = aggregated_memory.swap;
+            memory.events_low = aggregated_memory.events_low;
+            memory.events_high = aggregated_memory.events_high;
+            memory.events_max = aggregated_memory.events_max;
+            memory.events_oom = aggregated_memory.events_oom;
+            memory.events_oom_kill = aggregated_memory.events_oom_kill;
+        }
         self
     }
 
@@ -996,5 +1029,77 @@ mod tests {
             ),
             Some(Field::F64(42.0))
         );
+    }
+
+    #[test]
+    fn test_aggr_top_level_val() {
+        /*
+        Summary: This test verifies the aggregation of top-level values in a CgroupModel, executed in the aggr_top_level_val() function.
+        The test creates two child cgroup models with memory values, then uses them to create a root cgroup model.
+        The root cgroup model is aggregated using the aggr_top_level_val() function. During aggregation, local events should not be aggregated.
+        The test checks that the total memory is aggregated correctly and confirms that local events are not aggregated.
+        */
+        // Create two children cgroup models with memory values
+        let child1 = CgroupModel {
+            data: SingleCgroupModel {
+                name: "child1".to_string(),
+                memory: Some(CgroupMemoryModel {
+                    total: Some(100),
+                    swap: Some(50),
+                    events_low: Some(1),
+                    events_high: Some(2),
+                    events_max: Some(3),
+                    events_oom: Some(4),
+                    events_oom_kill: Some(5),
+                    events_local_low: Some(10),
+                    events_local_high: Some(20),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let child2 = CgroupModel {
+            data: SingleCgroupModel {
+                name: "child2".to_string(),
+                memory: Some(CgroupMemoryModel {
+                    total: Some(200),
+                    swap: Some(30),
+                    events_low: Some(1),
+                    events_high: Some(2),
+                    events_max: Some(3),
+                    events_oom: Some(4),
+                    events_oom_kill: Some(5),
+                    events_local_low: Some(10),
+                    events_local_high: Some(20),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        // Create root cgroup model without pre-existing memory values
+        let mut root = CgroupModel {
+            data: SingleCgroupModel {
+                name: "root".to_string(),
+                memory: Some(CgroupMemoryModel::default()),
+                ..Default::default()
+            },
+            children: vec![child1, child2].into_iter().collect(),
+            ..Default::default()
+        };
+        // Aggregate top-level values
+        root = root.aggr_top_level_val();
+        // Check that the total memory is aggregated correctly
+        assert_eq!(root.data.memory.as_ref().unwrap().total, Some(300));
+        assert_eq!(root.data.memory.as_ref().unwrap().swap, Some(80));
+        assert_eq!(root.data.memory.as_ref().unwrap().events_low, Some(2));
+        assert_eq!(root.data.memory.as_ref().unwrap().events_high, Some(4));
+        assert_eq!(root.data.memory.as_ref().unwrap().events_max, Some(6));
+        assert_eq!(root.data.memory.as_ref().unwrap().events_oom, Some(8));
+        assert_eq!(root.data.memory.as_ref().unwrap().events_oom_kill, Some(10));
+        // Confirm local events are not aggregated
+        assert_eq!(root.data.memory.as_ref().unwrap().events_local_low, None);
+        assert_eq!(root.data.memory.as_ref().unwrap().events_local_high, None);
     }
 }
