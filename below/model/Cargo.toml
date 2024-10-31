@@ -25,7 +25,7 @@ procfs = { package = "fb_procfs", version = "0.8.1", path = "../procfs" }
 regex = "1.9.2"
 resctrlfs = { version = "0.8.1", path = "../resctrlfs" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 tc = { package = "below-tc", version = "0.8.1", path = "../tc" }
 
