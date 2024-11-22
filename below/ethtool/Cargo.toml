@@ -10,6 +10,6 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
-nix = "0.25"
+nix = "0.26.4"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 thiserror = "1.0.64"

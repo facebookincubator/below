@@ -13,6 +13,6 @@ license = "Apache-2.0"
 netlink-packet-core = "0.7.0"
 netlink-packet-route = "0.19.0"
 netlink-sys = "0.8.5"
-nix = "0.25"
+nix = "0.26.4"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 thiserror = "1.0.64"
