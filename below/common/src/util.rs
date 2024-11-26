@@ -191,9 +191,8 @@ pub fn read_kern_file_to_internal_buffer<R: Read>(
             Ok(0) => break,
             Ok(n) => {
                 total_read += n;
-                if n < BUFFER_CHUNK_SIZE {
-                    break;
-                }
+                // n < BUFFER_CHUNK_SIZE does not indicate EOF because kernel
+                // may partially fill the buffer to avoid breaking the line.
             }
             Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
             Err(e) => return Err(e),
