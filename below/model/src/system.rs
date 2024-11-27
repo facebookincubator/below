@@ -31,7 +31,7 @@ pub struct SystemModel {
     #[queriable(subquery)]
     pub vm: VmModel,
     #[queriable(subquery)]
-    pub slab: BTreeMap<String, SingleSlabModel>,
+    pub slab: Vec<SingleSlabModel>,
     #[queriable(subquery)]
     pub ksm: Option<KsmModel>,
     #[queriable(subquery)]
@@ -76,17 +76,17 @@ impl SystemModel {
             .unwrap_or_default();
 
         let mut slab = sample
-            .slabinfo
+            .slabinfo_vec
             .iter()
-            .map(|(name, slab_info)| (name.to_owned(), SingleSlabModel::new(slab_info)))
-            .collect::<BTreeMap<String, SingleSlabModel>>();
+            .map(SingleSlabModel::new)
+            .collect::<Vec<SingleSlabModel>>();
 
         let slab_total = slab.iter().fold(
             SingleSlabModel {
                 name: Some(String::from("TOTAL")),
                 ..Default::default()
             },
-            |mut acc, (_, slabinfo)| {
+            |mut acc, slabinfo| {
                 acc.active_objs = opt_add(acc.active_objs, slabinfo.active_objs);
                 acc.num_objs = opt_add(acc.num_objs, slabinfo.num_objs);
                 acc.num_slabs = opt_add(acc.num_slabs, slabinfo.num_slabs);
@@ -97,7 +97,7 @@ impl SystemModel {
                 acc
             },
         );
-        slab.insert(String::from("TOTAL"), slab_total);
+        slab.insert(0, slab_total);
 
         let ksm = sample.ksm.as_ref().map(KsmModel::new);
 
@@ -591,7 +591,7 @@ mod test {
             "cpus": {},
             "mem": {},
             "vm": {},
-            "slab": {},
+            "slab": [],
             "ksm": {},
             "disks": {
                 "sda": {

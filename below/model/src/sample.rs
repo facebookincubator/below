@@ -64,8 +64,10 @@ pub struct SystemSample {
     pub stat: procfs::Stat,
     pub meminfo: procfs::MemInfo,
     pub vmstat: procfs::VmStat,
+    // Previously named slabinfo as a BTreeMap. Updated to a Vec with a new name
+    // to avoid breaking replay due to deserialization errors.
     #[serde(default)]
-    pub slabinfo: procfs::SlabInfoMap,
+    pub slabinfo_vec: Vec<procfs::SlabInfo>,
     pub ksm: Option<procfs::Ksm>,
     pub hostname: String,
     pub disks: procfs::DiskMap,

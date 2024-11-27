@@ -403,10 +403,10 @@ impl ProcReader {
         }
     }
 
-    pub fn read_slabinfo(&self) -> Result<SlabInfoMap> {
+    pub fn read_slabinfo(&self) -> Result<Vec<SlabInfo>> {
         let path = self.path.join("slabinfo");
         let content = self.read_file_to_str(&path)?;
-        let mut slab_info_map: SlabInfoMap = Default::default();
+        let mut slab_info_vec = vec![];
 
         // The first line is version, second line is headers:
         //
@@ -415,19 +415,19 @@ impl ProcReader {
         //
         for line in content.lines().skip(2) {
             let mut items = line.split_ascii_whitespace();
-            let mut slab_info: SlabInfo = Default::default();
-            let name = items.next().unwrap().to_owned();
-            slab_info.name = Some(name.clone());
-            slab_info.active_objs = parse_item!(path, items.next(), u64, line)?;
-            slab_info.num_objs = parse_item!(path, items.next(), u64, line)?;
-            slab_info.obj_size = parse_item!(path, items.next(), u64, line)?;
-            slab_info.obj_per_slab = parse_item!(path, items.next(), u64, line)?;
-            slab_info.pages_per_slab = parse_item!(path, items.next(), u64, line)?;
-            slab_info.active_slabs = parse_item!(path, items.nth(7), u64, line)?;
-            slab_info.num_slabs = parse_item!(path, items.next(), u64, line)?;
-            slab_info_map.insert(name, slab_info);
+            let slab_info = SlabInfo {
+                name: Some(items.next().unwrap().to_owned()),
+                active_objs: parse_item!(path, items.next(), u64, line)?,
+                num_objs: parse_item!(path, items.next(), u64, line)?,
+                obj_size: parse_item!(path, items.next(), u64, line)?,
+                obj_per_slab: parse_item!(path, items.next(), u64, line)?,
+                pages_per_slab: parse_item!(path, items.next(), u64, line)?,
+                active_slabs: parse_item!(path, items.nth(7), u64, line)?,
+                num_slabs: parse_item!(path, items.next(), u64, line)?,
+            };
+            slab_info_vec.push(slab_info);
         }
-        Ok(slab_info_map)
+        Ok(slab_info_vec)
     }
 
     fn read_disk_fsinfo(&self, mount_info: &MountInfo) -> Option<(f32, u64)> {

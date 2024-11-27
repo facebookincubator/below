@@ -472,7 +472,10 @@ swap_ra_hit 139012
 fn test_read_slabinfo() {
     let slabinfo = b"slabinfo - version: 2.1
     # name            <active_objs> <num_objs> <objsize> <objperslab> <pagesperslab> : tunables <limit> <batchcount> <sharedfactor> : slabdata <active_slabs> <num_slabs> <sharedavail>
-    zs_handle         3860100 6265344      8  512    1 : tunables    0    0    0 : slabdata  12237  12237      0
+    zspage             22225  24382     56   73    1 : tunables    0    0    0 : slabdata    334    334      0
+    zs_handle         157071 246784      8  512    1 : tunables    0    0    0 : slabdata    482    482      0
+    zspage             23311  24820     56   73    1 : tunables    0    0    0 : slabdata    340    340      0
+    zs_handle         160665 253440      8  512    1 : tunables    0    0    0 : slabdata    495    495      0
     kvm_async_pf           0      0    136   30    1 : tunables    0    0    0 : slabdata      0      0      0
     kvm_vcpu               0      0   9792    3    8 : tunables    0    0    0 : slabdata      0      0      0
     kvm_mmu_page_header      0      0    184   44    2 : tunables    0    0    0 : slabdata      0      0      0
@@ -486,100 +489,108 @@ fn test_read_slabinfo() {
     let slabinfo = reader
         .read_slabinfo()
         .expect("Failed to read slabinfo file");
-    let expected_slabinfo = std::collections::BTreeMap::from([
-        (
-            "zs_handle".to_string(),
-            SlabInfo {
-                name: Some("zs_handle".to_string()),
-                active_objs: Some(3860100),
-                num_objs: Some(6265344),
-                obj_size: Some(8),
-                obj_per_slab: Some(512),
-                pages_per_slab: Some(1),
-                active_slabs: Some(12237),
-                num_slabs: Some(12237),
-            },
-        ),
-        (
-            "kvm_async_pf".to_string(),
-            SlabInfo {
-                name: Some("kvm_async_pf".to_string()),
-                active_objs: Some(0),
-                num_objs: Some(0),
-                obj_size: Some(136),
-                obj_per_slab: Some(30),
-                pages_per_slab: Some(1),
-                active_slabs: Some(0),
-                num_slabs: Some(0),
-            },
-        ),
-        (
-            "kvm_vcpu".to_string(),
-            SlabInfo {
-                name: Some("kvm_vcpu".to_string()),
-                active_objs: Some(0),
-                num_objs: Some(0),
-                obj_size: Some(9792),
-                obj_per_slab: Some(3),
-                pages_per_slab: Some(8),
-                active_slabs: Some(0),
-                num_slabs: Some(0),
-            },
-        ),
-        (
-            "kvm_mmu_page_header".to_string(),
-            SlabInfo {
-                name: Some("kvm_mmu_page_header".to_string()),
-                active_objs: Some(0),
-                num_objs: Some(0),
-                obj_size: Some(184),
-                obj_per_slab: Some(44),
-
-                pages_per_slab: Some(2),
-                active_slabs: Some(0),
-                num_slabs: Some(0),
-            },
-        ),
-        (
-            "x86_emulator".to_string(),
-            SlabInfo {
-                name: Some("x86_emulator".to_string()),
-                active_objs: Some(0),
-                num_objs: Some(0),
-                obj_size: Some(2672),
-                obj_per_slab: Some(12),
-                pages_per_slab: Some(8),
-                active_slabs: Some(0),
-                num_slabs: Some(0),
-            },
-        ),
-        (
-            "x86_fpu".to_string(),
-            SlabInfo {
-                name: Some("x86_fpu".to_string()),
-                active_objs: Some(0),
-                num_objs: Some(0),
-                obj_size: Some(4160),
-                obj_per_slab: Some(7),
-                pages_per_slab: Some(8),
-                active_slabs: Some(0),
-                num_slabs: Some(0),
-            },
-        ),
-        (
-            "ext4_groupinfo_1k".to_string(),
-            SlabInfo {
-                name: Some("ext4_groupinfo_1k".to_string()),
-                active_objs: Some(90),
-                num_objs: Some(90),
-                obj_size: Some(136),
-                obj_per_slab: Some(30),
-                pages_per_slab: Some(1),
-                active_slabs: Some(3),
-                num_slabs: Some(3),
-            },
-        ),
-    ]);
+    let expected_slabinfo = vec![
+        SlabInfo {
+            name: Some("zspage".to_string()),
+            active_objs: Some(22225),
+            num_objs: Some(24382),
+            obj_size: Some(56),
+            obj_per_slab: Some(73),
+            pages_per_slab: Some(1),
+            active_slabs: Some(334),
+            num_slabs: Some(334),
+        },
+        SlabInfo {
+            name: Some("zs_handle".to_string()),
+            active_objs: Some(157071),
+            num_objs: Some(246784),
+            obj_size: Some(8),
+            obj_per_slab: Some(512),
+            pages_per_slab: Some(1),
+            active_slabs: Some(482),
+            num_slabs: Some(482),
+        },
+        SlabInfo {
+            name: Some("zspage".to_string()),
+            active_objs: Some(23311),
+            num_objs: Some(24820),
+            obj_size: Some(56),
+            obj_per_slab: Some(73),
+            pages_per_slab: Some(1),
+            active_slabs: Some(340),
+            num_slabs: Some(340),
+        },
+        SlabInfo {
+            name: Some("zs_handle".to_string()),
+            active_objs: Some(160665),
+            num_objs: Some(253440),
+            obj_size: Some(8),
+            obj_per_slab: Some(512),
+            pages_per_slab: Some(1),
+            active_slabs: Some(495),
+            num_slabs: Some(495),
+        },
+        SlabInfo {
+            name: Some("kvm_async_pf".to_string()),
+            active_objs: Some(0),
+            num_objs: Some(0),
+            obj_size: Some(136),
+            obj_per_slab: Some(30),
+            pages_per_slab: Some(1),
+            active_slabs: Some(0),
+            num_slabs: Some(0),
+        },
+        SlabInfo {
+            name: Some("kvm_vcpu".to_string()),
+            active_objs: Some(0),
+            num_objs: Some(0),
+            obj_size: Some(9792),
+            obj_per_slab: Some(3),
+            pages_per_slab: Some(8),
+            active_slabs: Some(0),
+            num_slabs: Some(0),
+        },
+        SlabInfo {
+            name: Some("kvm_mmu_page_header".to_string()),
+            active_objs: Some(0),
+            num_objs: Some(0),
+            obj_size: Some(184),
+            obj_per_slab: Some(44),
+            pages_per_slab: Some(2),
+            active_slabs: Some(0),
+            num_slabs: Some(0),
+        },
+        SlabInfo {
+            name: Some("x86_emulator".to_string()),
+            active_objs: Some(0),
+            num_objs: Some(0),
+            obj_size: Some(2672),
+            obj_per_slab: Some(12),
+            pages_per_slab: Some(8),
+            active_slabs: Some(0),
+            num_slabs: Some(0),
+        },
+        SlabInfo {
+            name: Some("x86_fpu".to_string()),
+            active_objs: Some(0),
+            num_objs: Some(0),
+            obj_size: Some(4160),
+            obj_per_slab: Some(7),
+            pages_per_slab: Some(8),
+            active_slabs: Some(0),
+            num_slabs: Some(0),
+        },
+        SlabInfo {
+            name: Some("ext4_groupinfo_1k".to_string()),
+            active_objs: Some(90),
+            num_objs: Some(90),
+            obj_size: Some(136),
+            obj_per_slab: Some(30),
+            pages_per_slab: Some(1),
+            active_slabs: Some(3),
+            num_slabs: Some(3),
+        },
+    ];
     assert_eq!(slabinfo, expected_slabinfo);
 }
 

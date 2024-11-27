@@ -414,7 +414,6 @@ pub struct PidInfo {
 pub type PidMap = BTreeMap<i32, PidInfo>;
 pub type NetMap = BTreeMap<String, InterfaceStat>;
 pub type DiskMap = BTreeMap<String, DiskStat>;
-pub type SlabInfoMap = BTreeMap<String, SlabInfo>;
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct NetStat {

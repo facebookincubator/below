@@ -219,7 +219,7 @@ fn collect_sample(
             stat: reader.read_stat()?,
             meminfo: reader.read_meminfo()?,
             vmstat: reader.read_vmstat()?,
-            slabinfo: reader.read_slabinfo().unwrap_or_default(),
+            slabinfo_vec: reader.read_slabinfo().unwrap_or_default(),
             ksm: if !options.enable_ksm_stats {
                 None
             } else {

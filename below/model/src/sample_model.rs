@@ -131,8 +131,8 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
             "pgscan_direct": 0,
             "oom_kill": 0
         },
-        "slab": {
-            "task_struct": {
+        "slab": [
+            {
                 "name": "task_group",
                 "active_objs": 13000,
                 "num_objs": 14000,
@@ -140,7 +140,7 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                 "obj_per_slab": 5,
                 "num_slabs": 3000
             },
-            "vmap_area": {
+            {
                 "name": "vmap_area",
                 "active_objs": 4000000,
                 "num_objs": 6000000,
@@ -148,7 +148,7 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                 "obj_per_slab": 64,
                 "num_slabs": 100000
             }
-        },
+        ],
         "ksm": {
             "advisor_max_cpu": 70,
             "advisor_max_pages_to_scan": 30000,

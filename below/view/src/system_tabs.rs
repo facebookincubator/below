@@ -178,7 +178,7 @@ impl SystemTab for SystemSlab {
 
     fn get_rows(&self, state: &SystemState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
         let model = state.get_model();
-        let mut slab: Vec<&SingleSlabModel> = model.slab.values().collect();
+        let mut slab: Vec<&SingleSlabModel> = model.slab.iter().collect();
 
         if let Some(SystemStateFieldId::Slab(sort_order)) = state.sort_order.as_ref() {
             model::sort_queriables(&mut slab, sort_order, state.reverse);
