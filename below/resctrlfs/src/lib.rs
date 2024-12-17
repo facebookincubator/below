@@ -19,6 +19,8 @@ use std::collections::BTreeSet;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::ErrorKind;
+use std::os::fd::AsRawFd;
+use std::os::fd::BorrowedFd;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -383,7 +385,9 @@ impl ResctrlReader {
         let dir = Dir::open(&path).map_err(|e| Error::IoError(path.clone(), e))?;
         // Check that it's a resctrl fs
         if validate {
-            let statfs = match fstatfs(&dir) {
+            // SAFETY: Fix when https://github.com/nix-rust/nix/issues/2546 is
+            let dir = unsafe { BorrowedFd::borrow_raw(dir.as_raw_fd()) };
+            let statfs = match fstatfs(dir) {
                 Ok(s) => s,
                 Err(e) => {
                     return Err(Error::IoError(

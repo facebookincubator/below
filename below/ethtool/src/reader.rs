@@ -16,7 +16,6 @@ use std::alloc;
 use std::ffi::CStr;
 use std::mem;
 use std::os::fd::AsRawFd;
-use std::os::fd::FromRawFd;
 use std::os::fd::OwnedFd;
 use std::ptr;
 use std::str;
@@ -326,8 +325,8 @@ impl EthtoolReadable for Ethtool {
             SockFlag::empty(),
             None,
         ) {
-            Ok(fd) => Ok(Ethtool {
-                sock_fd: unsafe { OwnedFd::from_raw_fd(fd) },
+            Ok(sock_fd) => Ok(Ethtool {
+                sock_fd,
                 if_name: if_name_bytes(if_name),
             }),
             Err(errno) => Err(EthtoolError::SocketError(errno)),

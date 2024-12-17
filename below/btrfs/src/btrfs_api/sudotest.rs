@@ -14,6 +14,7 @@
 
 use std::fs;
 use std::fs::File;
+use std::os::fd::BorrowedFd;
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
@@ -39,6 +40,8 @@ fn is_btrfs(base_path: &Path) -> bool {
         .map_err(|e| Error::IoError(base_path.to_path_buf(), e))
         .expect("Could not open directory");
 
+    // SAFETY: Fix when https://github.com/nix-rust/nix/issues/2546 is
+    let dir = unsafe { BorrowedFd::borrow_raw(dir.as_raw_fd()) };
     let statfs = match fstatfs(&dir) {
         Ok(s) => s,
         Err(_) => {
