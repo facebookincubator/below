@@ -1,0 +1,1721 @@
+.TH BELOW 1 "December 2024" "Version 1.0" "System Monitoring Tools"
+.SH NAME
+below \- interactive tool to view and record historical system data
+
+.SH SYNOPSIS
+.B below
+[\fIOPTIONS\fR] [\fISUBCOMMAND\fR] [\fISUBCOMMAND-OPTIONS\fR]
+
+.SH DESCRIPTION
+.B below
+is an interactive tool designed to view, record, and analyze historical system data. 
+It provides a set of subcommands to interact with live or recorded system performance metrics 
+and supports operations like recording, replaying, and exporting data.
+
+If no subcommand is specified, the tool defaults to the \fBlive\fR mode, which displays live 
+system data interactively.
+
+.SH GLOBAL OPTIONS
+.TP
+.B --config <CONFIG>
+Specify the configuration file. Default is /etc/below/below.conf.
+
+.TP
+.B -d, --debug
+Enable debug mode for additional logging and diagnostics.
+
+.TP
+.B -h, --help
+Print help for the tool.
+
+.SH SUBCOMMANDS
+.TP
+.B scuba
+Dump data to scuba.
+
+.TP
+.B live
+Display live system data interactively. This is the default mode if no subcommand is specified.
+
+.TP
+.B record
+Record local system data in daemon mode for later analysis.
+
+.TP
+.B replay
+Replay historical data interactively.
+
+.TP
+.B debug
+Provide debugging facilities (for development purposes).
+
+.TP
+.B dump
+Dump historical data into a parseable text format.
+
+.TP
+.B snapshot
+Create a historical snapshot file for a given time range.
+
+.SH SUBCOMMAND DETAILS
+.SS scuba
+Dump data to scuba. This subcommand supports the following options:
+
+.TP
+.B -b, --begin <BEGIN>
+Time string specifying the starting point. Examples:
+.RS
+.IP
+Keywords: now, today, yesterday
+.IP
+\fI{humantime}\fR ago, e.g., "2 days 3 hr 15m 10sec ago"
+.IP
+short: Mixed \fI{time_digit}{time_unit_char}\fR, e.g., 10m, 3d2h, 5h30s. Case insensitive.
+.IP
+Absolute: "Jan 01 23:59", "01/01/1970 11:59PM", "1970-01-01 23:59:59"
+.IP
+Unix Epoch: 1589808367
+.RE
+
+.TP
+.B -e, --end <END>
+Time string specifying the ending point. Follows the same format as \fB--begin\fR.
+
+.TP
+.B --duration <DURATION>
+Time string specifying the scuba duration. Examples:
+.RS
+.IP
+Keywords: days, min, h, sec
+.IP
+Relative: \fI{humantime}\fR, e.g., "2 days 3 hr 15m 10sec"
+.RE
+
+.TP
+.B -s, --host <HOST>
+Supply hostname to log data from remote.
+
+.TP
+.B --port <PORT>
+Override the default port to connect to remote.
+
+.TP
+.B -r <YESTERDAYS>
+Days adjuster. Use \fIy\fR for yesterday, repeated as needed (e.g., \fIyy\fR for 2 days ago). Examples:
+.RS
+.IP
+Yesterday at 2 pm: \fBbelow replay -r y -t 2:00pm\fR
+.IP
+Adjusted date: \fBbelow replay -r yy -t "09/03/2020 17:00"\fR
+.RE
+
+.TP
+.B -c, --cgroup-filter <CGROUP_FILTER>
+Only cgroups containing the specified string in their full path will be logged. Example:
+.RS
+.IP
+\fBbelow scuba --begin "1m ago" --cgroup-filter /system.slice\fR
+.RE
+
+.SS live
+Display live system data interactively. This subcommand supports the following options:
+
+.TP
+.B -i, --interval-s <INTERVAL_S>
+Set the refresh interval in seconds. Default is 5 seconds.
+
+.TP
+.B -s, --host <HOST>
+Supply hostname to activate remote viewing.
+
+.TP
+.B --port <PORT>
+Override the default port to connect remote viewing to.
+
+.SS record
+Record local system data in daemon mode for later analysis. This subcommand supports the following options:
+
+.TP
+.B -i, --interval-s <INTERVAL_S>
+Set the data collection interval in seconds. Default is 5 seconds.
+
+.TP
+.B --retain-for-s <RETAIN_FOR_S>
+Specify retention period in seconds. Data is stored in 24-hour shards. Shards older than \fIRETAIN_FOR_S + 24 hours\fR are discarded.
+.RS
+.IP
+Note: If \fB--store-size-limit\fR is set, data may be discarded earlier.
+.RE
+
+.TP
+.B --store-size-limit <STORE_SIZE_LIMIT>
+Set the maximum storage size in bytes. Data is stored in 24-hour shards, and the oldest shards are deleted first. 
+.RS
+.IP
+Note: The size limit may be exceeded by the active shard.
+.RE
+
+.TP
+.B --collect-io-stat
+Enable collection of \fBio.stat\fR for cgroups. This may be resource-intensive.
+
+.TP
+.B --port <PORT>
+Override the default port for the remote viewing server.
+
+.TP
+.B --skew-detection-threshold-ms <SKEW_DETECTION_THRESHOLD_MS>
+Set the threshold (in milliseconds) for detecting skew in data collection. Default is 500ms.
+
+.TP
+.B --disable-disk-stat
+Disable collection of disk statistics.
+
+.TP
+.B --disable-exitstats
+Disable eBPF-based exit statistics.
+
+.TP
+.B --compress
+Enable zstd compression for data files. Expect approximately 10x smaller files.
+
+.TP
+.B --dict-compress-chunk-size <DICT_COMPRESS_CHUNK_SIZE>
+Specify chunk size for zstd dictionary compression. Must be a power of 2, between 2 and 32768.
+.RS
+.IP
+Example: Setting \fB--dict-compress-chunk-size 16\fR can achieve 20-30x compression ratios.
+.RE
+
+.SS replay
+Replay historical data interactively. This subcommand supports the following options:
+
+.TP
+.B -t, --time <TIME>
+Time string specifying the replay starting point. Examples:
+.RS
+.IP
+Keywords: now, today, yesterday
+.IP
+Relative: \fI{humantime}\fR ago, e.g., "2 days 3 hr 15m 10sec ago"
+.IP
+Relative short: Mixed \fI{time_digit}{time_unit_char}\fR, e.g., 10m, 3d2h, 5h30s. Case insensitive.
+.IP
+Absolute: "Jan 01 23:59", "01/01/1970 11:59PM", "1970-01-01 23:59:59"
+.IP
+Unix Epoch: 1589808367
+.RE
+
+.TP
+.B -s, --host <HOST>
+Supply hostname to activate remote viewing.
+
+.TP
+.B --port <PORT>
+Override the default port to connect remote viewing to.
+
+.TP
+.B -r <YESTERDAYS>
+Days adjuster. Use \fIy\fR for yesterday, repeated as needed (e.g., \fIyy\fR for 2 days ago). Examples:
+.RS
+.IP
+Yesterday at 2 pm: \fBbelow replay -r y -t 2:00pm\fR
+.IP
+Adjusted date: \fBbelow replay -r yy -t "09/03/2020 17:00"\fR
+.RE
+
+.TP
+.B --snapshot <SNAPSHOT>
+Replay from a snapshot file generated by the snapshot command instead of from the store directory.
+
+.SS debug
+Provide debugging facilities. This subcommand includes the following subcommands:
+
+.TP
+.B dump-store
+Dump the data store for debugging purposes. This subcommand supports the following options:
+.RS
+.TP
+.B -t, --time <TIME>
+Time string to dump data for. Follows the same format as the replay mode.
+.TP
+.B -j, --json
+Pretty print the output in JSON format.
+.RE
+
+.TP
+.B convert-store
+Convert frames from an existing store and write them to a new store. This can be used to test compression or serialization formats. This subcommand supports the following options:
+.RS
+.TP
+.B -b, --begin <BEGIN>
+Time string specifying the starting point. Accepts the same formats as \fBreplay\fR.
+.TP
+.B -e, --end <END>
+Time string specifying the ending point. Accepts the same formats as \fBreplay\fR.
+.TP
+.B --duration <DURATION>
+Duration for the conversion process. Accepts relative time strings like "10m", "2h", etc.
+.TP
+.B --from-store-dir <FROM_STORE_DIR>
+Path to the source store directory for conversion.
+.TP
+.B --to-store-dir <TO_STORE_DIR>
+Path to the destination store directory for converted data.
+.TP
+.B -s, --host <HOST>
+Specify hostname for remote conversion.
+.TP
+.B --port <PORT>
+Override the default port for remote conversion.
+.TP
+.B --compress
+Enable zstd compression for the converted store. Expect around 10x smaller files.
+.TP
+.B --dict-compress-chunk-size <DICT_COMPRESS_CHUNK_SIZE>
+Specify chunk size for zstd dictionary compression during conversion. Must be a power of 2, between 2 and 32768.
+.RS
+.IP
+\[u2022] Example: Setting \fB--dict-compress-chunk-size 16\fR can achieve 20-30x compression ratios.
+.RE
+.RE
+
+.SS dump
+Dump historical data into parseable text format. Subcommands:
+
+.TP
+.B system
+Dump system stats
+
+.TP
+.B disk
+Dump disk stats
+
+.TP
+.B btrfs
+Dump btrfs Stats
+
+.TP
+.B process
+Dump process stats
+
+.TP
+.B cgroup
+Dump cgroup stats
+
+.TP
+.B iface
+Dump the link layer iface stats
+
+.TP
+.B network
+Dump the network layer stats including ip and icmp
+
+.TP
+.B transport
+Dump the transport layer stats including tcp and udp
+
+.TP
+.B ethtool-queue
+Dump network interface queue stats
+
+.TP
+.B tc 
+Dump the tc related stats with qdiscs
+
+.TP
+.B scuba
+Dump data to scuba.
+
+.SS dump system
+Dump system stats.
+
+.TP
+\fBAvailable fields\fR
+.PP
+\fItimestamp, datetime, hostname, kernel_version, os_release, stat.total_interrupt_ct, stat.context_switches, stat.boot_time_epoch_secs, stat.total_processes, stat.running_processes, stat.blocked_processes, cpu.idx, cpu.usage_pct, cpu.user_pct, cpu.system_pct, cpu.idle_pct, cpu.nice_pct, cpu.iowait_pct, cpu.irq_pct, cpu.softirq_pct, cpu.stolen_pct, cpu.guest_pct, cpu.guest_nice_pct, cpus.<key>.idx, cpus.<key>.usage_pct, cpus.<key>.user_pct, cpus.<key>.system_pct, cpus.<key>.idle_pct, cpus.<key>.nice_pct, cpus.<key>.iowait_pct, cpus.<key>.irq_pct, cpus.<key>.softirq_pct, cpus.<key>.stolen_pct, cpus.<key>.guest_pct, cpus.<key>.guest_nice_pct, mem.total, mem.free, mem.available, mem.buffers, mem.cached, mem.swap_cached, mem.active, mem.inactive, mem.anon, mem.file, mem.unevictable, mem.mlocked, mem.swap_total, mem.swap_free, mem.dirty, mem.writeback, mem.anon_pages, mem.mapped, mem.shmem, mem.kreclaimable, mem.slab, mem.slab_reclaimable, mem.slab_unreclaimable, mem.kernel_stack, mem.page_tables, mem.anon_huge_pages_bytes, mem.shmem_huge_pages_bytes, mem.file_huge_pages_bytes, mem.hugetlb, mem.cma_total, mem.cma_free, mem.vmalloc_total, mem.vmalloc_used, mem.vmalloc_chunk, mem.direct_map4k, mem.direct_map2m, mem.direct_map1g, vm.pgpgin_per_sec, vm.pgpgout_per_sec, vm.pswpin_per_sec, vm.pswpout_per_sec, vm.pgsteal_kswapd, vm.pgsteal_direct, vm.pgscan_kswapd, vm.pgscan_direct, vm.oom_kill, slab.<idx>.name, slab.<idx>.active_objs, slab.<idx>.num_objs, slab.<idx>.obj_size, slab.<idx>.obj_per_slab, slab.<idx>.num_slabs, slab.<idx>.active_caches, slab.<idx>.num_caches, slab.<idx>.active_size, slab.<idx>.total_size, ksm.advisor_max_cpu, ksm.advisor_max_pages_to_scan, ksm.advisor_min_pages_to_scan, ksm.advisor_mode, ksm.advisor_target_scan_time, ksm.full_scans, ksm.general_profit, ksm.ksm_zero_pages, ksm.max_page_sharing, ksm.merge_across_nodes, ksm.pages_scanned, ksm.pages_shared, ksm.pages_sharing, ksm.pages_skipped, ksm.pages_to_scan, ksm.pages_unshared, ksm.pages_volatile, ksm.run, ksm.sleep_millisecs, ksm.smart_scan, ksm.stable_node_chains, ksm.stable_node_chains_prune_millisecs, ksm.stable_node_dups, ksm.use_zero_pages, disks.<key>.name, disks.<key>.disk_usage, disks.<key>.partition_size, disks.<key>.filesystem_type, disks.<key>.read_bytes_per_sec, disks.<key>.write_bytes_per_sec, disks.<key>.discard_bytes_per_sec, disks.<key>.disk_total_bytes_per_sec, disks.<key>.read_completed, disks.<key>.read_merged, disks.<key>.read_sectors, disks.<key>.time_spend_read_ms, disks.<key>.write_completed, disks.<key>.write_merged, disks.<key>.write_sectors, disks.<key>.time_spend_write_ms, disks.<key>.discard_completed, disks.<key>.discard_merged, disks.<key>.discard_sectors, disks.<key>.time_spend_discard_ms, disks.<key>.major, disks.<key>.minor, btrfs.<key>.name btrfs.<key>.disk_fraction, btrfs.<key>.disk_bytes
+\fR
+
+.TP
+\fBAggregated fields\fR
+.PP
+\fBcpu\fR: includes [cpu.usage_pct, cpu.user_pct, cpu.system_pct].
+
+\fBmem\fR: includes [mem.total, mem.free].
+
+\fBvm\fR: includes [vm.pgpgin_per_sec, vm.pgpgout_per_sec, vm.pswpin_per_sec,
+vm.pswpout_per_sec, vm.pgsteal_kswapd, vm.pgsteal_direct, vm.pgscan_kswapd,
+vm.pgscan_direct, vm.oom_kill].
+
+\fBstat\fR: includes [stat.total_interrupt_ct, stat.context_switches,
+stat.boot_time_epoch_secs, stat.total_processes, stat.running_processes,
+stat.blocked_processes].
+
+\fB--detail\fR: includes [<agg_field>.*] for each given aggregated field.
+
+\fB--default\fR: includes [hostname, datetime, cpu, mem, vm, kernel_version, os_release,
+stat, timestamp].
+
+\fB--everything\fR: includes everything (equivalent to --default --detail).
+
+.SS OPTIONS
+
+\fB-f, --fields <FIELDS>...\fR
+Select which fields to display and in what order.
+
+\fB--default\fR
+Show all top layer fields. If --default is specified, it overrides any specified fields via --fields.
+
+\fB--everything\fR
+Show all fields. If --everything is specified, --fields and --default are overridden.
+
+\fB-d, --detail\fR
+Show more information other than default.
+
+\fB-b, --begin <BEGIN>\fR
+Begin time, same format as replay.
+
+\fB-e, --end <END>\fR
+End time, same format as replay.
+
+\fB--duration <DURATION>\fR
+Time string specifying the duration, e.g., "10 min." Keywords: days min, h, sec. Relative: {humantime}, e.g., "2 days 3 hr 15m 10sec."
+
+\fB-F, --filter <FILTER>\fR
+Take a regex and apply it to --select selected field. See command level doc for example.
+
+\fB--sort\fR
+Sort (lower to higher) by --select selected field. See command level doc for example.
+
+\fB--rsort\fR
+Sort (higher to lower) by --select selected field. See command level doc for example.
+
+\fB--top <TOP>\fR
+[default: 0].
+
+\fB--repeat-title <REPEAT_TITLE>\fR
+Repeat title, for each N line, it will render a line of title. Only for raw output format.
+
+\fB-O, --output-format <OUTPUT_FORMAT>\fR
+Output format. Choose from raw, csv, tsv, kv, json, openmetrics. Default to raw.
+
+\fB-o, --output <OUTPUT>\fR
+Output destination, default to stdout.
+
+\fB--disable-title\fR
+Disable title in raw, csv or tsv format output.
+
+\fB-r <YESTERDAYS>\fR
+Days adjuster, same as -r option in replay.
+
+\fB--br <BR>\fR
+Line break symbol between samples.
+
+\fB--raw\fR
+Dump raw data without units or conversion.
+
+\fB-p, --pattern <PATTERN>\fR
+Saved pattern in the dumprc file under [system] section.
+
+.TP
+\fBExample Commands\fR
+.PP
+\fB$ below dump system -b "08:30:00" -e "08:30:30" -f datetime vm hostname -O csv\fR
+
+.TP
+\fBUsage\fR
+.PP
+\fBbelow dump system [OPTIONS] --begin <BEGIN>\fR
+
+.SS dump disk
+Dump disk stats
+
+.TP
+\fBAvailable fields\fR
+.PP
+\fItimestamp, datetime, name, disk_usage, partition_size, filesystem_type,
+read_bytes_per_sec, write_bytes_per_sec, discard_bytes_per_sec,
+disk_total_bytes_per_sec, read_completed, read_merged, read_sectors,
+time_spend_read_ms, write_completed, write_merged, write_sectors,
+time_spend_write_ms, discard_completed, discard_merged, discard_sectors,
+time_spend_discard_ms, major, minor
+\fR
+
+.TP
+\fBAggregated fields\fR
+.PP
+\fBread\fR: includes [read_bytes_per_sec, read_completed, read_merged, read_sectors,
+time_spend_read_ms].
+
+\fBwrite\fR: includes [write_bytes_per_sec, write_completed, write_merged, write_sectors,
+time_spend_write_ms].
+
+\fBdiscard\fR: includes [discard_bytes_per_sec, discard_completed, discard_merged,
+discard_sectors, time_spend_discard_ms].
+
+\fBfs_info\fR: includes [disk_usage, partition_size, filesystem_type].
+
+\fB--detail\fR: no effect.
+
+\fB--default\fR: includes [datetime, name, disk_total_bytes_per_sec, major, minor, read,
+write, discard, fs_info, timestamp].
+
+\fB--everything\fR: includes everything (equivalent to --default --detail).
+
+.SS OPTIONS
+.TP
+\fB-f, --fields <FIELDS>...\fR  
+Select which fields to display and in what order.
+
+.TP
+\fB--default\fR  
+Show all top-layer fields. Overrides fields specified via \fB--fields\fR.
+
+.TP
+\fB--everything\fR  
+Show all fields. Overrides \fB--fields\fR and \fB--default\fR.
+
+.TP
+\fB-d, --detail\fR  
+Show more information beyond the default fields.
+
+.TP
+\fB-b, --begin <BEGIN>\fR  
+Specify the start time, in the same format as the replay command.
+
+.TP
+\fB-e, --end <END>\fR  
+Specify the end time, in the same format as the replay command.
+
+.TP
+\fB--duration <DURATION>\fR  
+Specify a duration using time strings (e.g., "10 min"). Supports keywords like "days", "min", "h", "sec" and relative times (e.g., "2 days 3 hr 15m 10sec").
+
+.TP
+\fB-F, --filter <FILTER>\fR  
+Apply a regex filter to the field specified by \fB--select\fR.
+
+.TP
+\fB--sort\fR  
+Sort in ascending order by the field specified with \fB--select\fR.
+
+.TP
+\fB--rsort\fR  
+Sort in descending order by the field specified with \fB--select\fR.
+
+.TP
+\fB--top <TOP>\fR  
+Display the top N results for each time slice. Default is 0 (show all).
+
+.TP
+\fB--repeat-title <REPEAT_TITLE>\fR  
+Repeat the title line every N lines in raw output format.
+
+.TP
+\fB-O, --output-format <OUTPUT_FORMAT>\fR  
+Specify the output format. Options are \fBraw\fR, \fBcsv\fR, \fBtsv\fR, \fBkv\fR, \fBjson\fR, and \fBopenmetrics\fR. Defaults to \fBraw\fR.
+
+.TP
+\fB-o, --output <OUTPUT>\fR  
+Specify the output destination. Defaults to stdout.
+
+.TP
+\fB--disable-title\fR  
+Disable the title in raw, csv, or tsv format output.
+
+.TP
+\fB-r <YESTERDAYS>\fR  
+Adjust the day offset, similar to the \fB-r\fR option in the replay command.
+
+.TP
+\fB--br <BR>\fR  
+Specify the line break symbol between samples.
+
+.TP
+\fB--raw\fR  
+Dump raw data without units or conversions.
+
+.TP
+\fB-s, --select <SELECT>\fR  
+Specify a field for operations (used with \fB--sort\fR, \fB--rsort\fR, \fB--filter\fR, \fB--top\fR).
+
+.TP
+\fB-p, --pattern <PATTERN>\fR  
+Use a saved pattern from the \fBdumprc\fR file under the \fB[disk]\fR section.
+
+.SS Examples
+.B Simple example:
+.br
+\fB$ below dump disk -b "08:30:00" -e "08:30:30" -f read write discard -O csv\fR
+.br
+Outputs disk statistics for all specified fields between 08:30:00 and 08:30:30.
+
+.B Filter by name:
+.br
+\fB$ below dump disk -b "08:30:00" -e "08:30:30" -s name -F nvme0* -O json\fR
+.br
+Outputs stats for disks matching "nvme0*" in JSON format.
+
+.B Top partitions by read speed:
+.br
+\fB$ below dump disk -b "08:30:00" -e "08:30:30" -s read_bytes_per_sec --rsort --top 5\fR
+.br
+Displays the top 5 partitions by read speed for each time slice.
+
+.SS dump btrfs
+Dump Btrfs filesystem statistics.
+
+.TP
+\fBAvailable fields\fR
+.PP
+\fItimestamp, datetime, name, disk_fraction, disk_bytes
+\fR
+
+.TP
+\fBAggregated fields\fR
+.PP
+\fBusage\fR: includes [disk_fraction, disk_bytes].
+
+\fB--detail\fR: no effect.
+
+\fB--default\fR: includes [datetime, name, disk_usage, timestamp].
+
+\fB--everything\fR: includes everything (equivalent to --default --detail).
+
+.SS OPTIONS
+.TP
+\fB-f, --fields <FIELDS>\fR  
+Select which fields to display and in what order.
+
+.TP
+\fB--default\fR  
+Show all top-layer fields. Overrides fields specified via \fB--fields\fR.
+
+.TP
+\fB--everything\fR  
+Show all fields. Overrides \fB--fields\fR and \fB--default\fR.
+
+.TP
+\fB-d, --detail\fR  
+Show more information beyond the default fields.
+
+.TP
+\fB-b, --begin <BEGIN>\fR  
+Specify the start time, in the same format as the replay command.
+
+.TP
+\fB-e, --end <END>\fR  
+Specify the end time, in the same format as the replay command.
+
+.TP
+\fB--duration <DURATION>\fR  
+Specify a duration using time strings (e.g., "10 min"). Supports keywords like "days", "min", "h", "sec" and relative times (e.g., "2 days 3 hr 15m 10sec").
+
+.TP
+\fB-F, --filter <FILTER>\fR  
+Apply a regex filter to the field specified by \fB--select\fR.
+
+.TP
+\fB--sort\fR  
+Sort in ascending order by the field specified with \fB--select\fR.
+
+.TP
+\fB--rsort\fR  
+Sort in descending order by the field specified with \fB--select\fR.
+
+.TP
+\fB--top <TOP>\fR  
+Display the top N results for each time slice. Default is 0 (show all).
+
+.TP
+\fB--repeat-title <REPEAT_TITLE>\fR  
+Repeat the title line every N lines in raw output format.
+
+.TP
+\fB-O, --output-format <OUTPUT_FORMAT>\fR  
+Specify the output format. Options are \fBraw\fR, \fBcsv\fR, \fBtsv\fR, \fBkv\fR, \fBjson\fR, and \fBopenmetrics\fR. Defaults to \fBraw\fR.
+
+.TP
+\fB-o, --output <OUTPUT>\fR  
+Specify the output destination. Defaults to stdout.
+
+.TP
+\fB--disable-title\fR  
+Disable the title in raw, csv, or tsv format output.
+
+.TP
+\fB-r <YESTERDAYS>\fR  
+Adjust the day offset, similar to the \fB-r\fR option in the replay command.
+
+.TP
+\fB--br <BR>\fR  
+Specify the line break symbol between samples.
+
+.TP
+\fB--raw\fR  
+Dump raw data without units or conversions.
+
+.TP
+\fB-s, --select <SELECT>\fR  
+Specify a field for operations (used with \fB--sort\fR, \fB--rsort\fR, \fB--filter\fR, \fB--top\fR).
+
+.TP
+\fB-p, --pattern <PATTERN>\fR  
+Use a saved pattern from the \fBdumprc\fR file under the \fB[btrfs]\fR section.
+
+.SS Examples
+.B Simple example:
+.br
+\fB$ below dump btrfs -b "08:30:00" -e "08:30:30" -f usage -O csv\fR
+.br
+Outputs Btrfs usage statistics between 08:30:00 and 08:30:30.
+
+.B Top subvolumes by disk bytes:
+.br
+\fB$ below dump btrfs -b "08:30:00" -e "08:30:30" -s disk_bytes --rsort --top 5\fR
+.br
+Displays the top 5 subvolumes by disk usage for each time slice.
+
+.SS dump process
+Dump process statistics.
+
+.TP
+\fBAvailable fields\fR
+.PP
+\fItimestamp, datetime, pid, ppid, ns_tgid, comm, state, uptime_secs, cgroup,
+io.rbytes_per_sec, io.wbytes_per_sec, io.rwbytes_per_sec, mem.minorfaults_per_sec,
+mem.majorfaults_per_sec, mem.rss_bytes, mem.vm_size, mem.lock, mem.pin, mem.anon,
+mem.file, mem.shmem, mem.pte, mem.swap, mem.huge_tlb, cpu.usage_pct, cpu.user_pct,
+cpu.system_pct, cpu.num_threads, cmdline, exe_path
+\fR
+
+.TP
+\fBAggregated fields\fR
+.PP
+\fBcpu\fR: includes [cpu.usage_pct].
+
+\fBmem\fR: includes [mem.rss_bytes].
+
+\fBio\fR: includes [io.rbytes_per_sec, io.wbytes_per_sec].
+
+\fB--detail\fR: includes [<agg_field>.*] for each given aggregated field.
+
+\fB--default\fR: includes [datetime, pid, ppid, comm, state, cpu, mem, io, uptime_secs,
+cgroup, timestamp, cmdline, exe_path].
+
+\fB--everything\fR: includes everything (equivalent to --default --detail).
+
+.SS OPTIONS
+.TP
+\fB-f, --fields <FIELDS>\fR  
+Select which fields to display and in what order.
+
+.TP
+\fB--default\fR  
+Show all top-layer fields. Overrides fields specified via \fB--fields\fR.
+
+.TP
+\fB--everything\fR  
+Show all fields. Overrides \fB--fields\fR and \fB--default\fR.
+
+.TP
+\fB-d, --detail\fR  
+Show more information beyond the default fields.
+
+.TP
+\fB-b, --begin <BEGIN>\fR  
+Specify the start time, in the same format as the replay command.
+
+.TP
+\fB-e, --end <END>\fR  
+Specify the end time, in the same format as the replay command.
+
+.TP
+\fB--duration <DURATION>\fR  
+Specify a duration using time strings (e.g., "10 min"). Supports keywords like "days", "min", "h", "sec" and relative times (e.g., "2 days 3 hr 15m 10sec").
+
+.TP
+\fB-F, --filter <FILTER>\fR  
+Apply a regex filter to the field specified by \fB--select\fR.
+
+.TP
+\fB--sort\fR  
+Sort in ascending order by the field specified with \fB--select\fR.
+
+.TP
+\fB--rsort\fR  
+Sort in descending order by the field specified with \fB--select\fR.
+
+.TP
+\fB--top <TOP>\fR  
+Display the top N results for each time slice. Default is 0 (show all).
+
+.TP
+\fB--repeat-title <REPEAT_TITLE>\fR  
+Repeat the title line every N lines in raw output format.
+
+.TP
+\fB-O, --output-format <OUTPUT_FORMAT>\fR  
+Specify the output format. Options are \fBraw\fR, \fBcsv\fR, \fBtsv\fR, \fBkv\fR, \fBjson\fR, and \fBopenmetrics\fR. Defaults to \fBraw\fR.
+
+.TP
+\fB-o, --output <OUTPUT>\fR  
+Specify the output destination. Defaults to stdout.
+
+.TP
+\fB--disable-title\fR  
+Disable the title in raw, csv, or tsv format output.
+
+.TP
+\fB-r <YESTERDAYS>\fR  
+Adjust the day offset, similar to the \fB-r\fR option in the replay command.
+
+.TP
+\fB--br <BR>\fR  
+Specify the line break symbol between samples.
+
+.TP
+\fB--raw\fR  
+Dump raw data without units or conversions.
+
+.TP
+\fB-s, --select <SELECT>\fR  
+Specify a field for operations (used with \fB--sort\fR, \fB--rsort\fR, \fB--filter\fR, \fB--top\fR).
+
+.TP
+\fB-p, --pattern <PATTERN>\fR  
+Use a saved pattern from the \fBdumprc\fR file under the \fB[process]\fR section.
+
+.SS Examples
+.B Simple example:
+.br
+\fB$ below dump process -b "08:30:00" -e "08:30:30" -f comm cpu io.rwbytes_per_sec -O csv\fR
+.br
+Outputs process statistics for specified fields (command name, CPU usage, I/O) from 08:30:00 to 08:30:30 in CSV format.
+
+.B Filter by process name:
+.br
+\fB$ below dump process -b "08:30:00" -e "08:30:30" -s comm -F below* -O json\fR
+.br
+Outputs statistics for processes matching "below*" in JSON format.
+
+.B Top CPU-intensive processes:
+.br
+\fB$ below dump process -b "08:30:00" -e "08:30:30" -s cpu.usage_pct --rsort --top 5\fR
+.br
+Displays the top 5 processes by CPU usage for each time slice.
+
+.SS dump cgroup
+Dump cgroup stats for specified time slices and fields.
+
+.TP
+\fBAvailable fields\fR
+.PP
+\fItimestamp, datetime, name, full_path, inode_number, props.cgroup_controllers,
+props.cgroup_subtree_control, props.tids_max, props.memory_min, props.memory_low,
+props.memory_high, props.memory_max, props.memory_swap_max, props.memory_zswap_max,
+props.cpu_weight, props.cpu_max_usec, props.cpu_max_period_usec, props.cpuset_cpus,
+props.cpuset_cpus_effective, props.cpuset_mems, props.cpuset_mems_effective,
+cpu.usage_pct, cpu.user_pct, cpu.system_pct, cpu.nr_periods_per_sec,
+cpu.nr_throttled_per_sec, cpu.throttled_pct, mem.total, mem.swap, mem.anon, mem.file,
+mem.kernel, mem.kernel_stack, mem.slab, mem.sock, mem.shmem, mem.zswap, mem.zswapped,
+mem.file_mapped, mem.file_dirty, mem.file_writeback, mem.anon_thp, mem.inactive_anon,
+mem.active_anon, mem.inactive_file, mem.active_file, mem.unevictable,
+mem.slab_reclaimable, mem.slab_unreclaimable, mem.pgfault, mem.pgmajfault,
+mem.workingset_refault_anon, mem.workingset_refault_file, mem.workingset_activate_anon,
+mem.workingset_activate_file, mem.workingset_restore_anon, mem.workingset_restore_file,
+mem.workingset_nodereclaim, mem.pgrefill, mem.pgscan, mem.pgsteal, mem.pgactivate,
+mem.pgdeactivate, mem.pglazyfree, mem.pglazyfreed, mem.thp_fault_alloc,
+mem.thp_collapse_alloc, mem.events_low, mem.events_high, mem.events_max, mem.events_oom,
+mem.events_oom_kill, mem.events_local_low, mem.events_local_high, mem.events_local_max,
+mem.events_local_oom, mem.events_local_oom_kill, pids.tids_current,
+io_details.<key>.rbytes_per_sec, io_details.<key>.wbytes_per_sec,
+io_details.<key>.rios_per_sec, io_details.<key>.wios_per_sec,
+io_details.<key>.dbytes_per_sec, io_details.<key>.dios_per_sec,
+io_details.<key>.rwbytes_per_sec, io_details.<key>.cost_usage_pct,
+io_details.<key>.cost_wait_pct, io_details.<key>.cost_indebt_pct,
+io_details.<key>.cost_indelay_pct, io.rbytes_per_sec, io.wbytes_per_sec,
+io.rios_per_sec, io.wios_per_sec, io.dbytes_per_sec, io.dios_per_sec,
+io.rwbytes_per_sec, io.cost_usage_pct, io.cost_wait_pct, io.cost_indebt_pct,
+io.cost_indelay_pct, pressure.cpu_some_pct, pressure.cpu_full_pct, pressure.io_some_pct,
+pressure.io_full_pct, pressure.memory_some_pct, pressure.memory_full_pct,
+cgroup_stat.nr_descendants, cgroup_stat.nr_dying_descendants, mem_numa.<key>.total,
+mem_numa.<key>.anon, mem_numa.<key>.file, mem_numa.<key>.kernel_stack,
+mem_numa.<key>.pagetables, mem_numa.<key>.shmem, mem_numa.<key>.file_mapped,
+mem_numa.<key>.file_dirty, mem_numa.<key>.file_writeback, mem_numa.<key>.swapcached,
+mem_numa.<key>.anon_thp, mem_numa.<key>.file_thp, mem_numa.<key>.shmem_thp,
+mem_numa.<key>.inactive_anon, mem_numa.<key>.active_anon, mem_numa.<key>.inactive_file,
+mem_numa.<key>.active_file, mem_numa.<key>.unevictable, mem_numa.<key>.slab_reclaimable,
+mem_numa.<key>.slab_unreclaimable, mem_numa.<key>.workingset_refault_anon,
+mem_numa.<key>.workingset_refault_file, mem_numa.<key>.workingset_activate_anon,
+mem_numa.<key>.workingset_activate_file, mem_numa.<key>.workingset_restore_anon,
+mem_numa.<key>.workingset_restore_file, mem_numa.<key>.workingset_nodereclaim
+\fR
+
+.TP
+\fBAggregated fields\fR
+.PP
+\fBcpu\fR: includes [cpu.usage_pct].
+
+\fBmem\fR: includes [mem.total].
+
+\fBio\fR: includes [io.rbytes_per_sec, io.wbytes_per_sec].
+
+\fBpressure\fR: includes [pressure.cpu_some_pct, pressure.memory_full_pct,
+pressure.io_full_pct].
+
+\fB--detail\fR: includes [<agg_field>.*] for each given aggregated field.
+
+\fB--default\fR: includes [name, inode_number, datetime, cpu, mem, io, pressure, timestamp].
+
+\fB--everything\fR: includes everything (equivalent to --default --detail).
+
+.SS OPTIONS
+.TP
+.B -f, --fields <FIELDS>...
+Select which fields to display and in what order.
+
+.TP
+.B --default
+Show all top-layer fields. Overrides any fields specified with \fB--fields\fR.
+
+.TP
+.B --everything
+Display all available fields. Overrides \fB--fields\fR and \fB--default\fR.
+
+.TP
+.B -d, --detail
+Include additional details beyond the default fields.
+
+.TP
+.B -b, --begin <BEGIN>
+Specify the starting time for data collection. Accepts the same format as the replay command.
+
+.TP
+.B -e, --end <END>
+Specify the ending time for data collection. Accepts the same format as the replay command.
+
+.TP
+.B --duration <DURATION>
+Define the duration of data collection using a time string (e.g., "10 min").
+Keywords: days, min, h, sec.
+Relative formats (e.g., "2 days 3 hr 15m 10sec") are supported.
+
+.TP
+.B -F, --filter <FILTER>
+Apply a regular expression filter to the field selected by \fB--select\fR.
+
+.TP
+.B --sort
+Sort results in ascending order based on the field selected by \fB--select\fR.
+
+.TP
+.B --rsort
+Sort results in descending order based on the field selected by \fB--select\fR.
+
+.TP
+.B --top <TOP>
+Display the top \fBTOP\fR entries based on the sorted field. Defaults to 0.
+
+.TP
+.B --repeat-title <REPEAT_TITLE>
+Repeat the title line every \fBN\fR lines. Applies only to raw output formats.
+
+.TP
+.B -O, --output-format <OUTPUT_FORMAT>
+Specify the output format. Supported formats: raw, csv, tsv, kv, json, openmetrics. Defaults to raw.
+
+.TP
+.B -o, --output <OUTPUT>
+Set the output destination. Defaults to standard output.
+
+.TP
+.B --disable-title
+Disable the title in raw, csv, or tsv format outputs.
+
+.TP
+.B -r <YESTERDAYS>
+Adjust the start date relative to the current date. Functions like the \fB-r\fR option in the replay command.
+
+.TP
+.B --br <BR>
+Set a custom line break symbol between samples.
+
+.TP
+.B --raw
+Output raw data without units or conversion.
+
+.TP
+.B -s, --select <SELECT>
+Select a field for operations like \fB--sort\fR, \fB--rsort\fR, \fB--filter\fR, or \fB--top\fR.
+
+.TP
+.B -p, --pattern <PATTERN>
+Use a saved pattern from the dumprc file under the \fB[cgroup]\fR section.
+
+.SS "Example Commands"
+.TP
+.B below dump cgroup -b "08:30:00" -e "08:30:30" -f name cpu -O csv
+Outputs statistics for all cgroups, displaying the \fBname\fR and \fBcpu\fR fields in CSV format, from 08:30:00 to 08:30:30.
+
+.TP
+.B below dump cgroup -b "08:30:00" -e "08:30:30" -s name -F below* -O json
+Outputs statistics for all cgroups matching the pattern \fBbelow*\fR in JSON format for the specified time range.
+
+.TP
+.B below dump cgroup -b "08:30:00" -e "08:30:30" -s cpu.usage_pct --rsort --top 5
+Outputs statistics for the top 5 CPU-intensive cgroups, sorted in descending order, for the specified time range.
+
+.SS dump iface
+Dump the link layer iface stats
+
+.TP
+\fBAvailable fields\fR
+.PP
+\fItimestamp, datetime, interface, rx_bytes_per_sec, tx_bytes_per_sec, throughput_per_sec,
+rx_packets_per_sec, tx_packets_per_sec, collisions, multicast, rx_bytes, rx_compressed,
+rx_crc_errors, rx_dropped, rx_errors, rx_fifo_errors, rx_frame_errors, rx_length_errors,
+rx_missed_errors, rx_nohandler, rx_over_errors, rx_packets, tx_aborted_errors, tx_bytes,
+tx_carrier_errors, tx_compressed, tx_dropped, tx_errors, tx_fifo_errors,
+tx_heartbeat_errors, tx_packets, tx_window_errors, tx_timeout_per_sec, raw_stats,
+queues.<idx>.interface, queues.<idx>.queue_id, queues.<idx>.rx_bytes_per_sec,
+queues.<idx>.tx_bytes_per_sec, queues.<idx>.rx_count_per_sec,
+queues.<idx>.tx_count_per_sec, queues.<idx>.tx_missed_tx,
+queues.<idx>.tx_unmask_interrupt, queues.<idx>.raw_stats
+\fR
+
+.TP
+\fBAggregated fields\fR
+.PP
+\fBrate\fR: includes [rx_bytes_per_sec, tx_bytes_per_sec, throughput_per_sec,
+rx_packets_per_sec, tx_packets_per_sec].
+
+\fBrx\fR: includes [rx_bytes, rx_compressed, rx_crc_errors, rx_dropped, rx_errors,
+rx_fifo_errors, rx_frame_errors, rx_length_errors, rx_missed_errors, rx_nohandler,
+rx_over_errors, rx_packets].
+
+\fBtx\fR: includes [tx_aborted_errors, tx_bytes, tx_carrier_errors, tx_compressed,
+tx_dropped, tx_errors, tx_fifo_errors, tx_heartbeat_errors, tx_packets,
+tx_window_errors].
+
+\fBethtool\fR: includes [tx_timeout_per_sec].
+
+\fB--detail\fR: includes `raw_stats` field.
+
+\fB--default\fR: includes [datetime, collisions, multicast, interface, rate, rx, tx,
+ethtool, timestamp].
+
+\fB--everything\fR: includes everything (equivalent to --default --detail).
+
+.SS OPTIONS
+.TP
+.B -f, --fields <FIELDS>...
+Select which fields to display and in what order.
+
+.TP
+.B --default
+Show all top-layer fields. Overrides any fields specified with \fB--fields\fR.
+
+.TP
+.B --everything
+Display all available fields. Overrides \fB--fields\fR and \fB--default\fR.
+
+.TP
+.B -d, --detail
+Include additional details beyond the default fields.
+
+.TP
+.B -b, --begin <BEGIN>
+Specify the starting time for data collection. Accepts the same format as the replay command.
+
+.TP
+.B -e, --end <END>
+Specify the ending time for data collection. Accepts the same format as the replay command.
+
+.TP
+.B --duration <DURATION>
+Define the duration of data collection using a time string (e.g., "10 min").
+Keywords: days, min, h, sec.
+Relative formats (e.g., "2 days 3 hr 15m 10sec") are supported.
+
+.TP
+.B -F, --filter <FILTER>
+Apply a regular expression filter to the field selected by \fB--select\fR.
+
+.TP
+.B --sort
+Sort results in ascending order based on the field selected by \fB--select\fR.
+
+.TP
+.B --rsort
+Sort results in descending order based on the field selected by \fB--select\fR.
+
+.TP
+.B --top <TOP>
+Display the top \fBTOP\fR entries based on the sorted field. Defaults to 0.
+
+.TP
+.B --repeat-title <REPEAT_TITLE>
+Repeat the title line every \fBN\fR lines. Applies only to raw output formats.
+
+.TP
+.B -O, --output-format <OUTPUT_FORMAT>
+Specify the output format. Supported formats: raw, csv, tsv, kv, json, openmetrics. Defaults to raw.
+
+.TP
+.B -o, --output <OUTPUT>
+Set the output destination. Defaults to standard output.
+
+.TP
+.B --disable-title
+Disable the title in raw, csv, or tsv format outputs.
+
+.TP
+.B -r <YESTERDAYS>
+Adjust the start date relative to the current date. Functions like the \fB-r\fR option in the replay command.
+
+.TP
+.B --br <BR>
+Set a custom line break symbol between samples.
+
+.TP
+.B --raw
+Output raw data without units or conversion.
+
+.TP
+.B -s, --select <SELECT>
+Select a field for operations like \fB--filter\fR.
+
+.TP
+.B -p, --pattern <PATTERN>
+Use a saved pattern from the dumprc file under the \fB[iface]\fR section.
+
+.SS "Example Commands"
+.TP
+.B below dump iface -b "08:30:00" -e "08:30:30" -f interface rate -O csv
+Outputs statistics for all interfaces, displaying the \fBinterface\fR and \fBrate\fR fields in CSV format, from 08:30:00 to 08:30:30.
+
+.TP
+.B below dump iface -b "08:30:00" -e "08:30:30" -s interface -F eth* -O json
+Outputs statistics for all interfaces matching the pattern \fBeth*\fR in JSON format for the specified time range.
+
+.SS dump network
+Dump the network layer stats including ip and icmp
+
+.TP
+\fBAvailable fields\fR
+.PP
+\fItimestamp, datetime, interfaces.<key>.interface, interfaces.<key>.rx_bytes_per_sec,
+interfaces.<key>.tx_bytes_per_sec, interfaces.<key>.throughput_per_sec,
+interfaces.<key>.rx_packets_per_sec, interfaces.<key>.tx_packets_per_sec,
+interfaces.<key>.collisions, interfaces.<key>.multicast, interfaces.<key>.rx_bytes,
+interfaces.<key>.rx_compressed, interfaces.<key>.rx_crc_errors,
+interfaces.<key>.rx_dropped, interfaces.<key>.rx_errors,
+interfaces.<key>.rx_fifo_errors, interfaces.<key>.rx_frame_errors,
+interfaces.<key>.rx_length_errors, interfaces.<key>.rx_missed_errors,
+interfaces.<key>.rx_nohandler, interfaces.<key>.rx_over_errors,
+interfaces.<key>.rx_packets, interfaces.<key>.tx_aborted_errors,
+interfaces.<key>.tx_bytes, interfaces.<key>.tx_carrier_errors,
+interfaces.<key>.tx_compressed, interfaces.<key>.tx_dropped, interfaces.<key>.tx_errors,
+interfaces.<key>.tx_fifo_errors, interfaces.<key>.tx_heartbeat_errors,
+interfaces.<key>.tx_packets, interfaces.<key>.tx_window_errors,
+interfaces.<key>.tx_timeout_per_sec, interfaces.<key>.raw_stats,
+interfaces.<key>.queues.<idx>.interface, interfaces.<key>.queues.<idx>.queue_id,
+interfaces.<key>.queues.<idx>.rx_bytes_per_sec,
+interfaces.<key>.queues.<idx>.tx_bytes_per_sec,
+interfaces.<key>.queues.<idx>.rx_count_per_sec,
+interfaces.<key>.queues.<idx>.tx_count_per_sec,
+interfaces.<key>.queues.<idx>.tx_missed_tx,
+interfaces.<key>.queues.<idx>.tx_unmask_interrupt,
+interfaces.<key>.queues.<idx>.raw_stats, tcp.active_opens_per_sec,
+tcp.passive_opens_per_sec, tcp.attempt_fails_per_sec, tcp.estab_resets_per_sec,
+tcp.curr_estab_conn, tcp.in_segs_per_sec, tcp.out_segs_per_sec,
+tcp.retrans_segs_per_sec, tcp.retrans_segs, tcp.in_errs, tcp.out_rsts_per_sec,
+tcp.in_csum_errors, ip.forwarding_pkts_per_sec, ip.in_receives_pkts_per_sec,
+ip.forw_datagrams_per_sec, ip.in_discards_pkts_per_sec, ip.in_delivers_pkts_per_sec,
+ip.out_requests_per_sec, ip.out_discards_pkts_per_sec, ip.out_no_routes_pkts_per_sec,
+ip.in_mcast_pkts_per_sec, ip.out_mcast_pkts_per_sec, ip.in_bcast_pkts_per_sec,
+ip.out_bcast_pkts_per_sec, ip.in_octets_per_sec, ip.out_octets_per_sec,
+ip.in_mcast_octets_per_sec, ip.out_mcast_octets_per_sec, ip.in_bcast_octets_per_sec,
+ip.out_bcast_octets_per_sec, ip.in_no_ect_pkts_per_sec, ip6.in_receives_pkts_per_sec,
+ip6.in_hdr_errors, ip6.in_no_routes_pkts_per_sec, ip6.in_addr_errors,
+ip6.in_discards_pkts_per_sec, ip6.in_delivers_pkts_per_sec,
+ip6.out_forw_datagrams_per_sec, ip6.out_requests_per_sec,
+ip6.out_no_routes_pkts_per_sec, ip6.in_mcast_pkts_per_sec, ip6.out_mcast_pkts_per_sec,
+ip6.in_octets_per_sec, ip6.out_octets_per_sec, ip6.in_mcast_octets_per_sec,
+ip6.out_mcast_octets_per_sec, ip6.in_bcast_octets_per_sec, ip6.out_bcast_octets_per_sec,
+icmp.in_msgs_per_sec, icmp.in_errors, icmp.in_dest_unreachs, icmp.out_msgs_per_sec,
+icmp.out_errors, icmp.out_dest_unreachs, icmp6.in_msgs_per_sec, icmp6.in_errors,
+icmp6.in_dest_unreachs, icmp6.out_msgs_per_sec, icmp6.out_errors,
+icmp6.out_dest_unreachs, udp.in_datagrams_pkts_per_sec, udp.no_ports, udp.in_errors,
+udp.out_datagrams_pkts_per_sec, udp.rcvbuf_errors, udp.sndbuf_errors, udp.ignored_multi,
+udp6.in_datagrams_pkts_per_sec, udp6.no_ports, udp6.in_errors,
+udp6.out_datagrams_pkts_per_sec, udp6.rcvbuf_errors, udp6.sndbuf_errors,
+udp6.in_csum_errors, udp6.ignored_multi
+\fR
+
+.TP
+\fBAggregated fields\fR
+.PP
+\fBip\fR: includes [ip.forwarding_pkts_per_sec, ip.in_receives_pkts_per_sec,
+ip.forw_datagrams_per_sec, ip.in_discards_pkts_per_sec, ip.in_delivers_pkts_per_sec,
+ip.out_requests_per_sec, ip.out_discards_pkts_per_sec, ip.out_no_routes_pkts_per_sec,
+ip.in_mcast_pkts_per_sec, ip.out_mcast_pkts_per_sec, ip.in_bcast_pkts_per_sec,
+ip.out_bcast_pkts_per_sec, ip.in_octets_per_sec, ip.out_octets_per_sec,
+ip.in_mcast_octets_per_sec, ip.out_mcast_octets_per_sec, ip.in_bcast_octets_per_sec,
+ip.out_bcast_octets_per_sec, ip.in_no_ect_pkts_per_sec].
+
+\fBip6\fR: includes [ip6.in_receives_pkts_per_sec, ip6.in_hdr_errors,
+ip6.in_no_routes_pkts_per_sec, ip6.in_addr_errors, ip6.in_discards_pkts_per_sec,
+ip6.in_delivers_pkts_per_sec, ip6.out_forw_datagrams_per_sec, ip6.out_requests_per_sec,
+ip6.out_no_routes_pkts_per_sec, ip6.in_mcast_pkts_per_sec, ip6.out_mcast_pkts_per_sec,
+ip6.in_octets_per_sec, ip6.out_octets_per_sec, ip6.in_mcast_octets_per_sec,
+ip6.out_mcast_octets_per_sec, ip6.in_bcast_octets_per_sec,
+ip6.out_bcast_octets_per_sec].
+
+\fBicmp\fR: includes [icmp.in_msgs_per_sec, icmp.in_errors, icmp.in_dest_unreachs,
+icmp.out_msgs_per_sec, icmp.out_errors, icmp.out_dest_unreachs].
+
+\fBicmp6\fR: includes [icmp6.in_msgs_per_sec, icmp6.in_errors, icmp6.in_dest_unreachs,
+icmp6.out_msgs_per_sec, icmp6.out_errors, icmp6.out_dest_unreachs].
+
+\fB--detail\fR: no effect.
+
+\fB--default\fR: includes [datetime, ip, ip6, icmp, icmp6, timestamp].
+
+\fB--everything\fR: includes everything (equivalent to --default --detail).
+
+.SH OPTIONS
+.TP
+.BR \-f ", " --fields " <FIELDS>..."
+Select which fields to display and in what order.
+
+.TP
+.BR --default
+Show all top-layer fields. Overrides any specified fields via
+.B --fields.
+
+.TP
+.BR --everything
+Show all fields. Overrides
+.B --fields
+and
+.B --default.
+
+.TP
+.BR \-d ", " --detail
+Show more information beyond the default.
+
+.TP
+.BR \-b ", " --begin " <BEGIN>"
+Specify the start time. Format is the same as for replay.
+
+.TP
+.BR \-e ", " --end " <END>"
+Specify the end time. Format is the same as for replay.
+
+.TP
+.BR --duration " <DURATION>"
+Specify a time duration, e.g., "10 min."
+.IP
+Keywords: days, min, h, sec.
+.IP
+Relative: {humantime}, e.g., "2 days 3 hr 15m 10sec."
+
+.TP
+.BR \-F ", " --filter " <FILTER>"
+Apply a regex filter to the
+.B --select
+selected field. Refer to the command-level documentation for examples.
+
+.TP
+.BR --sort
+Sort (ascending) by the
+.B --select
+selected field.
+
+.TP
+.BR --rsort
+Sort (descending) by the
+.B --select
+selected field.
+
+.TP
+.BR --top " <TOP>"
+Set the number of top results to display. [Default: 0].
+
+.TP
+.BR --repeat-title " <REPEAT_TITLE>"
+Specify the number of lines after which the title is repeated. Only applies to raw output format.
+
+.TP
+.BR \-O ", " --output-format " <OUTPUT_FORMAT>"
+Specify the output format. Options include
+.I raw
+(default),
+.I csv,
+.I tsv,
+.I kv,
+.I json,
+and
+.I openmetrics.
+
+.TP
+.BR \-o ", " --output " <OUTPUT>"
+Specify the output destination. Default is stdout.
+
+.TP
+.BR --disable-title
+Disable the title in raw, CSV, or TSV format outputs.
+
+.TP
+.BR \-r " <YESTERDAYS>"
+Adjust the date range by a specified number of days, similar to the
+.B \-r
+option in replay.
+
+.TP
+.BR --br " <BR>"
+Specify a line break symbol between samples.
+
+.TP
+.BR --raw
+Output raw data without units or conversion.
+
+.TP
+.BR \-p ", " --pattern " <PATTERN>"
+Use a saved pattern from the dumprc file under the
+.I [network]
+section.
+
+.SH EXAMPLES
+.PP
+To dump network statistics between 08:30:00 and 08:30:30, focusing on IP and IP6 in JSON format:
+.EX
+$ below dump network -b "08:30:00" -e "08:30:30" -f ip ip6 -O json
+.EE
+
+.SS dump transport
+Dump the transport layer stats including tcp and udp
+
+.TP
+\fBAvailable fields\fR
+.PP
+\fItimestamp, datetime, interfaces.<key>.interface, interfaces.<key>.rx_bytes_per_sec,
+interfaces.<key>.tx_bytes_per_sec, interfaces.<key>.throughput_per_sec,
+interfaces.<key>.rx_packets_per_sec, interfaces.<key>.tx_packets_per_sec,
+interfaces.<key>.collisions, interfaces.<key>.multicast, interfaces.<key>.rx_bytes,
+interfaces.<key>.rx_compressed, interfaces.<key>.rx_crc_errors,
+interfaces.<key>.rx_dropped, interfaces.<key>.rx_errors,
+interfaces.<key>.rx_fifo_errors, interfaces.<key>.rx_frame_errors,
+interfaces.<key>.rx_length_errors, interfaces.<key>.rx_missed_errors,
+interfaces.<key>.rx_nohandler, interfaces.<key>.rx_over_errors,
+interfaces.<key>.rx_packets, interfaces.<key>.tx_aborted_errors,
+interfaces.<key>.tx_bytes, interfaces.<key>.tx_carrier_errors,
+interfaces.<key>.tx_compressed, interfaces.<key>.tx_dropped, interfaces.<key>.tx_errors,
+interfaces.<key>.tx_fifo_errors, interfaces.<key>.tx_heartbeat_errors,
+interfaces.<key>.tx_packets, interfaces.<key>.tx_window_errors,
+interfaces.<key>.tx_timeout_per_sec, interfaces.<key>.raw_stats,
+interfaces.<key>.queues.<idx>.interface, interfaces.<key>.queues.<idx>.queue_id,
+interfaces.<key>.queues.<idx>.rx_bytes_per_sec,
+interfaces.<key>.queues.<idx>.tx_bytes_per_sec,
+interfaces.<key>.queues.<idx>.rx_count_per_sec,
+interfaces.<key>.queues.<idx>.tx_count_per_sec,
+interfaces.<key>.queues.<idx>.tx_missed_tx,
+interfaces.<key>.queues.<idx>.tx_unmask_interrupt,
+interfaces.<key>.queues.<idx>.raw_stats, tcp.active_opens_per_sec,
+tcp.passive_opens_per_sec, tcp.attempt_fails_per_sec, tcp.estab_resets_per_sec,
+tcp.curr_estab_conn, tcp.in_segs_per_sec, tcp.out_segs_per_sec,
+tcp.retrans_segs_per_sec, tcp.retrans_segs, tcp.in_errs, tcp.out_rsts_per_sec,
+tcp.in_csum_errors, ip.forwarding_pkts_per_sec, ip.in_receives_pkts_per_sec,
+ip.forw_datagrams_per_sec, ip.in_discards_pkts_per_sec, ip.in_delivers_pkts_per_sec,
+ip.out_requests_per_sec, ip.out_discards_pkts_per_sec, ip.out_no_routes_pkts_per_sec,
+ip.in_mcast_pkts_per_sec, ip.out_mcast_pkts_per_sec, ip.in_bcast_pkts_per_sec,
+ip.out_bcast_pkts_per_sec, ip.in_octets_per_sec, ip.out_octets_per_sec,
+ip.in_mcast_octets_per_sec, ip.out_mcast_octets_per_sec, ip.in_bcast_octets_per_sec,
+ip.out_bcast_octets_per_sec, ip.in_no_ect_pkts_per_sec, ip6.in_receives_pkts_per_sec,
+ip6.in_hdr_errors, ip6.in_no_routes_pkts_per_sec, ip6.in_addr_errors,
+ip6.in_discards_pkts_per_sec, ip6.in_delivers_pkts_per_sec,
+ip6.out_forw_datagrams_per_sec, ip6.out_requests_per_sec,
+ip6.out_no_routes_pkts_per_sec, ip6.in_mcast_pkts_per_sec, ip6.out_mcast_pkts_per_sec,
+ip6.in_octets_per_sec, ip6.out_octets_per_sec, ip6.in_mcast_octets_per_sec,
+ip6.out_mcast_octets_per_sec, ip6.in_bcast_octets_per_sec, ip6.out_bcast_octets_per_sec,
+icmp.in_msgs_per_sec, icmp.in_errors, icmp.in_dest_unreachs, icmp.out_msgs_per_sec,
+icmp.out_errors, icmp.out_dest_unreachs, icmp6.in_msgs_per_sec, icmp6.in_errors,
+icmp6.in_dest_unreachs, icmp6.out_msgs_per_sec, icmp6.out_errors,
+icmp6.out_dest_unreachs, udp.in_datagrams_pkts_per_sec, udp.no_ports, udp.in_errors,
+udp.out_datagrams_pkts_per_sec, udp.rcvbuf_errors, udp.sndbuf_errors, udp.ignored_multi,
+udp6.in_datagrams_pkts_per_sec, udp6.no_ports, udp6.in_errors,
+udp6.out_datagrams_pkts_per_sec, udp6.rcvbuf_errors, udp6.sndbuf_errors,
+udp6.in_csum_errors, udp6.ignored_multi.
+\fR
+
+.TP
+\fBAggregated fields\fR
+.PP
+\fBtcp\fR: includes [tcp.active_opens_per_sec, tcp.passive_opens_per_sec,
+tcp.attempt_fails_per_sec, tcp.estab_resets_per_sec, tcp.curr_estab_conn,
+tcp.in_segs_per_sec, tcp.out_segs_per_sec, tcp.retrans_segs_per_sec, tcp.retrans_segs,
+tcp.in_errs, tcp.out_rsts_per_sec, tcp.in_csum_errors].
+
+\fBudp\fR: includes [udp.in_datagrams_pkts_per_sec, udp.no_ports, udp.in_errors,
+udp.out_datagrams_pkts_per_sec, udp.rcvbuf_errors, udp.sndbuf_errors,
+udp.ignored_multi].
+
+\fBudp6\fR: includes [udp6.in_datagrams_pkts_per_sec, udp6.no_ports, udp6.in_errors,
+udp6.out_datagrams_pkts_per_sec, udp6.rcvbuf_errors, udp6.sndbuf_errors,
+udp6.in_csum_errors, udp6.ignored_multi].
+
+\fB--detail\fR: no effect.
+
+\fB--default\fR: includes [datetime, tcp, udp, udp6, timestamp].
+
+\fB--everything\fR: includes everything (equivalent to --default --detail).
+
+.SH OPTIONS
+.TP
+\fB\-f, \-\-fields <FIELDS>...\fR
+Select which fields to display and in what order.
+
+.TP
+\fB\-\-default\fR
+Show all top layer fields. Overrides any specified fields via \fB\-\-fields\fR.
+
+.TP
+\fB\-\-everything\fR
+Show all fields. Overrides \fB\-\-fields\fR and \fB\-\-default\fR.
+
+.TP
+\fB\-d, \-\-detail\fR
+Show additional information beyond the default fields.
+
+.TP
+\fB\-b, \-\-begin <BEGIN>\fR
+Specify the start time for the data, using the same format as replay.
+
+.TP
+\fB\-e, \-\-end <END>\fR
+Specify the end time for the data, using the same format as replay.
+
+.TP
+\fB\-\-duration <DURATION>\fR
+Specify the duration as a time string (e.g., "10 min"). Keywords include days, min, h, sec. Supports relative time formats (e.g., "2 days 3 hr 15m 10sec").
+
+.TP
+\fB\-F, \-\-filter <FILTER>\fR
+Apply a regex to filter the selected field. Refer to the command-level documentation for examples.
+
+.TP
+\fB\-\-sort\fR
+Sort data in ascending order based on the selected field.
+
+.TP
+\fB\-\-rsort\fR
+Sort data in descending order based on the selected field.
+
+.TP
+\fB\-\-top <TOP>\fR
+Specify the number of top results to display. Default is 0.
+
+.TP
+\fB\-\-repeat-title <REPEAT_TITLE>\fR
+Repeat the title for each \fBN\fR lines in the raw output format.
+
+.TP
+\fB\-O, \-\-output-format <OUTPUT_FORMAT>\fR
+Specify the output format. Options include raw, csv, tsv, kv, json, and openmetrics. Default is raw.
+
+.TP
+\fB\-o, \-\-output <OUTPUT>\fR
+Specify the output destination. Default is stdout.
+
+.TP
+\fB\-\-disable-title\fR
+Disable the title in raw, csv, or tsv output formats.
+
+.TP
+\fB\-r <YESTERDAYS>\fR
+Adjust days relative to the current date. Similar to the \fB\-r\fR option in replay.
+
+.TP
+\fB\-\-br <BR>\fR
+Specify the line break symbol between samples.
+
+.TP
+\fB\-\-raw\fR
+Dump raw data without units or conversion.
+
+.TP
+\fB\-p, \-\-pattern <PATTERN>\fR
+Apply a saved pattern from the dumprc file under the [transport] section.
+
+.SH EXAMPLES
+To dump transport statistics between 08:30:00 and 08:30:30 in JSON format, filtering by TCP and UDP:
+
+.SS dump ethtool-queue
+Dump network interface queue stats
+
+.TP
+\fBAvailable fields\fR
+.PP
+\fItimestamp, datetime, and expanded fields below.
+\fR
+
+.TP
+\fBAggregated fields\fR
+.PP
+\fBqueue\fR: includes [interface, queue_id, rx_bytes_per_sec, tx_bytes_per_sec,
+rx_count_per_sec, tx_count_per_sec, tx_missed_tx, tx_unmask_interrupt].
+
+\fB--detail\fR: includes `raw_stats` field.
+
+\fB--default\fR: includes [datetime, queue, timestamp].
+
+\fB--everything\fR: includes everything (equivalent to --default --detail).
+
+.SH OPTIONS
+.TP
+\fB\-f, \-\-fields <FIELDS>...\fR
+Select which fields to display and in what order.
+
+.TP
+\fB\-\-default\fR
+Show all top layer fields. Overrides any specified fields via \fB\-\-fields\fR.
+
+.TP
+\fB\-\-everything\fR
+Show all fields. Overrides \fB\-\-fields\fR and \fB\-\-default\fR.
+
+.TP
+\fB\-d, \-\-detail\fR
+Show additional information beyond the default fields.
+
+.TP
+\fB\-b, \-\-begin <BEGIN>\fR
+Specify the start time for the data, using the same format as replay.
+
+.TP
+\fB\-e, \-\-end <END>\fR
+Specify the end time for the data, using the same format as replay.
+
+.TP
+\fB\-\-duration <DURATION>\fR
+Specify the duration as a time string (e.g., "10 min"). Keywords include days, min, h, sec. Supports relative time formats (e.g., "2 days 3 hr 15m 10sec").
+
+.TP
+\fB\-F, \-\-filter <FILTER>\fR
+Apply a regex to filter the selected field. Refer to the command-level documentation for examples.
+
+.TP
+\fB\-\-sort\fR
+Sort data in ascending order based on the selected field.
+
+.TP
+\fB\-\-rsort\fR
+Sort data in descending order based on the selected field.
+
+.TP
+\fB\-\-top <TOP>\fR
+Specify the number of top results to display. Default is 0.
+
+.TP
+\fB\-\-repeat-title <REPEAT_TITLE>\fR
+Repeat the title for each \fBN\fR lines in the raw output format.
+
+.TP
+\fB\-O, \-\-output-format <OUTPUT_FORMAT>\fR
+Specify the output format. Options include raw, csv, tsv, kv, json, and openmetrics. Default is raw.
+
+.TP
+\fB\-o, \-\-output <OUTPUT>\fR
+Specify the output destination. Default is stdout.
+
+.TP
+\fB\-\-disable-title\fR
+Disable the title in raw, csv, or tsv output formats.
+
+.TP
+\fB\-r <YESTERDAYS>\fR
+Adjust days relative to the current date. Similar to the \fB\-r\fR option in replay.
+
+.TP
+\fB\-\-br <BR>\fR
+Specify the line break symbol between samples.
+
+.TP
+\fB\-\-raw\fR
+Dump raw data without units or conversion.
+
+.TP
+\fB\-p, \-\-pattern <PATTERN>\fR
+Apply a saved pattern from the dumprc file under the [ethtool] section.
+
+.SH EXAMPLES
+To dump ethtool queue statistics between 08:30:00 and 08:30:30 in JSON format:
+
+.SS below dump tc
+Dump the tc related stats with qdiscs
+
+.TP
+\fBAvailable fields\fR
+.PP
+\fItimestamp, datetime, interface, kind, qlen, bps, pps, bytes_per_sec, packets_per_sec,
+backlog_per_sec, drops_per_sec, requeues_per_sec, overlimits_per_sec,
+qdisc.fq_codel.target, qdisc.fq_codel.limit, qdisc.fq_codel.interval,
+qdisc.fq_codel.ecn, qdisc.fq_codel.quantum, qdisc.fq_codel.ce_threshold,
+qdisc.fq_codel.drop_batch_size, qdisc.fq_codel.memory_limit, qdisc.fq_codel.flows,
+xstats.fq_codel.maxpacket, xstats.fq_codel.ecn_mark, xstats.fq_codel.new_flows_len,
+xstats.fq_codel.old_flows_len, xstats.fq_codel.ce_mark,
+xstats.fq_codel.drop_overlimit_per_sec, xstats.fq_codel.new_flow_count_per_sec,
+xstats.fq_codel.memory_usage_per_sec, xstats.fq_codel.drop_overmemory_per_sec.
+\fR
+
+.TP
+\fBAggregated fields\fR
+.PP
+\fB--detail\fR: no effect.
+
+\fB--default\fR: includes [datetime, stats, xstats, qdisc, timestamp].
+
+\fB--everything\fR: includes everything (equivalent to --default --detail).
+
+.SH OPTIONS
+.TP
+\fB\-f, \-\-fields <FIELDS>\fR
+Select which fields to display and in what order.
+
+.TP
+\fB\-\-default\fR
+Show all top layer fields. Overrides any specified fields via \fB\-\-fields\fR.
+
+.TP
+\fB\-\-everything\fR
+Show all fields. Overrides \fB\-\-fields\fR and \fB\-\-default\fR.
+
+.TP
+\fB\-d, \-\-detail\fR
+Show additional information beyond the default fields.
+
+.TP
+\fB\-b, \-\-begin <BEGIN>\fR
+Specify the start time for the data, using the same format as replay.
+
+.TP
+\fB\-e, \-\-end <END>\fR
+Specify the end time for the data, using the same format as replay.
+
+.TP
+\fB\-\-duration <DURATION>\fR
+Specify the duration as a time string (e.g., "10 min"). Keywords include days, min, h, sec. Supports relative time formats (e.g., "2 days 3 hr 15m 10sec").
+
+.TP
+\fB\-F, \-\-filter <FILTER>\fR
+Apply a regex to filter the selected field. Refer to the command-level documentation for examples.
+
+.TP
+\fB\-\-sort\fR
+Sort data in ascending order based on the selected field.
+
+.TP
+\fB\-\-rsort\fR
+Sort data in descending order based on the selected field.
+
+.TP
+\fB\-\-top <TOP>\fR
+Specify the number of top results to display. Default is 0.
+
+.TP
+\fB\-\-repeat-title <REPEAT_TITLE>\fR
+Repeat the title for each \fBN\fR lines in the raw output format.
+
+.TP
+\fB\-O, \-\-output-format <OUTPUT_FORMAT>\fR
+Specify the output format. Options include raw, csv, tsv, kv, json, and openmetrics. Default is raw.
+
+.TP
+\fB\-o, \-\-output <OUTPUT>\fR
+Specify the output destination. Default is stdout.
+
+.TP
+\fB\-\-disable-title\fR
+Disable the title in raw, csv, or tsv output formats.
+
+.TP
+\fB\-r <YESTERDAYS>\fR
+Adjust days relative to the current date. Similar to the \fB\-r\fR option in replay.
+
+.TP
+\fB\-\-br <BR>\fR
+Specify the line break symbol between samples.
+
+.TP
+\fB\-\-raw\fR
+Dump raw data without units or conversion.
+
+.TP
+\fB\-p, \-\-pattern <PATTERN>\fR
+Apply a saved pattern from the dumprc file under the [tc] section.
+
+.SH EXAMPLES
+To dump tc statistics between 08:30:00 and 08:30:30 in JSON format:
+
+.SS snapshot
+Create a historical snapshot file for a given time range. This subcommand supports the following options:
+
+.TP
+.B -b, --begin <BEGIN>
+Specify the beginning time. Accepts the same formats as \fBreplay\fR.
+
+.TP
+.B -e, --end <END>
+Specify the ending time. Accepts the same formats as \fBreplay\fR.
+
+.TP
+.B --duration <DURATION>
+Specify the snapshot duration. Accepts relative time strings like "10m", "2h", etc.
+
+.TP
+.B -o, --output <OUTPUT>
+Specify the output file path. If unspecified, a randomized name is generated in the current directory.
+
+.TP
+.B -s, --host <HOST>
+Supply hostname to take snapshot from remote.
+
+.TP
+.B --port <PORT>
+Override the default port for remote snapshot creation.
+
+.SH EXAMPLES
+.TP
+Run \fBlive\fR mode to display live system data interactively:
+.nf
+below live
+.fi
+
+.TP
+Record system data in daemon mode:
+.nf
+below record
+.fi
+
+.TP
+Replay historical data interactively:
+.nf
+below replay
+.fi
+
+.TP
+Dump historical data to a parseable text format:
+.nf
+below dump > output.txt
+.fi
+
+.SH SEE ALSO
+.B top(1), htop(1), iostat(1), vmstat(8)
+
+.SH AUTHOR
+Meta Platforms, Inc.
+
+.SH COPYRIGHT
+Copyright (C) 2024. All rights reserved. Licensed under the Apache 2.0 license.
