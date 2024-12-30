@@ -30,10 +30,6 @@ Print help for the tool.
 
 .SH SUBCOMMANDS
 .TP
-.B scuba
-Dump data to scuba.
-
-.TP
 .B live
 Display live system data interactively. This is the default mode if no subcommand is specified.
 
@@ -58,65 +54,6 @@ Dump historical data into a parseable text format.
 Create a historical snapshot file for a given time range.
 
 .SH SUBCOMMAND DETAILS
-.SS scuba
-Dump data to scuba. This subcommand supports the following options:
-
-.TP
-.B -b, --begin <BEGIN>
-Time string specifying the starting point. Examples:
-.RS
-.IP
-Keywords: now, today, yesterday
-.IP
-\fI{humantime}\fR ago, e.g., "2 days 3 hr 15m 10sec ago"
-.IP
-short: Mixed \fI{time_digit}{time_unit_char}\fR, e.g., 10m, 3d2h, 5h30s. Case insensitive.
-.IP
-Absolute: "Jan 01 23:59", "01/01/1970 11:59PM", "1970-01-01 23:59:59"
-.IP
-Unix Epoch: 1589808367
-.RE
-
-.TP
-.B -e, --end <END>
-Time string specifying the ending point. Follows the same format as \fB--begin\fR.
-
-.TP
-.B --duration <DURATION>
-Time string specifying the scuba duration. Examples:
-.RS
-.IP
-Keywords: days, min, h, sec
-.IP
-Relative: \fI{humantime}\fR, e.g., "2 days 3 hr 15m 10sec"
-.RE
-
-.TP
-.B -s, --host <HOST>
-Supply hostname to log data from remote.
-
-.TP
-.B --port <PORT>
-Override the default port to connect to remote.
-
-.TP
-.B -r <YESTERDAYS>
-Days adjuster. Use \fIy\fR for yesterday, repeated as needed (e.g., \fIyy\fR for 2 days ago). Examples:
-.RS
-.IP
-Yesterday at 2 pm: \fBbelow replay -r y -t 2:00pm\fR
-.IP
-Adjusted date: \fBbelow replay -r yy -t "09/03/2020 17:00"\fR
-.RE
-
-.TP
-.B -c, --cgroup-filter <CGROUP_FILTER>
-Only cgroups containing the specified string in their full path will be logged. Example:
-.RS
-.IP
-\fBbelow scuba --begin "1m ago" --cgroup-filter /system.slice\fR
-.RE
-
 .SS live
 Display live system data interactively. This subcommand supports the following options:
 
@@ -322,10 +259,6 @@ Dump network interface queue stats
 .TP
 .B tc 
 Dump the tc related stats with qdiscs
-
-.TP
-.B scuba
-Dump data to scuba.
 
 .SS dump system
 Dump system stats.
