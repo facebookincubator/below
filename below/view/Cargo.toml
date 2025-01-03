@@ -10,7 +10,7 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 common = { package = "below-common", version = "0.8.1", path = "../common" }
 crossterm = { version = "0.28", features = ["event-stream"] }
