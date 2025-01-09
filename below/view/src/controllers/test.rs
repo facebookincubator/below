@@ -38,7 +38,7 @@ help = 'i'
 process = 'j'
 system = 'l'
 zoom = 'm'
-fold = 'f'
+fold = 'n'
 jump_forward = 'o'
 jump_backward = 'p'
 next_sample = 'q'
@@ -95,6 +95,10 @@ prev_page = 'y'
     assert_eq!(
         event_controllers.get(&Event::Char('v')),
         Some(&Controllers::CFilter)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('n')),
+        Some(&Controllers::Fold)
     );
     assert_eq!(
         event_controllers.get(&Event::Char('o')),
