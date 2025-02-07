@@ -346,7 +346,7 @@ pub struct DiskStat {
     pub filesystem_type: Option<String>,
 }
 
-#[derive(Clone, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, PartialOrd, Debug, Serialize, Deserialize, Eq, Hash)]
 pub enum PidState {
     Running,
     Sleeping,

@@ -21,6 +21,7 @@ use crate::ViewState;
 
 mod render_impl {
     use std::collections::BTreeMap;
+    use std::collections::HashMap;
     use std::str::FromStr;
 
     use base_render::RenderConfig;
@@ -28,11 +29,14 @@ mod render_impl {
     use cursive::utils::markup::StyledString;
     use model::Model;
     use model::ModelFieldId;
+    use model::ProcessModel;
     use model::Queriable;
     use model::SingleDiskModel;
     use model::SingleNetModel;
     use model::SystemModel;
     use once_cell::sync::Lazy;
+    use procfs::PidState;
+    use procfs::PidStateExt;
 
     use crate::render::ViewItem;
     use crate::viewrc::ViewRc;
@@ -181,6 +185,43 @@ mod render_impl {
         )
     }
 
+    pub fn render_state_row(processes: &ProcessModel) -> StyledString {
+        const COUNT_WIDTH: usize = 7;
+        let mut counts: HashMap<procfs::PidState, u32> = HashMap::new();
+        for process in processes.processes.values() {
+            if let Some(state) = process.state.clone() {
+                let count = counts.entry(state).or_insert(0);
+                *count += 1;
+            }
+        }
+        let mut row = StyledString::new();
+        row.append(base_render::get_fixed_width("Process", ROW_NAME_WIDTH));
+        row.append("Total ");
+        row.append(base_render::get_fixed_width(
+            &processes.processes.len().to_string(),
+            COUNT_WIDTH,
+        ));
+
+        // row.append(base_render::get_fixed_width("TOT", ROW_NAME_WIDTH));
+        for state in [
+            PidState::Running,
+            PidState::Sleeping,
+            PidState::UninterruptibleSleep,
+            PidState::Zombie,
+        ] {
+            let mut count = *counts.get(&state).unwrap_or(&0);
+            if state == PidState::Sleeping {
+                count += *counts.get(&PidState::Idle).unwrap_or(&0);
+            }
+            row.append(format!("{} ", state.as_char().unwrap()));
+            row.append(base_render::get_fixed_width(
+                &count.to_string(),
+                COUNT_WIDTH,
+            ));
+        }
+        row
+    }
+
     pub struct SummaryViewExtraRow {
         pub title: Option<String>,
         pub items: Vec<ViewItem<model::ModelFieldId>>,
@@ -222,13 +263,16 @@ fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
 
     let system_model = view_state.system.borrow();
     let network_model = view_state.network.borrow();
+    let process_model = view_state.process.borrow();
     let cpu_row = render_impl::render_cpu_row(&system_model);
     let mem_row = render_impl::render_mem_row(&system_model);
     let vm_row = render_impl::render_vm_row(&system_model);
     let io_row = render_impl::render_io_row(&system_model.disks);
     let iface_row = render_impl::render_iface_row(&network_model.interfaces);
+    let state_row = render_impl::render_state_row(&process_model);
 
     let mut view = LinearLayout::vertical();
+    view.add_child(TextView::new(state_row));
     view.add_child(TextView::new(cpu_row));
     view.add_child(TextView::new(mem_row));
     view.add_child(TextView::new(vm_row));
