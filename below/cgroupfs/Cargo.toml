@@ -19,4 +19,4 @@ thiserror = "2"
 
 [dev-dependencies]
 paste = "1.0.14"
-tempfile = "3.8"
+tempfile = "3.15"
