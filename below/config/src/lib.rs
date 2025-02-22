@@ -56,8 +56,11 @@ pub struct BelowConfig {
 impl Default for BelowConfig {
     fn default() -> Self {
         BelowConfig {
-            log_dir: BELOW_DEFAULT_LOG.into(),
-            store_dir: BELOW_DEFAULT_STORE.into(),
+            log_dir: std::env::var_os("LOGS_DIRECTORY")
+                .map_or(BELOW_DEFAULT_LOG.into(), PathBuf::from),
+            store_dir: std::env::var_os("LOGS_DIRECTORY").map_or(BELOW_DEFAULT_STORE.into(), |d| {
+                PathBuf::from(d).join("store")
+            }),
             cgroup_root: cgroupfs::DEFAULT_CG_ROOT.into(),
             cgroup_filter_out: String::new(),
             enable_gpu_stats: false,

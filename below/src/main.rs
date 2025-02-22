@@ -19,7 +19,6 @@
 use std::cell::RefCell;
 use std::fs;
 use std::io;
-use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::exit;
 use std::rc::Rc;
@@ -54,8 +53,6 @@ use tar::Archive;
 use tar::Builder as TarBuilder;
 use tempfile::TempDir;
 use tokio::runtime::Builder as TB;
-use uzers::get_current_uid;
-use uzers::get_user_by_uid;
 
 mod exitstat;
 #[cfg(test)]
@@ -331,13 +328,6 @@ pub enum Service {
     Off,
 }
 
-// Whether or not to redirect log to stderr on fs failure
-#[derive(PartialEq)]
-pub enum RedirectLogOnFail {
-    On,
-    Off,
-}
-
 fn bump_memlock_rlimit() -> Result<()> {
     // TODO(T78976996) remove the fbcode_gate once we can exit stats is
     // enabled for opensource
@@ -349,44 +339,6 @@ fn bump_memlock_rlimit() -> Result<()> {
 
         if unsafe { libc::setrlimit(libc::RLIMIT_MEMLOCK, &rlimit) } != 0 {
             bail!("Failed to increase rlimit");
-        }
-    }
-
-    Ok(())
-}
-
-fn create_log_dir(path: &PathBuf) -> Result<()> {
-    if path.exists() && !path.is_dir() {
-        bail!("{} exists and is not a directory", path.to_string_lossy());
-    }
-
-    if !path.is_dir() {
-        match fs::create_dir_all(path) {
-            Ok(()) => {}
-            Err(e) => {
-                bail!(
-                    "Failed to create dir {}: {}\nTry sudo.",
-                    path.to_string_lossy(),
-                    e
-                );
-            }
-        }
-    }
-
-    let dir = fs::File::open(path).unwrap();
-    let mut perm = dir.metadata().unwrap().permissions();
-
-    if perm.mode() & 0o777 != 0o777 {
-        perm.set_mode(0o777);
-        match dir.set_permissions(perm) {
-            Ok(()) => {}
-            Err(e) => {
-                bail!(
-                    "Failed to set permissions on {}: {}",
-                    path.to_string_lossy(),
-                    e
-                );
-            }
         }
     }
 
@@ -407,7 +359,7 @@ fn start_exitstat(
         .spawn(move || {
             match exit_driver.drive() {
                 Ok(_) => {}
-                Err(e) => bpf_err_send.send(e).unwrap(),
+                Err(e) => bpf_err_send.send(e).expect("Failed to send error"),
             };
         })
         .expect("Failed to spawn thread");
@@ -605,24 +557,14 @@ pub fn run<F>(
     debug: bool,
     below_config: &BelowConfig,
     _service: Service,
-    redirect: RedirectLogOnFail,
     command: F,
 ) -> i32
 where
     F: FnOnce(init::InitToken, &BelowConfig, slog::Logger, Receiver<Error>) -> Result<()>,
 {
     let (err_sender, err_receiver) = channel();
-    let mut log_dir = below_config.log_dir.clone();
-    let user = get_user_by_uid(get_current_uid()).expect("Failed to get current user for logging");
-
-    log_dir.push(format!("error_{}.log", user.name().to_string_lossy()));
-
-    if let Err(e) = create_log_dir(&below_config.log_dir) {
-        eprintln!("{:#}", e);
-        return 1;
-    }
-
-    let logger = logging::setup(init, log_dir, debug, redirect);
+    let log_path = below_config.log_dir.join("below.log");
+    let logger = logging::setup(init, log_path, debug);
     setup_log_on_panic(logger.clone());
 
     match Signals::new([signal_hook::consts::SIGINT, signal_hook::consts::SIGTERM]) {
@@ -640,7 +582,9 @@ where
                         }
                         term_now = true;
                         error!(logger, "Stop signal received: {}, exiting.", signal);
-                        err_sender.send(anyhow!(StopSignal { signal })).unwrap();
+                        err_sender
+                            .send(anyhow!(StopSignal { signal }))
+                            .expect("Failed to send stop signal");
                     }
                 })
                 .expect("Failed to spawn thread");
@@ -731,7 +675,6 @@ fn real_main(init: init::InitToken) {
                 debug,
                 below_config,
                 Service::Off,
-                RedirectLogOnFail::On,
                 |_, below_config, logger, errs| {
                     live(
                         init,
@@ -763,7 +706,6 @@ fn real_main(init: init::InitToken) {
                 debug,
                 below_config,
                 Service::On(*port),
-                RedirectLogOnFail::Off,
                 |init, below_config, logger, errs| {
                     record(
                         init,
@@ -800,7 +742,6 @@ fn real_main(init: init::InitToken) {
                 debug,
                 below_config,
                 Service::Off,
-                RedirectLogOnFail::Off,
                 |_, below_config, logger, errs| {
                     replay(
                         logger,
@@ -834,7 +775,6 @@ fn real_main(init: init::InitToken) {
                 debug,
                 below_config,
                 Service::Off,
-                RedirectLogOnFail::Off,
                 |_, below_config, logger, _errs| {
                     snapshot(
                         logger,
@@ -858,7 +798,6 @@ fn real_main(init: init::InitToken) {
                     debug,
                     below_config,
                     Service::Off,
-                    RedirectLogOnFail::Off,
                     |_, below_config, logger, _errs| dump_store(logger, time, below_config, json),
                 )
             }
@@ -884,7 +823,6 @@ fn real_main(init: init::InitToken) {
                     debug,
                     below_config,
                     Service::Off,
-                    RedirectLogOnFail::Off,
                     |_, below_config, logger, _errs| {
                         convert_store(
                             logger,
@@ -918,7 +856,6 @@ fn real_main(init: init::InitToken) {
                 debug,
                 below_config,
                 Service::Off,
-                RedirectLogOnFail::Off,
                 |_, _below_config, logger, errs| {
                     dump::run(logger, errs, store_dir, host, port, snapshot, cmd)
                 },
@@ -961,7 +898,7 @@ fn replay(
             tarball.unpack(&snapshot_dir)?;
             // Find and append the name of the original snapshot directory
             for path in fs::read_dir(&snapshot_dir)? {
-                snapshot_dir.push(path.unwrap().file_name());
+                snapshot_dir.push(path?.file_name());
             }
             new_advance_local(logger.clone(), snapshot_dir, timestamp)
         }
