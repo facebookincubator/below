@@ -2,7 +2,7 @@
 
 [package]
 name = "below-config"
-version = "0.8.1"
+version = "0.9.0"
 authors = ["Meta Platforms, Inc. and affiliates"]
 edition = "2021"
 description = "Configurations for below"
@@ -11,8 +11,8 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "1.0.95"
-btrfs = { package = "below-btrfs", version = "0.8.1", path = "../btrfs" }
-cgroupfs = { version = "0.8.1", path = "../cgroupfs" }
+btrfs = { package = "below-btrfs", version = "0.9.0", path = "../btrfs" }
+cgroupfs = { version = "0.9.0", path = "../cgroupfs" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 toml = "0.8.19"
 
