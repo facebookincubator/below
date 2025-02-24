@@ -23,60 +23,37 @@ use slog::Drain;
 use crate::init::InitToken;
 use crate::logutil::CommandPaletteDrain;
 use crate::logutil::CompoundDecorator;
-use crate::RedirectLogOnFail;
 
-fn setup_log<T: 'static + std::io::Write + std::marker::Send>(
-    _init: InitToken,
-    file: T,
-    _debug: bool,
-    error: Option<std::io::Error>,
-) -> slog::Logger {
+fn setup_log(_init: InitToken, file: std::fs::File, _debug: bool) -> slog::Logger {
     let decorator = CompoundDecorator::new(file, std::io::stderr());
     let drain = slog_term::FullFormat::new(decorator).build().fuse();
     let drain = CommandPaletteDrain::new(drain).fuse();
 
-    let logger = slog::Logger::root(drain, o!());
-
-    // When we want to redirect the log, also log the open file err to stderr
-    if let Some(e) = error {
-        error!(
-            logger,
-            "Fail to open log path: {}\n.Redirecting all log to stderr.", e
-        );
-    }
-
-    logger
+    slog::Logger::root(drain, o!())
 }
 
-pub fn setup(
-    init: InitToken,
-    path: PathBuf,
-    debug: bool,
-    redirect: RedirectLogOnFail,
-) -> slog::Logger {
-    let file_maybe = OpenOptions::new().create(true).append(true).open(path);
-
-    if let Ok(file) = file_maybe.as_ref() {
-        // We don't need to worry about the permission setting here since
-        // as long as the FS is writable, user can run with sudo to reset
-        // file permission.
-        let mut perms = file
-            .metadata()
-            .expect("failed to get file metadata for logfile")
-            .permissions();
-        if perms.mode() & 0o777 != 0o666 {
-            // World readable/writable -- the devil's permissions
-            perms.set_mode(0o666);
-            file.set_permissions(perms)
-                .expect("failed to set permissions on logfile");
+pub fn setup(init: InitToken, path: PathBuf, debug: bool) -> slog::Logger {
+    let file = match OpenOptions::new().create(true).append(true).open(path) {
+        Ok(f) => f,
+        Err(_) => {
+            let temp_log_path = tempfile::Builder::new()
+                .prefix("below.log.")
+                .keep(true)
+                .tempfile()
+                .expect("Failed to create tempfile")
+                .path()
+                .to_path_buf();
+            eprintln!(
+                "Log path unavailable. Logging to {}",
+                temp_log_path.to_string_lossy()
+            );
+            OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(temp_log_path)
+                .expect("Failed to open tempfile")
         }
-    } else if redirect == RedirectLogOnFail::Off {
-        // No redirect, let it crash.
-        file_maybe.as_ref().expect("Failed to open log path");
-    }
+    };
 
-    match file_maybe {
-        Ok(f) => setup_log(init, f, debug, None),
-        Err(e) => setup_log(init, std::io::stderr(), debug, Some(e)),
-    }
+    setup_log(init, file, debug)
 }
