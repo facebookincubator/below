@@ -737,6 +737,15 @@ impl ProcReader {
     /// time. This way, we don't suffer a priority inversion (b/c this crate can be
     /// run from a high priority binary).
     fn read_pid_cmdline_from_path<P: AsRef<Path>>(&self, path: P) -> Result<Option<Vec<String>>> {
+        // If the current number of active workers is equal to or exceeds the maximum, we avoid
+        // enqueuing a new job to prevent unnecessary work since the task would likely time out.
+        // This check is inherently racy: we might erroneously assume the pool is full when it
+        // isn't, but not the reverse, because this is the only place where new tasks are scheduled
+        // synchronously.
+        if self.threadpool.active_count() >= self.threadpool.max_count() {
+            return Ok(None);
+        }
+
         let path = path.as_ref().to_owned();
         let cmdline_data = Arc::new((Mutex::new(None), Condvar::new()));
         let cmdline_data_clone = Arc::clone(&cmdline_data);
