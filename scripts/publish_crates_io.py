@@ -25,10 +25,11 @@ from os import path
 # Paths to crates relative to repository root
 # NB: Order the list based on dependencies: least deps first, most deps last
 PACKAGES = [
+    "below/common",
+    "below/tc",
     "below/ethtool",
     "below/cgroupfs",
     "below/procfs",
-    "below/common",
     "below/btrfs",
     "below/gpu_stats",
     "below/config",
@@ -44,7 +45,9 @@ PACKAGES = [
 
 
 def is_logged_in():
-    return path.exists(path.expanduser("~/.cargo/credentials"))
+    return path.exists(path.expanduser("~/.cargo/credentials")) or path.exists(
+        path.expanduser("~/.cargo/credentials.toml")
+    )
 
 
 def get_repository_root():
@@ -57,10 +60,8 @@ def publish_crate(crate_root, dry_run):
     args.append("publish")
     if dry_run:
         args.append("--dry-run")
-    args.append("--manifest-path")
-    args.append(f"{crate_root}/Cargo.toml")
 
-    subprocess.run(args, check=True)
+    subprocess.run(args, check=True, cwd=crate_root)
 
 
 def main(args):
