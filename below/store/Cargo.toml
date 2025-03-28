@@ -11,7 +11,7 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "1.0.95"
-bitflags = { version = "2.6", features = ["serde"] }
+bitflags = { version = "2.6", features = ["serde", "std"], default-features = false }
 bytes = { version = "1.9.0", features = ["serde"] }
 common = { package = "below-common", version = "0.9.0", path = "../common" }
 humantime = "2.1"
