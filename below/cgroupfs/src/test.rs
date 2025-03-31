@@ -146,6 +146,12 @@ singleline_integer_or_max_test!(read_memory_high, "memory.high");
 singleline_integer_or_max_test!(read_memory_max, "memory.max");
 singleline_integer_or_max_test!(read_memory_swap_max, "memory.swap.max");
 singleline_integer_or_max_test!(read_memory_zswap_max, "memory.zswap.max");
+test_success!(
+    read_memory_zswap_writeback,
+    "memory.zswap.writeback",
+    b"1\n",
+    1
+);
 
 test_success!(read_pids_current, "pids.current", b"10000\n", 10000);
 test_success!(read_cpu_weight, "cpu.weight", b"10000\n", 10000);

@@ -1646,6 +1646,7 @@ impl HasRenderConfig for model::CgroupProperties {
             MemoryMax => rc.title("Mem Max").format(MaxOrReadableSize),
             MemorySwapMax => rc.title("Swap Max").format(MaxOrReadableSize),
             MemoryZswapMax => rc.title("Zswap Max").format(MaxOrReadableSize),
+            MemoryZswapWriteback => rc.title("Zswap WB").format(Precision(1)),
             CpuWeight => rc.title("CPU Weight"),
             CpusetCpus => rc.title("Allowed CPUs"),
             CpusetCpusEffective => rc.title("Effective CPUs"),

@@ -447,6 +447,7 @@ fn collect_cgroup_sample(
         memory_max: wrap(reader.read_memory_max())?,
         memory_swap_max: wrap(reader.read_memory_swap_max())?,
         memory_zswap_max: wrap(reader.read_memory_zswap_max())?,
+        memory_zswap_writeback: wrap(reader.read_memory_zswap_writeback())?,
         memory_events: wrap(reader.read_memory_events())?.map(Into::into),
         memory_events_local: wrap(reader.read_memory_events_local())?.map(Into::into),
         inode_number: match reader.read_inode_number() {

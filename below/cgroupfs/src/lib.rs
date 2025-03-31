@@ -409,6 +409,11 @@ impl CgroupReader {
         self.read_singleline_integer_or_max_stat_file("memory.zswap.max")
     }
 
+    /// Read memory.zswap.writeback - returning 0/1 if zswap writeback is disabled/enabled
+    pub fn read_memory_zswap_writeback(&self) -> Result<u32> {
+        self.read_singleline_file("memory.zswap.writeback")
+    }
+
     /// Read memory.current - returning current cgroup memory
     /// consumption in bytes
     pub fn read_memory_current(&self) -> Result<u64> {
