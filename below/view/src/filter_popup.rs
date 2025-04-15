@@ -15,16 +15,16 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use cursive::Cursive;
 use cursive::event::Key;
 use cursive::view::Nameable;
 use cursive::view::View;
 use cursive::views::Dialog;
 use cursive::views::EditView;
 use cursive::views::OnEventView;
-use cursive::Cursive;
 
-use crate::stats_view::StateCommon;
 use crate::MainViewState;
+use crate::stats_view::StateCommon;
 
 // Set command palette filter
 // field_info includes the column title (string formatted for display) and filter

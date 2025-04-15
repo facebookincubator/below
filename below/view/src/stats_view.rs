@@ -18,8 +18,9 @@ use std::cell::RefMut;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use common::logutil::get_last_log_to_display;
 use common::logutil::CPMsgRecord;
+use common::logutil::get_last_log_to_display;
+use cursive::Cursive;
 use cursive::event::Event;
 use cursive::event::EventResult;
 use cursive::event::EventTrigger;
@@ -36,7 +37,6 @@ use cursive::views::ResizedView;
 use cursive::views::ScrollView;
 use cursive::views::SelectView;
 use cursive::views::ViewRef;
-use cursive::Cursive;
 
 use crate::command_palette::CommandPalette;
 use crate::controllers::Controllers;

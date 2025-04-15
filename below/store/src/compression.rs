@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
+use anyhow::bail;
 use bytes::Bytes;
 
 /// This file defines a minimalistic compressor and decompressor interface

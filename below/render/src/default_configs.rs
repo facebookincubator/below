@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use model::ProcessModelFieldId;
-use model::SingleCgroupModelFieldId;
-use model::SingleProcessModelFieldId;
 use RenderFormat::Duration;
 use RenderFormat::MaxOrDuration;
 use RenderFormat::MaxOrReadableSize;
@@ -22,6 +19,9 @@ use RenderFormat::PageReadableSize;
 use RenderFormat::Precision;
 use RenderFormat::ReadableSize;
 use RenderFormat::SectorReadableSize;
+use model::ProcessModelFieldId;
+use model::SingleCgroupModelFieldId;
+use model::SingleProcessModelFieldId;
 
 use super::*;
 

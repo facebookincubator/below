@@ -24,10 +24,10 @@ use std::str::FromStr;
 use std::sync::mpsc::Receiver;
 use std::time::SystemTime;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use common::cliutil;
 use common::util::get_belowrc_dump_section_key;
 use common::util::get_belowrc_filename;
@@ -35,12 +35,12 @@ use common::util::timestamp_to_datetime;
 use model::Field;
 use model::FieldId;
 use model::Queriable;
-use serde_json::json;
 use serde_json::Value;
-use store::advance::new_advance_local;
-use store::advance::new_advance_remote;
+use serde_json::json;
 use store::Advance;
 use store::Direction;
+use store::advance::new_advance_local;
+use store::advance::new_advance_remote;
 use tar::Archive;
 use tempfile::TempDir;
 use toml::value::Value as TValue;
@@ -62,14 +62,14 @@ pub mod transport;
 #[cfg(test)]
 mod test;
 
-use command::expand_fields;
 pub use command::DumpCommand;
 use command::GeneralOpt;
 use command::OutputFormat;
+use command::expand_fields;
 use render::HasRenderConfigForDump;
-use tmain::dump_timeseries;
 use tmain::Dumper;
 use tmain::IterExecResult;
+use tmain::dump_timeseries;
 
 /// Fields available to all commands. Each enum represents some semantics and
 /// knows how to extract relevant data from a CommonFieldContext.

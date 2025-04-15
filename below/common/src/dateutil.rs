@@ -30,12 +30,12 @@ use std::sync::atomic::AtomicI32;
 use std::sync::atomic::Ordering;
 use std::time::SystemTime;
 
-use chrono::prelude::*;
 use chrono::Duration;
 use chrono::Local;
 use chrono::NaiveDateTime;
 use chrono::NaiveTime;
 use chrono::TimeZone;
+use chrono::prelude::*;
 use regex::Regex;
 
 /// A simple time structure that matches hg's time representation.

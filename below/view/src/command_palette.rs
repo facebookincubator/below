@@ -17,6 +17,9 @@ use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
+use cursive::Cursive;
+use cursive::Printer;
+use cursive::View;
 use cursive::event::Event;
 use cursive::event::EventResult;
 use cursive::event::Key;
@@ -24,9 +27,6 @@ use cursive::theme::ColorStyle;
 use cursive::vec::Vec2;
 use cursive::views::EditView;
 use cursive::views::NamedView;
-use cursive::Cursive;
-use cursive::Printer;
-use cursive::View;
 
 use crate::controllers::Controllers;
 use crate::stats_view::StatsView;

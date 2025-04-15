@@ -15,13 +15,13 @@
 use proc_macro2::Span;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::parse::Parse;
-use syn::parse::ParseStream;
-use syn::spanned::Spanned;
 use syn::DeriveInput;
 use syn::Field;
 use syn::Ident;
 use syn::Token;
+use syn::parse::Parse;
+use syn::parse::ParseStream;
+use syn::spanned::Spanned;
 
 use crate::helper::get_metadata;
 use crate::helper::occurrence_error;

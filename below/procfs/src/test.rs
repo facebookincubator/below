@@ -20,11 +20,11 @@ use std::path::Path;
 use slog::Drain;
 use tempfile::TempDir;
 
-use crate::types::*;
 use crate::KsmReader;
 use crate::NetReader;
-use crate::ProcReader;
 use crate::PAGE_SIZE;
+use crate::ProcReader;
+use crate::types::*;
 
 struct TestProcfs {
     tempdir: TempDir,

@@ -24,9 +24,9 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use bitflags::bitflags;
 use common::fileutil::get_dir_size;
 use common::open_source_shim;

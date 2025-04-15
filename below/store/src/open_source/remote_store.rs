@@ -14,8 +14,8 @@
 
 use std::time::SystemTime;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 
 use crate::DataFrame;
 use crate::Direction;

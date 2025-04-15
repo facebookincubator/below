@@ -19,8 +19,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use serde::Deserialize;
 use serde::Serialize;
 

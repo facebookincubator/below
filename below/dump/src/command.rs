@@ -15,9 +15,9 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use clap::Parser;
 use model::BtrfsModelFieldId;
 use model::FieldId;

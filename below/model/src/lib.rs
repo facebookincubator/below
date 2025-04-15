@@ -23,9 +23,9 @@ use std::time::Duration;
 use std::time::Instant;
 use std::time::SystemTime;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use common::open_source_shim;
 use enum_iterator::Sequence;
 use serde::Deserialize;

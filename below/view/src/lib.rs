@@ -66,6 +66,9 @@ use common::util::get_belowrc_filename;
 use common::util::get_belowrc_view_section_key;
 use crossterm::event::DisableMouseCapture;
 use crossterm::execute;
+use cursive::Cursive;
+use cursive::CursiveRunnable;
+use cursive::ScreenId;
 use cursive::event::Event;
 use cursive::theme::BaseColor;
 use cursive::theme::Color;
@@ -78,9 +81,6 @@ use cursive::views::OnEventView;
 use cursive::views::Panel;
 use cursive::views::ResizedView;
 use cursive::views::ScreensView;
-use cursive::Cursive;
-use cursive::CursiveRunnable;
-use cursive::ScreenId;
 use model::CgroupModel;
 #[cfg(fbcode_build)]
 use model::GpuModel;
@@ -529,12 +529,12 @@ pub mod fake_view {
 
     use self::viewrc::ViewRc;
     use super::*;
-    use crate::cgroup_view::CgroupView;
-    use crate::command_palette::CommandPalette;
-    use crate::stats_view::StatsView;
     use crate::MainViewState;
     use crate::ViewMode;
     use crate::ViewState;
+    use crate::cgroup_view::CgroupView;
+    use crate::command_palette::CommandPalette;
+    use crate::stats_view::StatsView;
 
     pub struct FakeView {
         pub inner: CursiveRunnable,

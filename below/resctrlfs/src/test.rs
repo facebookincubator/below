@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use std::ffi::OsStr;
-use std::fs::create_dir_all;
 use std::fs::File;
+use std::fs::create_dir_all;
 use std::io::Write;
 use std::os::linux::fs::MetadataExt;
 use std::path::Path;

@@ -25,9 +25,9 @@
 use proc_macro2::Span;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::spanned::Spanned;
 use syn::DeriveInput;
 use syn::LitStr;
+use syn::spanned::Spanned;
 
 use crate::helper::to_snakecase;
 

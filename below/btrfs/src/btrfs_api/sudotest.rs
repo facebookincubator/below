@@ -20,18 +20,18 @@ use std::os::unix::io::AsRawFd;
 use std::path::Path;
 
 #[cfg(fbcode_build)]
-pub use btrfs::btrfs_api::*;
-#[cfg(fbcode_build)]
 use btrfs::BtrfsReader;
+#[cfg(fbcode_build)]
+pub use btrfs::btrfs_api::*;
 use common::logutil::get_logger;
-use nix::sys::statfs::fstatfs;
 use nix::sys::statfs::FsType;
+use nix::sys::statfs::fstatfs;
 use openat::Dir;
 
 #[cfg(not(fbcode_build))]
-pub use crate::btrfs_api::*;
-#[cfg(not(fbcode_build))]
 use crate::BtrfsReader;
+#[cfg(not(fbcode_build))]
+pub use crate::btrfs_api::*;
 
 // Currently, sudotests test basic functionality. Will testing infrastructure in later commits
 

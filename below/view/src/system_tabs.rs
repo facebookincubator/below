@@ -12,10 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use base_render::get_fixed_width;
 use base_render::RenderConfigBuilder as Rc;
+use base_render::get_fixed_width;
 use common::util::get_prefix;
 use cursive::utils::markup::StyledString;
+use model::BtrfsModel;
+use model::Queriable;
+use model::SingleSlabModel;
 use model::system::BtrfsModelFieldId;
 use model::system::KsmModelFieldId;
 use model::system::MemoryModelFieldId;
@@ -23,9 +26,6 @@ use model::system::SingleCpuModelFieldId;
 use model::system::SingleDiskModelFieldId;
 use model::system::SingleSlabModelFieldId;
 use model::system::VmModelFieldId;
-use model::BtrfsModel;
-use model::Queriable;
-use model::SingleSlabModel;
 
 use crate::render::ViewItem;
 use crate::stats_view::ColumnTitles;

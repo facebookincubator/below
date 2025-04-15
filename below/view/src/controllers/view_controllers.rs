@@ -16,9 +16,9 @@ use cursive::views::OnEventView;
 use cursive::views::ResizedView;
 
 use super::*;
-use crate::set_active_screen;
 use crate::MainViewState;
 use crate::ProcessZoomState;
+use crate::set_active_screen;
 
 // Invoke command palette
 make_event_controller!(

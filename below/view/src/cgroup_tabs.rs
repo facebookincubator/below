@@ -16,12 +16,12 @@ use std::collections::HashSet;
 
 use base_render::RenderConfig;
 use cursive::utils::markup::StyledString;
-use model::sort_queriables;
 use model::CgroupModel;
 use model::CgroupModelFieldId;
 use model::Queriable;
 use model::SingleCgroupModel;
 use model::SingleCgroupModelFieldId;
+use model::sort_queriables;
 
 use crate::cgroup_view::CgroupState;
 use crate::render::ViewItem;

@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::render::HasViewStyle;
-use crate::render::ViewStyle;
 use crate::render::CPU_HIGHLIGHT;
+use crate::render::HasViewStyle;
 use crate::render::MEM_HIGHLIGHT;
 use crate::render::PRESSURE_HIGHLIGHT;
+use crate::render::ViewStyle;
 
 impl HasViewStyle for model::SingleCgroupModel {
     fn get_view_style(field_id: &Self::FieldId) -> Option<ViewStyle> {

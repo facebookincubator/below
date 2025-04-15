@@ -24,10 +24,10 @@ use model::Collector;
 use model::CollectorOptions;
 use model::Model;
 use model::Sample;
-use store::advance::new_advance_local;
 use store::ChunkSizePo2;
 use store::CompressionMode;
 use store::DataFrame;
+use store::advance::new_advance_local;
 use tempfile::TempDir;
 
 #[cfg_attr(not(feature = "vmtest"), test)]

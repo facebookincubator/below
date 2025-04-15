@@ -19,12 +19,12 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::rc::Rc;
 
+use cursive::Cursive;
 use cursive::utils::markup::StyledString;
 use cursive::view::Nameable;
 use cursive::views::NamedView;
 use cursive::views::SelectView;
 use cursive::views::ViewRef;
-use cursive::Cursive;
 use model::CgroupCpuModelFieldId;
 use model::CgroupIoModelFieldId;
 use model::CgroupMemoryModelFieldId;
@@ -32,14 +32,14 @@ use model::CgroupModel;
 use model::Queriable;
 use model::SingleCgroupModelFieldId;
 
-use crate::cgroup_tabs::default_tabs;
+use crate::ViewState;
 use crate::cgroup_tabs::CgroupTab;
+use crate::cgroup_tabs::default_tabs;
 use crate::render::ViewItem;
 use crate::stats_view::ColumnTitles;
 use crate::stats_view::StateCommon;
 use crate::stats_view::StatsView;
 use crate::stats_view::ViewBridge;
-use crate::ViewState;
 
 pub type ViewType = StatsView<CgroupView>;
 

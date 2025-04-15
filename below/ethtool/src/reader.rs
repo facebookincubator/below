@@ -22,10 +22,10 @@ use std::str;
 
 use nix::errno::Errno;
 use nix::libc;
-use nix::sys::socket::socket;
 use nix::sys::socket::AddressFamily;
 use nix::sys::socket::SockFlag;
 use nix::sys::socket::SockType;
+use nix::sys::socket::socket;
 
 use crate::errors::EthtoolError;
 use crate::ethtool_sys;

@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::bail;
 use anyhow::Result;
-use cursive::theme::Effect;
-use cursive::vec::Vec2;
+use anyhow::bail;
 use cursive::Printer;
 use cursive::View;
+use cursive::theme::Effect;
+use cursive::vec::Vec2;
 
 /// TextView that has a vector of string as tabs
 ///

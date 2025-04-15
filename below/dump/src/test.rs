@@ -15,9 +15,9 @@
 use std::collections::BTreeMap;
 use std::time::Duration;
 
-use command::expand_fields;
 use command::GeneralOpt;
 use command::OutputFormat;
+use command::expand_fields;
 use common::logutil::get_logger;
 use model::Collector;
 use model::Queriable;

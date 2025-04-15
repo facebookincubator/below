@@ -15,8 +15,8 @@
 use store::Direction;
 
 use super::*;
-use crate::jump_popup;
 use crate::ViewMode;
+use crate::jump_popup;
 
 // Jump forward
 make_event_controller!(

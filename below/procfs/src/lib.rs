@@ -30,9 +30,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use lazy_static::lazy_static;
+use libc::CLOCK_BOOTTIME;
 use libc::clock_gettime;
 use libc::timespec;
-use libc::CLOCK_BOOTTIME;
 use nix::sys;
 use openat::Dir;
 use parking_lot::Condvar;

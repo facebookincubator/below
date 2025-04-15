@@ -28,12 +28,12 @@ use netlink_packet_route::tc::TcStatsBasic;
 use netlink_packet_route::tc::TcStatsQueue;
 use netlink_packet_route::tc::TcXstats;
 
-use crate::types::XStats;
 use crate::FqCodelQDisc;
 use crate::FqCodelQdStats;
 use crate::FqCodelXStats;
 use crate::QDisc;
 use crate::Result;
+use crate::types::XStats;
 
 fn fake_netlink_qdiscs() -> Result<Vec<TcMessage>> {
     let mut tc_msgs = Vec::new();

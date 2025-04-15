@@ -71,10 +71,10 @@
 //!   2.2 if found, get the Controllers value. For example Controllers::Cgroup
 //! 3. Invoke the handle function. For example Controllers::Cgroup.hanle()
 //! 4. Invoke the callback function. For example Controllers::Cgroup.callback()
+use cursive::Cursive;
 use cursive::event::Event;
 use cursive::event::EventTrigger;
 use cursive::event::Key;
-use cursive::Cursive;
 use toml::value::Value;
 
 #[macro_use]
@@ -92,11 +92,11 @@ use controller_infra::*;
 use sample_controllers::*;
 use view_controllers::*;
 
+use crate::ViewState;
 use crate::refresh;
 use crate::stats_view::StateCommon;
 use crate::stats_view::StatsView;
 use crate::stats_view::ViewBridge;
-use crate::ViewState;
 
 open_source_shim!();
 

@@ -19,13 +19,12 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::rc::Rc;
 
+use cursive::Cursive;
 use cursive::utils::markup::StyledString;
 use cursive::view::Nameable;
 use cursive::views::NamedView;
 use cursive::views::SelectView;
 use cursive::views::ViewRef;
-use cursive::Cursive;
-use model::system::SystemModel;
 use model::BtrfsModelFieldId;
 use model::KsmModelFieldId;
 use model::MemoryModelFieldId;
@@ -33,13 +32,14 @@ use model::SingleCpuModelFieldId;
 use model::SingleDiskModelFieldId;
 use model::SingleSlabModelFieldId;
 use model::VmModelFieldId;
+use model::system::SystemModel;
 
+use crate::ViewState;
 use crate::stats_view::ColumnTitles;
 use crate::stats_view::StateCommon;
 use crate::stats_view::StatsView;
 use crate::stats_view::ViewBridge;
 use crate::system_tabs::*;
-use crate::ViewState;
 
 pub type ViewType = StatsView<SystemView>;
 

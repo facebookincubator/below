@@ -25,8 +25,8 @@ use cursive::views::Panel;
 use cursive::views::SelectView;
 use cursive::views::TextView;
 
-use crate::controllers::event_to_string;
 use crate::controllers::Controllers;
+use crate::controllers::event_to_string;
 use crate::tab_view::TabView;
 
 pub struct ControllerHelper {

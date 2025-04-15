@@ -17,8 +17,8 @@ use std::io::prelude::*;
 use tempfile::TempDir;
 
 use super::*;
-use crate::fake_view::FakeView;
 use crate::View;
+use crate::fake_view::FakeView;
 
 #[test]
 fn test_event_controller_override() {

@@ -16,9 +16,9 @@ use std::fs::OpenOptions;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
+use slog::Drain;
 use slog::error;
 use slog::o;
-use slog::Drain;
 
 use crate::init::InitToken;
 use crate::logutil::CommandPaletteDrain;

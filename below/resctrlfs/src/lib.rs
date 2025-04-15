@@ -25,8 +25,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use nix::sys::statfs::fstatfs;
 use nix::sys::statfs::RDTGROUP_SUPER_MAGIC;
+use nix::sys::statfs::fstatfs;
 use openat::Dir;
 use openat::SimpleType;
 use thiserror::Error;

@@ -28,8 +28,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use nix::sys::statfs::fstatfs;
 use nix::sys::statfs::CGROUP2_SUPER_MAGIC;
+use nix::sys::statfs::fstatfs;
 use openat::AsPath;
 use openat::Dir;
 use openat::SimpleType;
