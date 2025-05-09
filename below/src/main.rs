@@ -44,6 +44,8 @@ use clap_complete::Shell;
 use clap_complete::generate;
 use cursive::Cursive;
 use indicatif::ProgressBar;
+use nix::sys::mman::MlockAllFlags;
+use nix::sys::mman::mlockall;
 use regex::Regex;
 use signal_hook::iterator::Signals;
 use slog::debug;
@@ -1033,6 +1035,15 @@ fn record(
             tc_stats_receiver,
         },
     );
+
+    let ret = mlockall(MlockAllFlags::MCL_CURRENT);
+    if ret.is_err() {
+        warn!(
+            logger,
+            "mlockall failed: {}. Continue without mlock",
+            std::io::Error::last_os_error()
+        );
+    }
 
     loop {
         if !disable_exitstats {
