@@ -196,13 +196,12 @@ mod render_impl {
         }
         let mut row = StyledString::new();
         row.append(base_render::get_fixed_width("Process", ROW_NAME_WIDTH));
-        row.append("Total ");
+        row.append(base_render::get_fixed_width("Total ", ROW_FIELD_NAME_WIDTH));
         row.append(base_render::get_fixed_width(
             &processes.processes.len().to_string(),
-            COUNT_WIDTH,
+            ROW_FIELD_WIDTH,
         ));
 
-        // row.append(base_render::get_fixed_width("TOT", ROW_NAME_WIDTH));
         for state in [
             PidState::Running,
             PidState::Sleeping,
@@ -213,10 +212,13 @@ mod render_impl {
             if state == PidState::Sleeping {
                 count += *counts.get(&PidState::Idle).unwrap_or(&0);
             }
-            row.append(format!("{} ", state.as_char().unwrap()));
+            row.append(base_render::get_fixed_width(
+                &format!("{}", state.as_char().unwrap()),
+                ROW_FIELD_NAME_WIDTH,
+            ));
             row.append(base_render::get_fixed_width(
                 &count.to_string(),
-                COUNT_WIDTH,
+                ROW_FIELD_WIDTH,
             ));
         }
         row
