@@ -36,6 +36,7 @@ once_cell = "1.12"
 plain = "0.2"
 procfs = { package = "fb_procfs", version = "0.9.0", path = "procfs" }
 regex = "1.11.1"
+scopeguard = "1.2.0"
 serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
 signal-hook = "0.3"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

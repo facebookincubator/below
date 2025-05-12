@@ -26,9 +26,12 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::RecvTimeoutError;
+use std::sync::mpsc::SyncSender;
 use std::sync::mpsc::TryRecvError;
 use std::sync::mpsc::channel;
+use std::sync::mpsc::sync_channel;
 use std::thread;
+use std::thread::JoinHandle;
 use std::time::Duration;
 use std::time::Instant;
 use std::time::SystemTime;
@@ -47,6 +50,7 @@ use indicatif::ProgressBar;
 use nix::sys::mman::MlockAllFlags;
 use nix::sys::mman::mlockall;
 use regex::Regex;
+use scopeguard::guard;
 use signal_hook::iterator::Signals;
 use slog::debug;
 use slog::error;
@@ -203,6 +207,9 @@ enum Command {
         /// Options for compression
         #[clap(flatten)]
         compress_opts: CompressOpts,
+        /// Max number of samples we will buffer before writing becomes blocking
+        #[clap(short, default_value = "10")]
+        writer_buffer_size: usize,
     },
     /// Replay historical data (interactive)
     Replay {
@@ -538,6 +545,59 @@ fn cleanup_store(
     Ok(())
 }
 
+pub struct WorkerTask {
+    post_collect_sys_time: SystemTime,
+    data: DataFrame,
+}
+
+fn start_store_writer_thread(
+    logger: slog::Logger,
+    mut store: store::StoreWriter,
+    _stats: Arc<Mutex<statistics::Statistics>>,
+    store_size_limit: Option<u64>,
+    retention: Option<Duration>,
+    writer_buffer_size: usize,
+) -> Result<(JoinHandle<()>, SyncSender<WorkerTask>)> {
+    let (send_task, recv_task) = sync_channel::<WorkerTask>(writer_buffer_size);
+    let handle = thread::Builder::new()
+        .name("store_writer".to_owned())
+        .spawn(move || {
+            loop {
+                match recv_task.recv() {
+                    Ok(write_task) => {
+                        match store.put(write_task.post_collect_sys_time, &write_task.data) {
+                            Ok(/* new shard */ true) => {
+                                cleanup_store(
+                                    &store,
+                                    &logger,
+                                    store_size_limit,
+                                    /* retention */ None,
+                                )
+                                .expect("cleanup_store failed")
+                            }
+                            Ok(/* new shard */ false) => {}
+                            Err(e) => error!(logger, "{:#}", e),
+                        }
+                    }
+                    Err(_) => {
+                        warn!(
+                            logger,
+                            "store_write input channel disconnected, exiting thread"
+                        );
+                        // end loop
+                        break;
+                    }
+                }
+
+                // Only check against retention and not size limit. Size limit is only
+                // checked on creation of successful write to a new shard.
+                cleanup_store(&store, &logger, /* store_size_limit */ None, retention)
+                    .expect("cleanup_store failed");
+            }
+        })?;
+    Ok((handle, send_task))
+}
+
 /// Special Error that indicates the program should stop now. It represents an
 /// actual signal, e.g. SIGINT, SIGTERM, that is handled by below and thus below
 /// can shutdown gracefully.
@@ -701,6 +761,7 @@ fn real_main(init: init::InitToken) {
             disable_disk_stat,
             disable_exitstats,
             compress_opts,
+            ref writer_buffer_size,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
             run(
@@ -723,6 +784,7 @@ fn real_main(init: init::InitToken) {
                         *disable_disk_stat,
                         *disable_exitstats,
                         compress_opts,
+                        *writer_buffer_size,
                     )
                 },
             )
@@ -962,20 +1024,13 @@ fn record(
     disable_disk_stat: bool,
     disable_exitstats: bool,
     compress_opts: &CompressOpts,
+    writer_buffer_size: usize,
 ) -> Result<()> {
     debug!(logger, "Starting up!");
 
     if !disable_exitstats {
         bump_memlock_rlimit()?;
     }
-
-    let mut store = store::StoreWriter::new(
-        logger.clone(),
-        &below_config.store_dir,
-        compress_opts.to_compression_mode()?,
-        store::Format::Cbor,
-    )?;
-    let mut stats = statistics::Statistics::new(init);
 
     let (exit_buffer, bpf_errs) = if disable_exitstats {
         (Arc::new(Mutex::new(procfs::PidMap::new())), None)
@@ -1033,6 +1088,29 @@ fn record(
         },
     );
 
+    let store = store::StoreWriter::new(
+        logger.clone(),
+        &below_config.store_dir,
+        compress_opts.to_compression_mode()?,
+        store::Format::Cbor,
+    )?;
+
+    let shared_stats = Arc::new(Mutex::new(statistics::Statistics::new(init)));
+
+    let (writer_thread, send_task) = start_store_writer_thread(
+        logger.clone(),
+        store,
+        Arc::clone(&shared_stats),
+        store_size_limit,
+        retention,
+        writer_buffer_size,
+    )?;
+
+    let send_task = guard(send_task, |s| {
+        drop(s);
+        let _ = writer_thread.join();
+    });
+
     let ret = mlockall(MlockAllFlags::MCL_CURRENT);
     if ret.is_err() {
         warn!(
@@ -1075,23 +1153,24 @@ fn record(
                 collection_skew.as_millis(),
                 skew_detection_threshold.as_millis()
             );
-
-            stats.report_collection_skew();
+            shared_stats
+                .lock()
+                .expect("error acquired stats lock")
+                .report_collection_skew();
         }
 
         match collected_sample {
             Ok(s) => {
-                let frame = DataFrame { sample: s };
-                match store.put(post_collect_sys_time, &frame) {
-                    Ok(/* new shard */ true) => {
-                        cleanup_store(&store, &logger, store_size_limit, /* retention */ None)?
-                    }
-                    Ok(/* new shard */ false) => {}
-                    Err(e) => error!(logger, "{:#}", e),
-                }
                 if below_config.enable_gpu_stats {
-                    stats.report_nr_accelerators(&frame.sample);
+                    let mut lock = shared_stats.lock().expect("error acquiring stats lock");
+                    lock.report_nr_accelerators(&s);
                 }
+                send_task
+                    .send(WorkerTask {
+                        post_collect_sys_time,
+                        data: DataFrame { sample: s },
+                    })
+                    .expect("Failed to send write task");
             }
             Err(e) => {
                 // Handle cgroupfs errors
@@ -1103,11 +1182,10 @@ fn record(
             }
         };
 
-        // Only check against retention and not size limit. Size limit is only
-        // checked on creation of successful write to a new shard.
-        cleanup_store(&store, &logger, /* store_size_limit */ None, retention)?;
-
-        stats.report_store_size(below_config.store_dir.as_path());
+        {
+            let mut lock = shared_stats.lock().expect("error acquired stats lock");
+            lock.report_store_size(below_config.store_dir.as_path());
+        }
 
         let collect_duration = Instant::now().duration_since(collect_instant);
         // Sleep for at least 1s to avoid sample collision
