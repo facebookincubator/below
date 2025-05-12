@@ -141,7 +141,7 @@ pub trait EventController {
 /// * handle - handler closure for view level processing
 /// * callback - callback closure for cursive level processing
 macro_rules! make_event_controller {
-    ($name:ident, $cmd:expr, $cmd_short:expr, $event:expr, $handle:expr) => {
+    ($name:ident, $cmd:expr_2021, $cmd_short:expr_2021, $event:expr_2021, $handle:expr_2021) => {
         pub struct $name;
 
         impl EventController for $name {
@@ -163,7 +163,7 @@ macro_rules! make_event_controller {
         }
     };
 
-    ($name:ident, $cmd:expr, $cmd_short:expr, $event:expr, $handle:expr, $callback:expr) => {
+    ($name:ident, $cmd:expr_2021, $cmd_short:expr_2021, $event:expr_2021, $handle:expr_2021, $callback:expr_2021) => {
         pub struct $name;
 
         impl EventController for $name {

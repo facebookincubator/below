@@ -26,7 +26,7 @@ fn get_spacing() -> &'static str {
     "     "
 }
 
-fn get_content(c: &mut Cursive) -> impl Into<StyledString> {
+fn get_content(c: &mut Cursive) -> impl Into<StyledString> + use<> {
     let view_state = &c
         .user_data::<ViewState>()
         .expect("No data stored in Cursive object!");
@@ -73,6 +73,6 @@ pub fn refresh(c: &mut Cursive) {
     v.set_content(content);
 }
 
-pub fn new(c: &mut Cursive) -> impl View {
+pub fn new(c: &mut Cursive) -> impl View + use<> {
     TextView::new(get_content(c)).with_name("status_bar")
 }

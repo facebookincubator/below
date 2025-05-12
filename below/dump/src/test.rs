@@ -1006,7 +1006,8 @@ fn test_dump_queue_content() {
 
     // we are dumping timestamps assuming they are local time
     // so the timezone needs to be set to the expected TZ
-    std::env::set_var("TZ", "US/Pacific");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("TZ", "US/Pacific") };
 
     let result = queue_dumper
         .dump_model(&ctx, &model, &mut queue_content, &mut round, false)

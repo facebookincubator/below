@@ -112,7 +112,7 @@ macro_rules! parse_item {
     // Parse rhs (an option, usually from an iterator) into type $t or
     // report a parse error on $line otherwise
     // Returns a Result<Option<$t>>
-    ($path:expr, $rhs:expr, $t:tt, $line:ident) => {
+    ($path:expr_2021, $rhs:expr_2021, $t:tt, $line:ident) => {
         if let Some(s) = $rhs {
             s.parse::<$t>()
                 .map_err(|_| Error::ParseError {
@@ -128,7 +128,7 @@ macro_rules! parse_item {
     };
     // Parse the second item of $line as type $t with the same
     // semantics as above
-    ($path: expr, $line:ident, $t:tt) => {{
+    ($path: expr_2021, $line:ident, $t:tt) => {{
         let mut items = $line.split_ascii_whitespace();
 
         // Advance past the name
@@ -139,19 +139,19 @@ macro_rules! parse_item {
 }
 
 macro_rules! parse_usec {
-    ($path:expr, $rhs:expr, $line:ident) => {
+    ($path:expr_2021, $rhs:expr_2021, $line:ident) => {
         parse_item!($path, $rhs, u64, $line).map(|opt| opt.map(|v| v * *MICROS_PER_TICK))
     };
 }
 
 macro_rules! parse_sec {
-    ($path:expr, $rhs:expr, $line:ident) => {
+    ($path:expr_2021, $rhs:expr_2021, $line:ident) => {
         parse_item!($path, $rhs, u64, $line).map(|opt| opt.map(|v| v / *TICKS_PER_SECOND))
     };
 }
 
 macro_rules! parse_kb {
-    ($path:expr, $rhs:expr, $line:ident) => {
+    ($path:expr_2021, $rhs:expr_2021, $line:ident) => {
         parse_item!($path, $rhs, u64, $line).map(|opt| opt.map(|v| v * 1024))
     };
 }

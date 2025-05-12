@@ -666,9 +666,9 @@ fn real_main(init: init::InitToken) {
     let rc = match cmd {
         Command::External(command) => commands::run_command(init, debug, below_config, command),
         Command::Live {
-            ref interval_s,
-            ref host,
-            ref port,
+            interval_s,
+            host,
+            port,
         } => {
             let host = host.clone();
             let port = *port;
@@ -692,15 +692,15 @@ fn real_main(init: init::InitToken) {
             )
         }
         Command::Record {
-            ref interval_s,
-            ref retain_for_s,
-            ref store_size_limit,
-            ref collect_io_stat,
-            ref port,
-            ref skew_detection_threshold_ms,
-            ref disable_disk_stat,
-            ref disable_exitstats,
-            ref compress_opts,
+            interval_s,
+            retain_for_s,
+            store_size_limit,
+            collect_io_stat,
+            port,
+            skew_detection_threshold_ms,
+            disable_disk_stat,
+            disable_exitstats,
+            compress_opts,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
             run(
@@ -728,11 +728,11 @@ fn real_main(init: init::InitToken) {
             )
         }
         Command::Replay {
-            ref time,
-            ref host,
-            ref port,
-            ref yesterdays,
-            ref snapshot,
+            time,
+            host,
+            port,
+            yesterdays,
+            snapshot,
         } => {
             let time = time.clone();
             let host = host.clone();
@@ -759,12 +759,12 @@ fn real_main(init: init::InitToken) {
             )
         }
         Command::Snapshot {
-            ref begin,
-            ref end,
-            ref duration,
-            ref output,
-            ref host,
-            ref port,
+            begin,
+            end,
+            duration,
+            output,
+            host,
+            port,
         } => {
             let begin = begin.clone();
             let end = end.clone();
@@ -791,8 +791,8 @@ fn real_main(init: init::InitToken) {
                 },
             )
         }
-        Command::Debug { ref cmd } => match cmd {
-            DebugCommand::DumpStore { ref time, ref json } => {
+        Command::Debug { cmd } => match cmd {
+            DebugCommand::DumpStore { time, json } => {
                 let time = time.clone();
                 let json = *json;
                 run(
@@ -804,14 +804,14 @@ fn real_main(init: init::InitToken) {
                 )
             }
             DebugCommand::ConvertStore {
-                ref begin,
-                ref end,
-                ref duration,
-                ref from_store_dir,
-                ref to_store_dir,
-                ref host,
-                ref port,
-                ref compress_opts,
+                begin,
+                end,
+                duration,
+                from_store_dir,
+                to_store_dir,
+                host,
+                port,
+                compress_opts,
             } => {
                 let begin = begin.clone();
                 let end = end.clone();
@@ -843,10 +843,10 @@ fn real_main(init: init::InitToken) {
             }
         },
         Command::Dump {
-            ref host,
-            ref port,
-            ref snapshot,
-            ref cmd,
+            host,
+            port,
+            snapshot,
+            cmd,
         } => {
             let store_dir = below_config.store_dir.clone();
             let host = host.clone();
@@ -863,10 +863,7 @@ fn real_main(init: init::InitToken) {
                 },
             )
         }
-        Command::GenerateCompletions {
-            ref shell,
-            ref output,
-        } => {
+        Command::GenerateCompletions { shell, output } => {
             generate_completions(*shell, output.clone())
                 .unwrap_or_else(|_| panic!("Failed to generate completions for {:?}", shell));
             0
@@ -1134,7 +1131,7 @@ fn live_local(
     if let Err(e) = bump_memlock_rlimit() {
         warn!(
             logger,
-            #"V",
+            # "V",
             "Failed to initialize BPF: {}. Data collection will be degraded. \
             You can ignore this warning or try to run with sudo.",
             &e

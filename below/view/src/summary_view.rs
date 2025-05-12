@@ -299,7 +299,7 @@ pub fn refresh(c: &mut Cursive) {
     fill_content(c, &mut v);
 }
 
-pub fn new(c: &mut Cursive) -> impl View {
+pub fn new(c: &mut Cursive) -> impl View + use<> {
     let mut view = LinearLayout::vertical();
     fill_content(c, &mut view);
     view.with_name("summary_view")

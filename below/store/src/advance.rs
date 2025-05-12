@@ -490,7 +490,7 @@ mod tests {
         let mut store = FakeStore::new();
         // We didn't use closure here to reveal line number for test failure
         macro_rules! check_sample {
-            ($query:tt, $expected:tt, $direction:expr) => {
+            ($query:tt, $expected:tt, $direction:expr_2021) => {
                 let timestamp = util::get_system_time($query);
                 let res = store.get_sample_at_timestamp(timestamp, $direction);
                 assert_eq!(
@@ -498,7 +498,7 @@ mod tests {
                     Some((util::get_system_time($expected), $expected))
                 );
             };
-            ($query:tt, $direction:expr) => {
+            ($query:tt, $direction:expr_2021) => {
                 let timestamp = util::get_system_time($query);
                 let res = store.get_sample_at_timestamp(timestamp, $direction);
                 assert_eq!(res.expect("Fail to get sample."), None);
@@ -535,7 +535,7 @@ mod tests {
         let mut store = FakeStore::new();
 
         macro_rules! check_sample {
-            ($query:tt, $direction:expr, $expected_sample:expr) => {
+            ($query:tt, $direction:expr_2021, $expected_sample:expr_2021) => {
                 let timestamp = util::get_system_time($query);
                 let res =
                     store.get_adjacent_sample_at_timestamp(timestamp, $direction, &get_logger());
@@ -546,7 +546,7 @@ mod tests {
                     $expected_sample
                 );
             };
-            ($query:tt, $direction:expr) => {
+            ($query:tt, $direction:expr_2021) => {
                 let timestamp = util::get_system_time($query);
                 let res =
                     store.get_adjacent_sample_at_timestamp(timestamp, $direction, &get_logger());
@@ -608,7 +608,7 @@ mod tests {
     #[test]
     fn advance_test_initialize() {
         macro_rules! check_advance {
-            ($init_time:tt, $expected:expr) => {
+            ($init_time:tt, $expected:expr_2021) => {
                 let mut advance = get_advance_with_fake_store($init_time);
                 advance.initialize();
                 assert_eq!(advance.cached_sample, $expected);
@@ -641,7 +641,7 @@ mod tests {
     }
 
     macro_rules! advance {
-        ($adv:expr, $direction:expr, $expected_cache:expr, $model:expr) => {
+        ($adv:expr_2021, $direction:expr_2021, $expected_cache:expr_2021, $model:expr_2021) => {
             let res = $adv.advance($direction);
             assert_eq!(res, $model);
             assert_eq!($adv.cached_sample, Some($expected_cache));
@@ -731,7 +731,7 @@ mod tests {
         advance.initialize();
 
         macro_rules! check_jump {
-            ($query:tt, $expected_cache:expr, $expected_sample:expr) => {
+            ($query:tt, $expected_cache:expr_2021, $expected_sample:expr_2021) => {
                 let timestamp = util::get_system_time($query);
                 let res = advance.jump_sample_to(timestamp);
                 assert_eq!(res.expect("Failed to get sample"), $expected_sample);
