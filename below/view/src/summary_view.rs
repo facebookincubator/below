@@ -97,26 +97,28 @@ mod render_impl {
     /// Maximum number of I/O devices to display
     const MAX_IO_DEVICES: usize = 5;
 
+    /// Represents a single title/value entry in this view.
+    pub struct Entry {
+        title: String,
+        value: String,
+    }
+
     fn bold(s: &str) -> StyledString {
         StyledString::styled(s, Style::from(Effect::Bold))
     }
 
-    pub fn render_row<T: Queriable>(
-        name: &'static str,
+    pub fn gather<T: Queriable>(
         model: &T,
         items: impl Iterator<Item = ViewItem<T::FieldId>>,
-    ) -> StyledString {
-        let mut row = StyledString::new();
-        row.append(base_render::get_fixed_width(name, ROW_NAME_WIDTH));
+    ) -> Vec<Entry> {
+        let mut group = Vec::new();
         for item in items {
-            let title = item.config.render_config.get_title();
-            row.append(bold(&base_render::get_fixed_width(
-                title,
-                ROW_FIELD_NAME_WIDTH,
-            )));
-            row.append(item.update(Rc::new().width(ROW_FIELD_WIDTH)).render(model));
+            group.push(Entry {
+                title: item.config.render_config.get_title().to_string(),
+                value: item.render_tight(model).source().to_string(),
+            });
         }
-        row
+        group
     }
 
     pub fn render_extra_row(extra_row: &SummaryViewExtraRow, model: &Model) -> StyledString {
@@ -134,70 +136,69 @@ mod render_impl {
         row
     }
 
-    pub fn render_read_write_models_row<'a, T: 'a + Queriable>(
-        name: &'static str,
+    pub fn gather_read_write_models<'a, T: 'a + Queriable>(
         models: impl Iterator<Item = (&'a String, &'a T)>,
         read_item: ViewItem<T::FieldId>,
         write_item: ViewItem<T::FieldId>,
-    ) -> StyledString {
+    ) -> Vec<Entry> {
         let read_item = read_item.update(Rc::new().width(ROW_FIELD_WIDTH_HALVED));
         let write_item = write_item.update(Rc::new().width(ROW_FIELD_WIDTH_HALVED));
 
-        let mut row = StyledString::new();
-        row.append(base_render::get_fixed_width(name, ROW_NAME_WIDTH));
+        let mut group = Vec::new();
         for (count, (name, model)) in models.enumerate() {
             if count >= MAX_IO_DEVICES {
-                row.append(base_render::get_fixed_width(name, ROW_FIELD_NAME_WIDTH));
-                row.append_plain("[...]");
+                group.push(Entry {
+                    title: name.to_string(),
+                    value: "[...]".to_string(),
+                });
                 break;
             }
 
-            row.append(bold(&base_render::get_fixed_width(
-                name,
-                ROW_FIELD_NAME_WIDTH,
-            )));
-            row.append(read_item.render(model));
-            row.append_plain("|");
-            row.append(write_item.render(model));
+            group.push(Entry {
+                title: name.to_string(),
+                value: format!(
+                    "{}|{}",
+                    read_item.render(model).source(),
+                    write_item.render(model).source(),
+                ),
+            });
         }
-        row
+        group
     }
 
-    pub fn render_cpu_row(model: &SystemModel) -> StyledString {
-        render_row("CPU", model, SYS_CPU_ITEMS.iter().cloned())
+    pub fn gather_cpu(model: &SystemModel) -> Vec<Entry> {
+        gather(model, SYS_CPU_ITEMS.iter().cloned())
     }
 
-    pub fn render_mem_row(model: &SystemModel) -> StyledString {
-        render_row("Mem", model, SYS_MEM_ITEMS.iter().cloned())
+    pub fn gather_mem(model: &SystemModel) -> Vec<Entry> {
+        gather(model, SYS_MEM_ITEMS.iter().cloned())
     }
 
-    pub fn render_vm_row(model: &SystemModel) -> StyledString {
-        render_row("VM", model, SYS_VM_ITEMS.iter().cloned())
+    pub fn gather_vm(model: &SystemModel) -> Vec<Entry> {
+        gather(model, SYS_VM_ITEMS.iter().cloned())
     }
 
-    pub fn render_io_row(disks: &BTreeMap<String, SingleDiskModel>) -> StyledString {
+    pub fn gather_io(disks: &BTreeMap<String, SingleDiskModel>) -> Vec<Entry> {
         use model::SingleDiskModelFieldId::ReadBytesPerSec;
         use model::SingleDiskModelFieldId::WriteBytesPerSec;
-        render_read_write_models_row(
-            "I/O   (Rd|Wr)", // Line up () with Iface's below
+        gather_read_write_models(
             disks.iter().filter(|(_, sdm)| sdm.minor == Some(0)),
             ViewItem::from_default(ReadBytesPerSec),
             ViewItem::from_default(WriteBytesPerSec),
         )
     }
 
-    pub fn render_iface_row(ifaces: &BTreeMap<String, SingleNetModel>) -> StyledString {
+    pub fn gather_iface(ifaces: &BTreeMap<String, SingleNetModel>) -> Vec<Entry> {
         use model::SingleNetModelFieldId::RxBytesPerSec;
         use model::SingleNetModelFieldId::TxBytesPerSec;
-        render_read_write_models_row(
-            "Iface (Rx|Tx)",
+        gather_read_write_models(
             ifaces.iter(),
             ViewItem::from_default(RxBytesPerSec),
             ViewItem::from_default(TxBytesPerSec),
         )
     }
 
-    pub fn render_state_row(processes: &ProcessModel) -> StyledString {
+    pub fn gather_state(processes: &ProcessModel) -> Vec<Entry> {
         let mut counts: HashMap<procfs::PidState, u32> = HashMap::new();
         for process in processes.processes.values() {
             if let Some(state) = process.state.clone() {
@@ -205,16 +206,11 @@ mod render_impl {
                 *count += 1;
             }
         }
-        let mut row = StyledString::new();
-        row.append(base_render::get_fixed_width("Process", ROW_NAME_WIDTH));
-        row.append(bold(&base_render::get_fixed_width(
-            "Total ",
-            ROW_FIELD_NAME_WIDTH,
-        )));
-        row.append(base_render::get_fixed_width(
-            &processes.processes.len().to_string(),
-            ROW_FIELD_WIDTH,
-        ));
+        let mut group = Vec::new();
+        group.push(Entry {
+            title: "Total".to_string(),
+            value: processes.processes.len().to_string(),
+        });
 
         for state in [
             PidState::Running,
@@ -226,14 +222,24 @@ mod render_impl {
             if state == PidState::Sleeping {
                 count += *counts.get(&PidState::Idle).unwrap_or(&0);
             }
+            group.push(Entry {
+                title: state.as_char().unwrap().to_string(),
+                value: count.to_string(),
+            });
+        }
+        group
+    }
+
+    /// Render a row of entries.
+    pub fn render_row(name: &str, entries: &Vec<Entry>) -> StyledString {
+        let mut row = StyledString::new();
+        row.append(base_render::get_fixed_width(name, ROW_NAME_WIDTH));
+        for entry in entries {
             row.append(bold(&base_render::get_fixed_width(
-                &format!("{}", state.as_char().unwrap()),
+                &entry.title,
                 ROW_FIELD_NAME_WIDTH,
             )));
-            row.append(base_render::get_fixed_width(
-                &count.to_string(),
-                ROW_FIELD_WIDTH,
-            ));
+            row.append(base_render::get_fixed_width(&entry.value, ROW_FIELD_WIDTH));
         }
         row
     }
@@ -280,20 +286,23 @@ fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
     let system_model = view_state.system.borrow();
     let network_model = view_state.network.borrow();
     let process_model = view_state.process.borrow();
-    let cpu_row = render_impl::render_cpu_row(&system_model);
-    let mem_row = render_impl::render_mem_row(&system_model);
-    let vm_row = render_impl::render_vm_row(&system_model);
-    let io_row = render_impl::render_io_row(&system_model.disks);
-    let iface_row = render_impl::render_iface_row(&network_model.interfaces);
-    let state_row = render_impl::render_state_row(&process_model);
+    let cpu = render_impl::gather_cpu(&system_model);
+    let mem = render_impl::gather_mem(&system_model);
+    let vm = render_impl::gather_vm(&system_model);
+    let io = render_impl::gather_io(&system_model.disks);
+    let iface = render_impl::gather_iface(&network_model.interfaces);
+    let state = render_impl::gather_state(&process_model);
 
     let mut view = LinearLayout::vertical();
-    view.add_child(TextView::new(state_row));
-    view.add_child(TextView::new(cpu_row));
-    view.add_child(TextView::new(mem_row));
-    view.add_child(TextView::new(vm_row));
-    view.add_child(TextView::new(io_row));
-    view.add_child(TextView::new(iface_row));
+    view.add_child(TextView::new(render_impl::render_row("Process", &state)));
+    view.add_child(TextView::new(render_impl::render_row("CPU", &cpu)));
+    view.add_child(TextView::new(render_impl::render_row("Mem", &mem)));
+    view.add_child(TextView::new(render_impl::render_row("VM", &vm)));
+    view.add_child(TextView::new(render_impl::render_row("I/O   (Rd|Wr)", &io)));
+    view.add_child(TextView::new(render_impl::render_row(
+        "Iface (Rx|Tx)",
+        &iface,
+    )));
 
     let model = view_state.model.borrow();
     // TODO: Save the parsed extra rows in a struct and reuse
