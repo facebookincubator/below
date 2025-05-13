@@ -37,7 +37,6 @@ mod render_impl {
     use model::SystemModel;
     use once_cell::sync::Lazy;
     use procfs::PidState;
-    use procfs::PidStateExt;
 
     use crate::render::ViewItem;
     use crate::viewrc::ViewRc;
@@ -202,18 +201,18 @@ mod render_impl {
             value: processes.processes.len().to_string(),
         });
 
-        for state in [
-            PidState::Running,
-            PidState::Sleeping,
-            PidState::UninterruptibleSleep,
-            PidState::Zombie,
+        for (state, name) in [
+            (PidState::Running, "Running"),
+            (PidState::Sleeping, "Sleeping"),
+            (PidState::UninterruptibleSleep, "D-state"),
+            (PidState::Zombie, "Zombie"),
         ] {
             let mut count = *counts.get(&state).unwrap_or(&0);
             if state == PidState::Sleeping {
                 count += *counts.get(&PidState::Idle).unwrap_or(&0);
             }
             group.push(Entry {
-                title: state.as_char().unwrap().to_string(),
+                title: name.to_string(),
                 value: count.to_string(),
             });
         }
