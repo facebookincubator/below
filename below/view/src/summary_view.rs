@@ -18,7 +18,6 @@ use cursive::view::View;
 use cursive::views::LinearLayout;
 use cursive::views::PaddedView;
 use cursive::views::Panel;
-use cursive::views::TextView;
 
 use crate::ViewState;
 
@@ -28,8 +27,6 @@ mod render_impl {
     use std::str::FromStr;
 
     use base_render::RenderConfig;
-    use cursive::theme::Effect;
-    use cursive::theme::Style;
     use cursive::utils::markup::StyledString;
     use cursive::views::TextView;
     use model::Model;
@@ -94,10 +91,6 @@ mod render_impl {
         value: String,
     }
 
-    fn bold(s: &str) -> StyledString {
-        StyledString::styled(s, Style::from(Effect::Bold))
-    }
-
     pub fn gather<T: Queriable>(
         model: &T,
         items: impl Iterator<Item = ViewItem<T::FieldId>>,
@@ -112,19 +105,28 @@ mod render_impl {
         group
     }
 
-    pub fn render_extra_row(extra_row: &SummaryViewExtraRow, model: &Model) -> StyledString {
-        let mut row = StyledString::new();
-        if let Some(title) = &extra_row.title {
-            row.append(title.clone());
-        }
-        for item in &extra_row.items {
-            if !row.is_empty() {
-                row.append(" | ");
-            }
-            row.append(bold(&format!("{} ", item.config.render_config.get_title())));
+    pub fn render_extra_group(group: &SummaryViewExtraRow, model: &Model) -> TextView {
+        let mut view = TextView::new("");
+        let title_width = group
+            .items
+            .iter()
+            .map(|item| item.config.render_config.get_title().len() + 2)
+            .max()
+            .unwrap_or(10);
+
+        for item in &group.items {
+            let mut row = StyledString::new();
+            row.append(base_render::get_fixed_width(
+                item.config.render_config.get_title(),
+                title_width,
+            ));
             row.append(item.render_tight(model));
+            row.append('\n');
+
+            view.append(row);
         }
-        row
+
+        view
     }
 
     pub fn gather_read_write_models<'a, T: 'a + Queriable>(
@@ -254,7 +256,7 @@ mod render_impl {
         pub items: Vec<ViewItem<model::ModelFieldId>>,
     }
 
-    pub fn get_summary_view_extra_rows(viewrc: &ViewRc) -> Vec<SummaryViewExtraRow> {
+    pub fn get_summary_view_extra_group(viewrc: &ViewRc) -> Vec<SummaryViewExtraRow> {
         if let Some(viewrc_rows) = viewrc.summary_view_extra_rows.as_ref() {
             viewrc_rows
                 .iter()
@@ -311,11 +313,13 @@ fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
 
     let model = view_state.model.borrow();
     // TODO: Save the parsed extra rows in a struct and reuse
-    let extra_rows = render_impl::get_summary_view_extra_rows(&view_state.viewrc);
-    for extra_row in extra_rows {
-        view.add_child(TextView::new(render_impl::render_extra_row(
-            &extra_row, &model,
-        )));
+    let extra_groups = render_impl::get_summary_view_extra_group(&view_state.viewrc);
+    for extra_group in extra_groups {
+        let mut panel = Panel::new(render_impl::render_extra_group(&extra_group, &model));
+        if let Some(title) = &extra_group.title {
+            panel.set_title(title);
+        }
+        view.add_child(pad(panel));
     }
 
     *v = view;
