@@ -26,6 +26,8 @@ mod render_impl {
 
     use base_render::RenderConfig;
     use base_render::RenderConfigBuilder as Rc;
+    use cursive::theme::Effect;
+    use cursive::theme::Style;
     use cursive::utils::markup::StyledString;
     use model::Model;
     use model::ModelFieldId;
@@ -95,6 +97,10 @@ mod render_impl {
     /// Maximum number of I/O devices to display
     const MAX_IO_DEVICES: usize = 5;
 
+    fn bold(s: &str) -> StyledString {
+        StyledString::styled(s, Style::from(Effect::Bold))
+    }
+
     pub fn render_row<T: Queriable>(
         name: &'static str,
         model: &T,
@@ -104,7 +110,10 @@ mod render_impl {
         row.append(base_render::get_fixed_width(name, ROW_NAME_WIDTH));
         for item in items {
             let title = item.config.render_config.get_title();
-            row.append(base_render::get_fixed_width(title, ROW_FIELD_NAME_WIDTH));
+            row.append(bold(&base_render::get_fixed_width(
+                title,
+                ROW_FIELD_NAME_WIDTH,
+            )));
             row.append(item.update(Rc::new().width(ROW_FIELD_WIDTH)).render(model));
         }
         row
@@ -119,7 +128,7 @@ mod render_impl {
             if !row.is_empty() {
                 row.append(" | ");
             }
-            row.append(format!("{} ", item.config.render_config.get_title()));
+            row.append(bold(&format!("{} ", item.config.render_config.get_title())));
             row.append(item.render_tight(model));
         }
         row
@@ -143,7 +152,10 @@ mod render_impl {
                 break;
             }
 
-            row.append(base_render::get_fixed_width(name, ROW_FIELD_NAME_WIDTH));
+            row.append(bold(&base_render::get_fixed_width(
+                name,
+                ROW_FIELD_NAME_WIDTH,
+            )));
             row.append(read_item.render(model));
             row.append_plain("|");
             row.append(write_item.render(model));
@@ -186,7 +198,6 @@ mod render_impl {
     }
 
     pub fn render_state_row(processes: &ProcessModel) -> StyledString {
-        const COUNT_WIDTH: usize = 7;
         let mut counts: HashMap<procfs::PidState, u32> = HashMap::new();
         for process in processes.processes.values() {
             if let Some(state) = process.state.clone() {
@@ -196,7 +207,10 @@ mod render_impl {
         }
         let mut row = StyledString::new();
         row.append(base_render::get_fixed_width("Process", ROW_NAME_WIDTH));
-        row.append(base_render::get_fixed_width("Total ", ROW_FIELD_NAME_WIDTH));
+        row.append(bold(&base_render::get_fixed_width(
+            "Total ",
+            ROW_FIELD_NAME_WIDTH,
+        )));
         row.append(base_render::get_fixed_width(
             &processes.processes.len().to_string(),
             ROW_FIELD_WIDTH,
@@ -212,10 +226,10 @@ mod render_impl {
             if state == PidState::Sleeping {
                 count += *counts.get(&PidState::Idle).unwrap_or(&0);
             }
-            row.append(base_render::get_fixed_width(
+            row.append(bold(&base_render::get_fixed_width(
                 &format!("{}", state.as_char().unwrap()),
                 ROW_FIELD_NAME_WIDTH,
-            ));
+            )));
             row.append(base_render::get_fixed_width(
                 &count.to_string(),
                 ROW_FIELD_WIDTH,
