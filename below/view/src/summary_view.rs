@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use cursive::Cursive;
+use cursive::view::Margins;
 use cursive::view::Nameable;
 use cursive::view::View;
 use cursive::views::LinearLayout;
+use cursive::views::PaddedView;
+use cursive::views::Panel;
 use cursive::views::TextView;
 
 use crate::ViewState;
@@ -28,6 +31,7 @@ mod render_impl {
     use cursive::theme::Effect;
     use cursive::theme::Style;
     use cursive::utils::markup::StyledString;
+    use cursive::views::TextView;
     use model::Model;
     use model::ModelFieldId;
     use model::ProcessModel;
@@ -135,19 +139,26 @@ mod render_impl {
         for (count, (name, model)) in models.enumerate() {
             if count >= MAX_IO_DEVICES {
                 group.push(Entry {
-                    title: name.to_string(),
+                    title: "[...]".to_string(),
                     value: "[...]".to_string(),
                 });
                 break;
             }
 
             group.push(Entry {
-                title: name.to_string(),
+                title: format!("{name} Read"),
                 value: format!(
                     // Provide a reasonable fixed width for both read and write so that
                     // fluctuations do not cause columns to shift left and right every interval.
-                    "{:10}|{:>10}",
+                    "{:10}",
                     read_item.render_tight(model).source(),
+                ),
+            });
+            group.push(Entry {
+                title: format!("{name} Write"),
+                value: format!(
+                    // See above.
+                    "{:10}",
                     write_item.render_tight(model).source(),
                 ),
             });
@@ -219,34 +230,23 @@ mod render_impl {
         group
     }
 
-    /// Extracts the maximum title width for a column given column index.
-    fn value_width(all: &[&Vec<Entry>], col: usize, title_len: usize) -> usize {
-        all.iter()
-            .filter_map(|row| row.get(col))
-            .map(|e| e.title.len() + e.value.len())
+    /// Render a group of entries.
+    pub fn render_group(entries: &[Entry]) -> TextView {
+        let mut view = TextView::new("");
+        let title_width = entries
+            .iter()
+            .map(|e| e.title.len() + 2)
             .max()
-            .unwrap_or(title_len)
-            - title_len
-    }
+            .unwrap_or(10);
+        for entry in entries {
+            let mut row = StyledString::new();
+            row.append(base_render::get_fixed_width(&entry.title, title_width));
+            row.append(&entry.value);
+            row.append('\n');
 
-    /// Render a row of entries.
-    pub fn render_row(name: &str, entries: &[Entry], all: &[&Vec<Entry>]) -> StyledString {
-        const ROW_NAME_WIDTH: usize = 15;
-
-        let mut row = StyledString::new();
-        row.append(base_render::get_fixed_width(name, ROW_NAME_WIDTH));
-        for (idx, entry) in entries.iter().enumerate() {
-            // Starting column for title is always prepared by previous value
-            row.append(bold(&entry.title));
-
-            // Calculate padding necessary to align Entry columns
-            let vwidth = value_width(all, idx, entry.title.len()) + 1;
-            row.append(base_render::get_fixed_width_rjust(&entry.value, vwidth));
-
-            // This corresonds to the above `+1` so that there's a gap between Entry's
-            row.append(" ");
+            view.append(row);
         }
-        row
+        view
     }
 
     pub struct SummaryViewExtraRow {
@@ -284,7 +284,7 @@ mod render_impl {
 }
 
 fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
-    use render_impl::render_row;
+    use render_impl::render_group;
 
     let view_state = &c
         .user_data::<ViewState>()
@@ -300,16 +300,14 @@ fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
     let iface = render_impl::gather_iface(&network_model.interfaces);
     let state = render_impl::gather_state(&process_model);
 
-    let mut view = LinearLayout::vertical();
-    let all = [&cpu, &mem, &vm, &io, &iface, &state];
-    view.add_child(TextView::new(render_impl::render_row(
-        "Process", &state, &all,
-    )));
-    view.add_child(TextView::new(render_row("CPU", &cpu, &all)));
-    view.add_child(TextView::new(render_row("Mem", &mem, &all)));
-    view.add_child(TextView::new(render_row("VM", &vm, &all)));
-    view.add_child(TextView::new(render_row("I/O   (Rd|Wr)", &io, &all)));
-    view.add_child(TextView::new(render_row("Iface (Rx|Tx)", &iface, &all)));
+    let mut view = LinearLayout::horizontal();
+    let pad = |v| PaddedView::new(Margins::lr(0, 1), v);
+    view.add_child(pad(Panel::new(render_group(&cpu)).title("CPU")));
+    view.add_child(pad(Panel::new(render_group(&mem)).title("Mem")));
+    view.add_child(pad(Panel::new(render_group(&vm)).title("Vm")));
+    view.add_child(pad(Panel::new(render_group(&state)).title("Process")));
+    view.add_child(pad(Panel::new(render_group(&io)).title("I/O")));
+    view.add_child(pad(Panel::new(render_group(&iface)).title("Interface")));
 
     let model = view_state.model.borrow();
     // TODO: Save the parsed extra rows in a struct and reuse
@@ -332,7 +330,7 @@ pub fn refresh(c: &mut Cursive) {
 }
 
 pub fn new(c: &mut Cursive) -> impl View + use<> {
-    let mut view = LinearLayout::vertical();
+    let mut view = LinearLayout::horizontal();
     fill_content(c, &mut view);
     view.with_name("summary_view")
 }

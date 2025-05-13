@@ -452,7 +452,7 @@ impl View {
             .add_fullscreen_layer(ResizedView::with_full_screen(
                 LinearLayout::vertical()
                     .child(Panel::new(status_bar))
-                    .child(Panel::new(summary_view))
+                    .child(summary_view)
                     .child(
                         OnEventView::new(screens_view.with_name("main_view_screens"))
                             .with_name("dynamic_view"),
