@@ -297,8 +297,14 @@ impl From<RenderConfig> for RenderConfigBuilder {
     }
 }
 
+/// Pad `val` with spaces on right side to a total length of `width` characters.
 pub fn get_fixed_width(val: &str, width: usize) -> String {
     format!("{val:width$.width$}", val = val, width = width)
+}
+
+/// Same as `get_fixed_width`, except text is right justified.
+pub fn get_fixed_width_rjust(val: &str, width: usize) -> String {
+    format!("{val:>width$.width$}", val = val, width = width)
 }
 
 impl RenderConfig {

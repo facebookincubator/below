@@ -25,7 +25,6 @@ mod render_impl {
     use std::str::FromStr;
 
     use base_render::RenderConfig;
-    use base_render::RenderConfigBuilder as Rc;
     use cursive::theme::Effect;
     use cursive::theme::Style;
     use cursive::utils::markup::StyledString;
@@ -86,16 +85,6 @@ mod render_impl {
         ]
     });
 
-    const ROW_NAME_WIDTH: usize = 15;
-    const ROW_FIELD_WIDTH: usize = 21;
-    /// ROW_FIELD_WIDTH_HALVED * 2 + 1 == ROW_NAME_WIDTH, the +1 is for the '|'
-    ///
-    /// Need 10 chars for each field b/c each value has up to 4 significant digits
-    /// with a dot, a space, 4 chars for units
-    const ROW_FIELD_WIDTH_HALVED: usize = 10;
-    /// Maximum number of I/O devices to display
-    const MAX_IO_DEVICES: usize = 5;
-
     /// Represents a single title/value entry in this view.
     pub struct Entry {
         title: String,
@@ -140,8 +129,8 @@ mod render_impl {
         read_item: ViewItem<T::FieldId>,
         write_item: ViewItem<T::FieldId>,
     ) -> Vec<Entry> {
-        let read_item = read_item.update(Rc::new().width(ROW_FIELD_WIDTH_HALVED));
-        let write_item = write_item.update(Rc::new().width(ROW_FIELD_WIDTH_HALVED));
+        // Maximum number of I/O devices to display.
+        const MAX_IO_DEVICES: usize = 5;
 
         let mut group = Vec::new();
         for (count, (name, model)) in models.enumerate() {
@@ -156,9 +145,11 @@ mod render_impl {
             group.push(Entry {
                 title: name.to_string(),
                 value: format!(
-                    "{}|{}",
-                    read_item.render(model).source(),
-                    write_item.render(model).source(),
+                    // Provide a reasonable fixed width for both read and write so that
+                    // fluctuations do not cause columns to shift left and right every interval.
+                    "{:10}|{:>10}",
+                    read_item.render_tight(model).source(),
+                    write_item.render_tight(model).source(),
                 ),
             });
         }
@@ -230,25 +221,31 @@ mod render_impl {
     }
 
     /// Extracts the maximum title width for a column given column index.
-    fn title_width(all: &[&Vec<Entry>], columnn: usize) -> usize {
+    fn value_width(all: &[&Vec<Entry>], col: usize, title_len: usize) -> usize {
         all.iter()
-            .filter_map(|row| row.get(columnn))
-            .map(|e| e.title.len())
+            .filter_map(|row| row.get(col))
+            .map(|e| e.title.len() + e.value.len())
             .max()
-            .unwrap_or(0)
-            + 1
+            .unwrap_or(title_len)
+            - title_len
     }
 
     /// Render a row of entries.
     pub fn render_row(name: &str, entries: &[Entry], all: &[&Vec<Entry>]) -> StyledString {
+        const ROW_NAME_WIDTH: usize = 15;
+
         let mut row = StyledString::new();
         row.append(base_render::get_fixed_width(name, ROW_NAME_WIDTH));
         for (idx, entry) in entries.iter().enumerate() {
-            row.append(bold(&base_render::get_fixed_width(
-                &entry.title,
-                title_width(all, idx),
-            )));
-            row.append(base_render::get_fixed_width(&entry.value, ROW_FIELD_WIDTH));
+            // Starting column for title is always prepared by previous value
+            row.append(bold(&entry.title));
+
+            // Calculate padding necessary to align Entry columns
+            let vwidth = value_width(all, idx, entry.title.len()) + 1;
+            row.append(base_render::get_fixed_width_rjust(&entry.value, vwidth));
+
+            // This corresonds to the above `+1` so that there's a gap between Entry's
+            row.append(" ");
         }
         row
     }
