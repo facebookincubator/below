@@ -553,7 +553,6 @@ pub struct WorkerTask {
 fn start_store_writer_thread(
     logger: slog::Logger,
     mut store: store::StoreWriter,
-    _stats: Arc<Mutex<statistics::Statistics>>,
     store_size_limit: Option<u64>,
     retention: Option<Duration>,
     writer_buffer_size: usize,
@@ -563,6 +562,7 @@ fn start_store_writer_thread(
         .name("store_writer".to_owned())
         .spawn(move || {
             loop {
+                let loop_start_time = Instant::now();
                 match recv_task.recv() {
                     Ok(write_task) => {
                         match store.put(write_task.post_collect_sys_time, &write_task.data) {
@@ -573,11 +573,18 @@ fn start_store_writer_thread(
                                     store_size_limit,
                                     /* retention */ None,
                                 )
-                                .expect("cleanup_store failed")
+                                .expect("cleanup_store failed");
                             }
                             Ok(/* new shard */ false) => {}
-                            Err(e) => error!(logger, "{:#}", e),
+                            Err(e) => {
+                                error!(logger, "{:#}", e);
+                                // no need to report/cleanup
+                                continue;
+                            }
                         }
+                        statistics::report_writer_time_ms(
+                            Instant::now().duration_since(loop_start_time),
+                        );
                     }
                     Err(_) => {
                         warn!(
@@ -1095,12 +1102,11 @@ fn record(
         store::Format::Cbor,
     )?;
 
-    let shared_stats = Arc::new(Mutex::new(statistics::Statistics::new(init)));
+    let mut stats = statistics::Statistics::new(init);
 
     let (writer_thread, send_task) = start_store_writer_thread(
         logger.clone(),
         store,
-        Arc::clone(&shared_stats),
         store_size_limit,
         retention,
         writer_buffer_size,
@@ -1153,17 +1159,13 @@ fn record(
                 collection_skew.as_millis(),
                 skew_detection_threshold.as_millis()
             );
-            shared_stats
-                .lock()
-                .expect("error acquired stats lock")
-                .report_collection_skew();
+            statistics::report_collection_skew();
         }
 
         match collected_sample {
             Ok(s) => {
                 if below_config.enable_gpu_stats {
-                    let mut lock = shared_stats.lock().expect("error acquiring stats lock");
-                    lock.report_nr_accelerators(&s);
+                    stats.report_nr_accelerators(&s);
                 }
                 send_task
                     .send(WorkerTask {
@@ -1182,12 +1184,11 @@ fn record(
             }
         };
 
-        {
-            let mut lock = shared_stats.lock().expect("error acquired stats lock");
-            lock.report_store_size(below_config.store_dir.as_path());
-        }
+        stats.report_store_size(below_config.store_dir.as_path());
 
         let collect_duration = Instant::now().duration_since(collect_instant);
+        statistics::report_collection_time_ms(collect_duration);
+
         // Sleep for at least 1s to avoid sample collision
         let sleep_duration = if interval > collect_duration {
             std::cmp::max(Duration::from_secs(1), interval - collect_duration)

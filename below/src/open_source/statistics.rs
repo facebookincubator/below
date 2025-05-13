@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::path::Path;
+use std::time::Duration;
 
 use crate::init;
 
@@ -25,7 +26,11 @@ impl Statistics {
 
     pub fn report_store_size<P: AsRef<Path>>(&mut self, _dir: P) {}
 
-    pub fn report_collection_skew(&mut self) {}
-
     pub fn report_nr_accelerators(&mut self, _sample: &model::Sample) {}
 }
+
+pub fn report_collection_skew() {}
+
+pub fn report_collection_time_ms(ms: Duration) {}
+
+pub fn report_writer_time_ms(ms: Duration) {}
