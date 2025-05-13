@@ -757,8 +757,8 @@ impl HasRenderConfig for model::SingleNetModel {
         let rc = RenderConfigBuilder::new();
         match field_id {
             Interface => rc.title("Interface"),
-            RxBytesPerSec => rc.title("RX Bytes/s").format(ReadableSize),
-            TxBytesPerSec => rc.title("TX Bytes/s").format(ReadableSize),
+            RxBytesPerSec => rc.title("RX Bytes/s").format(ReadableSize).suffix("/s"),
+            TxBytesPerSec => rc.title("TX Bytes/s").format(ReadableSize).suffix("/s"),
             ThroughputPerSec => rc.title("I/O Bytes/s").format(ReadableSize),
             RxPacketsPerSec => rc.title("RX Pkts/s"),
             TxPacketsPerSec => rc.title("TX Pkts/s"),
