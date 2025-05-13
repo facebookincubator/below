@@ -87,7 +87,6 @@ mod render_impl {
     });
 
     const ROW_NAME_WIDTH: usize = 15;
-    const ROW_FIELD_NAME_WIDTH: usize = 9;
     const ROW_FIELD_WIDTH: usize = 21;
     /// ROW_FIELD_WIDTH_HALVED * 2 + 1 == ROW_NAME_WIDTH, the +1 is for the '|'
     ///
@@ -230,14 +229,24 @@ mod render_impl {
         group
     }
 
+    /// Extracts the maximum title width for a column given column index.
+    fn title_width(all: &[&Vec<Entry>], columnn: usize) -> usize {
+        all.iter()
+            .filter_map(|row| row.get(columnn))
+            .map(|e| e.title.len())
+            .max()
+            .unwrap_or(0)
+            + 1
+    }
+
     /// Render a row of entries.
-    pub fn render_row(name: &str, entries: &Vec<Entry>) -> StyledString {
+    pub fn render_row(name: &str, entries: &[Entry], all: &[&Vec<Entry>]) -> StyledString {
         let mut row = StyledString::new();
         row.append(base_render::get_fixed_width(name, ROW_NAME_WIDTH));
-        for entry in entries {
+        for (idx, entry) in entries.iter().enumerate() {
             row.append(bold(&base_render::get_fixed_width(
                 &entry.title,
-                ROW_FIELD_NAME_WIDTH,
+                title_width(all, idx),
             )));
             row.append(base_render::get_fixed_width(&entry.value, ROW_FIELD_WIDTH));
         }
@@ -279,6 +288,8 @@ mod render_impl {
 }
 
 fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
+    use render_impl::render_row;
+
     let view_state = &c
         .user_data::<ViewState>()
         .expect("No data stored in Cursive object!");
@@ -294,15 +305,15 @@ fn fill_content(c: &mut Cursive, v: &mut LinearLayout) {
     let state = render_impl::gather_state(&process_model);
 
     let mut view = LinearLayout::vertical();
-    view.add_child(TextView::new(render_impl::render_row("Process", &state)));
-    view.add_child(TextView::new(render_impl::render_row("CPU", &cpu)));
-    view.add_child(TextView::new(render_impl::render_row("Mem", &mem)));
-    view.add_child(TextView::new(render_impl::render_row("VM", &vm)));
-    view.add_child(TextView::new(render_impl::render_row("I/O   (Rd|Wr)", &io)));
+    let all = [&cpu, &mem, &vm, &io, &iface, &state];
     view.add_child(TextView::new(render_impl::render_row(
-        "Iface (Rx|Tx)",
-        &iface,
+        "Process", &state, &all,
     )));
+    view.add_child(TextView::new(render_row("CPU", &cpu, &all)));
+    view.add_child(TextView::new(render_row("Mem", &mem, &all)));
+    view.add_child(TextView::new(render_row("VM", &vm, &all)));
+    view.add_child(TextView::new(render_row("I/O   (Rd|Wr)", &io, &all)));
+    view.add_child(TextView::new(render_row("Iface (Rx|Tx)", &iface, &all)));
 
     let model = view_state.model.borrow();
     // TODO: Save the parsed extra rows in a struct and reuse
