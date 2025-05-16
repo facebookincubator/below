@@ -370,6 +370,7 @@ impl View {
         theme.palette[PaletteColor::Background] = Color::TerminalDefault;
         theme.palette[PaletteColor::View] = Color::TerminalDefault;
         theme.palette[PaletteColor::Primary] = Color::TerminalDefault;
+        theme.palette[PaletteColor::TitlePrimary] = Color::TerminalDefault;
         theme.palette[PaletteColor::Highlight] = Color::Dark(BaseColor::Cyan);
         theme.palette[PaletteColor::HighlightText] = Color::Dark(BaseColor::Black);
         theme.shadow = false;
