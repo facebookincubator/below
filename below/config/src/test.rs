@@ -21,7 +21,7 @@ use super::*;
 #[test]
 fn test_config_default() {
     let below_config: BelowConfig = Default::default();
-    assert_eq!(below_config.log_dir.to_string_lossy(), "/var/log/below");
+    assert_eq!(below_config.log_dir, std::env::temp_dir());
     assert_eq!(
         below_config.store_dir.to_string_lossy(),
         "/var/log/below/store"

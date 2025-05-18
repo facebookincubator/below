@@ -28,7 +28,6 @@ use serde::Serialize;
 mod test;
 
 pub const BELOW_DEFAULT_CONF: &str = "/etc/below/below.conf";
-const BELOW_DEFAULT_LOG: &str = "/var/log/below";
 const BELOW_DEFAULT_STORE: &str = "/var/log/below/store";
 
 /// Global below config
@@ -56,8 +55,7 @@ pub struct BelowConfig {
 impl Default for BelowConfig {
     fn default() -> Self {
         BelowConfig {
-            log_dir: std::env::var_os("LOGS_DIRECTORY")
-                .map_or(BELOW_DEFAULT_LOG.into(), PathBuf::from),
+            log_dir: std::env::var_os("LOGS_DIRECTORY").map_or(std::env::temp_dir(), PathBuf::from),
             store_dir: std::env::var_os("LOGS_DIRECTORY").map_or(BELOW_DEFAULT_STORE.into(), |d| {
                 PathBuf::from(d).join("store")
             }),
