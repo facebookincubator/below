@@ -24,6 +24,7 @@ mod default_configs;
 use common::open_source_shim;
 use common::util::convert_bytes;
 use common::util::convert_duration;
+use common::util::convert_duration_sec;
 use common::util::convert_freq;
 use common::util::fold_string;
 use model::Field;
@@ -50,9 +51,12 @@ pub enum RenderFormat {
     MaxOrReadableSize,
     /// Frequency. Format with human-readable freq with suffixes (MHz, GHz etc.)
     ReadableFrequency,
-    /// Only works on int Fields. Displays duration with human readable
+    /// Only works on int Fields. Displays us duration with human readable
     /// suffixes (us, ms, s, etc.)
     Duration,
+    /// Only works on int Fields. Displays long duration inf human readable
+    /// format (?d ?h ?m)
+    DurationSec,
     /// Only works on int Fields. -1 displays "max" else displays duration with
     /// human readable suffixes (us, ms, s, etc.)
     MaxOrDuration,
@@ -359,6 +363,10 @@ impl RenderConfig {
                 Duration => {
                     let field = u64::from(field);
                     convert_duration(field)
+                }
+                DurationSec => {
+                    let field = u64::from(field);
+                    convert_duration_sec(field)
                 }
                 MaxOrDuration => {
                     let field = i64::from(field);

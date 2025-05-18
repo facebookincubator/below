@@ -88,6 +88,16 @@ pub fn convert_duration(val: u64) -> String {
     convert(val as f64, 1000_f64, UNITS)
 }
 
+pub fn convert_duration_sec(val: u64) -> String {
+    const DAY: u64 = 24 * 3600;
+    let days = val / DAY;
+    let val = val % DAY;
+    let hours = val / 3600;
+    let val = val % 3600;
+    let minutes = val / 60;
+    format!("{days}d {hours}h {minutes}m")
+}
+
 pub fn get_prefix(collapsed: bool) -> &'static str {
     if collapsed { "└+ " } else { "└─ " }
 }
@@ -251,5 +261,24 @@ mod test {
         assert_eq!(convert_freq(999_950_000), "1000 MHz".to_owned());
         assert_eq!(convert_freq(1_000_000_000), "1 GHz".to_owned());
         assert_eq!(convert_freq(1_000_000_000_000), "1 THz".to_owned());
+    }
+
+    #[test]
+    fn test_convert_duration_sec() {
+        assert_eq!(convert_duration_sec(0), "0d 0h 0m".to_string());
+        assert_eq!(convert_duration_sec(30), "0d 0h 0m".to_string());
+        assert_eq!(convert_duration_sec(60), "0d 0h 1m".to_string());
+        assert_eq!(convert_duration_sec(119), "0d 0h 1m".to_string());
+        assert_eq!(convert_duration_sec(120), "0d 0h 2m".to_string());
+        assert_eq!(convert_duration_sec(3600), "0d 1h 0m".to_string());
+        assert_eq!(
+            convert_duration_sec(3600 * 24 - 1),
+            "0d 23h 59m".to_string()
+        );
+        assert_eq!(convert_duration_sec(3600 * 24), "1d 0h 0m".to_string());
+        assert_eq!(
+            convert_duration_sec(30 * 3600 * 24),
+            "30d 0h 0m".to_string()
+        );
     }
 }

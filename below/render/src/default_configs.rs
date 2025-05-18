@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use RenderFormat::Duration;
+use RenderFormat::DurationSec;
 use RenderFormat::MaxOrDuration;
 use RenderFormat::MaxOrReadableSize;
 use RenderFormat::PageReadableSize;
@@ -917,7 +918,7 @@ impl HasRenderConfig for model::SingleProcessModel {
             NsTgid => rc.title("NStgid").width(12),
             Comm => rc.title("Comm").width(30),
             State => rc.title("State"),
-            UptimeSecs => rc.title("Uptime(sec)"),
+            UptimeSecs => rc.title("Uptime(sec)").format(DurationSec),
             Cgroup => rc.title("Cgroup").width(50).fold(FoldOption::Name),
             Io(field_id) => model::ProcessIoModel::get_render_config_builder(field_id),
             Mem(field_id) => model::ProcessMemoryModel::get_render_config_builder(field_id),
