@@ -135,7 +135,7 @@ mod render_impl {
         write_item: ViewItem<T::FieldId>,
     ) -> Vec<Entry> {
         // Maximum number of I/O devices to display.
-        const MAX_IO_DEVICES: usize = 5;
+        const MAX_IO_DEVICES: usize = 3;
 
         let mut group = Vec::new();
         for (count, (name, model)) in models.enumerate() {
@@ -194,7 +194,8 @@ mod render_impl {
         use model::SingleNetModelFieldId::RxBytesPerSec;
         use model::SingleNetModelFieldId::TxBytesPerSec;
         gather_read_write_models(
-            ifaces.iter(),
+            // Do not show localhost traffic
+            ifaces.iter().filter(|(name, _model)| *name != "lo"),
             ViewItem::from_default(RxBytesPerSec),
             ViewItem::from_default(TxBytesPerSec),
         )
