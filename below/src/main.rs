@@ -507,7 +507,15 @@ fn check_for_exitstat_errors(logger: &slog::Logger, receiver: &Receiver<Error>) 
     // Print an error but don't exit on bpf issues. Do this b/c we can't always
     // be sure what kind of kernel we're running on and if it's new enough.
     match receiver.try_recv() {
-        Ok(e) => error!(logger, "{:#}", e),
+        Ok(e) => {
+            // When running as non-root for live, ignore EACCESS
+            if let Some(e) = e.downcast_ref::<libbpf_rs::Error>() {
+                if e.kind() == libbpf_rs::ErrorKind::PermissionDenied {
+                    return false;
+                }
+            }
+            error!(logger, "{:#}", e);
+        }
         Err(TryRecvError::Empty) => {}
         Err(TryRecvError::Disconnected) => {
             warn!(logger, "bpf error channel disconnected");
