@@ -16,6 +16,7 @@ use anyhow::Result;
 use anyhow::bail;
 use cursive::Printer;
 use cursive::View;
+use cursive::theme::Effect;
 use cursive::vec::Vec2;
 
 /// TextView that has a vector of string as tabs
@@ -46,26 +47,23 @@ impl View for TabView {
                 continue;
             }
 
-            let content = self.tabs[idx].to_string();
+            let content = self.tabs[idx].as_str();
 
             if idx == self.current_selected {
-                let trimmed = content.trim_end();
-                let selected = format!("◉ {}", trimmed);
-                printer.print((current_offset, 0), &selected);
-                // Some tab views are created with padding built into the names. For those,
-                // there are no separators and the untrimmed length is longer than the trimmed
-                // length. But for others, no padding is built in but there is a separator. To
-                // handle both these cases, take the longest of the unformatted name and formatted
-                // length.
-                //
-                // The `◉` unicode character is encoded with 3 bytes, so len() is not accurate.
-                // Use +1 instead which is how many cells wide it is. Other +1 is for space.
-                current_offset += std::cmp::max(content.len(), trimmed.len() + 2);
+                let trimed = content.trim_end();
+                printer.with_effects(Effect::Bold | Effect::Underline, |printer| {
+                    printer.print((current_offset, 0), trimed);
+                });
+                printer.print_hline(
+                    (current_offset + trimed.len(), 0),
+                    content.len() - trimed.len(),
+                    " ",
+                );
             } else {
-                printer.print((current_offset, 0), &content);
-                current_offset += content.len();
+                printer.print((current_offset, 0), content);
             }
 
+            current_offset += content.len();
             printer.print((current_offset, 0), &self.separator);
             current_offset += self.separator.len();
         }
