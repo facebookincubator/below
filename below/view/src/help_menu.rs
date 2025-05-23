@@ -41,14 +41,14 @@ impl std::fmt::Display for ControllerHelper {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
-            "{:<18} {:<11} {:<24} {:<10} {}",
+            "{:<24} {:<24} {:<11} {:<10} {}",
             self.cmd,
+            &gen_hotkey_string(&self.events),
             if self.cmd_short.is_empty() {
                 "-"
             } else {
                 self.cmd_short
             },
-            &gen_hotkey_string(&self.events),
             self.args,
             self.description
         )
@@ -56,11 +56,11 @@ impl std::fmt::Display for ControllerHelper {
 }
 
 fn gen_hotkey_string(events: &[Event]) -> String {
-    return events
+    events
         .iter()
         .map(event_to_string)
         .collect::<Vec<String>>()
-        .join(",");
+        .join(",")
 }
 
 fn get_description(controller: &Controllers) -> &'static str {
@@ -118,9 +118,9 @@ fn get_args(controller: &Controllers) -> &'static str {
 
 fn get_title() -> Vec<String> {
     vec![
-        format!("{:<18}", "Command"),
-        format!("{:<11}", "Short Cmd"),
+        format!("{:<24}", "Command"),
         format!("{:<24}", "Hot Key"),
+        format!("{:<11}", "Cmd Alias"),
         format!("{:<10}", "Args"),
         "Description".into(),
     ]
