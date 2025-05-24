@@ -1125,13 +1125,15 @@ fn record(
         let _ = writer_thread.join();
     });
 
-    let ret = mlockall(MlockAllFlags::MCL_CURRENT);
-    if ret.is_err() {
-        warn!(
-            logger,
-            "mlockall failed: {}. Continue without mlock",
-            std::io::Error::last_os_error()
-        );
+    if below_config.mlock_record {
+        let ret = mlockall(MlockAllFlags::MCL_CURRENT);
+        if ret.is_err() {
+            warn!(
+                logger,
+                "mlockall failed: {}. Continue without mlock",
+                std::io::Error::last_os_error()
+            );
+        }
     }
 
     loop {
