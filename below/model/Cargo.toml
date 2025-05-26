@@ -20,7 +20,7 @@ enum-iterator = "1.4.1"
 ethtool = { package = "below-ethtool", version = "0.9.0", path = "../ethtool" }
 gpu_stats = { package = "below-gpu-stats", version = "0.9.0", path = "../gpu_stats" }
 hostname = "0.3"
-os_info = "3.0.7"
+os_info = "3.11.0"
 procfs = { package = "fb_procfs", version = "0.9.0", path = "../procfs" }
 regex = "1.11.1"
 resctrlfs = { version = "0.9.0", path = "../resctrlfs" }
