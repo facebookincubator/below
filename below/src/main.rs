@@ -776,7 +776,7 @@ fn real_main(init: init::InitToken) {
             disable_disk_stat,
             disable_exitstats,
             compress_opts,
-            ref writer_buffer_size,
+            writer_buffer_size,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
             run(
