@@ -4,7 +4,7 @@
 name = "below-tc"
 version = "0.9.0"
 authors = ["Meta Platforms, Inc. and affiliates"]
-edition = "2021"
+edition = "2024"
 description = "TC crate for below"
 repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"

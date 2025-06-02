@@ -4,7 +4,7 @@
 name = "resctrlfs"
 version = "0.9.0"
 authors = ["Meta Platforms, Inc. and affiliates"]
-edition = "2021"
+edition = "2024"
 description = "A crate for reading resctrl fs data"
 readme = "README"
 repository = "https://github.com/facebookincubator/below"

@@ -4,7 +4,7 @@
 name = "below"
 version = "0.9.0"
 authors = ["Meta Platforms, Inc. and affiliates"]
-edition = "2021"
+edition = "2024"
 description = "An interactive tool to view and record historical system data"
 readme = "../README.md"
 repository = "https://github.com/facebookincubator/below"
