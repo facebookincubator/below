@@ -467,6 +467,7 @@ pub struct CgroupMemoryModel {
     pub file_mapped: Option<u64>,
     pub file_dirty: Option<u64>,
     pub file_writeback: Option<u64>,
+    pub file_thp: Option<u64>,
     pub anon_thp: Option<u64>,
     pub inactive_anon: Option<u64>,
     pub active_anon: Option<u64>,
@@ -524,6 +525,7 @@ impl std::ops::Add for CgroupMemoryModel {
             file_mapped: opt_add(self.file_mapped, other.file_mapped),
             file_dirty: opt_add(self.file_dirty, other.file_dirty),
             file_writeback: opt_add(self.file_writeback, other.file_writeback),
+            file_thp: opt_add(self.file_thp, other.file_thp),
             anon_thp: opt_add(self.anon_thp, other.anon_thp),
             inactive_anon: opt_add(self.inactive_anon, other.inactive_anon),
             active_anon: opt_add(self.active_anon, other.active_anon),
@@ -655,6 +657,7 @@ impl CgroupMemoryModel {
             model.file_mapped = stat.file_mapped;
             model.file_dirty = stat.file_dirty;
             model.file_writeback = stat.file_writeback;
+            model.file_thp = stat.file_thp;
             model.anon_thp = stat.anon_thp;
             model.inactive_anon = stat.inactive_anon;
             model.active_anon = stat.active_anon;

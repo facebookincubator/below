@@ -264,6 +264,7 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::File;
     use model::CgroupMemoryModelFieldId::FileDirty;
     use model::CgroupMemoryModelFieldId::FileMapped;
+    use model::CgroupMemoryModelFieldId::FileThp;
     use model::CgroupMemoryModelFieldId::FileWriteback;
     use model::CgroupMemoryModelFieldId::InactiveAnon;
     use model::CgroupMemoryModelFieldId::InactiveFile;
@@ -373,6 +374,7 @@ pub mod default_tabs {
             ViewItem::from_default(Mem(FileMapped)),
             ViewItem::from_default(Mem(FileDirty)),
             ViewItem::from_default(Mem(FileWriteback)),
+            ViewItem::from_default(Mem(FileThp)),
             ViewItem::from_default(Mem(AnonThp)),
             ViewItem::from_default(Mem(InactiveAnon)),
             ViewItem::from_default(Mem(ActiveAnon)),

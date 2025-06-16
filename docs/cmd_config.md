@@ -28,7 +28,7 @@ See `belowrc.md`.
 cpu_usage, cpu_user, cpu_sys, nr_periods, nr_throttled, throttled
 
 mem_total, swap, anon, file, kernel_stack, slab, sock, shmem, file_mapped, file_dirty,
-file_writeback, anon_thp, inactive_anon, active_anon, inactive_file, active_file,
+file_writeback, file_thp, anon_thp, inactive_anon, active_anon, inactive_file, active_file,
 unevictable, slab_reclaimable, slab_unreclaimable, pgfault, pgmajfault, workingset_refault,
 workingset_activate, workingset_node_reclaim, pgrefill, pgscan, pgsteal, pgactivate,
 pgdeactivate, pglazyfree, pglazyfreed, thp_fault_alloc, thp_collapse_alloc

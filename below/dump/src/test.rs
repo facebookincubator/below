@@ -503,6 +503,7 @@ fn test_dump_cgroup_titles() {
         "File Mapped",
         "File Dirty",
         "File WB",
+        "File THP",
         "Anon THP",
         "Inactive Anon",
         "Active Anon",

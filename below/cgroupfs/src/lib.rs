@@ -709,6 +709,7 @@ key_values_format!(MemoryStat; memory.stat; [
     file_mapped,
     file_dirty,
     file_writeback,
+    file_thp,
     anon_thp,
     inactive_anon,
     active_anon,
