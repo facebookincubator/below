@@ -10,7 +10,7 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 async-trait = "0.1.86"
 below_derive = { version = "0.9.0", path = "../below_derive" }
 btrfs = { package = "below-btrfs", version = "0.9.0", path = "../btrfs" }
