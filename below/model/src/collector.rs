@@ -275,17 +275,8 @@ fn collect_sample(
             if let Some(gpu_stats_receiver) = &options.gpu_stats_receiver {
                 // It is possible to receive no sample if the
                 // collector has not updated since the previous take
-                // or the collector encountered a recoverable error
-                // (e.g. timeout). The behavior for now is to store an
-                // empty map. Alternatively we could store the latest
-                // sample and read that, but then we have to decide how
-                // stale the data can be.
-                Some(
-                    gpu_stats_receiver
-                        .try_take()
-                        .context("GPU stats collector had an error")?
-                        .unwrap_or_default(),
-                )
+                // or the collector encountered errors (e.g. timeout).
+                gpu_stats_receiver.take()
             } else {
                 None
             }
@@ -320,12 +311,7 @@ fn collect_sample(
             }
         },
         tc: if let Some(tc_stats_receiver) = &options.tc_stats_receiver {
-            Some(
-                tc_stats_receiver
-                    .try_take()
-                    .context("TC stats collector had an error")?
-                    .unwrap_or_default(),
-            )
+            tc_stats_receiver.take()
         } else {
             None
         },
@@ -396,13 +382,13 @@ fn collect_cgroup_sample(
         None
     };
     Ok(CgroupSample {
-        cpu_stat: wrap(reader.read_cpu_stat())?.map(Into::into),
+        cpu_stat: wrap(reader.read_cpu_stat())?,
         io_stat,
         tids_current: wrap(reader.read_pids_current())?,
         tids_max: wrap(reader.read_pids_max())?,
         memory_current: wrap(reader.read_memory_current().map(|v| v as i64))?,
-        memory_stat: wrap(reader.read_memory_stat())?.map(Into::into),
-        pressure: pressure_wrap(reader.read_pressure())?.map(Into::into),
+        memory_stat: wrap(reader.read_memory_stat())?,
+        pressure: pressure_wrap(reader.read_pressure())?,
         // We transpose at the end here to convert the
         // Option<Result<BTreeMap... into Result<Option<BTreeMap and
         // then bail any errors with `?` - leaving us with the
@@ -448,8 +434,8 @@ fn collect_cgroup_sample(
         memory_swap_max: wrap(reader.read_memory_swap_max())?,
         memory_zswap_max: wrap(reader.read_memory_zswap_max())?,
         memory_zswap_writeback: wrap(reader.read_memory_zswap_writeback())?,
-        memory_events: wrap(reader.read_memory_events())?.map(Into::into),
-        memory_events_local: wrap(reader.read_memory_events_local())?.map(Into::into),
+        memory_events: wrap(reader.read_memory_events())?,
+        memory_events_local: wrap(reader.read_memory_events_local())?,
         inode_number: match reader.read_inode_number() {
             Ok(st_ino) => Some(st_ino as i64),
             Err(e) => {
@@ -457,8 +443,8 @@ fn collect_cgroup_sample(
                 None
             }
         },
-        cgroup_stat: wrap(reader.read_cgroup_stat())?.map(Into::into),
-        memory_numa_stat: wrap(reader.read_memory_numa_stat())?.map(Into::into),
+        cgroup_stat: wrap(reader.read_cgroup_stat())?,
+        memory_numa_stat: wrap(reader.read_memory_numa_stat())?,
         cpuset_cpus: wrap(reader.read_cpuset_cpus())?,
         cpuset_cpus_effective: wrap(reader.read_cpuset_cpus_effective())?,
         cpuset_mems: wrap(reader.read_cpuset_mems())?,

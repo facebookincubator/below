@@ -28,15 +28,14 @@ pub trait AsyncCollectorPlugin {
     //
     // On success, this should return `Ok(Some(sample))`.
     //
-    // On a recoverable error, this should return `Ok(None)`. The
+    // On a error handled by the collector, this should return `Ok(None)`. The
     // function itself should consume the error (e.g. log the error)
-    // so that it does not get sent to a consumer thread
     //
-    // On unrecoverable error, this should return `Err(e)`.
+    // On unhandled errors, this should return `Err(e)`.
     async fn try_collect(&mut self) -> Result<Option<Self::T>>;
 }
 
-type SharedVal<T> = Arc<Mutex<Option<Result<T>>>>;
+type SharedVal<T> = Arc<Mutex<Option<T>>>;
 
 // A wrapper around an `AsyncCollectorPlugin` that allows samples to
 // be sent to a `Consumer`.
@@ -50,8 +49,8 @@ impl<T, Plugin: AsyncCollectorPlugin<T = T>> AsyncCollector<T, Plugin> {
         Self { shared, plugin }
     }
 
-    fn update(&self, value: Result<T>) {
-        *self.shared.lock().unwrap() = Some(value);
+    fn update(&self, value: Option<T>) {
+        *self.shared.lock().unwrap() = value;
     }
 
     // Collect sample and update value shared with consumer. Replaces
@@ -59,26 +58,18 @@ impl<T, Plugin: AsyncCollectorPlugin<T = T>> AsyncCollector<T, Plugin> {
     //
     // Returns true if data was collected and sent. Returns false if
     // there was a recoverable error. Returns an error if there was an
-    // unrecoverable error.
+    // unrecoverable error. Errors are never sent to the consumer.
     pub async fn collect_and_update(&mut self) -> Result<bool> {
-        let collect_result = self
-            .plugin
-            .try_collect()
-            .await
-            .context("Collector failed to read");
-
-        match collect_result {
-            Ok(Some(sample)) => {
-                self.update(Ok(sample));
-                Ok(true)
-            }
-            Ok(None) => Ok(false),
+        let maybe_sample = match self.plugin.try_collect().await {
+            Ok(maybe_sample) => maybe_sample,
             Err(e) => {
-                let error_msg = format!("{:#}", e);
-                self.update(Err(e));
-                Err(anyhow!(error_msg))
+                self.update(None);
+                return Err(e).context("Collector failed to collect");
             }
-        }
+        };
+        let collected = maybe_sample.is_some();
+        self.update(maybe_sample);
+        Ok(collected)
     }
 }
 
@@ -93,13 +84,8 @@ impl<T> Consumer<T> {
     }
 
     // Try to get latest sample of data if it exists.
-    // Returns the error if the collector sent an error.
-    pub fn try_take(&self) -> Result<Option<T>> {
-        match self.shared.lock().unwrap().take() {
-            Some(Ok(v)) => Ok(Some(v)),
-            Some(Err(e)) => Err(e),
-            None => Ok(None),
-        }
+    pub fn take(&self) -> Option<T> {
+        self.shared.lock().unwrap().take()
     }
 }
 
@@ -169,15 +155,15 @@ mod test {
         });
         // Collector overwriting sample
         barrier.wait(); // <-- 1
-        assert_eq!(Some(2), consumer.try_take().unwrap());
+        assert_eq!(Some(2), consumer.take());
         barrier.wait(); // <-- 2
         // Collector sending None
         barrier.wait(); // <-- 3
-        assert_eq!(None, consumer.try_take().unwrap());
+        assert!(consumer.take().is_none());
         barrier.wait(); // <-- 4
         // Collector sending error
         barrier.wait(); // <-- 5
-        assert!(consumer.try_take().is_err());
+        assert!(consumer.take().is_none());
 
         handle.join().unwrap();
     }
