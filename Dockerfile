@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,50 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:22.04 AS build
+FROM fedora:42 AS builder
+# NOTE: `clang` is required by `libbpf-cargo` for building `below/src/bpf/exitstat.bpf.c`
+RUN dnf install -yq cargo clang elfutils-libelf-devel && dnf clean all
+WORKDIR /app
+# Only copy over files/dirs needed for the build:
+COPY Cargo.lock Cargo.toml .
+COPY below/ below/
+RUN <<HEREDOC
+    cargo build --release --bin below
+    cp target/release/below /usr/local/bin/below
+    strip /usr/local/bin/below
+HEREDOC
 
-ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y \
-  build-essential \
-  ca-certificates \
-  clang-15 \
-  curl \
-  git \
-  libelf-dev \
-  libssl-dev \
-  m4 \
-  pkg-config \
-  python3 \
-  zlib1g-dev
+# Provides a minimal base for the runtime image to use:
+FROM fedora:42 AS root-fs
+RUN <<HEREDOC
+    dnf --installroot /root-fs --use-host-config --setopt=install_weak_deps=0 \
+        install -yq elfutils-libelf glibc libgcc libzstd zlib-ng-compat
 
-WORKDIR /
+    # Remove DNF cache (almost 100MB):
+    dnf --installroot /root-fs --use-host-config --setopt=install_weak_deps=0 \
+        clean all
+HEREDOC
 
-# Install rustup
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /rustup.sh
-RUN chmod +x /rustup.sh
-RUN bash /rustup.sh -y
-
-ADD . /below
-# Build below
-WORKDIR below
-ENV CLANG=clang-15
-RUN /root/.cargo/bin/cargo build --release --all-targets
-
-# Now create stage 2 image. We drop all the build dependencies and only install
-# runtime dependencies. This will create a smaller image suitable for
-# distribution.
-FROM ubuntu:22.04
-
-# Default locale is "POSIX" which doesn't seem to play well with UTF-8. Cursive
-# uses UTF-8 to draw lines so we need to set this locale otherwise our lines
-# will be garbled. See https://github.com/gyscos/cursive/issues/13 .
-ENV LANG C.UTF-8
-
-RUN apt-get update
-RUN apt-get install -y \
-  libelf1 \
-  zlib1g
-
-COPY --from=build /below/target/release/below /below
-
+# Compose the final minimal image to publish:
+FROM scratch AS runtime
+COPY --link --from=root-fs /root-fs /
+COPY --link --from=builder /usr/local/bin/below /below
 ENTRYPOINT ["/below"]
