@@ -13,7 +13,7 @@ license = "Apache-2.0"
 [package.metadata]
 
 [package.metadata.deb]
-depends = "libelf1, libncursesw5, zlib1g"
+depends = "libelf1, zlib1g"
 
 [package.metadata.deb.systemd-units]
 unit-name = "below"

@@ -22,7 +22,6 @@ RUN apt-get update && apt-get install -y \
   curl \
   git \
   libelf-dev \
-  libncursesw5-dev \
   libssl-dev \
   m4 \
   pkg-config \
@@ -55,7 +54,6 @@ ENV LANG C.UTF-8
 RUN apt-get update
 RUN apt-get install -y \
   libelf1 \
-  libncursesw5 \
   zlib1g
 
 COPY --from=build /below/target/release/below /below

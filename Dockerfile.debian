@@ -22,7 +22,6 @@ RUN apt-get update && apt-get install -y \
   curl \
   git \
   libelf-dev \
-  libncursesw5-dev \
   libssl-dev \
   m4 \
   pkg-config \
