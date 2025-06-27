@@ -26,6 +26,13 @@ RUN <<HEREDOC
     strip /usr/local/bin/below
 HEREDOC
 
+# Support for `scripts/build_deb.sh`:
+FROM builder AS package-deb
+RUN cargo install cargo-deb
+COPY README.md .
+COPY etc/ .
+RUN cargo deb --package below --no-build
+
 # Provides a minimal base for the runtime image to use:
 FROM fedora:42 AS root-fs
 RUN <<HEREDOC
