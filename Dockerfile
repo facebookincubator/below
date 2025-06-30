@@ -14,8 +14,14 @@
 # limitations under the License.
 
 FROM fedora:42 AS builder
-# NOTE: `clang` is required by `libbpf-cargo` for building `below/src/bpf/exitstat.bpf.c`
-RUN dnf install -yq cargo clang elfutils-libelf-devel && dnf clean all
+RUN <<HEREDOC
+    # NOTE: `clang` is required by `libbpf-cargo` for building `below/src/bpf/exitstat.bpf.c`
+    dnf install -yq clang elfutils-libelf-devel rustup
+    dnf clean all
+
+    # NOTE: `libbpf-cargo` requires the `rustfmt` component to generate `exitstat.skel.rs`
+    rustup-init -y --profile minimal --default-toolchain stable --component rustfmt
+HEREDOC
 WORKDIR /app
 # Only copy over files/dirs needed for the build:
 COPY Cargo.lock Cargo.toml .
