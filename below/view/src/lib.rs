@@ -52,9 +52,9 @@
 /// * Column names: The column names line also called title line in below_derive. It defines the table column of
 ///   the following selectable view. A user can press `,` or `.` to switch between different columns and press `s`
 ///   or `S` to sort in ascending or descending order.
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 use std::time::SystemTime;
 
@@ -186,9 +186,9 @@ impl MainViewState {
 
 #[derive(Clone)]
 pub enum ViewMode {
-    Live(Rc<RefCell<Advance>>),
-    Pause(Rc<RefCell<Advance>>),
-    Replay(Rc<RefCell<Advance>>),
+    Live(Arc<Mutex<Advance>>),
+    Pause(Arc<Mutex<Advance>>),
+    Replay(Arc<Mutex<Advance>>),
 }
 
 // Invoked either when the data view was explicitly advanced, or
@@ -240,20 +240,20 @@ pub struct ViewState {
     pub lowest_time_elapsed: Duration,
     pub timestamp: SystemTime,
     // TODO: Replace other fields with model
-    pub model: Rc<RefCell<Model>>,
-    pub system: Rc<RefCell<SystemModel>>,
-    pub cgroup: Rc<RefCell<CgroupModel>>,
-    pub process: Rc<RefCell<ProcessModel>>,
-    pub network: Rc<RefCell<NetworkModel>>,
+    pub model: Arc<Mutex<Model>>,
+    pub system: Arc<Mutex<SystemModel>>,
+    pub cgroup: Arc<Mutex<CgroupModel>>,
+    pub process: Arc<Mutex<ProcessModel>>,
+    pub network: Arc<Mutex<NetworkModel>>,
     #[cfg(fbcode_build)]
-    pub gpu: Rc<RefCell<Option<GpuModel>>>,
+    pub gpu: Arc<Mutex<Option<GpuModel>>>,
     pub main_view_state: MainViewState,
     pub main_view_screens: HashMap<String, ScreenId>,
     pub mode: ViewMode,
     pub viewrc: ViewRc,
     pub viewrc_error: Option<String>,
-    pub event_controllers: Rc<RefCell<HashMap<Event, controllers::Controllers>>>,
-    pub cmd_controllers: Rc<RefCell<HashMap<&'static str, controllers::Controllers>>>,
+    pub event_controllers: Arc<Mutex<HashMap<Event, controllers::Controllers>>>,
+    pub cmd_controllers: Arc<Mutex<HashMap<&'static str, controllers::Controllers>>>,
 }
 
 impl ViewState {
@@ -263,13 +263,15 @@ impl ViewState {
             self.lowest_time_elapsed = model.time_elapsed;
         }
         self.timestamp = model.timestamp;
-        self.model.replace(model.clone());
-        self.system.replace(model.system);
-        self.cgroup.replace(model.cgroup);
-        self.process.replace(model.process);
-        self.network.replace(model.network);
+        *self.model.lock().unwrap() = model.clone();
+        *self.system.lock().unwrap() = model.system;
+        *self.cgroup.lock().unwrap() = model.cgroup;
+        *self.process.lock().unwrap() = model.process;
+        *self.network.lock().unwrap() = model.network;
         #[cfg(fbcode_build)]
-        self.gpu.replace(model.gpu);
+        {
+            *self.gpu.lock().unwrap() = model.gpu;
+        }
     }
 
     pub fn new_with_advance(
@@ -283,20 +285,20 @@ impl ViewState {
             time_elapsed: model.time_elapsed,
             lowest_time_elapsed: model.time_elapsed,
             timestamp: model.timestamp,
-            model: Rc::new(RefCell::new(model.clone())),
-            system: Rc::new(RefCell::new(model.system)),
-            cgroup: Rc::new(RefCell::new(model.cgroup)),
-            process: Rc::new(RefCell::new(model.process)),
-            network: Rc::new(RefCell::new(model.network)),
+            model: Arc::new(Mutex::new(model.clone())),
+            system: Arc::new(Mutex::new(model.system)),
+            cgroup: Arc::new(Mutex::new(model.cgroup)),
+            process: Arc::new(Mutex::new(model.process)),
+            network: Arc::new(Mutex::new(model.network)),
             #[cfg(fbcode_build)]
-            gpu: Rc::new(RefCell::new(model.gpu)),
+            gpu: Arc::new(Mutex::new(model.gpu)),
             main_view_state,
             main_view_screens: HashMap::new(),
             mode,
             viewrc,
             viewrc_error,
-            event_controllers: Rc::new(RefCell::new(HashMap::new())),
-            cmd_controllers: Rc::new(RefCell::new(controllers::make_cmd_controller_map())),
+            event_controllers: Arc::new(Mutex::new(HashMap::new())),
+            cmd_controllers: Arc::new(Mutex::new(controllers::make_cmd_controller_map())),
         }
     }
 
@@ -316,10 +318,7 @@ impl ViewState {
 impl View {
     pub fn new_with_advance(model: model::Model, mode: ViewMode) -> View {
         let mut inner = cursive::CursiveRunnable::new(|| {
-            let backend = cursive::backends::crossterm::Backend::init().map(|backend| {
-                Box::new(cursive_buffered_backend::BufferedBackend::new(backend))
-                    as Box<(dyn cursive::backend::Backend)>
-            });
+            let backend = cursive::backends::crossterm::Backend::init();
             execute!(std::io::stdout(), DisableMouseCapture).expect("Failed to disable mouse.");
             backend
         });
@@ -359,10 +358,11 @@ impl View {
 
         let event_controller_map = controllers::make_event_controller_map(c, &cmdrc_opt);
 
-        c.user_data::<ViewState>()
+        *c.user_data::<ViewState>()
             .expect("No data stored in Cursive object!")
             .event_controllers
-            .replace(event_controller_map);
+            .lock()
+            .unwrap() = event_controller_map;
     }
 
     pub fn run(&mut self) -> Result<()> {
@@ -518,9 +518,9 @@ impl View {
 
 #[cfg(test)]
 pub mod fake_view {
-    use std::cell::RefCell;
     use std::path::PathBuf;
-    use std::rc::Rc;
+    use std::sync::Arc;
+    use std::sync::Mutex;
 
     use common::logutil::get_logger;
     use cursive::views::DummyView;
@@ -556,7 +556,7 @@ pub mod fake_view {
             let mut user_data = ViewState::new_with_advance(
                 MainViewState::Cgroup,
                 model,
-                ViewMode::Live(Rc::new(RefCell::new(advance))),
+                ViewMode::Live(Arc::new(Mutex::new(advance))),
                 ViewRc::default(),
                 None,
             );

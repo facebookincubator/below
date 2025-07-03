@@ -176,7 +176,8 @@ make_event_controller!(
         if current_state.is_process_zoom_state() {
             crate::process_view::ProcessView::get_process_view(c)
                 .state
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .reset_state_for_quiting_zoom();
         }
         c.user_data::<ViewState>()
@@ -205,7 +206,8 @@ make_event_controller!(
         if current_state.is_process_zoom_state() {
             crate::process_view::ProcessView::get_process_view(c)
                 .state
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .reset_state_for_quiting_zoom();
         }
         c.user_data::<ViewState>()
@@ -234,7 +236,8 @@ make_event_controller!(
         if current_state.is_process_zoom_state() {
             crate::process_view::ProcessView::get_process_view(c)
                 .state
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .reset_state_for_quiting_zoom();
         }
         c.user_data::<ViewState>()
@@ -265,17 +268,20 @@ make_event_controller!(
                 if zoom != ProcessZoomState::NoZoom {
                     crate::process_view::ProcessView::get_process_view(c)
                         .state
-                        .borrow_mut()
+                        .lock()
+                        .unwrap()
                         .reset_state_for_quiting_zoom();
                 }
                 let selected_cgroup = crate::process_view::ProcessView::get_process_view(c)
                     .state
-                    .borrow()
+                    .lock()
+                    .unwrap()
                     .get_cgroup_for_selected_pid();
                 if let Some(cgroup) = selected_cgroup {
                     crate::cgroup_view::CgroupView::get_cgroup_view(c)
                         .state
-                        .borrow_mut()
+                        .lock()
+                        .unwrap()
                         .handle_state_for_entering_focus(cgroup);
                 } else {
                     // Probably no entries in process view. We still move to
@@ -286,12 +292,14 @@ make_event_controller!(
             MainViewState::Cgroup => {
                 let current_selection = crate::cgroup_view::CgroupView::get_cgroup_view(c)
                     .state
-                    .borrow()
+                    .lock()
+                    .unwrap()
                     .current_selected_cgroup
                     .clone();
                 crate::process_view::ProcessView::get_process_view(c)
                     .state
-                    .borrow_mut()
+                    .lock()
+                    .unwrap()
                     .handle_state_for_entering_zoom(current_selection);
                 MainViewState::Process(ProcessZoomState::Cgroup)
             }
@@ -340,7 +348,7 @@ make_event_controller!(
         if current_state == MainViewState::Process(ProcessZoomState::NoZoom) {
             let mut process_view = crate::process_view::ProcessView::get_process_view(c);
             process_view.get_cmd_palette().toggle_fold();
-            process_view.state.borrow_mut().toggle_fold();
+            process_view.state.lock().unwrap().toggle_fold();
         }
 
         // Redraw screen now so we don't have to wait until next tick

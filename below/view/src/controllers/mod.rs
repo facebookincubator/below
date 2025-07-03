@@ -29,6 +29,7 @@
 //! * default_events: An array of default event triggers for this EventController
 //! * handle: How should below handle such event given the currst StatsView<T>
 //! * callback: How should below handle such event with a cursive object.
+//!
 //! EventController is a interface ONLY struct.
 //!
 //! ## Controllers
@@ -58,8 +59,8 @@
 //! 1. User typed something when not in the "command mode". For example "c".
 //! 2. StatsView<T> capture the cursive event. For example Event::char('c').
 //! 3. StatsView<T> trys to find the corresponding Controllers value in event_controller_map
-//!   3.1 if not found, send the event to its parent and return.
-//!   3.2 if found, get the Controllers value. For example Controllers::Cgroup.
+//!    3.1 if not found, send the event to its parent and return.
+//!    3.2 if found, get the Controllers value. For example Controllers::Cgroup.
 //! 4. Invoke the handle function. For example Controllers::Cgroup.hanle()
 //! 5. Invoke the callback function. For example Controllers::Cgroup.callback()
 //! 6. Mark the event as consumed.
@@ -67,10 +68,11 @@
 //! ## Command to EventController
 //! 1. User typed something in "command mode" and hit enter. For example: "cgroup".
 //! 2. CommandPalette capture the input and try to find the corresponding Controllers value in cmd_controller_map
-//!   2.1 if not found, raise error message
-//!   2.2 if found, get the Controllers value. For example Controllers::Cgroup
+//!    2.1 if not found, raise error message
+//!    2.2 if found, get the Controllers value. For example Controllers::Cgroup
 //! 3. Invoke the handle function. For example Controllers::Cgroup.hanle()
 //! 4. Invoke the callback function. For example Controllers::Cgroup.callback()
+
 use cursive::Cursive;
 use cursive::event::Event;
 use cursive::event::EventTrigger;

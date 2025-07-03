@@ -116,7 +116,8 @@ impl CgroupTab {
 
             let collapsed = state
                 .collapsed_cgroups
-                .borrow()
+                .lock()
+                .unwrap()
                 .contains(&cgroup.data.full_path);
             let row = self.get_line(&cgroup.data, collapsed, offset, cgroup.recreate_flag);
             // Each row is (label, value), where label is visible and value is used
@@ -146,7 +147,8 @@ impl CgroupTab {
                 for child_cgroup in &children {
                     state
                         .collapsed_cgroups
-                        .borrow_mut()
+                        .lock()
+                        .unwrap()
                         .insert(child_cgroup.data.full_path.clone());
                 }
             }

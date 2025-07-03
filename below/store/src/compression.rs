@@ -22,10 +22,10 @@ use bytes::Bytes;
 /// This file defines a minimalistic compressor and decompressor interface
 /// optimized for below's usage. They are wrappers around general compression
 /// libraries. Currently only zstd is supported.
-
+//
 // TODO: Use latest zstd as implementation
 // TODO: Consider using experimental feature to load dict by reference
-
+//
 fn code_to_err(code: zstd_safe::ErrorCode) -> Error {
     anyhow!(zstd_safe::get_error_name(code))
 }

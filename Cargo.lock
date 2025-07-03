@@ -340,7 +340,6 @@ dependencies = [
  "chrono",
  "crossterm 0.28.1",
  "cursive",
- "cursive_buffered_backend",
  "enum-iterator",
  "fb_procfs",
  "humantime",
@@ -649,20 +648,6 @@ dependencies = [
  "signal-hook",
  "unicode-segmentation",
  "unicode-width 0.1.14",
-]
-
-[[package]]
-name = "cursive_buffered_backend"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf6287f9e06f44558a3264976e70c51187482a0271d48abfd88f0d3af18d3ee6"
-dependencies = [
- "cursive_core",
- "enumset",
- "log",
- "smallvec",
- "unicode-segmentation",
- "unicode-width 0.2.0",
 ]
 
 [[package]]

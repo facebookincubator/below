@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use cursive::Cursive;
 use cursive::event::Key;
@@ -44,29 +44,30 @@ fn set_cp_filter(c: &mut Cursive, field_info: Option<(String, String)>) {
 }
 
 pub fn new<F>(
-    state: Rc<RefCell<impl StateCommon + 'static>>,
+    state: Arc<Mutex<impl StateCommon + 'static>>,
     refresh: F,
     tab: String,
     idx: usize,
     title_name: String,
 ) -> impl View
 where
-    F: 'static + Copy + Fn(&mut Cursive),
+    F: 'static + Copy + Fn(&mut Cursive) + Send + Sync,
 {
     fn set_filter_state_and_cp(
         c: &mut Cursive,
-        state: Rc<RefCell<impl StateCommon + 'static>>,
+        state: Arc<Mutex<impl StateCommon + 'static>>,
         text: &str,
         tab: &str,
         idx: usize,
         title_name: &String,
     ) {
         if text.is_empty() {
-            state.borrow_mut().set_filter_from_tab_idx("", 0, None);
+            state.lock().unwrap().set_filter_from_tab_idx("", 0, None);
             set_cp_filter(c, None);
         } else {
             state
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .set_filter_from_tab_idx(tab, idx, Some(text.to_string()));
             set_cp_filter(c, Some((title_name.to_string(), text.to_string())));
         }
@@ -91,7 +92,7 @@ where
             c.pop_layer();
         });
 
-    editview.set_content(match state.borrow_mut().get_filter_info().as_ref() {
+    editview.set_content(match state.lock().unwrap().get_filter_info().as_ref() {
         None => String::new(),
         Some((_, filter)) => filter.to_string(),
     });

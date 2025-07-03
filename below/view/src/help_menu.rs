@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use cursive::event::Event;
 use cursive::view::Nameable;
@@ -129,14 +129,14 @@ fn get_title() -> Vec<String> {
 // Grab the user customized keymaps and generate helper message
 fn fill_controllers(
     v: &mut SelectView<String>,
-    event_controllers: Rc<RefCell<HashMap<Event, Controllers>>>,
+    event_controllers: Arc<Mutex<HashMap<Event, Controllers>>>,
 ) {
     // event_controllers can generate helper messages in completely random order base on
     // user's customization. Instead of using it directly, we will generate a cmd-msg map
     // to ensure the order.
     //
     let mut cmd_map: HashMap<Controllers, ControllerHelper> = HashMap::new();
-    for (event, controller) in event_controllers.borrow().iter() {
+    for (event, controller) in event_controllers.lock().unwrap().iter() {
         match cmd_map.get_mut(controller) {
             Some(ref mut item) => item.events.push(event.clone()),
             None => drop(cmd_map.insert(
@@ -209,7 +209,7 @@ fn fill_reserved(v: &mut LinearLayout) {
     }
 }
 
-pub fn new(event_controllers: Rc<RefCell<HashMap<Event, Controllers>>>) -> impl View {
+pub fn new(event_controllers: Arc<Mutex<HashMap<Event, Controllers>>>) -> impl View {
     let mut reserved = LinearLayout::vertical();
     fill_reserved(&mut reserved);
     let mut controllers = SelectView::<String>::new();

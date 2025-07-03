@@ -83,7 +83,7 @@ make_event_controller!(
             .clone();
         match mode {
             ViewMode::Pause(adv) | ViewMode::Replay(adv) => {
-                let mut adv = adv.borrow_mut();
+                let mut adv = adv.lock().unwrap();
                 advance!(c, adv, Direction::Forward);
             }
             _ => {}
@@ -109,7 +109,7 @@ make_event_controller!(
             .clone();
         match mode {
             ViewMode::Pause(adv) | ViewMode::Replay(adv) => {
-                let mut adv = adv.borrow_mut();
+                let mut adv = adv.lock().unwrap();
                 advance!(c, adv, Direction::Reverse);
             }
             _ => {}
@@ -134,12 +134,12 @@ make_event_controller!(
             match &view_state.mode {
                 ViewMode::Pause(adv) => {
                     // On resume, we need to jump back to latest sample
-                    adv.borrow_mut().get_latest_sample();
+                    adv.lock().unwrap().get_latest_sample();
                     view_state.mode = ViewMode::Live(adv.clone());
                 }
                 ViewMode::Live(adv) => {
                     // If it's live local, we need to jump to the lastest sample
-                    adv.borrow_mut().get_latest_sample();
+                    adv.lock().unwrap().get_latest_sample();
                     view_state.mode = ViewMode::Pause(adv.clone());
                 }
                 _ => {}

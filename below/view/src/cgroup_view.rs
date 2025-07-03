@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::Ref;
-use std::cell::RefCell;
-use std::cell::RefMut;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::MutexGuard;
 
 use cursive::Cursive;
 use cursive::utils::markup::StyledString;
@@ -45,10 +44,10 @@ pub type ViewType = StatsView<CgroupView>;
 
 #[derive(Default)]
 pub struct CgroupState {
-    // Rc::RefCell is necessaray here since we will need to change the collapsed_cgroups
+    // Arc::Mutex is necessary here since we will need to change the collapsed_cgroups
     // when we traverse the cgroup tree recursively. And we can not pass the CgroupState as
     // mutable.
-    pub collapsed_cgroups: Rc<RefCell<HashSet<String>>>,
+    pub collapsed_cgroups: Arc<Mutex<HashSet<String>>>,
     pub current_selected_cgroup: String,
     // cgroup row to move focus on. If set, on next refresh, selector will be
     // moved to the cgroup
@@ -57,7 +56,7 @@ pub struct CgroupState {
     pub sort_order: Option<SingleCgroupModelFieldId>,
     pub sort_tags: HashMap<String, Vec<ViewItem<SingleCgroupModelFieldId>>>,
     pub reverse: bool,
-    pub model: Rc<RefCell<CgroupModel>>,
+    pub model: Arc<Mutex<CgroupModel>>,
     pub collapse_all_top_level_cgroup: bool,
 }
 
@@ -130,15 +129,15 @@ impl StateCommon for CgroupState {
         }
     }
 
-    fn get_model(&self) -> Ref<Self::ModelType> {
-        self.model.borrow()
+    fn get_model(&self) -> MutexGuard<Self::ModelType> {
+        self.model.lock().unwrap()
     }
 
-    fn get_model_mut(&self) -> RefMut<Self::ModelType> {
-        self.model.borrow_mut()
+    fn get_model_mut(&self) -> MutexGuard<Self::ModelType> {
+        self.model.lock().unwrap()
     }
 
-    fn new(model: Rc<RefCell<Self::ModelType>>) -> Self {
+    fn new(model: Arc<Mutex<Self::ModelType>>) -> Self {
         let mut sort_tags = HashMap::new();
         sort_tags.insert("General".into(), default_tabs::get_general_items());
         sort_tags.insert("CPU".into(), default_tabs::get_cpu_items());
@@ -147,7 +146,7 @@ impl StateCommon for CgroupState {
         sort_tags.insert("Pressure".into(), default_tabs::get_pressure_items());
         sort_tags.insert("Properties".into(), default_tabs::get_properties_items());
         Self {
-            collapsed_cgroups: Rc::new(RefCell::new(HashSet::new())),
+            collapsed_cgroups: Arc::new(Mutex::new(HashSet::new())),
             current_selected_cgroup: "<root>".into(),
             cgroup_to_focus: None,
             filter_info: None,
@@ -182,7 +181,7 @@ impl CgroupState {
         self.collapse_all_top_level_cgroup = false;
         let mut sub_cgroup = Some(cgroup);
         while let Some(c) = sub_cgroup {
-            self.collapsed_cgroups.borrow_mut().remove(c);
+            self.collapsed_cgroups.lock().unwrap().remove(c);
             sub_cgroup = c.rsplit_once('/').map(|(s, _)| s);
         }
     }
@@ -198,7 +197,8 @@ impl CgroupState {
             .get_by_path_str(&self.current_selected_cgroup)
         {
             self.collapsed_cgroups
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .extend(cur.children.iter().map(|c| &c.data.full_path).cloned());
         }
     }
@@ -217,34 +217,42 @@ impl CgroupView {
 
             // Select root will collapse or uncollapse all top level cgroup
             if cgroup.is_empty() {
-                view.state.borrow_mut().toggle_collapse_root_flag();
+                view.state.lock().unwrap().toggle_collapse_root_flag();
                 view.state
-                    .borrow_mut()
+                    .lock()
+                    .unwrap()
                     .collapsed_cgroups
-                    .borrow_mut()
+                    .lock()
+                    .unwrap()
                     .clear();
                 return view.refresh(c);
-            } else if view.state.borrow().collapse_all_top_level_cgroup {
-                view.state.borrow_mut().toggle_collapse_root_flag();
+            } else if view.state.lock().unwrap().collapse_all_top_level_cgroup {
+                view.state.lock().unwrap().toggle_collapse_root_flag();
             }
 
             if view
                 .state
-                .borrow()
+                .lock()
+                .unwrap()
                 .collapsed_cgroups
-                .borrow()
+                .lock()
+                .unwrap()
                 .contains(cgroup)
             {
                 view.state
-                    .borrow_mut()
+                    .lock()
+                    .unwrap()
                     .collapsed_cgroups
-                    .borrow_mut()
+                    .lock()
+                    .unwrap()
                     .remove(cgroup);
             } else {
                 view.state
-                    .borrow_mut()
+                    .lock()
+                    .unwrap()
                     .collapsed_cgroups
-                    .borrow_mut()
+                    .lock()
+                    .unwrap()
                     .insert(cgroup.to_string());
             }
 
@@ -320,36 +328,42 @@ impl CgroupView {
         .on_event('C', |c| {
             let mut view = Self::get_cgroup_view(c);
             view.state
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .set_sort_order(SingleCgroupModelFieldId::Cpu(
                     CgroupCpuModelFieldId::UsagePct,
                 ));
-            view.state.borrow_mut().set_reverse(true);
+            view.state.lock().unwrap().set_reverse(true);
             view.refresh(c)
         })
         .on_event('M', |c| {
             let mut view = Self::get_cgroup_view(c);
             view.state
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .set_sort_order(SingleCgroupModelFieldId::Mem(
                     CgroupMemoryModelFieldId::Total,
                 ));
-            view.state.borrow_mut().set_reverse(true);
+            view.state.lock().unwrap().set_reverse(true);
             view.refresh(c)
         })
         .on_event('D', |c| {
             let mut view = Self::get_cgroup_view(c);
             view.state
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .set_sort_order(SingleCgroupModelFieldId::Io(
                     CgroupIoModelFieldId::RwbytesPerSec,
                 ));
-            view.state.borrow_mut().set_reverse(true);
+            view.state.lock().unwrap().set_reverse(true);
             view.refresh(c)
         })
         .on_event('=', |c| {
             let mut view = Self::get_cgroup_view(c);
-            view.state.borrow_mut().collapse_selected_cgroup_children();
+            view.state
+                .lock()
+                .unwrap()
+                .collapse_selected_cgroup_children();
             view.refresh(c);
         })
         .with_name(Self::get_view_name())
@@ -361,7 +375,7 @@ impl CgroupView {
 
     pub fn refresh(c: &mut Cursive) {
         let mut view = Self::get_cgroup_view(c);
-        let cgroup_to_focus = view.state.borrow_mut().cgroup_to_focus.take();
+        let cgroup_to_focus = view.state.lock().unwrap().cgroup_to_focus.take();
         if let Some(cgroup) = &cgroup_to_focus {
             // Refresh before getting position to ensure cgroup is expanded
             view.refresh(c);
@@ -412,7 +426,8 @@ impl ViewBridge for CgroupView {
         };
         let field_str = view
             .model
-            .borrow()
+            .lock()
+            .unwrap()
             .get_by_path_str(selected_key)
             .and_then(|model| model.data.query(&tag))
             .map_or("?".to_string(), |field| field.to_string());

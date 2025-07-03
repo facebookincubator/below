@@ -76,7 +76,7 @@ impl SamplePackage<DataFrame> {
 }
 
 /// The store trait defines how should we get a sample from a Store
-trait ModelStore: Store {
+trait ModelStore: Store + Send + Sync {
     // For LocalStore and RemoteStore, ModelType will be Model
     // For FakeStore, ModelType will be string
     type ModelType;

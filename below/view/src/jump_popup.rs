@@ -11,9 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use common::dateutil;
 use cursive::Cursive;
@@ -31,7 +30,7 @@ use store::Direction;
 use crate::ViewState;
 
 pub fn advance_helper(
-    adv: &Rc<RefCell<Advance>>,
+    adv: &Arc<Mutex<Advance>>,
     direction: Direction,
     c: &mut Cursive,
     input: &str,
@@ -45,7 +44,7 @@ pub fn advance_helper(
     // Jump for duration
     match (input.parse::<humantime::Duration>(), direction) {
         (Ok(d), Direction::Forward) => {
-            if let Some(data) = adv.borrow_mut().jump_sample_forward(d) {
+            if let Some(data) = adv.lock().unwrap().jump_sample_forward(d) {
                 c.user_data::<ViewState>()
                     .expect("No user data set")
                     .update(data)
@@ -56,7 +55,7 @@ pub fn advance_helper(
             }
         }
         (Ok(d), Direction::Reverse) => {
-            if let Some(data) = adv.borrow_mut().jump_sample_backward(d) {
+            if let Some(data) = adv.lock().unwrap().jump_sample_backward(d) {
                 c.user_data::<ViewState>()
                     .expect("No user data set")
                     .update(data)
@@ -76,7 +75,7 @@ pub fn advance_helper(
 
                 match dateutil::HgTime::time_of_day_relative_to_system_time(view_time, time_of_day)
                 {
-                    Some(timestamp) => match adv.borrow_mut().jump_sample_to(timestamp) {
+                    Some(timestamp) => match adv.lock().unwrap().jump_sample_to(timestamp) {
                         Some(data) => c
                             .user_data::<ViewState>()
                             .expect("No user data set")
@@ -97,7 +96,7 @@ pub fn advance_helper(
                         // For backward jumping: we will find the next available sample of the input time backward
                         let timestamp =
                             std::time::UNIX_EPOCH + std::time::Duration::from_secs(pt.unixtime);
-                        match adv.borrow_mut().jump_sample_to(timestamp) {
+                        match adv.lock().unwrap().jump_sample_to(timestamp) {
                             Some(data) => c
                                 .user_data::<ViewState>()
                                 .expect("No user data set")
@@ -117,11 +116,12 @@ pub fn advance_helper(
     crate::refresh(c);
 }
 
-pub fn new(adv: Rc<RefCell<Advance>>, direction: Direction) -> impl View {
+pub fn new(_adv: Arc<Mutex<Advance>>, direction: Direction) -> impl View {
     let title = match direction {
         Direction::Forward => "How far forward should we advance?",
         Direction::Reverse => "How far backward should we advance?",
     };
+
     OnEventView::new(
         Dialog::new()
             .title(title)
@@ -131,6 +131,16 @@ pub fn new(adv: Rc<RefCell<Advance>>, direction: Direction) -> impl View {
                     .child(
                         EditView::new()
                             .on_submit(move |c, input| {
+                                // Get the advance from ViewState instead of capturing it
+                                let adv = {
+                                    let view_state =
+                                        c.user_data::<ViewState>().expect("No user data set");
+                                    match &view_state.mode {
+                                        crate::ViewMode::Pause(adv)
+                                        | crate::ViewMode::Replay(adv) => adv.clone(),
+                                        _ => return, // Can't jump in live mode
+                                    }
+                                };
                                 advance_helper(&adv, direction, c, input);
                                 c.pop_layer();
                             })
