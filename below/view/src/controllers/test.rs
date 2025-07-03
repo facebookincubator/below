@@ -324,7 +324,8 @@ next_col = 'd'
         .user_data::<ViewState>()
         .expect("No data stored in Cursive object!")
         .event_controllers
-        .borrow();
+        .lock()
+        .unwrap();
     assert_eq!(
         event_controllers.get(&Event::Char('b')),
         Some(&Controllers::NextTab)

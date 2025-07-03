@@ -399,8 +399,10 @@ impl StoreWriter {
 
     /// For the given `DataFrame` and an optional Compressor mut ref, returns a
     /// tuple consisting of:
+    ///
     ///   1) Raw bytes to write to the data file
     ///   2) Flags to write to the index entry
+    ///
     /// For compressed write, the Compressor will be initialized if None, and
     /// potentially updated. is_key_frame is used to indicate the start of a new
     /// chunk if dictionary compression is enabled.
@@ -731,7 +733,7 @@ pub fn read_next_sample<P: AsRef<Path>>(
     cursor.get_next(&get_unix_timestamp(timestamp), direction)
 }
 
-pub trait Store {
+pub trait Store: Send + Sync {
     // We intentionally make this trait generic which not tied to the DataFrame and Model
     // type for ease of testing.
     // For LocalStore and RemoteStore, SampleType will be DataFrame

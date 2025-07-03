@@ -16,12 +16,10 @@
 #![allow(clippy::too_many_arguments)]
 #![recursion_limit = "256"]
 
-use std::cell::RefCell;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
 use std::process::exit;
-use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::mpsc::Receiver;
@@ -999,10 +997,8 @@ fn replay(
 
     cliutil::check_initial_sample_time_with_requested_time(model.timestamp, timestamp);
 
-    let mut view = view::View::new_with_advance(
-        model,
-        view::ViewMode::Replay(Rc::new(RefCell::new(advance))),
-    );
+    let mut view =
+        view::View::new_with_advance(model, view::ViewMode::Replay(Arc::new(Mutex::new(advance))));
     logutil::set_current_log_target(logutil::TargetLog::File);
 
     let sink = view.cb_sink().clone();
@@ -1265,7 +1261,7 @@ fn live_local(
     adv.initialize();
     let mut view = view::View::new_with_advance(
         collector.collect_and_update_model()?,
-        view::ViewMode::Live(Rc::new(RefCell::new(adv))),
+        view::ViewMode::Live(Arc::new(Mutex::new(adv))),
     );
 
     let sink = view.cb_sink().clone();
@@ -1340,10 +1336,9 @@ fn live_remote(
 
     advance.initialize();
     let mut view = match advance.get_latest_sample() {
-        Some(model) => view::View::new_with_advance(
-            model,
-            view::ViewMode::Live(Rc::new(RefCell::new(advance))),
-        ),
+        Some(model) => {
+            view::View::new_with_advance(model, view::ViewMode::Live(Arc::new(Mutex::new(advance))))
+        }
         None => return Err(anyhow!("No data could be found!")),
     };
 
@@ -1374,7 +1369,7 @@ fn live_remote(
                     let view_state = s.user_data::<ViewState>().expect("user data not set");
 
                     if let view::ViewMode::Live(adv) = view_state.mode.clone() {
-                        if let Some(data) = adv.borrow_mut().advance(store::Direction::Forward) {
+                        if let Some(data) = adv.lock().unwrap().advance(store::Direction::Forward) {
                             view_state.update(data)
                         }
                     }

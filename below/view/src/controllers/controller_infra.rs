@@ -306,7 +306,7 @@ macro_rules! make_controllers {
                     .clone();
 
                 value.as_table().map(|table| table.iter().for_each(|(k, v)| {
-                    match (cmd_controllers.borrow().get::<str>(k), v.as_array()) {
+                    match (cmd_controllers.lock().unwrap().get::<str>(k), v.as_array()) {
                         (Some(controller), Some(key_array)) => {
                             for event_item in key_array.iter() {
                                 match event_item.as_str() {

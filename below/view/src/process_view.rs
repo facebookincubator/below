@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::Ref;
-use std::cell::RefCell;
-use std::cell::RefMut;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::MutexGuard;
 
 use cursive::Cursive;
 use cursive::utils::markup::StyledString;
@@ -57,7 +56,7 @@ pub struct ProcessState {
     pub sort_tags: HashMap<String, &'static ProcessTab>,
     pub reverse: bool,
     pub fold: bool,
-    pub model: Rc<RefCell<ProcessModel>>,
+    pub model: Arc<Mutex<ProcessModel>>,
 }
 
 impl StateCommon for ProcessState {
@@ -134,15 +133,15 @@ impl StateCommon for ProcessState {
         }
     }
 
-    fn get_model(&self) -> Ref<Self::ModelType> {
-        self.model.borrow()
+    fn get_model(&self) -> MutexGuard<Self::ModelType> {
+        self.model.lock().unwrap()
     }
 
-    fn get_model_mut(&self) -> RefMut<Self::ModelType> {
-        self.model.borrow_mut()
+    fn get_model_mut(&self) -> MutexGuard<Self::ModelType> {
+        self.model.lock().unwrap()
     }
 
-    fn new(model: Rc<RefCell<Self::ModelType>>) -> Self {
+    fn new(model: Arc<Mutex<Self::ModelType>>) -> Self {
         let mut sort_tags = HashMap::new();
         sort_tags.insert("General".into(), &*PROCESS_GENERAL_TAB);
         sort_tags.insert("CPU".into(), &*PROCESS_CPU_TAB);
@@ -255,47 +254,52 @@ impl ProcessView {
         .on_event('P', |c| {
             let mut view = Self::get_process_view(c);
             view.state
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .set_sort_order(SingleProcessModelFieldId::Pid);
-            view.state.borrow_mut().set_reverse(false);
+            view.state.lock().unwrap().set_reverse(false);
             view.refresh(c)
         })
         .on_event('C', |c| {
             let mut view = Self::get_process_view(c);
             view.state
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .set_sort_order(SingleProcessModelFieldId::Cpu(
                     ProcessCpuModelFieldId::UsagePct,
                 ));
-            view.state.borrow_mut().set_reverse(true);
+            view.state.lock().unwrap().set_reverse(true);
             view.refresh(c)
         })
         .on_event('N', |c| {
             let mut view = Self::get_process_view(c);
             view.state
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .set_sort_order(SingleProcessModelFieldId::Comm);
-            view.state.borrow_mut().set_reverse(false);
+            view.state.lock().unwrap().set_reverse(false);
             view.refresh(c)
         })
         .on_event('M', |c| {
             let mut view = Self::get_process_view(c);
             view.state
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .set_sort_order(SingleProcessModelFieldId::Mem(
                     ProcessMemoryModelFieldId::RssBytes,
                 ));
-            view.state.borrow_mut().set_reverse(true);
+            view.state.lock().unwrap().set_reverse(true);
             view.refresh(c)
         })
         .on_event('D', |c| {
             let mut view = Self::get_process_view(c);
             view.state
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .set_sort_order(SingleProcessModelFieldId::Io(
                     ProcessIoModelFieldId::RwbytesPerSec,
                 ));
-            view.state.borrow_mut().set_reverse(true);
+            view.state.lock().unwrap().set_reverse(true);
             view.refresh(c)
         })
         .with_name(Self::get_view_name())

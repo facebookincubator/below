@@ -54,7 +54,7 @@ fn get_content(c: &mut Cursive) -> impl Into<StyledString> + use<> {
     header_str.append_plain(format!(
         "{}{}{}",
         get_spacing(),
-        &view_state.system.borrow().hostname,
+        &view_state.system.lock().unwrap().hostname,
         get_spacing(),
     ));
 

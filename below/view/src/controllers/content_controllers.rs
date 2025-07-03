@@ -23,7 +23,7 @@ make_event_controller!(
     vec![Event::Char('S')],
     |view: &mut StatsView<T>, cmd_vec: &[&str]| {
         let (sort_res, title) = if cmd_vec.len() > 1 {
-            let mut state = view.state.borrow_mut();
+            let mut state = view.state.lock().unwrap();
             let selection = cmd_vec[1..].join(" ");
             let sort_res = state.set_sort_string(&selection, &mut view.reverse_sort);
             (sort_res, selection)
@@ -33,7 +33,7 @@ make_event_controller!(
             let title_view = view.get_title_view();
             let title_idx = title_view.current_selected;
             let title = title_view.get_cur_selected().to_string();
-            let sort_res = view.state.borrow_mut().set_sort_tag_from_tab_idx(
+            let sort_res = view.state.lock().unwrap().set_sort_tag_from_tab_idx(
                 tab,
                 title_idx,
                 &mut view.reverse_sort,
@@ -43,7 +43,7 @@ make_event_controller!(
 
         if !sort_res {
             view.get_cmd_palette()
-                .set_alert(&format!("\"{}\" is not sortable currently.", title.trim()));
+                .set_alert(format!("\"{}\" is not sortable currently.", title.trim()));
         }
     },
     |c: &mut Cursive, _cmd_vec: &[&str]| {
@@ -71,14 +71,16 @@ make_event_controller!(
         };
         // don't enable str filter for unsupported fields
         if state
-            .borrow()
+            .lock()
+            .unwrap()
             .is_filter_supported_from_tab_idx(&tab, title_idx)
         {
             // set filter to cp
             if cmd_vec.len() > 1 {
                 let text = cmd_vec[1..].join(" ");
                 state
-                    .borrow_mut()
+                    .lock()
+                    .unwrap()
                     .set_filter_from_tab_idx(&tab, title_idx, Some(text.clone()));
                 StatsView::<T>::cp_filter(c, Some((title_name, text)));
                 StatsView::<T>::refresh_myself(c);
@@ -104,7 +106,7 @@ make_event_controller!(
     |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
     |c: &mut Cursive, _cmd_vec: &[&str]| {
         let state = StatsView::<T>::get_view(c).state.clone();
-        state.borrow_mut().set_filter_from_tab_idx("", 0, None); // clear filter
+        state.lock().unwrap().set_filter_from_tab_idx("", 0, None); // clear filter
         StatsView::<T>::cp_filter(c, None);
         StatsView::<T>::refresh_myself(c);
     }

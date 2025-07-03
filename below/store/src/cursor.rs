@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::RefCell;
 use std::fs::File;
 use std::io::ErrorKind;
 use std::path::PathBuf;
+use std::sync::Mutex;
 use std::time::SystemTime;
 
 use anyhow::Context;
@@ -93,7 +93,7 @@ pub trait KeyedCursor<Key: std::cmp::Ord>: Cursor {
         let mut curr_key = self.get_key();
         for curr_dir in &[direction.flip(), direction] {
             let skip_order = curr_dir.get_skip_order();
-            while curr_key.as_ref().map_or(true, |k| k.cmp(key) == skip_order) {
+            while curr_key.as_ref().is_none_or(|k| k.cmp(key) == skip_order) {
                 if !self.advance(*curr_dir)? {
                     break;
                 }
@@ -101,7 +101,7 @@ pub trait KeyedCursor<Key: std::cmp::Ord>: Cursor {
             }
         }
         // Check if the last key satisfies the direction order
-        Ok(curr_key.map_or(false, |k| k.cmp(key) != direction.get_skip_order()))
+        Ok(curr_key.is_some_and(|k| k.cmp(key) != direction.get_skip_order()))
     }
 
     /// Convenient function to jump to a key and get the closest valid item to
@@ -160,7 +160,7 @@ pub struct StoreCursor {
     index_offset: Option<usize>,
     // Used for extracting compressed frames. If dictionary is used, it's also
     // cached, along with the shard and dict_index_offset that identify it.
-    decompressor: RefCell<Option<Decompressor<(u64, usize)>>>,
+    decompressor: Mutex<Option<Decompressor<(u64, usize)>>>,
 }
 
 enum StoreFile {
@@ -178,7 +178,7 @@ impl StoreCursor {
             index_mmap: None,
             data_mmap: None,
             index_offset: None,
-            decompressor: RefCell::new(None),
+            decompressor: Mutex::new(None),
         }
     }
 
@@ -314,7 +314,7 @@ impl StoreCursor {
         if let Some(index_mmap) = self.index_mmap.as_ref() {
             // get_mmap ensures that index_mmap.len() >= INDEX_ENTRY_SIZE, and
             // thus 0 is always a valid index.
-            debug_assert!(index_mmap.len() > 0);
+            debug_assert!(!index_mmap.is_empty());
             // index offset may be None if overflows
             let offset = match self.index_offset {
                 Some(offset) => match direction {
@@ -501,14 +501,14 @@ impl StoreCursor {
                 data_slice,
                 index_offset,
                 chunk_compress_size_po2,
-                &mut self.decompressor.borrow_mut(),
+                &mut self.decompressor.lock().unwrap(),
             )
             .context("Failed to get serialized chunk frame")?
         } else {
             Self::get_serialized_single_frame(
                 data_slice,
                 index_entry.flags.contains(IndexEntryFlags::COMPRESSED),
-                &mut self.decompressor.borrow_mut(),
+                &mut self.decompressor.lock().unwrap(),
             )
             .context("Failed to get serialized single frame")?
         };

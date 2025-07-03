@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::Ref;
-use std::cell::RefCell;
-use std::cell::RefMut;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::MutexGuard;
 
 use cursive::Cursive;
 use cursive::utils::markup::StyledString;
@@ -51,7 +50,7 @@ use crate::system_view::default_tabs::SYSTEM_BTRFS_TAB;
 pub struct SystemState {
     pub filter_info: Option<(SystemStateFieldId, String)>,
     pub collapsed_disk: HashSet<String>,
-    pub model: Rc<RefCell<SystemModel>>,
+    pub model: Arc<Mutex<SystemModel>>,
     pub sort_order: Option<SystemStateFieldId>,
     pub sort_tags: HashMap<String, default_tabs::SystemTabs>,
     pub reverse: bool,
@@ -179,15 +178,15 @@ impl StateCommon for SystemState {
         }
     }
 
-    fn get_model(&self) -> Ref<Self::ModelType> {
-        self.model.borrow()
+    fn get_model(&self) -> MutexGuard<Self::ModelType> {
+        self.model.lock().unwrap()
     }
 
-    fn get_model_mut(&self) -> RefMut<Self::ModelType> {
-        self.model.borrow_mut()
+    fn get_model_mut(&self) -> MutexGuard<Self::ModelType> {
+        self.model.lock().unwrap()
     }
 
-    fn new(model: Rc<RefCell<Self::ModelType>>) -> Self {
+    fn new(model: Arc<Mutex<Self::ModelType>>) -> Self {
         let mut sort_tags = HashMap::new();
         sort_tags.insert(
             "Btrfs".into(),
@@ -220,11 +219,12 @@ impl SystemView {
             let mut view = SystemView::get_system_view(c);
             // We only care about disk not partition
             if view.get_tab_view().get_cur_selected() == "Disk" && idx.ends_with(".0") {
-                if view.state.borrow_mut().collapsed_disk.contains(idx) {
-                    view.state.borrow_mut().collapsed_disk.remove(idx);
+                if view.state.lock().unwrap().collapsed_disk.contains(idx) {
+                    view.state.lock().unwrap().collapsed_disk.remove(idx);
                 } else {
                     view.state
-                        .borrow_mut()
+                        .lock()
+                        .unwrap()
                         .collapsed_disk
                         .insert(idx.to_string());
                 }

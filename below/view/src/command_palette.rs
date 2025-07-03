@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use cursive::Cursive;
 use cursive::Printer;
@@ -56,8 +56,8 @@ pub struct CommandPalette {
     filter_info: Option<(String, String)>,
     fold: bool,
     mode: CPMode,
-    cmd_view: RefCell<EditView>,
-    cmd_controllers: Rc<RefCell<HashMap<&'static str, Controllers>>>,
+    cmd_view: Arc<Mutex<EditView>>,
+    cmd_controllers: Arc<Mutex<HashMap<&'static str, Controllers>>>,
     cmd_history: VecDeque<String>,
     cur_cmd_idx: usize,
 }
@@ -87,8 +87,8 @@ impl View for CommandPalette {
             CPMode::Command => {
                 printer.print((0, 1), ":");
                 let inner_printer = printer.offset((1, 1));
-                self.cmd_view.borrow_mut().layout(inner_printer.size);
-                self.cmd_view.borrow().draw(&inner_printer);
+                self.cmd_view.lock().unwrap().layout(inner_printer.size);
+                self.cmd_view.lock().unwrap().draw(&inner_printer);
             }
             _ => {
                 // Message should adapt the screen size
@@ -116,7 +116,7 @@ impl View for CommandPalette {
                 self.next_cmd();
                 EventResult::Consumed(None)
             }
-            _ => self.cmd_view.borrow_mut().on_event(event),
+            _ => self.cmd_view.lock().unwrap().on_event(event),
         }
     }
 
@@ -130,21 +130,21 @@ impl CommandPalette {
     pub fn new<V: 'static + ViewBridge>(
         name: &'static str,
         content: &str,
-        cmd_controllers: Rc<RefCell<HashMap<&'static str, Controllers>>>,
+        cmd_controllers: Arc<Mutex<HashMap<&'static str, Controllers>>>,
     ) -> Self {
         Self {
             content: content.into(),
             filter_info: None,
             fold: false,
             mode: CPMode::Info,
-            cmd_view: RefCell::new(
+            cmd_view: Arc::new(Mutex::new(
                 EditView::new()
                     .on_submit(move |c, cmd| {
                         Self::handle_cmd_history(name, c, cmd);
                         Self::run_cmd::<V>(name, c, cmd)
                     })
                     .style(ColorStyle::terminal_default()),
-            ),
+            )),
             cmd_controllers,
             cmd_history: VecDeque::new(),
             cur_cmd_idx: 0,
@@ -170,7 +170,8 @@ impl CommandPalette {
             return;
         }
         self.cmd_view
-            .borrow_mut()
+            .lock()
+            .unwrap()
             .set_content(&self.cmd_history[self.cur_cmd_idx]);
         if self.cur_cmd_idx > 0 {
             self.cur_cmd_idx -= 1;
@@ -182,11 +183,12 @@ impl CommandPalette {
             return;
         }
         if self.cur_cmd_idx == self.cmd_history.len() - 1 {
-            self.cmd_view.borrow_mut().set_content("");
+            self.cmd_view.lock().unwrap().set_content("");
         } else {
             self.cur_cmd_idx += 1;
             self.cmd_view
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .set_content(&self.cmd_history[self.cur_cmd_idx]);
         }
     }
@@ -200,7 +202,8 @@ impl CommandPalette {
             .find_name::<Self>(&format!("{}_cmd_palette", name))
             .expect("Fail to get cmd_palette")
             .cmd_controllers
-            .borrow()
+            .lock()
+            .unwrap()
             .get(cmd_vec[0])
             .unwrap_or(&Controllers::Unknown)
             .clone();
@@ -212,7 +215,7 @@ impl CommandPalette {
                     .expect("Fail to get cmd_palette");
                 cp.mode = CPMode::Alert;
                 cp.content = "Unknown Command".into();
-                cp.cmd_view.borrow_mut().set_content("");
+                cp.cmd_view.lock().unwrap().set_content("");
             }
             _ => {
                 controller.handle(&mut StatsView::<V>::get_view(c), &cmd_vec);
@@ -229,7 +232,7 @@ impl CommandPalette {
 
     pub fn reset_cmd(&mut self) {
         self.mode = CPMode::Info;
-        self.cmd_view.borrow_mut().set_content("");
+        self.cmd_view.lock().unwrap().set_content("");
     }
 
     /// Turn cmd_palette into command input mode

@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::Ref;
-use std::cell::RefCell;
-use std::cell::RefMut;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::MutexGuard;
 
 use common::logutil::CPMsgRecord;
 use common::logutil::get_last_log_to_display;
@@ -52,10 +51,10 @@ pub struct ColumnTitles {
 /// This trait must be implemented by all view state. It will help to expose
 /// state data to the StatsView for common behavior. On the other hand, it force
 /// a view to have required data in order to fit itself inside the StatsView.
-pub trait StateCommon {
+pub trait StateCommon: Send + Sync {
     type ModelType;
     type TagType: ToString;
-    type KeyType: Clone;
+    type KeyType: Clone + Send + Sync;
 
     /// Expose filter data for StatsView to set fields in filter popup
     fn get_filter_info(&self) -> &Option<(Self::TagType, String)>;
@@ -90,13 +89,13 @@ pub trait StateCommon {
         false
     }
 
-    fn get_model(&self) -> Ref<Self::ModelType>;
-    fn get_model_mut(&self) -> RefMut<Self::ModelType>;
-    fn new(model: Rc<RefCell<Self::ModelType>>) -> Self;
+    fn get_model(&self) -> MutexGuard<Self::ModelType>;
+    fn get_model_mut(&self) -> MutexGuard<Self::ModelType>;
+    fn new(model: Arc<Mutex<Self::ModelType>>) -> Self;
 }
 
 /// ViewBridge defines how a ConcreteView will relate to StatsView
-pub trait ViewBridge {
+pub trait ViewBridge: Send + Sync {
     type StateType: Default + StateCommon;
     /// Return the name of the view, this function will help StatsView to
     /// query view by name.
@@ -176,9 +175,9 @@ pub struct StatsView<V: 'static + ViewBridge> {
     tab_titles_map: HashMap<String, ColumnTitles>,
     tab_view_map: HashMap<String, V>,
     detailed_view: OnEventView<Panel<LinearLayout>>,
-    pub state: Rc<RefCell<V::StateType>>,
+    pub state: Arc<Mutex<V::StateType>>,
     pub reverse_sort: bool,
-    pub event_controllers: Rc<RefCell<HashMap<Event, Controllers>>>,
+    pub event_controllers: Arc<Mutex<HashMap<Event, Controllers>>>,
 }
 
 impl<V: 'static + ViewBridge> ViewWrapper for StatsView<V> {
@@ -201,7 +200,8 @@ impl<V: 'static + ViewBridge> ViewWrapper for StatsView<V> {
 
         let controller = self
             .event_controllers
-            .borrow()
+            .lock()
+            .unwrap()
             .get(&ch)
             .unwrap_or(&Controllers::Unknown)
             .clone();
@@ -225,8 +225,8 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         tab_view_map: HashMap<String, V>,
         select_view: SelectView<<V::StateType as StateCommon>::KeyType>,
         state: V::StateType,
-        event_controllers: Rc<RefCell<HashMap<Event, Controllers>>>,
-        cmd_controllers: Rc<RefCell<HashMap<&'static str, Controllers>>>,
+        event_controllers: Arc<Mutex<HashMap<Event, Controllers>>>,
+        cmd_controllers: Arc<Mutex<HashMap<&'static str, Controllers>>>,
     ) -> Self {
         let mut tab_titles_map = HashMap::new();
         for (tab, bridge) in &tab_view_map {
@@ -242,12 +242,12 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         let select_view_with_cb =
             select_view.on_select(|c, selected_key: &<V::StateType as StateCommon>::KeyType| {
                 c.call_on_name(V::get_view_name(), |view: &mut StatsView<V>| {
-                    V::on_select_update_state(&mut view.state.borrow_mut(), Some(selected_key));
+                    V::on_select_update_state(&mut view.state.lock().unwrap(), Some(selected_key));
                     let mut cmd_palette = view.get_cmd_palette();
                     let cur_tab = view.get_tab_view().get_cur_selected().to_string();
                     let selected_column = view.get_title_view().current_selected;
                     cmd_palette.set_info(V::on_select_update_cmd_palette(
-                        &view.state.borrow(),
+                        &view.state.lock().unwrap(),
                         selected_key,
                         &cur_tab,
                         selected_column,
@@ -292,7 +292,7 @@ impl<V: 'static + ViewBridge> StatsView<V> {
             tab_titles_map,
             tab_view_map,
             detailed_view,
-            state: Rc::new(RefCell::new(state)),
+            state: Arc::new(Mutex::new(state)),
             reverse_sort: true,
             event_controllers,
         }
@@ -319,7 +319,7 @@ impl<V: 'static + ViewBridge> StatsView<V> {
     pub fn on_event<F, E>(mut self, trigger: E, cb: F) -> Self
     where
         E: Into<EventTrigger>,
-        F: 'static + Fn(&mut Cursive),
+        F: 'static + Fn(&mut Cursive) + Send + Sync,
     {
         self.detailed_view.set_on_event(trigger, cb);
         self
@@ -436,7 +436,8 @@ impl<V: 'static + ViewBridge> StatsView<V> {
                 .tab_view_map
                 .get_mut(&cur_tab)
                 .unwrap_or_else(|| panic!("Fail to query data from tab {}", cur_tab));
-            select_view.add_all(tab_detail.get_rows(&self.state.borrow(), Some(horizontal_offset)));
+            select_view
+                .add_all(tab_detail.get_rows(&self.state.lock().unwrap(), Some(horizontal_offset)));
 
             // This will trigger on_select handler, but handler will not be able to
             // find the current StatsView from cursive, presumably because we are
@@ -450,12 +451,12 @@ impl<V: 'static + ViewBridge> StatsView<V> {
 
             let selection = select_view.selection().map(|rc| rc.as_ref().clone());
             let selected_column = self.get_title_view().current_selected;
-            V::on_select_update_state(&mut self.state.borrow_mut(), selection.as_ref());
+            V::on_select_update_state(&mut self.state.lock().unwrap(), selection.as_ref());
             // We should not override alert on refresh. Only selection should
             // override alert.
             if let (false, Some(selection)) = (cmd_palette.is_alerting(), selection) {
                 let info_msg = V::on_select_update_cmd_palette(
-                    &self.state.borrow(),
+                    &self.state.lock().unwrap(),
                     &selection,
                     &cur_tab,
                     selected_column,
