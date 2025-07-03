@@ -12,7 +12,7 @@ license = "Apache-2.0"
 
 [dependencies]
 common = { package = "below-common", version = "0.9.0", path = "../common" }
-lazy_static = { version = "1.5", features = ["spin_no_std"], default-features = false }
+lazy_static = "1.5"
 libc = "0.2.139"
 nix = { version = "0.29.0", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 openat = "0.1.21"
