@@ -46,6 +46,7 @@ mod render_impl {
     type SummaryViewItem = ViewItem<model::SystemModelFieldId>;
 
     static SYS_CPU_ITEMS: Lazy<Vec<SummaryViewItem>> = Lazy::new(|| {
+        use model::SingleCpuModelFieldId::NicePct;
         use model::SingleCpuModelFieldId::SystemPct;
         use model::SingleCpuModelFieldId::UsagePct;
         use model::SingleCpuModelFieldId::UserPct;
@@ -54,6 +55,7 @@ mod render_impl {
             ViewItem::from_default(Cpu(UsagePct)),
             ViewItem::from_default(Cpu(UserPct)),
             ViewItem::from_default(Cpu(SystemPct)),
+            ViewItem::from_default(Cpu(NicePct)),
         ]
     });
 
