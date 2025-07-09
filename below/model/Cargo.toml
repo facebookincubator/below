@@ -16,7 +16,7 @@ below_derive = { version = "0.9.0", path = "../below_derive" }
 btrfs = { package = "below-btrfs", version = "0.9.0", path = "../btrfs" }
 cgroupfs = { version = "0.9.0", path = "../cgroupfs" }
 common = { package = "below-common", version = "0.9.0", path = "../common" }
-enum-iterator = "1.4.1"
+enum-iterator = "2.1"
 ethtool = { package = "below-ethtool", version = "0.9.0", path = "../ethtool" }
 gpu_stats = { package = "below-gpu-stats", version = "0.9.0", path = "../gpu_stats" }
 hostname = "0.3"
