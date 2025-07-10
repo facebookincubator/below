@@ -14,25 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-# This script spits out an ubuntu .deb package for below.
-#
-# For example, to build a .deb for ubuntu 18.04:
-#
-#     ./build_deb.sh 18.04
-#
-
 set -eu
 
 # cd to project root
 cd "$(dirname "$(realpath "$0")")"/..
 
-if [[ $# != 1 ]]; then
-  echo "usage: ./build_deb.sh RELEASE" 1>&2
-  exit 1
-fi
+# Build `below` and create a `.deb` package:
+docker build --tag localhost/below:packaged --target package-deb .
+# Copy the `.deb` package to the host filesystem which you can then install via `dpkg -i below_*.deb`:
+docker run --rm -it --volume "$(pwd):/output:Z" localhost/below:packaged /bin/bash -c 'cp target/debian/below_*.deb /output'
 
-docker build -f Dockerfile.debian --build-arg RELEASE="$1" -t below-deb .
-docker run -v $(pwd):/output below-deb /bin/bash -c "cp /below/target/debian/below_*.deb /output"
-
-echo Debian package copied to $(pwd)
+echo "Debian package copied to $(pwd)"
