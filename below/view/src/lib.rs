@@ -344,7 +344,7 @@ impl View {
     pub fn generate_event_controller_map(c: &mut Cursive, filename: String) {
         // Verify belowrc file format
         let cmdrc_opt = match std::fs::read_to_string(filename) {
-            Ok(belowrc_str) => match belowrc_str.parse::<Value>() {
+            Ok(belowrc_str) => match toml::from_str::<Value>(&belowrc_str) {
                 Ok(belowrc) => belowrc
                     .get(get_belowrc_cmd_section_key())
                     .map(|cmdrc| cmdrc.to_owned()),

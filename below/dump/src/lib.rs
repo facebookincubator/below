@@ -170,7 +170,7 @@ pub fn parse_pattern<T: FromStr>(
     section_key: &str,
 ) -> Option<Vec<T>> {
     let dump_map = match std::fs::read_to_string(filename) {
-        Ok(belowrc_str) => match belowrc_str.parse::<TValue>() {
+        Ok(belowrc_str) => match toml::from_str::<TValue>(&belowrc_str) {
             Ok(belowrc_val) => belowrc_val
                 .get(get_belowrc_dump_section_key())
                 .unwrap_or_else(|| {

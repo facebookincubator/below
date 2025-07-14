@@ -25,7 +25,7 @@ fn test_event_controller_override() {
     let mut fake_view = FakeView::new();
     fake_view.add_cgroup_view();
 
-    let cmdrc_str = b"invoke_cmd_palette = 'a'
+    let cmdrc_str = "invoke_cmd_palette = 'a'
 next_tab = 'b'
 cgroup = 'k'
 prev_tab = 'c'
@@ -50,10 +50,7 @@ clear_filter = 'v'
 next_page = 'Y'
 prev_page = 'y'
 ";
-    let cmdrc_val = std::str::from_utf8(cmdrc_str)
-        .expect("Failed to parse [u8] to str")
-        .parse::<Value>()
-        .expect("Failed to parse test cmdrc");
+    let cmdrc_val = toml::from_str::<Value>(cmdrc_str).expect("Failed to parse test cmdrc");
     let event_controllers = make_event_controller_map(&mut fake_view.inner, &Some(cmdrc_val));
 
     assert_eq!(
@@ -161,9 +158,7 @@ fn test_event_controller_override_failed() {
 
     // Invalid command
     let cmdrc_str = "demacia = 'a'";
-    let cmdrc_val = cmdrc_str
-        .parse::<Value>()
-        .expect("Failed to parse test cmdrc");
+    let cmdrc_val = toml::from_str::<Value>(cmdrc_str).expect("Failed to parse test cmdrc");
     make_event_controller_map(&mut fake_view.inner, &Some(cmdrc_val));
     assert_eq!(
         fake_view.get_cmd_palette("cgroup_view").get_content(),
@@ -173,9 +168,7 @@ fn test_event_controller_override_failed() {
     // Duplicate event
     fake_view.get_cmd_palette("cgroup_view").set_info("");
     let cmdrc_str = "process = 'c'";
-    let cmdrc_val = cmdrc_str
-        .parse::<Value>()
-        .expect("Failed to parse test cmdrc");
+    let cmdrc_val = toml::from_str::<Value>(cmdrc_str).expect("Failed to parse test cmdrc");
     make_event_controller_map(&mut fake_view.inner, &Some(cmdrc_val));
     assert_eq!(
         fake_view.get_cmd_palette("cgroup_view").get_content(),
@@ -185,9 +178,7 @@ fn test_event_controller_override_failed() {
     // Failed to parse event
     fake_view.get_cmd_palette("cgroup_view").set_info("");
     let cmdrc_str = "process = 'ctrll-c'";
-    let cmdrc_val = cmdrc_str
-        .parse::<Value>()
-        .expect("Failed to parse test cmdrc");
+    let cmdrc_val = toml::from_str::<Value>(cmdrc_str).expect("Failed to parse test cmdrc");
     make_event_controller_map(&mut fake_view.inner, &Some(cmdrc_val));
     assert_eq!(
         fake_view.get_cmd_palette("cgroup_view").get_content(),

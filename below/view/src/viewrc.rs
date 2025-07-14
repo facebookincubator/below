@@ -62,7 +62,7 @@ impl ViewRc {
     /// parse error string.
     pub fn new() -> (ViewRc, Option<String>) {
         match std::fs::read_to_string(get_belowrc_filename()) {
-            Ok(belowrc_str) => match belowrc_str.parse::<toml::value::Value>() {
+            Ok(belowrc_str) => match toml::from_str::<toml::value::Value>(&belowrc_str) {
                 // We get the belowrc file, parsing the [view] section
                 Ok(belowrc_val) => {
                     if let Some(viewrc_val) = belowrc_val.get(get_belowrc_view_section_key()) {
