@@ -968,7 +968,7 @@ fn replay(
         (None, Some(snapshot)) => {
             let mut tarball =
                 Archive::new(fs::File::open(snapshot).context("Failed to open snapshot file")?);
-            let mut snapshot_dir = TempDir::with_prefix("snapshot_replay.")?.into_path();
+            let mut snapshot_dir = TempDir::with_prefix("snapshot_replay.")?.keep();
             tarball.unpack(&snapshot_dir)?;
             // Find and append the name of the original snapshot directory
             for path in fs::read_dir(&snapshot_dir)? {
@@ -1555,7 +1555,7 @@ fn snapshot(
         timestamp_begin, timestamp_end
     ))
     .context("Failed to create temporary folder for snapshot")?;
-    let snapshot_store_path = temp_folder.into_path();
+    let snapshot_store_path = temp_folder.keep();
 
     // Build compression options to ensure snapshot is compressed before tarball
     let compress_opts = CompressOpts {

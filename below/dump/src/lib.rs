@@ -144,7 +144,7 @@ fn get_advance(
         (None, Some(snapshot)) => {
             let mut tarball =
                 Archive::new(fs::File::open(snapshot).context("Failed to open snapshot file")?);
-            let mut snapshot_dir = TempDir::with_prefix("snapshot_replay.")?.into_path();
+            let mut snapshot_dir = TempDir::with_prefix("snapshot_replay.")?.keep();
             tarball.unpack(&snapshot_dir)?;
             // Find and append the name of the original snapshot directory
             for path in fs::read_dir(&snapshot_dir)? {
