@@ -27,6 +27,7 @@ use std::time::SystemTime;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use anyhow::bail;
 use common::cliutil;
 use common::util::get_belowrc_dump_section_key;
@@ -145,7 +146,9 @@ fn get_advance(
             let mut tarball =
                 Archive::new(fs::File::open(snapshot).context("Failed to open snapshot file")?);
             let mut snapshot_dir = TempDir::with_prefix("snapshot_replay.")?.keep();
-            tarball.unpack(&snapshot_dir)?;
+            tarball
+                .unpack(&snapshot_dir)
+                .map_err(|_| anyhow!("Failed to unpack snapshot file"))?;
             // Find and append the name of the original snapshot directory
             for path in fs::read_dir(&snapshot_dir)? {
                 snapshot_dir.push(path.unwrap().file_name());
