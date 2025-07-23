@@ -2,7 +2,7 @@
 
 [package]
 name = "below-ethtool"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Meta Platforms, Inc. and affiliates"]
 edition = "2024"
 description = "ethtool crate for below"
