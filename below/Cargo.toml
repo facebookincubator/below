@@ -22,7 +22,7 @@ unit-scripts = "../etc"
 [dependencies]
 anyhow = "1.0.98"
 cgroupfs = { version = "0.10.0", path = "cgroupfs" }
-clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.41", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 clap_complete = "4.5.50"
 common = { package = "below-common", version = "0.10.0", path = "common" }
 config = { package = "below-config", version = "0.10.0", path = "config" }
