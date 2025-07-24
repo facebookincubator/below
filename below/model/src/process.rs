@@ -172,6 +172,7 @@ pub struct ProcessCpuModel {
     pub user_pct: Option<f64>,
     pub system_pct: Option<f64>,
     pub num_threads: Option<u64>,
+    pub processor: Option<i32>,
 }
 
 impl ProcessCpuModel {
@@ -184,6 +185,7 @@ impl ProcessCpuModel {
             user_pct,
             system_pct,
             num_threads: end.num_threads,
+            processor: end.processor,
         }
     }
 
@@ -194,6 +196,7 @@ impl ProcessCpuModel {
             user_pct: fold_optionals!(left.user_pct, right.user_pct),
             system_pct: fold_optionals!(left.system_pct, right.system_pct),
             num_threads: fold_optionals!(left.num_threads, right.num_threads),
+            processor: Some(-1),
         }
     }
 }

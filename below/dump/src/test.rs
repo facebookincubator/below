@@ -80,8 +80,7 @@ fn test_dump_sys_content() {
                             rc.render_title(false)
                         ))
                         .to_owned(),
-                    "Model value and json value do not match for field: {}",
-                    field_id,
+                    "Model value and json value do not match for field: {field_id}",
                 );
             }
         }
@@ -248,8 +247,7 @@ fn test_dump_process_content() {
                                 rc.render_title(false)
                             ))
                             .to_owned(),
-                        "Model value and json value do not match for field: {}",
-                        field_id,
+                        "Model value and json value do not match for field: {field_id}",
                     );
                 }
             }
@@ -282,6 +280,7 @@ fn test_dump_proc_titles() {
         "User CPU",
         "Sys CPU",
         "Threads",
+        "Processor",
         "Minflt",
         "Majflt",
         "RSS",
@@ -373,7 +372,7 @@ fn test_dump_proc_select() {
         let pid = item["Pid"].as_str().unwrap();
         let cur_id = pid.parse::<i32>().unwrap();
         if prev_id > 0 {
-            assert!(prev_id < cur_id, "prev_id: {}, cur_id: {}", prev_id, cur_id);
+            assert!(prev_id < cur_id, "prev_id: {prev_id}, cur_id: {cur_id}");
         }
         prev_id = cur_id;
     }
@@ -399,7 +398,7 @@ fn test_dump_proc_select() {
         let pid = item["Pid"].as_str().unwrap();
         let cur_id = pid.parse::<i32>().unwrap();
         if prev_id > 0 {
-            assert!(prev_id > cur_id, "prev_id: {}, cur_id: {}", prev_id, cur_id);
+            assert!(prev_id > cur_id, "prev_id: {prev_id}, cur_id: {cur_id}");
         }
         prev_id = cur_id;
     }
@@ -420,8 +419,7 @@ fn traverse_cgroup_tree(model: &model::CgroupModel, jval: &Value) {
                             rc.render_title(false)
                         ))
                         .to_owned(),
-                    "Model value and json value do not match for field: {}",
-                    field_id,
+                    "Model value and json value do not match for field: {field_id}",
                 );
             }
         }
@@ -619,8 +617,7 @@ fn test_dump_iface_content() {
                                 rc.render_title(false)
                             ))
                             .to_owned(),
-                        "Model value and json value do not match for field: {}",
-                        field_id,
+                        "Model value and json value do not match for field: {field_id}",
                     );
                 }
             }
@@ -729,8 +726,7 @@ fn test_dump_network_content() {
                             rc.render_title(false),
                         ))
                         .to_owned(),
-                    "Model value and json value do not match for field: {}",
-                    field_id,
+                    "Model value and json value do not match for field: {field_id}",
                 );
             }
         }
@@ -850,8 +846,7 @@ fn test_dump_transport_content() {
                             rc.render_title(false),
                         ))
                         .to_owned(),
-                    "Model value and json value do not match for field: {}",
-                    field_id,
+                    "Model value and json value do not match for field: {field_id}",
                 );
             }
         }
@@ -1121,8 +1116,7 @@ fn test_dump_disk_content() {
                                 rc.render_title(false),
                             ))
                             .to_owned(),
-                        "Model value and json value do not match for field: {}",
-                        field_id,
+                        "Model value and json value do not match for field: {field_id}",
                     );
                 }
             }

@@ -23,7 +23,7 @@
 ///
 /// This list also servers as documentation for available field ids that could
 /// be used in other below crates. A test ensures that this list is up-to-date.
-pub const COMMON_MODEL_FIELD_IDS: [&str; 480] = [
+pub const COMMON_MODEL_FIELD_IDS: [&str; 481] = [
     "system.hostname",
     "system.kernel_version",
     "system.os_release",
@@ -357,6 +357,7 @@ pub const COMMON_MODEL_FIELD_IDS: [&str; 480] = [
     "process.processes.<key>.cpu.user_pct",
     "process.processes.<key>.cpu.system_pct",
     "process.processes.<key>.cpu.num_threads",
+    "process.processes.<key>.cpu.processor",
     "process.processes.<key>.cmdline",
     "process.processes.<key>.exe_path",
     "network.interfaces.<key>.interface",

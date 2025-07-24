@@ -137,6 +137,7 @@ impl ProcessTab {
 
 pub mod default_tabs {
     use model::ProcessCpuModelFieldId::NumThreads;
+    use model::ProcessCpuModelFieldId::Processor;
     use model::ProcessCpuModelFieldId::SystemPct;
     use model::ProcessCpuModelFieldId::UsagePct;
     use model::ProcessCpuModelFieldId::UserPct;
@@ -201,6 +202,7 @@ pub mod default_tabs {
             ViewItem::from_default(Cpu(SystemPct)),
             ViewItem::from_default(Cpu(NumThreads)),
             ViewItem::from_default(Cpu(UsagePct)),
+            ViewItem::from_default(Cpu(Processor)),
         ])
     });
 
