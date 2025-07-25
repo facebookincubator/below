@@ -202,6 +202,7 @@ fn fill_reserved(v: &mut LinearLayout) {
         " 'C'            - sort by cpu (cgroup view and process view only)\n",
         " 'M'            - sort by memory (cgroup view and process view only)\n",
         " 'D'            - sort by total disk activity(cgroup view and process view only)\n",
+        " 'F'            - show as tree/list (process view only)\n",
     ];
 
     for line in lines {

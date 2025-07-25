@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+
 use cursive::utils::markup::StyledString;
 use itertools::Itertools;
 use model::Queriable;
@@ -40,10 +43,11 @@ impl ProcessTab {
     fn get_process_field_line(
         &self,
         model: &SingleProcessModel,
+        depth: usize,
         offset: Option<usize>,
     ) -> StyledString {
         let mut line = StyledString::new();
-        line.append(default_tabs::COMM_VIEW_ITEM.render(model));
+        line.append(default_tabs::COMM_VIEW_ITEM.render_indented_depth(model, depth));
         line.append_plain(" ");
 
         for item in std::iter::once(&*default_tabs::CGROUP_VIEW_ITEM)
@@ -68,6 +72,25 @@ impl ProcessTab {
         }
     }
 
+    fn render_process_tree(
+        &self,
+        tree: &HashMap<i32, Vec<&SingleProcessModel>>,
+        p: &SingleProcessModel,
+        depth: usize,
+        offset: Option<usize>,
+        visited: &mut HashSet<i32>,
+        output: &mut Vec<(StyledString, i32)>,
+    ) {
+        let pid = p.pid.unwrap_or(0);
+        // Show each process only once
+        if visited.insert(pid) {
+            output.push((self.get_process_field_line(p, depth, offset), pid));
+            for c in tree.get(&pid).unwrap_or(&Vec::new()) {
+                self.render_process_tree(tree, c, depth + 1, offset, visited, output);
+            }
+        }
+    }
+
     pub fn get_rows(
         &self,
         state: &ProcessState,
@@ -81,8 +104,9 @@ impl ProcessTab {
         if let Some(sort_order) = state.sort_order.as_ref() {
             model::sort_queriables(&mut processes, sort_order, state.reverse);
         }
-        processes
-            .iter()
+
+        processes = processes
+            .into_iter()
             .filter(|spm| {
                 // If we're in zoomed pids mode, only show processes belonging
                 // to set of pids
@@ -112,30 +136,61 @@ impl ProcessTab {
                     true
                 }
             })
-            .copied()
-            // Abuse batching() to conditionally fold iter
-            .batching(|it| {
-                if state.fold {
-                    it.next().map(|first| {
-                        it.fold(first.clone(), |acc, spm| {
-                            SingleProcessModel::fold(&acc, spm)
-                        })
-                    })
-                } else {
-                    it.next().cloned()
+            .collect();
+
+        if state.tree_view {
+            let mut tree: HashMap<i32, Vec<&SingleProcessModel>> = HashMap::new();
+            let mut pids: HashSet<i32> = HashSet::new();
+
+            for p in &processes {
+                if let Some(ppid) = p.ppid {
+                    tree.entry(ppid).or_default().push(p);
                 }
-            })
-            .map(|spm| {
-                (
-                    self.get_process_field_line(&spm, offset),
-                    spm.pid.unwrap_or(0),
-                )
-            })
-            .collect()
+
+                if let Some(pid) = p.pid {
+                    pids.insert(pid);
+                }
+            }
+
+            let mut output = Vec::new();
+            let mut visited = HashSet::new();
+            for p in processes {
+                let ppid = p.ppid.unwrap_or(0);
+                // it's pid 1 or parent is not visible
+                if ppid == 0 || !pids.contains(&ppid) {
+                    self.render_process_tree(&tree, p, 0, offset, &mut visited, &mut output);
+                }
+            }
+            output
+        } else {
+            processes
+                .into_iter()
+                .cloned()
+                // Abuse batching() to conditionally fold iter
+                .batching(|it| {
+                    if state.fold {
+                        it.next().map(|first| {
+                            it.fold(first.clone(), |acc, spm| {
+                                SingleProcessModel::fold(&acc, &spm)
+                            })
+                        })
+                    } else {
+                        it.next()
+                    }
+                })
+                .map(|spm| {
+                    (
+                        self.get_process_field_line(&spm, 0, offset),
+                        spm.pid.unwrap_or(0),
+                    )
+                })
+                .collect()
+        }
     }
 }
 
 pub mod default_tabs {
+    use common::util::get_prefix;
     use model::ProcessCpuModelFieldId::NumThreads;
     use model::ProcessCpuModelFieldId::Processor;
     use model::ProcessCpuModelFieldId::SystemPct;
@@ -171,7 +226,11 @@ pub mod default_tabs {
 
     use super::*;
 
-    pub static COMM_VIEW_ITEM: Lazy<ProcessViewItem> = Lazy::new(|| ViewItem::from_default(Comm));
+    pub static COMM_VIEW_ITEM: Lazy<ProcessViewItem> = Lazy::new(|| {
+        use base_render::RenderConfigBuilder;
+        ViewItem::from_default(Comm)
+            .update(RenderConfigBuilder::new().indented_prefix(get_prefix(false)))
+    });
     pub static CGROUP_VIEW_ITEM: Lazy<ProcessViewItem> =
         Lazy::new(|| ViewItem::from_default(Cgroup));
 

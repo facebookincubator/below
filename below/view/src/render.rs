@@ -147,6 +147,11 @@ impl<F: FieldId> ViewItem<F> {
     pub fn render_tight(&self, model: &F::Queriable) -> StyledString {
         self.config.render_tight(model.query(&self.field_id))
     }
+
+    pub fn render_indented_depth(&self, model: &F::Queriable, depth: usize) -> StyledString {
+        self.config
+            .render_indented(model.query(&self.field_id), depth)
+    }
 }
 
 impl<F, T> ViewItem<F>
@@ -155,7 +160,6 @@ where
     F: FieldId<Queriable = T>,
 {
     pub fn render_indented(&self, model: &T) -> StyledString {
-        self.config
-            .render_indented(model.query(&self.field_id), model.get_depth())
+        self.render_indented_depth(model, model.get_depth())
     }
 }

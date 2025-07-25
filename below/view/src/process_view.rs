@@ -56,6 +56,7 @@ pub struct ProcessState {
     pub sort_tags: HashMap<String, &'static ProcessTab>,
     pub reverse: bool,
     pub fold: bool,
+    pub tree_view: bool,
     pub model: Arc<Mutex<ProcessModel>>,
 }
 
@@ -157,6 +158,7 @@ impl StateCommon for ProcessState {
             sort_tags,
             reverse: false,
             fold: false,
+            tree_view: true,
             model,
         }
     }
@@ -173,6 +175,10 @@ impl ProcessState {
 
     pub fn toggle_fold(&mut self) {
         self.fold = !self.fold;
+    }
+
+    pub fn toggle_tree_view(&mut self) {
+        self.tree_view = !self.tree_view;
     }
 
     pub fn handle_state_for_entering_zoom(&mut self, current_selection: String) {
@@ -300,6 +306,12 @@ impl ProcessView {
                     ProcessIoModelFieldId::RwbytesPerSec,
                 ));
             view.state.lock().unwrap().set_reverse(true);
+            view.refresh(c)
+        })
+        .on_event('F', |c| {
+            // Toggle tree view to show process hierarchy
+            let mut view = Self::get_process_view(c);
+            view.state.lock().unwrap().toggle_tree_view();
             view.refresh(c)
         })
         .with_name(Self::get_view_name())
