@@ -443,11 +443,11 @@ impl View {
             "system_view_panel".to_owned(),
             screens_view.add_screen(BoxedView::boxed(ResizedView::with_full_screen(system_view))),
         );
-        #[cfg(fbcode_build)]
-        main_view_screens.insert(
-            "gpu_view_panel".to_owned(),
-            screens_view.add_screen(BoxedView::boxed(ResizedView::with_full_screen(gpu_view))),
-        );
+        // #[cfg(fbcode_build)]
+        // main_view_screens.insert(
+        //     "gpu_view_panel".to_owned(),
+        //     screens_view.add_screen(BoxedView::boxed(ResizedView::with_full_screen(gpu_view))),
+        // );
 
         self.inner
             .add_fullscreen_layer(ResizedView::with_full_screen(

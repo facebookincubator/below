@@ -413,6 +413,11 @@ impl CgroupReader {
         self.read_singleline_file("memory.zswap.writeback")
     }
 
+    /// Read memory.oom.group - returning 0/1 if oom group is disabled/enabled
+    pub fn read_memory_oom_group(&self) -> Result<u32> {
+        self.read_singleline_file("memory.oom.group")
+    }
+
     /// Read memory.current - returning current cgroup memory
     /// consumption in bytes
     pub fn read_memory_current(&self) -> Result<u64> {

@@ -317,6 +317,7 @@ pub mod default_tabs {
     use model::CgroupPropertiesFieldId::MemoryLow;
     use model::CgroupPropertiesFieldId::MemoryMax;
     use model::CgroupPropertiesFieldId::MemoryMin;
+    use model::CgroupPropertiesFieldId::MemoryOomGroup;
     use model::CgroupPropertiesFieldId::MemorySwapMax;
     use model::CgroupPropertiesFieldId::MemoryZswapMax;
     use model::CgroupPropertiesFieldId::MemoryZswapWriteback;
@@ -447,6 +448,7 @@ pub mod default_tabs {
             ViewItem::from_default(Props(MemorySwapMax)),
             ViewItem::from_default(Props(MemoryZswapMax)),
             ViewItem::from_default(Props(MemoryZswapWriteback)),
+            ViewItem::from_default(Props(MemoryOomGroup)),
             ViewItem::from_default(Props(CpuMaxUsec)),
             ViewItem::from_default(Props(CpuMaxPeriodUsec)),
             ViewItem::from_default(Props(CpuWeight)),

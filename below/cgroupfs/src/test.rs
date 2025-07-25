@@ -152,6 +152,7 @@ test_success!(
     b"1\n",
     1
 );
+test_success!(read_memory_oom_group, "memory.oom.group", b"1\n", 1);
 
 test_success!(read_pids_current, "pids.current", b"10000\n", 10000);
 test_success!(read_cpu_weight, "cpu.weight", b"10000\n", 10000);
