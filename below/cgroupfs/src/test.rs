@@ -293,7 +293,7 @@ fn test_memory_current_parse_failure() {
         .expect_err("Did not fail to read memory.current");
     match err {
         Error::UnexpectedLine(_, _) => {}
-        _ => panic!("Got unexpected error type {}", err),
+        _ => panic!("Got unexpected error type {err}"),
     }
 }
 
@@ -309,7 +309,7 @@ fn test_memory_current_invalid_format() {
         .expect_err("Did not fail to read memory.current");
     match err {
         Error::InvalidFileFormat(_) => {}
-        _ => panic!("Got unexpected error type {}", err),
+        _ => panic!("Got unexpected error type {err}"),
     }
 }
 
@@ -375,7 +375,7 @@ fn test_memory_stat_parse_failure() {
         .expect_err("Did not fail to read memory.stat");
     match err {
         Error::UnexpectedLine(_, _) => {}
-        _ => panic!("Got unexpected error type {}", err),
+        _ => panic!("Got unexpected error type {err}"),
     }
 }
 
@@ -390,7 +390,7 @@ fn test_memory_stat_invalid_format() {
         .expect_err("Did not fail to read memory.stat");
     match err {
         Error::InvalidFileFormat(_) => {}
-        _ => panic!("Got unexpected error type: {}", err),
+        _ => panic!("Got unexpected error type: {err}"),
     }
 }
 
@@ -420,7 +420,7 @@ fn test_cpu_stat_parse_failure() {
         .expect_err("Did not fail to read cpu.stat");
     match err {
         Error::UnexpectedLine(_, _) => {}
-        _ => panic!("Got unexpected error type {}", err),
+        _ => panic!("Got unexpected error type {err}"),
     }
 }
 
@@ -435,7 +435,7 @@ fn test_cpu_stat_invalid_format() {
         .expect_err("Did not fail to read cpu.stat");
     match err {
         Error::InvalidFileFormat(_) => {}
-        _ => panic!("Got unexpected error type: {}", err),
+        _ => panic!("Got unexpected error type: {err}"),
     }
 }
 
@@ -478,7 +478,7 @@ fn test_io_stat_parse_failure() {
         .expect_err("Did not fail to read io.stat");
     match err {
         Error::InvalidFileFormat(_) => {}
-        _ => panic!("Got unexpected error type {}", err),
+        _ => panic!("Got unexpected error type {err}"),
     }
 }
 
@@ -550,7 +550,7 @@ fn test_cpu_pressure_empty_file() {
         .expect_err("Did not fail to read cpu.pressure");
     match err {
         Error::InvalidFileFormat(_) => {}
-        _ => panic!("Got unexpected error type: {}", err),
+        _ => panic!("Got unexpected error type: {err}"),
     }
 }
 
@@ -584,7 +584,7 @@ fn test_io_pressure_empty_file() {
         .expect_err("Did not fail to read io.pressure");
     match err {
         Error::InvalidFileFormat(_) => {}
-        _ => panic!("Got unexpected error type: {}", err),
+        _ => panic!("Got unexpected error type: {err}"),
     }
 }
 
@@ -618,7 +618,7 @@ fn test_memory_pressure_empty_file() {
         .expect_err("Did not fail to read memory.pressure");
     match err {
         Error::InvalidFileFormat(_) => {}
-        _ => panic!("Got unexpected error type: {}", err),
+        _ => panic!("Got unexpected error type: {err}"),
     }
 }
 
@@ -752,7 +752,7 @@ fn test_cgroup_stat_parse_failure() {
         .expect_err("Failed to read cgroup.stat");
     match err {
         Error::UnexpectedLine(_, _) => {}
-        _ => panic!("Got unexpected error type {}", err),
+        _ => panic!("Got unexpected error type {err}"),
     }
 }
 
@@ -767,7 +767,7 @@ fn test_cgroup_stat_invalid_format() {
         .expect_err("Did not fail to read cgroup.stat");
     match err {
         Error::InvalidFileFormat(_) => {}
-        _ => panic!("Got unexpected error type: {}", err),
+        _ => panic!("Got unexpected error type: {err}"),
     }
 }
 
@@ -939,7 +939,7 @@ fn test_memory_numa_stat_parse_failure() {
         .expect_err("Did not fail to read memory.numa.stat");
     match err {
         Error::UnexpectedLine(_, _) => {}
-        _ => panic!("Got unexpected error type {}", err),
+        _ => panic!("Got unexpected error type {err}"),
     }
 }
 
@@ -954,6 +954,6 @@ fn test_memory_numa_stat_invalid_format() {
         .expect_err("Did not fail to read memory.numa_stat");
     match err {
         Error::InvalidFileFormat(_) => {}
-        _ => panic!("Got unexpected error type: {}", err),
+        _ => panic!("Got unexpected error type: {err}"),
     }
 }

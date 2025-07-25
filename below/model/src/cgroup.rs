@@ -229,7 +229,7 @@ impl CgroupModel {
             .map(|(child_name, child_sample)| {
                 CgroupModel::new(
                     child_name.clone(),
-                    format!("{}/{}", full_path, child_name),
+                    format!("{full_path}/{child_name}"),
                     depth + 1,
                     child_sample,
                     last.and_then(|(last, delta)| {
@@ -1005,7 +1005,7 @@ mod tests {
             assert_eq!(
                 model.query(
                     &CgroupModelFieldId::from_str(field_id)
-                        .map_err(|e| format!("Failed to parse field id {}: {:?}", field_id, e))
+                        .map_err(|e| format!("Failed to parse field id {field_id}: {e:?}"))
                         .unwrap()
                 ),
                 expected.map(|s| Field::Str(s.to_string()))

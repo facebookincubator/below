@@ -21,7 +21,6 @@ use std::ffi::OsStr;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::io::ErrorKind;
 use std::os::fd::AsRawFd;
 use std::os::fd::BorrowedFd;
 use std::path::Path;
@@ -72,21 +71,21 @@ fn parse_integer_or_max(s: &str) -> std::result::Result<i64, String> {
         return Ok(-1);
     }
     s.parse::<u64>()
-        .map_err(|e| format!("Invalid integer or max value {}", e))
+        .map_err(|e| format!("Invalid integer or max value {e}"))
         .map(|v| v as i64)
 }
 
 fn parse_node_range(s: &str) -> std::result::Result<BTreeSet<u32>, String> {
     fn parse_node(s: &str) -> std::result::Result<u32, String> {
         s.parse()
-            .map_err(|_| format!("id must be non-negative int: {}", s))
+            .map_err(|_| format!("id must be non-negative int: {s}"))
     }
     match s.split_once('-') {
         Some((first, last)) => {
             let first = parse_node(first)?;
             let last = parse_node(last)?;
             if first > last {
-                return Err(format!("Invalid range: {}", s));
+                return Err(format!("Invalid range: {s}"));
             }
             Ok((first..(last + 1)).collect())
         }
@@ -113,9 +112,9 @@ fn fmt_nodes(f: &mut std::fmt::Formatter<'_>, nodes: &BTreeSet<u32>) -> std::fmt
         range_end: u32,
     ) -> std::fmt::Result {
         if range_start == range_end {
-            write!(f, "{}", range_start)
+            write!(f, "{range_start}")
         } else {
-            write!(f, "{}-{}", range_start, range_end)
+            write!(f, "{range_start}-{range_end}")
         }
     }
 
@@ -142,13 +141,13 @@ impl FromStr for CpuMax {
     fn from_str(s: &str) -> std::result::Result<Self, String> {
         let nums: Vec<&str> = s.split(' ').collect();
         if nums.len() != 2 {
-            return Err(format!("Invalid cpu.max {}", s));
+            return Err(format!("Invalid cpu.max {s}"));
         }
         Ok(CpuMax {
             max_usec: parse_integer_or_max(nums[0])?,
             period_usec: nums[1]
                 .parse()
-                .map_err(|e| format!("Invalid non-negative integer {}", e))?,
+                .map_err(|e| format!("Invalid non-negative integer {e}"))?,
         })
     }
 }
@@ -260,7 +259,7 @@ impl CgroupReader {
                 Err(e) => {
                     return Err(Error::IoError(
                         path,
-                        std::io::Error::new(ErrorKind::Other, format!("Failed to fstatfs: {}", e)),
+                        std::io::Error::other(format!("Failed to fstatfs: {e}")),
                     ));
                 }
             };
