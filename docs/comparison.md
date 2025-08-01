@@ -51,6 +51,40 @@ https://htop.dev/
 * No cgroup awareness
 * Limited host-level stats
 
+## sysstat (sar)
+
+https://github.com/sysstat/sysstat
+
+* CLI-based tools like `sar`, `iostat`, `pidstat`, and others  
+* Collects a wide range of system performance metrics (CPU, memory, IO, etc.)  
+* Mature and widely used for historical performance tracking  
+* Data can be collected periodically via `cron` or systemd timers  
+* Data stored in a binary format, accessible through CLI  
+
+### Drawbacks
+
+* No interactive or web interface  
+* Lacks container or cgroup-specific visibility  
+* Requires parsing and scripting to extract structured data  
+* Binary logs are not human-readable without `sar`  
+
+## collectd
+
+https://collectd.org/
+
+* Daemon-based metrics collector  
+* Plugin architecture for system and application metrics (disk, memory, network, etc.)  
+* Can push metrics to various backends (Graphite, InfluxDB, Prometheus via exporter)  
+* Lightweight and extensible with community plugins  
+* Suitable for long-term storage and visualization setups  
+
+### Drawbacks
+
+* No built-in UI or terminal interface  
+* Configuration can be complex  
+* Requires external tooling for data visualization  
+* No direct cgroup or container integration by default  
+
 ## below
 
 https://github.com/facebookincubator/below
