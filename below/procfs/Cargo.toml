@@ -17,7 +17,7 @@ libc = "0.2.139"
 nix = { version = "0.29.0", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 openat = "0.1.21"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "2.0.12"
 threadpool = "1.8.1"
