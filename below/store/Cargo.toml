@@ -18,7 +18,7 @@ humantime = "2.1"
 maplit = "1.0"
 memmap2 = "0.9.5"
 model = { package = "below-model", version = "0.10.0", path = "../model" }
-nix = { version = "0.29.0", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
+nix = { version = "0.30.1", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_cbor = "0.11"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

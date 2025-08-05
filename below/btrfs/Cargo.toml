@@ -13,7 +13,7 @@ license = "Apache-2.0"
 [dependencies]
 common = { package = "below-common", version = "0.10.0", path = "../common" }
 libc = "0.2.139"
-nix = { version = "0.29.0", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
+nix = { version = "0.30.1", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 openat = "0.1.21"
 rand = { version = "0.8", features = ["small_rng"] }
 rand_distr = "0.4"
