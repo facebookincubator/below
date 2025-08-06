@@ -87,7 +87,7 @@ impl StateCommon for ProcessState {
             _ => self
                 .sort_tags
                 .get(tab)
-                .unwrap_or_else(|| panic!("Fail to find tab: {}", tab))
+                .unwrap_or_else(|| panic!("Fail to find tab: {tab}"))
                 .view_items
                 .get(idx - 2)
                 .expect("Out of title scope")
@@ -177,6 +177,10 @@ impl ProcessState {
         self.fold = !self.fold;
     }
 
+    pub fn set_tree_view(&mut self, enable: bool) {
+        self.tree_view = enable;
+    }
+
     pub fn toggle_tree_view(&mut self) {
         self.tree_view = !self.tree_view;
     }
@@ -247,12 +251,17 @@ impl ProcessView {
         let user_data = c
             .user_data::<ViewState>()
             .expect("No data stored in Cursive Object!");
+
+        let mut process_state = ProcessState::new(user_data.process.clone());
+        if let Some(process_view_default_tree) = user_data.viewrc.process_view_default_tree {
+            process_state.set_tree_view(process_view_default_tree);
+        }
         StatsView::new(
             "process",
             tabs,
             tabs_map,
             list,
-            ProcessState::new(user_data.process.clone()),
+            process_state,
             user_data.event_controllers.clone(),
             user_data.cmd_controllers.clone(),
         )
@@ -365,6 +374,6 @@ impl ViewBridge for ProcessView {
             .get(selected_key /* pid */)
             .and_then(|spm| spm.query(&tag))
             .map_or("?".to_string(), |field| field.to_string());
-        format!(" {} : {} ", tag, field_str)
+        format!(" {tag} : {field_str} ")
     }
 }

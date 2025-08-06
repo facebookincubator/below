@@ -53,6 +53,9 @@ pub struct ViewRc {
     pub cgroup_name_width: Option<usize>,
     // Extra rows to add in the summary view.
     pub summary_view_extra_rows: Option<Vec<SummaryViewExtraRow>>,
+    // Show process view as tree instead of list by default.
+    // When not set, defaults to true (tree view).
+    pub process_view_default_tree: Option<bool>,
 }
 
 impl ViewRc {
@@ -84,7 +87,7 @@ impl ViewRc {
                 }
                 Err(e) => (
                     Default::default(),
-                    Some(format!("Failed to parse belowrc: {}", e)),
+                    Some(format!("Failed to parse belowrc: {e}")),
                 ),
             },
             _ => (Default::default(), None),
