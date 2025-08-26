@@ -183,7 +183,7 @@ impl std::fmt::Display for MemNodes {
 }
 
 macro_rules! impl_read_pressure {
-    ( $fn:ident, $e:expr_2021, $typ:tt, FullPressureSupported ) => {
+    ( $fn:ident, $e:expr, $typ:tt, FullPressureSupported ) => {
         /// Read $typ
         pub fn $fn(&self) -> Result<$typ> {
             let (some_pressure, full_pressure_opt, file_name) =
@@ -196,7 +196,7 @@ macro_rules! impl_read_pressure {
             })
         }
     };
-    ( $fn:ident, $e:expr_2021, $typ:tt, FullPressureMaybeSupported ) => {
+    ( $fn:ident, $e:expr, $typ:tt, FullPressureMaybeSupported ) => {
         /// Read $typ
         pub fn $fn(&self) -> Result<$typ> {
             let (some_pressure, full_pressure_opt, _) = impl_read_pressure!(Internal, &self, $e);
@@ -206,7 +206,7 @@ macro_rules! impl_read_pressure {
             })
         }
     };
-    ( Internal, $self:expr_2021, $e:expr_2021) => {{
+    ( Internal, $self:expr, $e:expr) => {{
         let file_name = concat!($e, ".pressure");
         let mut pressure = PressureMetrics::read($self, file_name)?;
         (
@@ -220,7 +220,7 @@ macro_rules! impl_read_pressure {
 }
 
 macro_rules! parse_and_set_fields {
-    ($struct:expr_2021; $key:expr_2021; $value:expr_2021; [ $($field:ident,)+  ]) => (
+    ($struct:expr; $key:expr; $value:expr; [ $($field:ident,)+  ]) => (
         match $key {
             $(stringify!($field) => $struct.$field = Some($value),)*
             _ => (),
@@ -660,7 +660,7 @@ trait KVRead: Sized {
 // corresponding field is left as `None`. If lines include fields that
 // are not listed, they are ignored.
 macro_rules! key_values_format {
-    ($struct:ident; $file:expr_2021; [ $( $field:ident ),+ ]) => (
+    ($struct:ident; $file:expr; [ $( $field:ident ),+ ]) => (
         impl KVRead for $struct {
             fn read(r: &CgroupReader) -> Result<$struct> {
                 let mut s = $struct::default();
@@ -772,7 +772,7 @@ struct AllowsEmpty(bool);
 struct AllowsPressureEOpNotSupp(bool);
 
 macro_rules! name_key_equal_value_format {
-    ($struct:ident; $allows_empty:expr_2021; $allows_pressure_eopnotsupp:expr_2021; [ $($field:ident,)+ ]) => (
+    ($struct:ident; $allows_empty:expr; $allows_pressure_eopnotsupp:expr; [ $($field:ident,)+ ]) => (
         impl NameKVRead for $struct {
             fn read<P: AsRef<Path> + AsPath + Clone>(r: &CgroupReader, file_name: P) -> Result<BTreeMap<String, $struct>> {
                 let mut map = BTreeMap::new();

@@ -458,7 +458,7 @@ fn collect_cgroup_sample(
 }
 
 macro_rules! usec_pct {
-    ($a_opt:expr_2021, $b_opt:expr_2021, $delta:expr_2021) => {{
+    ($a_opt:expr, $b_opt:expr, $delta:expr) => {{
         let mut ret = None;
         if let (Some(a), Some(b)) = ($a_opt, $b_opt) {
             if a <= b {
@@ -470,7 +470,7 @@ macro_rules! usec_pct {
 }
 
 macro_rules! count_per_sec {
-    ($a_opt:expr_2021, $b_opt:expr_2021, $delta:expr_2021) => {{
+    ($a_opt:expr, $b_opt:expr, $delta:expr) => {{
         let mut ret = None;
         if let (Some(a), Some(b)) = ($a_opt, $b_opt) {
             if a <= b {
@@ -479,14 +479,14 @@ macro_rules! count_per_sec {
         }
         ret
     }};
-    ($a:ident, $b:ident, $delta:expr_2021, $target_type:ty) => {{
+    ($a:ident, $b:ident, $delta:expr, $target_type:ty) => {{
         let mut ret = None;
         if $a <= $b {
             ret = Some((($b - $a) as f64 / $delta.as_secs_f64()).ceil() as $target_type);
         }
         ret
     }};
-    ($a_opt:expr_2021, $b_opt:expr_2021, $delta:expr_2021, $target_type:ty) => {{
+    ($a_opt:expr, $b_opt:expr, $delta:expr, $target_type:ty) => {{
         let mut ret = None;
         if let (Some(a), Some(b)) = ($a_opt, $b_opt) {
             if a <= b {

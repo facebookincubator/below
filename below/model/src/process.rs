@@ -16,11 +16,11 @@ use super::*;
 
 /// Folds two optionals together with either `+` operator or provided closure
 macro_rules! fold_optionals {
-    ($left:expr_2021, $right:expr_2021) => {
+    ($left:expr, $right:expr) => {
         fold_optionals!($left, $right, |l, r| l + r)
     };
 
-    ($left:expr_2021, $right:expr_2021, $f:expr_2021) => {
+    ($left:expr, $right:expr, $f:expr) => {
         match ($left, $right) {
             (Some(l), Some(r)) => Some($f(l, r)),
             (Some(l), None) => Some(l.clone()),

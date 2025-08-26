@@ -30,7 +30,7 @@ const BELOW_RC: &str = "/.config/below/belowrc";
 /// 4th, and so on calls.
 #[macro_export]
 macro_rules! every_n {
-    ($n:expr_2021, $ex:expr_2021) => {{
+    ($n:expr, $ex:expr) => {{
         static COUNT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
         let p = COUNT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         if p % ($n) == 0 {

@@ -116,7 +116,7 @@ pub struct View {
 }
 
 macro_rules! advance {
-    ($c:ident, $adv:ident, $dir:expr_2021) => {
+    ($c:ident, $adv:ident, $dir:expr) => {
         match $adv.advance($dir) {
             Some(data) => {
                 $c.user_data::<ViewState>()

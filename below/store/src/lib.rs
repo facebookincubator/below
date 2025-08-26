@@ -896,7 +896,7 @@ mod tests {
 
     // Asserts that a and b are equal, to the resolution of one second
     macro_rules! assert_ts {
-        ($a:expr_2021, $b:expr_2021) => {
+        ($a:expr, $b:expr) => {
             let a_dur = $a
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .expect("Timestamp earlier than UNIX EPOCH");
