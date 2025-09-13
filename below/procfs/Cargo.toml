@@ -24,4 +24,4 @@ threadpool = "1.8.1"
 
 [dev-dependencies]
 slog-term = "2.8"
-tempfile = "3.15"
+tempfile = "3.22"

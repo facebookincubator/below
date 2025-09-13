@@ -16,7 +16,7 @@ jobs:
       run: >
         docker build
         -t below
-        --target build
+        --target builder
         .
     - name: Run tests
       # Skip tests that require host to have cgroup2
