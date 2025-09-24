@@ -2,7 +2,7 @@
 
 [package]
 name = "below-gpu-stats"
-version = "0.10.0"
+version = "0.11.0"
 authors = ["Meta Platforms, Inc. and affiliates"]
 edition = "2024"
 description = "GPU stats crate for below"
@@ -10,5 +10,5 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
-common = { package = "below-common", version = "0.10.0", path = "../common" }
+common = { package = "below-common", version = "0.11.0", path = "../common" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }

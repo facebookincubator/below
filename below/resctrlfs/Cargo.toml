@@ -2,7 +2,7 @@
 
 [package]
 name = "resctrlfs"
-version = "0.10.0"
+version = "0.11.0"
 authors = ["Meta Platforms, Inc. and affiliates"]
 edition = "2024"
 description = "A crate for reading resctrl fs data"

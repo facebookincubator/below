@@ -2,7 +2,7 @@
 
 [package]
 name = "below-store"
-version = "0.10.0"
+version = "0.11.0"
 authors = ["Meta Platforms, Inc. and affiliates"]
 edition = "2024"
 description = "Store crate for below"
@@ -13,11 +13,11 @@ license = "Apache-2.0"
 anyhow = "1.0.98"
 bitflags = { version = "2.9", features = ["serde", "std"], default-features = false }
 bytes = { version = "1.10", features = ["serde"] }
-common = { package = "below-common", version = "0.10.0", path = "../common" }
+common = { package = "below-common", version = "0.11.0", path = "../common" }
 humantime = "2.1"
 maplit = "1.0"
 memmap2 = "0.9.5"
-model = { package = "below-model", version = "0.10.0", path = "../model" }
+model = { package = "below-model", version = "0.11.0", path = "../model" }
 nix = { version = "0.30.1", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_cbor = "0.11"
