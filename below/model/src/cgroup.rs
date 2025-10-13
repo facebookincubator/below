@@ -469,6 +469,7 @@ pub struct CgroupMemoryModel {
     pub file_writeback: Option<u64>,
     pub file_thp: Option<u64>,
     pub anon_thp: Option<u64>,
+    pub shmem_thp: Option<u64>,
     pub inactive_anon: Option<u64>,
     pub active_anon: Option<u64>,
     pub inactive_file: Option<u64>,
@@ -527,6 +528,7 @@ impl std::ops::Add for CgroupMemoryModel {
             file_writeback: opt_add(self.file_writeback, other.file_writeback),
             file_thp: opt_add(self.file_thp, other.file_thp),
             anon_thp: opt_add(self.anon_thp, other.anon_thp),
+            shmem_thp: opt_add(self.shmem_thp, other.shmem_thp),
             inactive_anon: opt_add(self.inactive_anon, other.inactive_anon),
             active_anon: opt_add(self.active_anon, other.active_anon),
             inactive_file: opt_add(self.inactive_file, other.inactive_file),
@@ -598,48 +600,45 @@ impl CgroupMemoryModel {
             zswap: sample.memory_zswap_current.map(|v| v as u64),
             ..Default::default()
         };
-        if let Some(events) = &sample.memory_events {
-            if let Some((
+        if let Some(events) = &sample.memory_events
+            && let Some((
                 CgroupSample {
                     memory_events: Some(last_memory_events),
                     ..
                 },
                 delta,
             )) = last
-            {
-                model.events_low = count_per_sec!(last_memory_events.low, events.low, delta, u64);
-                model.events_high =
-                    count_per_sec!(last_memory_events.high, events.high, delta, u64);
-                model.events_max = count_per_sec!(last_memory_events.max, events.max, delta, u64);
-                model.events_oom = count_per_sec!(last_memory_events.oom, events.oom, delta, u64);
-                model.events_oom_kill =
-                    count_per_sec!(last_memory_events.oom_kill, events.oom_kill, delta, u64);
-            }
+        {
+            model.events_low = count_per_sec!(last_memory_events.low, events.low, delta, u64);
+            model.events_high = count_per_sec!(last_memory_events.high, events.high, delta, u64);
+            model.events_max = count_per_sec!(last_memory_events.max, events.max, delta, u64);
+            model.events_oom = count_per_sec!(last_memory_events.oom, events.oom, delta, u64);
+            model.events_oom_kill =
+                count_per_sec!(last_memory_events.oom_kill, events.oom_kill, delta, u64);
         }
-        if let Some(events_local) = &sample.memory_events_local {
-            if let Some((
+        if let Some(events_local) = &sample.memory_events_local
+            && let Some((
                 CgroupSample {
                     memory_events_local: Some(last_memory_events_local),
                     ..
                 },
                 delta,
             )) = last
-            {
-                model.events_local_low =
-                    count_per_sec!(last_memory_events_local.low, events_local.low, delta, u64);
-                model.events_local_high =
-                    count_per_sec!(last_memory_events_local.high, events_local.high, delta, u64);
-                model.events_local_max =
-                    count_per_sec!(last_memory_events_local.max, events_local.max, delta, u64);
-                model.events_local_oom =
-                    count_per_sec!(last_memory_events_local.oom, events_local.oom, delta, u64);
-                model.events_local_oom_kill = count_per_sec!(
-                    last_memory_events_local.oom_kill,
-                    events_local.oom_kill,
-                    delta,
-                    u64
-                );
-            }
+        {
+            model.events_local_low =
+                count_per_sec!(last_memory_events_local.low, events_local.low, delta, u64);
+            model.events_local_high =
+                count_per_sec!(last_memory_events_local.high, events_local.high, delta, u64);
+            model.events_local_max =
+                count_per_sec!(last_memory_events_local.max, events_local.max, delta, u64);
+            model.events_local_oom =
+                count_per_sec!(last_memory_events_local.oom, events_local.oom, delta, u64);
+            model.events_local_oom_kill = count_per_sec!(
+                last_memory_events_local.oom_kill,
+                events_local.oom_kill,
+                delta,
+                u64
+            );
         }
         if let Some(stat) = &sample.memory_stat {
             model.anon = stat.anon;
@@ -659,6 +658,7 @@ impl CgroupMemoryModel {
             model.file_writeback = stat.file_writeback;
             model.file_thp = stat.file_thp;
             model.anon_thp = stat.anon_thp;
+            model.shmem_thp = stat.shmem_thp;
             model.inactive_anon = stat.inactive_anon;
             model.active_anon = stat.active_anon;
             model.inactive_file = stat.inactive_file;

@@ -715,6 +715,7 @@ key_values_format!(MemoryStat; memory.stat; [
     file_writeback,
     file_thp,
     anon_thp,
+    shmem_thp,
     inactive_anon,
     active_anon,
     inactive_file,

@@ -64,6 +64,7 @@ pub struct MemoryStat {
     pub file_writeback: Option<u64>,
     pub file_thp: Option<u64>,
     pub anon_thp: Option<u64>,
+    pub shmem_thp: Option<u64>,
     pub inactive_anon: Option<u64>,
     pub active_anon: Option<u64>,
     pub inactive_file: Option<u64>,

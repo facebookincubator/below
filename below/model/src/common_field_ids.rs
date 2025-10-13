@@ -206,6 +206,7 @@ pub const COMMON_MODEL_FIELD_IDS: &[&str] = &[
     "cgroup.[path:/<cgroup_path>/.]mem.file_writeback",
     "cgroup.[path:/<cgroup_path>/.]mem.file_thp",
     "cgroup.[path:/<cgroup_path>/.]mem.anon_thp",
+    "cgroup.[path:/<cgroup_path>/.]mem.shmem_thp",
     "cgroup.[path:/<cgroup_path>/.]mem.inactive_anon",
     "cgroup.[path:/<cgroup_path>/.]mem.active_anon",
     "cgroup.[path:/<cgroup_path>/.]mem.inactive_file",

@@ -503,6 +503,7 @@ fn test_dump_cgroup_titles() {
         "File WB",
         "File THP",
         "Anon THP",
+        "Shmem THP",
         "Inactive Anon",
         "Active Anon",
         "Inactive File",

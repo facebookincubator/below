@@ -108,10 +108,10 @@ impl CgroupTab {
     ) {
         let mut cgroup_stack = vec![cgroup];
         while let Some(cgroup) = cgroup_stack.pop() {
-            if let Some(set) = &filtered_set {
-                if !set.contains(&cgroup.data.full_path) {
-                    continue;
-                }
+            if let Some(set) = &filtered_set
+                && !set.contains(&cgroup.data.full_path)
+            {
+                continue;
             }
 
             let collapsed = state
@@ -282,6 +282,7 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::Pgscan;
     use model::CgroupMemoryModelFieldId::Pgsteal;
     use model::CgroupMemoryModelFieldId::Shmem;
+    use model::CgroupMemoryModelFieldId::ShmemThp;
     use model::CgroupMemoryModelFieldId::Slab;
     use model::CgroupMemoryModelFieldId::SlabReclaimable;
     use model::CgroupMemoryModelFieldId::SlabUnreclaimable;
@@ -379,6 +380,7 @@ pub mod default_tabs {
             ViewItem::from_default(Mem(FileWriteback)),
             ViewItem::from_default(Mem(FileThp)),
             ViewItem::from_default(Mem(AnonThp)),
+            ViewItem::from_default(Mem(ShmemThp)),
             ViewItem::from_default(Mem(InactiveAnon)),
             ViewItem::from_default(Mem(ActiveAnon)),
             ViewItem::from_default(Mem(InactiveFile)),
