@@ -507,10 +507,10 @@ fn check_for_exitstat_errors(logger: &slog::Logger, receiver: &Receiver<Error>) 
     match receiver.try_recv() {
         Ok(e) => {
             // When running as non-root for live, ignore EACCESS
-            if let Some(e) = e.downcast_ref::<libbpf_rs::Error>() {
-                if e.kind() == libbpf_rs::ErrorKind::PermissionDenied {
-                    return false;
-                }
+            if let Some(e) = e.downcast_ref::<libbpf_rs::Error>()
+                && e.kind() == libbpf_rs::ErrorKind::PermissionDenied
+            {
+                return false;
             }
             error!(logger, "{:#}", e);
         }
@@ -531,17 +531,16 @@ fn cleanup_store(
     store_size_limit: Option<u64>,
     retention: Option<Duration>,
 ) -> Result<()> {
-    if let Some(limit) = store_size_limit {
-        if !store
+    if let Some(limit) = store_size_limit
+        && !store
             .try_discard_until_size(limit)
             .context("Failed to discard earlier data")?
-        {
-            warn!(
-                logger,
-                "Failed to limit store size since the current shard is \
+    {
+        warn!(
+            logger,
+            "Failed to limit store size since the current shard is \
                 greater than the limit"
-            );
-        }
+        );
     }
     if let Some(retention) = retention {
         store
@@ -1133,22 +1132,13 @@ fn record(
     }
 
     loop {
-        if !disable_exitstats {
-            // Anything that comes over the error channel is an error
-            match errs.try_recv() {
-                Ok(e) => bail!(e),
-                Err(TryRecvError::Empty) => {}
-                Err(TryRecvError::Disconnected) => bail!("error channel disconnected"),
-            };
-
-            if !bpf_err_warned {
-                bpf_err_warned = check_for_exitstat_errors(
-                    &logger,
-                    bpf_errs
-                        .as_ref()
-                        .expect("Failed to unwrap bpf_errs receiver"),
-                );
-            }
+        if !disable_exitstats && !bpf_err_warned {
+            bpf_err_warned = check_for_exitstat_errors(
+                &logger,
+                bpf_errs
+                    .as_ref()
+                    .expect("Failed to unwrap bpf_errs receiver"),
+            );
         }
 
         let collect_instant = Instant::now();
@@ -1201,7 +1191,15 @@ fn record(
         } else {
             Duration::from_secs(1)
         };
-        std::thread::sleep(sleep_duration);
+
+        // Use recv timeout as loop interval
+        match errs.recv_timeout(sleep_duration) {
+            // SIGTERM/SIGINT or any genral error. Stop loop immediately.
+            Ok(e) => bail!(e),
+            // No error. Continue to collect next sample.
+            Err(RecvTimeoutError::Timeout) => {}
+            Err(RecvTimeoutError::Disconnected) => bail!("error channel disconnected"),
+        };
     }
 }
 
@@ -1368,10 +1366,13 @@ fn live_remote(
                 let data_plane = Box::new(move |s: &mut Cursive| {
                     let view_state = s.user_data::<ViewState>().expect("user data not set");
 
-                    if let view::ViewMode::Live(adv) = view_state.mode.clone() {
-                        if let Some(data) = adv.lock().unwrap().advance(store::Direction::Forward) {
-                            view_state.update(data)
-                        }
+                    if let view::ViewMode::Live(adv) = view_state.mode.clone()
+                        && let Some(data) = adv
+                            .lock()
+                            .expect("Lock failed")
+                            .advance(store::Direction::Forward)
+                    {
+                        view_state.update(data)
                     }
                 });
                 if sink.send(data_plane).is_err() {
