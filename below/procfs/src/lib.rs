@@ -899,6 +899,19 @@ impl ProcReader {
             Ok(pidmap)
         }
     }
+
+    pub fn read_sysctl_file<T: FromStr>(&self, directory: &str, key: &str) -> Option<T> {
+        let path = self.path.join("sys").join(directory).join(key);
+        let content = self.read_file_to_str(&path).ok()?;
+        content.split('\n').next()?.parse::<T>().ok()
+    }
+
+    pub fn read_sysctl(&self) -> Sysctl {
+        Sysctl {
+            kernel_hung_task_detect_count: self
+                .read_sysctl_file("kernel", "hung_task_detect_count"),
+        }
+    }
 }
 
 pub trait PidStateExt {

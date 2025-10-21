@@ -1769,3 +1769,14 @@ fn test_read_mountinfo() {
         "/dev/vda1"
     );
 }
+
+#[test]
+fn test_read_sysctl() {
+    let procfs = TestProcfs::new();
+    procfs.create_dir("sys/kernel");
+    procfs.create_file_with_content("sys/kernel/hung_task_detect_count", b"54\n");
+
+    let reader = procfs.get_reader();
+    let sysctl = reader.read_sysctl();
+    assert_eq!(sysctl.kernel_hung_task_detect_count, Some(54));
+}

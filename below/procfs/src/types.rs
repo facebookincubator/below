@@ -445,3 +445,8 @@ impl fmt::Display for PidState {
         }
     }
 }
+
+#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct Sysctl {
+    pub kernel_hung_task_detect_count: Option<u64>,
+}
