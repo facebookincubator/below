@@ -796,6 +796,7 @@ active_file N0=522350592 N1=460431360 N2=206303232 N3=4300206080
 unevictable N0=405504 N1=135168 N2=0 N3=0
 slab_reclaimable N0=663340528 N1=563089336 N2=514239048 N3=647222000
 slab_unreclaimable N0=686272088 N1=472630728 N2=556250640 N3=693263576
+hugetlb N0=0 N1=0 N2=0 N3=0
 workingset_refault_anon N0=3497864 N1=2225803 N2=2410565 N3=1468001
 workingset_refault_file N0=214724399 N1=172943243 N2=2094241456 N3=155295239
 workingset_activate_anon N0=477507 N1=238415 N2=318245 N3=235467
@@ -831,6 +832,7 @@ workingset_nodereclaim N0=266941 N1=176289 N2=1260264 N3=638641",
         unevictable: Some(405504),
         slab_reclaimable: Some(663340528),
         slab_unreclaimable: Some(686272088),
+        hugetlb: Some(0),
         workingset_refault_anon: Some(3497864),
         workingset_refault_file: Some(214724399),
         workingset_activate_anon: Some(477507),
@@ -859,6 +861,7 @@ workingset_nodereclaim N0=266941 N1=176289 N2=1260264 N3=638641",
         unevictable: Some(135168),
         slab_reclaimable: Some(563089336),
         slab_unreclaimable: Some(472630728),
+        hugetlb: Some(0),
         workingset_refault_anon: Some(2225803),
         workingset_refault_file: Some(172943243),
         workingset_activate_anon: Some(238415),
@@ -887,6 +890,7 @@ workingset_nodereclaim N0=266941 N1=176289 N2=1260264 N3=638641",
         unevictable: Some(0),
         slab_reclaimable: Some(514239048),
         slab_unreclaimable: Some(556250640),
+        hugetlb: Some(0),
         workingset_refault_anon: Some(2410565),
         workingset_refault_file: Some(2094241456),
         workingset_activate_anon: Some(318245),
@@ -915,6 +919,7 @@ workingset_nodereclaim N0=266941 N1=176289 N2=1260264 N3=638641",
         unevictable: Some(0),
         slab_reclaimable: Some(647222000),
         slab_unreclaimable: Some(693263576),
+        hugetlb: Some(0),
         workingset_refault_anon: Some(1468001),
         workingset_refault_file: Some(155295239),
         workingset_activate_anon: Some(235467),

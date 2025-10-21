@@ -477,6 +477,7 @@ pub struct CgroupMemoryModel {
     pub unevictable: Option<u64>,
     pub slab_reclaimable: Option<u64>,
     pub slab_unreclaimable: Option<u64>,
+    pub hugetlb: Option<u64>,
     pub pgfault: Option<u64>,
     pub pgmajfault: Option<u64>,
     pub workingset_refault_anon: Option<u64>,
@@ -536,6 +537,7 @@ impl std::ops::Add for CgroupMemoryModel {
             unevictable: opt_add(self.unevictable, other.unevictable),
             slab_reclaimable: opt_add(self.slab_reclaimable, other.slab_reclaimable),
             slab_unreclaimable: opt_add(self.slab_unreclaimable, other.slab_unreclaimable),
+            hugetlb: opt_add(self.hugetlb, other.hugetlb),
             pgfault: opt_add(self.pgfault, other.pgfault),
             pgmajfault: opt_add(self.pgmajfault, other.pgmajfault),
             workingset_refault_anon: opt_add(
@@ -666,6 +668,7 @@ impl CgroupMemoryModel {
             model.unevictable = stat.unevictable;
             model.slab_reclaimable = stat.slab_reclaimable;
             model.slab_unreclaimable = stat.slab_unreclaimable;
+            model.hugetlb = stat.hugetlb;
 
             if let Some((
                 CgroupSample {
@@ -815,6 +818,7 @@ pub struct CgroupMemoryNumaModel {
     pub unevictable: Option<u64>,
     pub slab_reclaimable: Option<u64>,
     pub slab_unreclaimable: Option<u64>,
+    pub hugetlb: Option<u64>,
     pub workingset_refault_anon: Option<f64>,
     pub workingset_refault_file: Option<f64>,
     pub workingset_activate_anon: Option<f64>,
@@ -850,6 +854,7 @@ impl CgroupMemoryNumaModel {
             unevictable: begin.unevictable,
             slab_reclaimable: begin.slab_reclaimable,
             slab_unreclaimable: begin.slab_unreclaimable,
+            hugetlb: begin.hugetlb,
             ..Default::default()
         };
         if let (Some(anon), Some(file), Some(kernel_stack), Some(pagetables)) =

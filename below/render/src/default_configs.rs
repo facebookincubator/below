@@ -252,6 +252,7 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
                 Unevictable => Some(gauge.unit("bytes")),
                 SlabReclaimable => Some(gauge.unit("bytes")),
                 SlabUnreclaimable => Some(gauge.unit("bytes")),
+                Hugetlb => Some(gauge.unit("bytes")),
                 Pgfault => Some(gauge.help("Page faults per second")),
                 Pgmajfault => Some(gauge.help("Major page faults per second")),
                 WorkingsetRefaultAnon => Some(gauge.help("Workingset refault anon per second")),
@@ -379,6 +380,7 @@ impl HasRenderConfig for model::CgroupMemoryModel {
             Unevictable => rc.title("Unevictable").format(ReadableSize),
             SlabReclaimable => rc.title("Slab Reclaimable").format(ReadableSize),
             SlabUnreclaimable => rc.title("Slab Unreclaimable").format(ReadableSize),
+            Hugetlb => rc.title("Hugetlb").format(ReadableSize),
             Pgfault => rc.title("Pgfault/s"),
             Pgmajfault => rc.title("Pgmajfault/s"),
             WorkingsetRefaultAnon => rc.title("WS Rflt Anon/s"),
@@ -1606,6 +1608,7 @@ impl HasRenderConfig for model::CgroupMemoryNumaModel {
             Unevictable => rc.title("Unevictable").format(ReadableSize),
             SlabReclaimable => rc.title("SlabReclaimable").format(ReadableSize),
             SlabUnreclaimable => rc.title("SlabUnreclaimable").format(ReadableSize),
+            Hugetlb => rc.title("Hugetlb").format(ReadableSize),
             WorkingsetRefaultAnon => rc
                 .title("Workingset Refaults Anon")
                 .suffix("/s")

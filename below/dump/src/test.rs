@@ -511,6 +511,7 @@ fn test_dump_cgroup_titles() {
         "Unevictable",
         "Slab Reclaimable",
         "Slab Unreclaimable",
+        "Hugetlb",
         "Pgfault",
         "Pgmajfault",
         "Workingset Refault Anon",

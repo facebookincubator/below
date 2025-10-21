@@ -268,6 +268,7 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::FileMapped;
     use model::CgroupMemoryModelFieldId::FileThp;
     use model::CgroupMemoryModelFieldId::FileWriteback;
+    use model::CgroupMemoryModelFieldId::Hugetlb;
     use model::CgroupMemoryModelFieldId::InactiveAnon;
     use model::CgroupMemoryModelFieldId::InactiveFile;
     use model::CgroupMemoryModelFieldId::Kernel;
@@ -388,6 +389,7 @@ pub mod default_tabs {
             ViewItem::from_default(Mem(Unevictable)),
             ViewItem::from_default(Mem(SlabReclaimable)),
             ViewItem::from_default(Mem(SlabUnreclaimable)),
+            ViewItem::from_default(Mem(Hugetlb)),
             ViewItem::from_default(Mem(Pgfault)),
             ViewItem::from_default(Mem(Pgmajfault)),
             ViewItem::from_default(Mem(WorkingsetRefaultAnon)),
