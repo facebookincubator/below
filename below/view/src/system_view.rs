@@ -217,8 +217,8 @@ impl SystemView {
         let mut list = SelectView::<String>::new();
         list.set_on_submit(|c, idx: &String| {
             let mut view = SystemView::get_system_view(c);
-            // We only care about disk not partition
-            if view.get_tab_view().get_cur_selected() == "Disk" && idx.ends_with(".0") {
+            // We only care about disk not partition.
+            if view.get_tab_view().get_cur_selected() == "Disk" && !idx.ends_with("_partition") {
                 if view.state.lock().unwrap().collapsed_disk.contains(idx) {
                     view.state.lock().unwrap().collapsed_disk.remove(idx);
                 } else {

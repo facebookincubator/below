@@ -258,10 +258,19 @@ impl SystemTab for SystemDisk {
             .disks
             .iter()
             .filter_map(|(dn, sdm)| {
-                // We use the partition parent id to check if it exists in collapsed_disk set.
-                let idx_major = format!("{}.0", sdm.major.unwrap_or(0));
-                let idx = format!("{}.{}", sdm.major.unwrap_or(0), sdm.minor.unwrap_or(0));
-                let collapse = state.collapsed_disk.contains(&idx_major) && sdm.minor != Some(0);
+                // Use _partition suffix to tell apart partitions from disks
+                let idx = if sdm.is_partition == Some(true) {
+                    format!("{}_partition", sdm.name.as_ref().map_or("", |v| v))
+                } else {
+                    sdm.name.clone().unwrap_or("".to_string())
+                };
+                // Only hide partitions whose parent is collapsed
+                // Partitions always starts with their parent disk name with p?[0-9]+ suffix
+                let collapse = sdm.is_partition == Some(true)
+                    && state
+                        .collapsed_disk
+                        .iter()
+                        .any(|d| sdm.name.as_ref().is_some_and(|v| v.starts_with(d)));
                 if state
                     .filter_info
                     .as_ref()

@@ -484,11 +484,17 @@ pub struct SingleDiskModel {
     pub time_spend_discard_ms: Option<u64>,
     pub major: Option<u64>,
     pub minor: Option<u64>,
+    #[queriable(ignore)]
+    pub is_partition: Option<bool>,
 }
 
 impl Recursive for SingleDiskModel {
     fn get_depth(&self) -> usize {
-        if self.minor == Some(0) { 0 } else { 1 }
+        if self.is_partition == Some(true) {
+            1
+        } else {
+            0
+        }
     }
 }
 
@@ -531,6 +537,7 @@ impl SingleDiskModel {
             time_spend_discard_ms: end.time_spend_discard_ms,
             major: end.major,
             minor: end.minor,
+            is_partition: end.is_partition,
         }
     }
 }

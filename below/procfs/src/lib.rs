@@ -431,14 +431,14 @@ impl ProcReader {
     }
 
     fn read_disk_fsinfo(&self, mount_info: &MountInfo) -> Option<(f32, u64)> {
-        if let Some(mount_point) = &mount_info.mount_point {
-            if let Ok(stat) = sys::statvfs::statvfs(Path::new(&mount_point)) {
-                let disk_usage = ((stat.blocks() - stat.blocks_available()) as f32 * 100.0)
-                    / stat.blocks() as f32;
-                #[allow(clippy::unnecessary_cast)]
-                let partition_size = stat.blocks() as u64 * stat.block_size() as u64;
-                return Some((disk_usage, partition_size));
-            }
+        if let Some(mount_point) = &mount_info.mount_point
+            && let Ok(stat) = sys::statvfs::statvfs(Path::new(&mount_point))
+        {
+            let disk_usage =
+                ((stat.blocks() - stat.blocks_available()) as f32 * 100.0) / stat.blocks() as f32;
+            #[allow(clippy::unnecessary_cast)]
+            let partition_size = stat.blocks() as u64 * stat.block_size() as u64;
+            return Some((disk_usage, partition_size));
         }
         None
     }
@@ -452,10 +452,10 @@ impl ProcReader {
         let mut mount_info_map: HashMap<String, MountInfo> = HashMap::new();
 
         for line in content.lines() {
-            if let Ok(mount_info) = self.process_mount_info(&path, line) {
-                if let Some(mount_source) = mount_info.mount_source.clone() {
-                    mount_info_map.entry(mount_source).or_insert(mount_info);
-                }
+            if let Ok(mount_info) = self.process_mount_info(&path, line)
+                && let Some(mount_source) = mount_info.mount_source.clone()
+            {
+                mount_info_map.entry(mount_source).or_insert(mount_info);
             }
         }
 
@@ -534,6 +534,15 @@ impl ProcReader {
                 disk_stat.filesystem_type.clone_from(&mount_info.fs_type)
             }
 
+            let sysfs_path = format!(
+                "/sys/dev/block/{}:{}",
+                disk_stat.major.unwrap(),
+                disk_stat.minor.unwrap()
+            );
+            // lsblk checks this file for partition
+            // https://kernel.googlesource.com/pub/scm/utils/util-linux/util-linux/+/v2.25.2/lib/sysfs.c#322
+            disk_stat.is_partition = Some(Path::new(&sysfs_path).join("start").exists());
+
             disk_map.insert(disk_name, disk_stat);
         }
 
@@ -582,7 +591,7 @@ impl ProcReader {
                 20 => {
                     let uptime = self.read_uptime_secs()?;
                     pidstat.running_secs = parse_sec!(path, Some(item), line)?
-                        .map(|running_secs_since_boot| (uptime - running_secs_since_boot));
+                        .map(|running_secs_since_boot| uptime - running_secs_since_boot);
                 }
                 22 => {
                     pidstat.rss_bytes =
@@ -695,7 +704,7 @@ impl ProcReader {
                 }
             }
         }
-        cgroup_path.ok_or_else(|| Error::InvalidFileFormat(path))
+        cgroup_path.ok_or(Error::InvalidFileFormat(path))
     }
 
     pub fn read_pid_cgroup(&self, pid: u32) -> Result<String> {
@@ -842,19 +851,15 @@ impl ProcReader {
 
             match self.read_pid_io_from_path(entry.path()) {
                 Err(Error::IoError(_, ref e))
-                    if e.raw_os_error().map_or(false, |ec| {
+                    if e.raw_os_error().is_some_and(|ec| {
                         ec == 2 || ec == 3 /* ENOENT or ESRCH */
                     }) =>
                 {
                     continue;
                 }
                 Err(Error::IoError(_, ref e))
-                    if e.raw_os_error().map_or(false, |ec| {
-                        /* EACCES (b/c /proc/pid/io requires elevated
-                         * perms due to security concerns). Just leave
-                         * io info empty */
-                        ec == 13
-                    }) => {}
+                    // EACCES (b/c /proc/pid/io requires elevated perms due to security concerns). Just leave io info empty
+                    if e.raw_os_error() == Some(13) => {}
                 res => pidinfo.io = res?,
             }
 
@@ -1057,10 +1062,7 @@ impl NetReader {
             .interface_dir
             .list_dir(".")
             .map_err(|e| Error::IoError(cur_path.clone(), e))?
-            .filter_map(|entry| match entry {
-                Ok(e) => Some(e),
-                _ => None,
-            })
+            .filter_map(|entry| entry.ok())
         {
             let interface = entry.file_name().to_string_lossy();
             let netstat = self.read_all_iface_stats(&interface, &cur_path)?;
@@ -1087,13 +1089,7 @@ impl NetReader {
             .map_err(|e| Error::IoError(cur_path.clone(), e))?;
 
         let buf_reader = BufReader::new(stats_file);
-        let content: Vec<String> = buf_reader
-            .lines()
-            .filter_map(|line| match line {
-                Ok(l) => Some(l),
-                _ => None,
-            })
-            .collect();
+        let content: Vec<String> = buf_reader.lines().map_while(|line| line.ok()).collect();
 
         let mut res = BTreeMap::new();
         for topic in content.chunks(2) {
