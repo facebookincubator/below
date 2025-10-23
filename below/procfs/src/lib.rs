@@ -35,6 +35,7 @@ use libc::clock_gettime;
 use libc::timespec;
 use nix::sys;
 use openat::Dir;
+use openat::SimpleType;
 use parking_lot::Condvar;
 use parking_lot::Mutex;
 use slog::debug;
@@ -1075,11 +1076,14 @@ impl NetReader {
             .interface_dir
             .list_dir(".")
             .map_err(|e| Error::IoError(cur_path.clone(), e))?
-            .filter_map(|entry| entry.ok())
         {
-            let interface = entry.file_name().to_string_lossy();
-            let netstat = self.read_all_iface_stats(&interface, &cur_path)?;
-            netmap.insert(interface.into(), netstat);
+            if let Ok(entry) = entry
+                && entry.simple_type() == Some(SimpleType::Symlink)
+            {
+                let interface = entry.file_name().to_string_lossy();
+                let netstat = self.read_all_iface_stats(&interface, &cur_path)?;
+                netmap.insert(interface.into(), netstat);
+            }
         }
 
         if netmap == Default::default() {
