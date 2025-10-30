@@ -118,10 +118,10 @@ pub fn opt_multiply<S: Sized + std::ops::Mul<T, Output = S>, T: Sized>(
 }
 
 pub fn get_hostname() -> Result<String> {
-    if let Ok(h) = hostname::get() {
-        if let Ok(s) = h.into_string() {
-            return Ok(s);
-        }
+    if let Ok(h) = hostname::get()
+        && let Ok(s) = h.into_string()
+    {
+        return Ok(s);
     }
     Err(anyhow!("Could not get hostname"))
 }
@@ -331,14 +331,13 @@ fn wrap<S: Sized>(
         if e.kind() == std::io::ErrorKind::NotFound {
             return Ok(None);
         }
-        if e.kind() == std::io::ErrorKind::Other {
-            if let Some(errno) = e.raw_os_error() {
-                if errno == /* ENODEV */ 19 {
-                    // If the cgroup is removed after a control file is opened,
-                    // ENODEV is returned. Ignore it.
-                    return Ok(None);
-                }
-            }
+        if e.kind() == std::io::ErrorKind::Other
+            && let Some(errno) = e.raw_os_error()
+            && errno == /* ENODEV */ 19
+        {
+            // If the cgroup is removed after a control file is opened,
+            // ENODEV is returned. Ignore it.
+            return Ok(None);
         }
     }
     v.map(Some)
