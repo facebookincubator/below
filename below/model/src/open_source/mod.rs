@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(test)]
 pub mod field_ids;
 pub mod gpu_model;
 pub mod gpu_stats_collector_plugin;

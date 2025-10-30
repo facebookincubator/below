@@ -18,8 +18,10 @@
 
 use std::fs;
 use std::io;
+use std::io::BufRead;
 use std::path::PathBuf;
 use std::process::exit;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::mpsc::Receiver;
@@ -45,6 +47,7 @@ use clap_complete::Shell;
 use clap_complete::generate;
 use cursive::Cursive;
 use indicatif::ProgressBar;
+use model::Queriable;
 use nix::sys::mman::MlockAllFlags;
 use nix::sys::mman::mlockall;
 use regex::Regex;
@@ -282,6 +285,22 @@ enum Command {
         /// Override default port to connect to remote
         #[clap(long, requires("host"))]
         port: Option<u16>,
+    },
+    /// Inspect historical data (experimental)
+    #[clap(hide = true, long_about = format!(r#"Inspect historical data (experimental)
+
+Available fields:
+{:?}
+"#,
+        model::field_ids::MODEL_FIELD_IDS,
+    ))]
+    Inspect {
+        /// Inspect the sample whose timestamp is at or after this timestamp.
+        /// If positive it is epoch seconds, otherwise seconds relative to now.
+        #[clap(short = 't', long, allow_hyphen_values = true)]
+        when: Option<i64>,
+        /// list of field IDs to inspect. If empty, read in lines from stdin.
+        fields: Vec<model::ModelFieldId>,
     },
     /// Generate a shell completions file
     #[clap(hide = true)]
@@ -937,6 +956,13 @@ fn real_main(init: init::InitToken) {
                 },
             )
         }
+        Command::Inspect { when, fields } => run(
+            init,
+            debug,
+            below_config,
+            Service::Off,
+            |_, below_config, logger, _| inspect(logger.clone(), below_config, when, fields),
+        ),
         Command::GenerateCompletions { shell, output } => {
             generate_completions(*shell, output.clone())
                 .unwrap_or_else(|_| panic!("Failed to generate completions for {:?}", shell));
@@ -944,6 +970,57 @@ fn real_main(init: init::InitToken) {
         }
     };
     exit(rc);
+}
+
+fn inspect(
+    logger: slog::Logger,
+    below_config: &BelowConfig,
+    when: &Option<i64>,
+    fields: &Vec<model::ModelFieldId>,
+) -> Result<()> {
+    let timestamp = match *when {
+        Some(when) if when > 0 => SystemTime::UNIX_EPOCH
+            .checked_add(Duration::from_secs(when as u64))
+            .expect("Invalid timestamp"),
+        Some(when) => SystemTime::now()
+            .checked_sub(Duration::from_secs((-when) as u64))
+            .expect("Invalid timestamp"),
+        None => SystemTime::now(),
+    };
+    let fields = if fields.is_empty() {
+        &std::io::stdin()
+            .lock()
+            .lines()
+            .map_while(|line| line.ok())
+            .filter_map(|line| model::ModelFieldId::from_str(&line).ok())
+            .collect()
+    } else {
+        fields
+    };
+    let mut store = store::LocalStore::new(logger.clone(), below_config.store_dir.clone());
+    let (timestamp, sample) = store
+        .get_sample_at_timestamp(timestamp, store::Direction::Reverse)?
+        .ok_or(anyhow!("No sample available"))?;
+
+    let model = model::Model::new(timestamp, &sample.sample, None);
+    let mut output = serde_json::Map::new();
+    for field in fields {
+        if let Some(v) = model.query(field) {
+            let name = field.to_string();
+            match v {
+                model::Field::I32(v) => output.insert(name, serde_json::json!(v)),
+                model::Field::I64(v) => output.insert(name, serde_json::json!(v)),
+                model::Field::U32(v) => output.insert(name, serde_json::json!(v)),
+                model::Field::U64(v) => output.insert(name, serde_json::json!(v)),
+                model::Field::F32(v) => output.insert(name, serde_json::json!(v)),
+                model::Field::F64(v) => output.insert(name, serde_json::json!(v)),
+                model::Field::Str(v) => output.insert(name, serde_json::json!(v)),
+                _ => None,
+            };
+        }
+    }
+    serde_json::to_writer(std::io::stdout(), &output)?;
+    Ok(())
 }
 
 fn replay(

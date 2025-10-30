@@ -35,7 +35,6 @@ use serde::Serialize;
 pub mod collector;
 pub mod cgroup;
 pub mod collector_plugin;
-#[cfg(test)]
 mod common_field_ids;
 pub mod network;
 pub mod process;
