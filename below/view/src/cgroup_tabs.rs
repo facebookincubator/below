@@ -302,6 +302,10 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::WorkingsetRestoreFile;
     use model::CgroupMemoryModelFieldId::Zswap;
     use model::CgroupMemoryModelFieldId::Zswapped;
+    use model::CgroupNetworkModelFieldId::RxBytesPerSec;
+    use model::CgroupNetworkModelFieldId::RxPacketsPerSec;
+    use model::CgroupNetworkModelFieldId::TxBytesPerSec;
+    use model::CgroupNetworkModelFieldId::TxPacketsPerSec;
     use model::CgroupPidsModelFieldId::TidsCurrent;
     use model::CgroupPressureModelFieldId::CpuFullPct;
     use model::CgroupPressureModelFieldId::CpuSomePct;
@@ -330,6 +334,7 @@ pub mod default_tabs {
     use model::SingleCgroupModelFieldId::Cpu;
     use model::SingleCgroupModelFieldId::Io;
     use model::SingleCgroupModelFieldId::Mem;
+    use model::SingleCgroupModelFieldId::Net;
     use model::SingleCgroupModelFieldId::Pids;
     use model::SingleCgroupModelFieldId::Pressure;
     use model::SingleCgroupModelFieldId::Props;
@@ -460,6 +465,16 @@ pub mod default_tabs {
             ViewItem::from_default(Props(CpusetCpusEffective)),
             ViewItem::from_default(Props(TidsMax)),
             ViewItem::from_default(Props(CgroupControllers)),
+        ]
+    }
+
+    pub fn get_network_items() -> Vec<ViewItem<SingleCgroupModelFieldId>> {
+        // Placeholder network items - will return "?" for anything without a value
+        vec![
+            ViewItem::from_default(Net(RxBytesPerSec)),
+            ViewItem::from_default(Net(TxBytesPerSec)),
+            ViewItem::from_default(Net(RxPacketsPerSec)),
+            ViewItem::from_default(Net(TxPacketsPerSec)),
         ]
     }
 }

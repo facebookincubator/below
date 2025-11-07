@@ -59,6 +59,7 @@ pub struct CgroupSample {
     pub cpu_max: Option<cgroupfs::CpuMax>,
     pub cgroup_controllers: Option<BTreeSet<String>>,
     pub cgroup_subtree_control: Option<BTreeSet<String>>,
+    pub network_stat: Option<cgroupfs::NetworkCounters>,
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]

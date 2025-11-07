@@ -67,6 +67,7 @@ impl HasRenderConfig for model::SingleCgroupModel {
             }
             Props(field_id) => model::CgroupProperties::get_render_config_builder(field_id),
             Pids(field_id) => model::CgroupPidsModel::get_render_config_builder(field_id),
+            Net(field_id) => model::CgroupNetworkModel::get_render_config_builder(field_id),
         }
     }
 }
@@ -113,12 +114,17 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
         use model::CgroupMemoryModelFieldId::WorkingsetRestoreFile;
         use model::CgroupMemoryModelFieldId::Zswap;
         use model::CgroupMemoryModelFieldId::Zswapped;
+        use model::CgroupNetworkModelFieldId::RxBytesPerSec;
+        use model::CgroupNetworkModelFieldId::RxPacketsPerSec;
+        use model::CgroupNetworkModelFieldId::TxBytesPerSec;
+        use model::CgroupNetworkModelFieldId::TxPacketsPerSec;
         use model::CgroupPressureModelFieldId::MemoryFullPct;
         use model::CgroupPressureModelFieldId::MemorySomePct;
         use model::SingleCgroupModelFieldId::Cpu;
         use model::SingleCgroupModelFieldId::Io;
         use model::SingleCgroupModelFieldId::Mem;
         use model::SingleCgroupModelFieldId::Name;
+        use model::SingleCgroupModelFieldId::Net;
         use model::SingleCgroupModelFieldId::Pressure;
 
         let rc = model::SingleCgroupModel::get_render_config_builder(field_id);
@@ -165,6 +171,10 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
             Mem(ThpCollapseAlloc) => rc.title("THP Collapse Alloc"),
             Pressure(MemorySomePct) => rc.title("Mem Some Pressure"),
             Pressure(MemoryFullPct) => rc.title("Mem Pressure"),
+            Net(RxBytesPerSec) => rc.title("Rx Bytes/s"),
+            Net(TxBytesPerSec) => rc.title("Tx Bytes/s"),
+            Net(RxPacketsPerSec) => rc.title("Rx Packets/s"),
+            Net(TxPacketsPerSec) => rc.title("Tx Packets/s"),
             _ => rc,
         }
         .get()
@@ -177,6 +187,7 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
         use model::CgroupCpuModelFieldId::*;
         use model::CgroupIoModelFieldId::*;
         use model::CgroupMemoryModelFieldId::*;
+        use model::CgroupNetworkModelFieldId::*;
         use model::CgroupPidsModelFieldId::*;
         use model::CgroupPressureModelFieldId::*;
         use model::CgroupStatModelFieldId::*;
@@ -292,6 +303,12 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
             // Looks like these represent child IO data. Not sure it's necessary to report this
             // as dump does not even pretend to form a hierarchy.
             IoDetails(_) => None,
+            Net(field_id) => match field_id {
+                RxBytesPerSec => Some(counter.unit("bytes_per_second")),
+                TxBytesPerSec => Some(counter.unit("bytes_per_second")),
+                RxPacketsPerSec => Some(counter.unit("count")),
+                TxPacketsPerSec => Some(counter.unit("count")),
+            },
         }
     }
 }
@@ -1665,6 +1682,19 @@ impl HasRenderConfig for model::CgroupProperties {
             CpusetMemsEffective => rc.title("Effective Mem Nodes"),
             CpuMaxUsec => rc.title("CPU Max").format(MaxOrDuration),
             CpuMaxPeriodUsec => rc.title("CPU Max Period").format(Duration),
+        }
+    }
+}
+
+impl HasRenderConfig for model::CgroupNetworkModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::CgroupNetworkModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            RxBytesPerSec => rc.title("Rx Bytes").suffix("/s").format(ReadableSize),
+            TxBytesPerSec => rc.title("Tx Bytes").suffix("/s").format(ReadableSize),
+            RxPacketsPerSec => rc.title("Rx Packets").suffix("/s"),
+            TxPacketsPerSec => rc.title("Tx Packets").suffix("/s"),
         }
     }
 }

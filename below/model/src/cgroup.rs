@@ -47,6 +47,9 @@ pub struct SingleCgroupModel {
     #[queriable(subquery)]
     #[queriable(preferred_name = mem_numa)]
     pub memory_numa_stat: Option<BTreeMap<u32, CgroupMemoryNumaModel>>,
+    #[queriable(subquery)]
+    #[queriable(preferred_name=net)]
+    pub network: Option<CgroupNetworkModel>,
 }
 
 /// A model that represents a cgroup subtree. Each instance is a node that uses
@@ -218,6 +221,8 @@ impl CgroupModel {
             })
         };
 
+        let network = Some(CgroupNetworkModel::new(sample, last));
+
         // recursively calculate view of children
         // `children` is optional, but we treat it the same as an empty map
         let empty = BTreeMap::new();
@@ -258,21 +263,27 @@ impl CgroupModel {
                 depth,
                 cgroup_stat,
                 memory_numa_stat,
+                network,
             },
             children,
             count: nr_descendants + 1,
             recreate_flag,
         }
+        .aggr_child_level_val_net()
     }
 
-    pub fn aggr_top_level_val(mut self) -> Self {
+    pub fn aggr_top_level_val(self) -> Self {
+        self.aggr_top_level_val_mem()
+    }
+    fn aggr_top_level_val_mem(mut self) -> Self {
         if let Some(memory) = &self.data.memory {
             // If root model has the value, return it directly
             if memory.total.is_some() {
                 return self;
             }
         }
-        // Manually aggregate specified fields from children
+
+        // Manually aggregate memory fields from children
         let mut aggregated_memory = CgroupMemoryModel::default();
         for child in &self.children {
             if let Some(child_memory) = &child.data.memory {
@@ -302,6 +313,49 @@ impl CgroupModel {
             memory.events_oom = aggregated_memory.events_oom;
             memory.events_oom_kill = aggregated_memory.events_oom_kill;
         }
+
+        self
+    }
+
+    pub fn aggr_child_level_val_net(mut self) -> Self {
+        if let Some(network) = &self.data.network {
+            // If current level has network data, return it directly
+            if network.rx_bytes_per_sec.is_some() {
+                return self;
+            }
+        }
+
+        // Manually aggregate network fields from children
+        let mut aggregated_network = CgroupNetworkModel::default();
+        for child in &self.children {
+            if let Some(child_network) = &child.data.network {
+                aggregated_network.rx_bytes_per_sec = opt_add(
+                    aggregated_network.rx_bytes_per_sec,
+                    child_network.rx_bytes_per_sec,
+                );
+                aggregated_network.tx_bytes_per_sec = opt_add(
+                    aggregated_network.tx_bytes_per_sec,
+                    child_network.tx_bytes_per_sec,
+                );
+                aggregated_network.rx_packets_per_sec = opt_add(
+                    aggregated_network.rx_packets_per_sec,
+                    child_network.rx_packets_per_sec,
+                );
+                aggregated_network.tx_packets_per_sec = opt_add(
+                    aggregated_network.tx_packets_per_sec,
+                    child_network.tx_packets_per_sec,
+                );
+            }
+        }
+
+        // Assign aggregated values to root network model
+        if let Some(network) = &mut self.data.network {
+            network.rx_bytes_per_sec = aggregated_network.rx_bytes_per_sec;
+            network.tx_bytes_per_sec = aggregated_network.tx_bytes_per_sec;
+            network.rx_packets_per_sec = aggregated_network.rx_packets_per_sec;
+            network.tx_packets_per_sec = aggregated_network.tx_packets_per_sec;
+        }
+
         self
     }
 
@@ -957,6 +1011,43 @@ impl CgroupProperties {
     }
 }
 
+#[::below_derive::queriable_derives]
+pub struct CgroupNetworkModel {
+    pub rx_bytes_per_sec: Option<f64>,
+    pub tx_bytes_per_sec: Option<f64>,
+    pub rx_packets_per_sec: Option<u64>,
+    pub tx_packets_per_sec: Option<u64>,
+}
+
+impl CgroupNetworkModel {
+    pub fn new(sample: &CgroupSample, last: Option<(&CgroupSample, Duration)>) -> Self {
+        if let Some((last_model, delta)) = last {
+            let delta_sec = delta.as_secs_f64();
+
+            if delta_sec > 0.0 {
+                // Helper to calculate rate for a field
+                let calc_rate = |get_field: fn(&cgroupfs::NetworkCounters) -> Option<u64>| {
+                    sample.network_stat.as_ref().and_then(|curr_net| {
+                        last_model.network_stat.as_ref().and_then(|prev_net| {
+                            get_field(curr_net)
+                                .zip(get_field(prev_net))
+                                .map(|(curr, prev)| (curr - prev) as f64 / delta_sec)
+                        })
+                    })
+                };
+
+                return Self {
+                    rx_bytes_per_sec: calc_rate(|n| n.rx_bytes),
+                    tx_bytes_per_sec: calc_rate(|n| n.tx_bytes),
+                    rx_packets_per_sec: calc_rate(|n| n.rx_packets).map(|v| v.round() as u64),
+                    tx_packets_per_sec: calc_rate(|n| n.tx_packets).map(|v| v.round() as u64),
+                };
+            }
+        }
+        Default::default()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -1047,11 +1138,11 @@ mod tests {
     fn test_aggr_top_level_val() {
         /*
         Summary: This test verifies the aggregation of top-level values in a CgroupModel, executed in the aggr_top_level_val() function.
-        The test creates two child cgroup models with memory values, then uses them to create a root cgroup model.
+        The test creates two child cgroup models with memory and network values, then uses them to create a root cgroup model.
         The root cgroup model is aggregated using the aggr_top_level_val() function. During aggregation, local events should not be aggregated.
         The test checks that the total memory is aggregated correctly and confirms that local events are not aggregated.
         */
-        // Create two children cgroup models with memory values
+        // Create two children cgroup models with memory and network values
         let child1 = CgroupModel {
             data: SingleCgroupModel {
                 name: "child1".to_string(),
@@ -1066,6 +1157,12 @@ mod tests {
                     events_local_low: Some(10),
                     events_local_high: Some(20),
                     ..Default::default()
+                }),
+                network: Some(CgroupNetworkModel {
+                    rx_bytes_per_sec: Some(100.0),
+                    tx_bytes_per_sec: Some(100.0),
+                    rx_packets_per_sec: Some(10),
+                    tx_packets_per_sec: Some(10),
                 }),
                 ..Default::default()
             },
@@ -1086,22 +1183,29 @@ mod tests {
                     events_local_high: Some(20),
                     ..Default::default()
                 }),
+                network: Some(CgroupNetworkModel {
+                    rx_bytes_per_sec: Some(100.0),
+                    tx_bytes_per_sec: Some(100.0),
+                    rx_packets_per_sec: Some(10),
+                    tx_packets_per_sec: Some(10),
+                }),
                 ..Default::default()
             },
             ..Default::default()
         };
-        // Create root cgroup model without pre-existing memory values
+        // Create root cgroup model without pre-existing memory and network values
         let mut root = CgroupModel {
             data: SingleCgroupModel {
                 name: "root".to_string(),
                 memory: Some(CgroupMemoryModel::default()),
+                network: Some(CgroupNetworkModel::default()),
                 ..Default::default()
             },
             children: vec![child1, child2].into_iter().collect(),
             ..Default::default()
         };
         // Aggregate top-level values
-        root = root.aggr_top_level_val();
+        root = root.aggr_top_level_val().aggr_child_level_val_net();
         // Check that the total memory is aggregated correctly
         assert_eq!(root.data.memory.as_ref().unwrap().total, Some(300));
         assert_eq!(root.data.memory.as_ref().unwrap().swap, Some(80));
@@ -1110,8 +1214,100 @@ mod tests {
         assert_eq!(root.data.memory.as_ref().unwrap().events_max, Some(6));
         assert_eq!(root.data.memory.as_ref().unwrap().events_oom, Some(8));
         assert_eq!(root.data.memory.as_ref().unwrap().events_oom_kill, Some(10));
+        assert_eq!(
+            root.data.network.as_ref().unwrap().rx_bytes_per_sec,
+            Some(200.0)
+        );
+        assert_eq!(
+            root.data.network.as_ref().unwrap().tx_bytes_per_sec,
+            Some(200.0)
+        );
+        assert_eq!(
+            root.data.network.as_ref().unwrap().rx_packets_per_sec,
+            Some(20)
+        );
+        assert_eq!(
+            root.data.network.as_ref().unwrap().tx_packets_per_sec,
+            Some(20)
+        );
         // Confirm local events are not aggregated
         assert_eq!(root.data.memory.as_ref().unwrap().events_local_low, None);
         assert_eq!(root.data.memory.as_ref().unwrap().events_local_high, None);
+    }
+
+    #[test]
+    fn test_aggr_child_level_val_net() {
+        /*
+        Summary: This test verifies the aggregation of child-level values in a CgroupModel, executed in the aggr_child_level_val_net() function.
+        The test creates nested cgroup models with network values, then uses them to create a root cgroup model.
+        The root cgroup model is aggregated using the aggr_child_level_val_net() function.
+        The test checks that the total network is aggregated correctly.
+        */
+        // Create nested cgroup models with values.
+        let nested_child = CgroupModel {
+            data: SingleCgroupModel {
+                name: "nested_child".to_string(),
+                network: Some(CgroupNetworkModel {
+                    rx_bytes_per_sec: Some(100.0),
+                    tx_bytes_per_sec: Some(100.0),
+                    rx_packets_per_sec: Some(10),
+                    tx_packets_per_sec: Some(10),
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let nested_child2 = CgroupModel {
+            data: SingleCgroupModel {
+                name: "nested_child2".to_string(),
+                network: Some(CgroupNetworkModel {
+                    rx_bytes_per_sec: Some(100.0),
+                    tx_bytes_per_sec: Some(100.0),
+                    rx_packets_per_sec: Some(10),
+                    tx_packets_per_sec: Some(10),
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut child = CgroupModel {
+            data: SingleCgroupModel {
+                name: "child".to_string(),
+                network: Some(CgroupNetworkModel::default()),
+                ..Default::default()
+            },
+            children: vec![nested_child, nested_child2].into_iter().collect(),
+            ..Default::default()
+        };
+        child = child.aggr_child_level_val_net();
+        // Create root cgroup model without pre-existing network values
+        let mut root = CgroupModel {
+            data: SingleCgroupModel {
+                name: "root".to_string(),
+                network: Some(CgroupNetworkModel::default()),
+                ..Default::default()
+            },
+            children: vec![child].into_iter().collect(),
+            ..Default::default()
+        };
+        // Aggregate top-level values
+        root = root.aggr_top_level_val().aggr_child_level_val_net();
+        // Check that the total network is aggregated correctly
+        assert_eq!(
+            root.data.network.as_ref().unwrap().rx_bytes_per_sec,
+            Some(200.0)
+        );
+        assert_eq!(
+            root.data.network.as_ref().unwrap().tx_bytes_per_sec,
+            Some(200.0)
+        );
+        assert_eq!(
+            root.data.network.as_ref().unwrap().rx_packets_per_sec,
+            Some(20)
+        );
+        assert_eq!(
+            root.data.network.as_ref().unwrap().tx_packets_per_sec,
+            Some(20)
+        );
     }
 }

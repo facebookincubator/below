@@ -56,6 +56,8 @@ pub struct ViewRc {
     // Show process view as tree instead of list by default.
     // When not set, defaults to true (tree view).
     pub process_view_default_tree: Option<bool>,
+    // Shows network tab for open source, by default is false
+    pub enable_cgroup_network_tab: Option<bool>,
 }
 
 impl ViewRc {

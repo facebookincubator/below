@@ -453,6 +453,7 @@ fn collect_cgroup_sample(
         cpu_max: wrap(reader.read_cpu_max())?,
         cgroup_controllers: wrap(reader.read_cgroup_controllers())?,
         cgroup_subtree_control: wrap(reader.read_cgroup_subtree_control())?,
+        network_stat: wrap(reader.read_network_counters())?,
     })
 }
 

@@ -145,6 +145,7 @@ impl StateCommon for CgroupState {
         sort_tags.insert("I/O".into(), default_tabs::get_io_items());
         sort_tags.insert("Pressure".into(), default_tabs::get_pressure_items());
         sort_tags.insert("Properties".into(), default_tabs::get_properties_items());
+        sort_tags.insert("Network".into(), default_tabs::get_network_items());
         Self {
             collapsed_cgroups: Arc::new(Mutex::new(HashSet::new())),
             current_selected_cgroup: "<root>".into(),
@@ -266,7 +267,7 @@ impl CgroupView {
             width: user_data.viewrc.cgroup_name_width,
             ..Default::default()
         };
-        let tabs = vec![
+        let mut tabs = vec![
             "General".into(),
             "CPU".into(),
             "Mem".into(),
@@ -275,6 +276,19 @@ impl CgroupView {
             "Properties".into(),
         ];
         let mut tabs_map: HashMap<String, CgroupView> = HashMap::new();
+        if user_data
+            .viewrc
+            .enable_cgroup_network_tab
+            .unwrap_or(cfg!(fbcode_build))
+        {
+            tabs.push("Network".into());
+            tabs_map.insert(
+                "Network".into(),
+                CgroupView {
+                    tab: CgroupTab::new(default_tabs::get_network_items(), &cgroup_name_config),
+                },
+            );
+        }
         tabs_map.insert(
             "General".into(),
             CgroupView {
