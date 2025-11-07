@@ -40,7 +40,10 @@ pub use types::*;
 #[cfg(test)]
 mod test;
 
+use common::open_source_shim;
 use common::util;
+
+open_source_shim!(pub);
 
 pub const DEFAULT_CG_ROOT: &str = "/sys/fs/cgroup";
 

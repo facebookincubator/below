@@ -192,3 +192,11 @@ pub struct Cpuset {
 pub struct MemNodes {
     pub nodes: BTreeSet<u32>,
 }
+
+#[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub struct NetworkCounters {
+    pub rx_bytes: Option<u64>,
+    pub tx_bytes: Option<u64>,
+    pub rx_packets: Option<u64>,
+    pub tx_packets: Option<u64>,
+}
