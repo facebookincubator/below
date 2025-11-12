@@ -28,7 +28,7 @@ common = { package = "below-common", version = "0.11.0", path = "common" }
 config = { package = "below-config", version = "0.11.0", path = "config" }
 cursive = { version = "0.21.1", features = ["crossterm-backend"], default-features = false }
 dump = { package = "below-dump", version = "0.11.0", path = "dump" }
-indicatif = { version = "0.17.6", features = ["futures", "improved_unicode", "rayon", "tokio"] }
+indicatif = { version = "0.18.3", features = ["futures", "improved_unicode", "rayon", "tokio"] }
 libbpf-rs = { version = "=0.26.0-beta.0", default-features = false }
 libc = "0.2.139"
 model = { package = "below-model", version = "0.11.0", path = "model" }
