@@ -151,3 +151,165 @@ fn test_config_partial_load() {
         "/var/log/below/store"
     );
 }
+
+#[test]
+fn test_config_valid_stack_trace_filter_single() {
+    let tempdir = TempDir::with_prefix("below_config_stack.").expect("Failed to create temp dir");
+    let path = tempdir.path().join("below.config");
+
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(&path)
+        .expect("Fail to open below.conf in tempdir");
+    let config_str = r#"
+        process_stack_trace_filter = "Uninterruptible"
+    "#;
+    file.write_all(config_str.as_bytes())
+        .expect("Failed to write temp conf file");
+    file.flush().expect("Failed to flush");
+
+    let below_config = BelowConfig::load(&path).expect("Should load valid config");
+    assert_eq!(
+        below_config.process_stack_trace_filter,
+        ProcessStackTraceFilter::Uninterruptible
+    );
+}
+
+#[test]
+fn test_config_valid_stack_trace_filter_multiple() {
+    let tempdir = TempDir::with_prefix("below_config_stack.").expect("Failed to create temp dir");
+    let path = tempdir.path().join("below.config");
+
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(&path)
+        .expect("Fail to open below.conf in tempdir");
+    let config_str = r#"
+        enable_process_stack_traces = true
+        process_stack_trace_filter = "UninterruptibleAndRunning"
+    "#;
+    file.write_all(config_str.as_bytes())
+        .expect("Failed to write temp conf file");
+    file.flush().expect("Failed to flush");
+
+    let below_config = BelowConfig::load(&path).expect("Should load valid config");
+    assert_eq!(
+        below_config.process_stack_trace_filter,
+        ProcessStackTraceFilter::UninterruptibleAndRunning
+    );
+}
+
+#[test]
+fn test_config_valid_stack_trace_filter_all() {
+    let tempdir = TempDir::with_prefix("below_config_stack.").expect("Failed to create temp dir");
+    let path = tempdir.path().join("below.config");
+
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(&path)
+        .expect("Fail to open below.conf in tempdir");
+    let config_str = r#"
+        process_stack_trace_filter = "All"
+    "#;
+    file.write_all(config_str.as_bytes())
+        .expect("Failed to write temp conf file");
+    file.flush().expect("Failed to flush");
+
+    let below_config = BelowConfig::load(&path).expect("Should load valid config");
+    assert_eq!(
+        below_config.process_stack_trace_filter,
+        ProcessStackTraceFilter::All
+    );
+}
+
+#[test]
+fn test_config_valid_stack_trace_filter_none() {
+    let tempdir = TempDir::with_prefix("below_config_stack.").expect("Failed to create temp dir");
+    let path = tempdir.path().join("below.config");
+
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(&path)
+        .expect("Fail to open below.conf in tempdir");
+    let config_str = r#"
+        process_stack_trace_filter = "None"
+    "#;
+    file.write_all(config_str.as_bytes())
+        .expect("Failed to write temp conf file");
+    file.flush().expect("Failed to flush");
+
+    let below_config = BelowConfig::load(&path).expect("Should load valid config");
+    assert_eq!(
+        below_config.process_stack_trace_filter,
+        ProcessStackTraceFilter::None
+    );
+}
+
+#[test]
+fn test_config_invalid_stack_trace_filter_typo() {
+    let tempdir = TempDir::with_prefix("below_config_stack.").expect("Failed to create temp dir");
+    let path = tempdir.path().join("below.config");
+
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(&path)
+        .expect("Fail to open below.conf in tempdir");
+    let config_str = r#"
+        process_stack_trace_filter = "Untiterruptible"
+    "#;
+    file.write_all(config_str.as_bytes())
+        .expect("Failed to write temp conf file");
+    file.flush().expect("Failed to flush");
+
+    match BelowConfig::load(&path) {
+        Ok(_) => panic!("Should not load config with invalid filter value"),
+        Err(e) => {
+            let err_msg = format!("{}", e);
+            assert!(err_msg.contains("unknown variant"));
+            assert!(err_msg.contains("Untiterruptible"));
+        }
+    }
+}
+
+#[test]
+fn test_config_invalid_stack_trace_filter_empty_value() {
+    let tempdir = TempDir::with_prefix("below_config_stack.").expect("Failed to create temp dir");
+    let path = tempdir.path().join("below.config");
+
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(&path)
+        .expect("Fail to open below.conf in tempdir");
+    let config_str = r#"
+        process_stack_trace_filter = ""
+    "#;
+    file.write_all(config_str.as_bytes())
+        .expect("Failed to write temp conf file");
+    file.flush().expect("Failed to flush");
+
+    match BelowConfig::load(&path) {
+        Ok(_) => panic!("Should not load config with empty filter value"),
+        Err(e) => {
+            let err_msg = format!("{}", e);
+            assert!(err_msg.contains("unknown variant"));
+        }
+    }
+}

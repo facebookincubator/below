@@ -48,6 +48,47 @@ use threadpool::ThreadPool;
 mod types;
 pub use types::*;
 
+/// Filter for which process states to capture stack traces
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub enum ProcessStackTraceFilter {
+    /// Do not capture stack traces for any process
+    None,
+    /// Capture stack traces only for processes in uninterruptible sleep (D state)
+    Uninterruptible,
+    /// Capture stack traces for processes in uninterruptible sleep (D) or running (R) states
+    UninterruptibleAndRunning,
+    /// Capture stack traces for all processes regardless of state
+    All,
+}
+
+impl ProcessStackTraceFilter {
+    /// Check if this filter should capture stack traces for the given PidState
+    pub fn should_capture(&self, state: &PidState) -> bool {
+        match self {
+            Self::Uninterruptible => matches!(state, PidState::UninterruptibleSleep),
+            Self::UninterruptibleAndRunning => {
+                matches!(state, PidState::UninterruptibleSleep | PidState::Running)
+            }
+            Self::None => false,
+            Self::All => true,
+        }
+    }
+}
+
+impl Default for ProcessStackTraceFilter {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
 #[cfg(test)]
 mod test;
 
@@ -905,7 +946,7 @@ impl ProcReader {
         Some(result)
     }
 
-    pub fn read_all_pids(&self, enable_stack_traces: bool) -> Result<PidMap> {
+    pub fn read_all_pids(&self, stack_trace_filter: &ProcessStackTraceFilter) -> Result<PidMap> {
         let mut pidmap: PidMap = Default::default();
         for entry in
             std::fs::read_dir(&self.path).map_err(|e| Error::IoError(self.path.clone(), e))?
@@ -996,14 +1037,19 @@ impl ProcReader {
                 pidinfo.exe_path = Some(s);
             }
 
-            // Read kernel stack trace ONLY for processes in D state (UninterruptibleSleep)
-            // This provides zero overhead on healthy systems with no stuck processes
-            if enable_stack_traces
-                && let Some(ref state) = pidinfo.stat.state
-                && matches!(state, PidState::UninterruptibleSleep)
-                && let Ok(stack) = self.read_pid_stack_from_path(entry.path())
+            // Read kernel stack trace based on configured filter
+            // This provides zero overhead on healthy systems when no matching processes exist
+            if let Some(ref state) = pidinfo.stat.state
+                && stack_trace_filter.should_capture(state)
             {
-                pidinfo.stack = Some(stack)
+                match self.read_pid_stack_from_path(entry.path()) {
+                    Ok(stack) => {
+                        pidinfo.stack = Some(stack);
+                    }
+                    Err(_) => {
+                        // Silently skip on error (process may have exited, or permission denied)
+                    }
+                }
             }
 
             pidmap.insert(pid, pidinfo);

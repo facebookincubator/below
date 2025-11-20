@@ -21,6 +21,7 @@ use std::sync::OnceLock;
 
 use anyhow::Result;
 use anyhow::bail;
+pub use procfs::ProcessStackTraceFilter;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -50,7 +51,7 @@ pub struct BelowConfig {
     pub enable_ksm_stats: bool,
     pub enable_resctrl_stats: bool,
     pub enable_tc_stats: bool,
-    pub enable_process_stack_traces: bool,
+    pub process_stack_trace_filter: ProcessStackTraceFilter,
     pub mlock_record: bool,
 }
 
@@ -72,7 +73,7 @@ impl Default for BelowConfig {
             enable_ksm_stats: false,
             enable_resctrl_stats: false,
             enable_tc_stats: false,
-            enable_process_stack_traces: false,
+            process_stack_trace_filter: Default::default(),
             mlock_record: false,
         }
     }

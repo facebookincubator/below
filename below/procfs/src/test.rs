@@ -1192,7 +1192,9 @@ nonvoluntary_ctxt_switches:	37733";
     procfs.create_pid_file_with_content(1025, "cmdline", cmdline);
     let reader = procfs.get_reader();
 
-    let pidmap = reader.read_all_pids(false).expect("Failed to get all pids");
+    let pidmap = reader
+        .read_all_pids(&Default::default())
+        .expect("Failed to get all pids");
 
     assert_eq!(pidmap[&1024].stat.comm, Some("bash".to_string()));
     assert_eq!(
