@@ -368,6 +368,7 @@ pub const COMMON_MODEL_FIELD_IDS: &[&str] = &[
     "process.processes.<key>.cpu.processor",
     "process.processes.<key>.cmdline",
     "process.processes.<key>.exe_path",
+    "process.processes.<key>.stack",
     "network.interfaces.<key>.interface",
     "network.interfaces.<key>.rx_bytes_per_sec",
     "network.interfaces.<key>.tx_bytes_per_sec",

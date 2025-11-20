@@ -69,6 +69,7 @@ pub enum Field {
     Str(String),
     PidState(procfs::PidState),
     VecU32(Vec<u32>),
+    VecString(Vec<String>),
     StrSet(BTreeSet<String>),
     StrU64Map(BTreeMap<String, u64>),
     Cpuset(cgroupfs::Cpuset),
@@ -181,6 +182,12 @@ impl From<Vec<u32>> for Field {
     }
 }
 
+impl From<Vec<String>> for Field {
+    fn from(v: Vec<String>) -> Self {
+        Field::VecString(v)
+    }
+}
+
 impl From<BTreeSet<String>> for Field {
     fn from(v: BTreeSet<String>) -> Self {
         Field::StrSet(v)
@@ -287,6 +294,7 @@ impl fmt::Display for Field {
             Field::Str(v) => v.fmt(f),
             Field::PidState(v) => v.fmt(f),
             Field::VecU32(v) => f.write_fmt(format_args!("{:?}", v)),
+            Field::VecString(v) => f.write_fmt(format_args!("{}", v.join("\n"))),
             Field::StrSet(v) => f.write_fmt(format_args!(
                 "{}",
                 v.iter()

@@ -77,6 +77,7 @@ pub struct SingleProcessModel {
     pub cpu: Option<ProcessCpuModel>,
     pub cmdline: Option<String>,
     pub exe_path: Option<String>,
+    pub stack: Option<Vec<String>>,
 }
 
 impl SingleProcessModel {
@@ -106,6 +107,12 @@ impl SingleProcessModel {
                 Some("?".into())
             },
             exe_path: sample.exe_path.clone(),
+            stack: sample.stack.as_ref().map(|s| {
+                s.frames
+                    .iter()
+                    .map(|frame| frame.function.clone())
+                    .collect()
+            }),
         }
     }
 
@@ -126,6 +133,7 @@ impl SingleProcessModel {
             cpu: fold_optionals!(&left.cpu, &right.cpu, ProcessCpuModel::fold),
             cmdline: None,
             exe_path: None,
+            stack: None, // Stack doesn't make sense when folding processes
         }
     }
 }
@@ -281,5 +289,116 @@ mod test {
             model.query(&ProcessModelFieldId::from_str("processes.1.comm").unwrap()),
             Some(Field::Str("systemd".to_owned()))
         );
+    }
+
+    #[test]
+    fn test_stack_transformation_with_stack() {
+        use procfs::PidStack;
+        use procfs::StackFrame;
+
+        // Create a PidInfo with stack traces
+        let mut pidinfo = procfs::PidInfo::default();
+        pidinfo.stat.pid = Some(12345);
+        pidinfo.stat.comm = Some("test_process".to_string());
+        pidinfo.stack = Some(PidStack {
+            frames: vec![
+                StackFrame {
+                    function: "io_schedule".to_string(),
+                    offset: Some(0x12),
+                    size: Some(0x40),
+                },
+                StackFrame {
+                    function: "wait_on_page_bit".to_string(),
+                    offset: Some(0x7a),
+                    size: Some(0xa0),
+                },
+                StackFrame {
+                    function: "generic_file_read_iter".to_string(),
+                    offset: Some(0x2b4),
+                    size: Some(0x410),
+                },
+            ],
+        });
+
+        // Transform to SingleProcessModel
+        let model = SingleProcessModel::new(&pidinfo, None);
+
+        // Verify stack was transformed correctly
+        assert!(model.stack.is_some());
+        let stack = model.stack.unwrap();
+        assert_eq!(stack.len(), 3);
+        assert_eq!(stack[0], "io_schedule");
+        assert_eq!(stack[1], "wait_on_page_bit");
+        assert_eq!(stack[2], "generic_file_read_iter");
+    }
+
+    #[test]
+    fn test_stack_transformation_without_stack() {
+        // Create a PidInfo without stack traces
+        let mut pidinfo = procfs::PidInfo::default();
+        pidinfo.stat.pid = Some(12345);
+        pidinfo.stat.comm = Some("test_process".to_string());
+        pidinfo.stack = None;
+
+        // Transform to SingleProcessModel
+        let model = SingleProcessModel::new(&pidinfo, None);
+
+        // Verify stack is None
+        assert!(model.stack.is_none());
+    }
+
+    #[test]
+    fn test_stack_transformation_empty_stack() {
+        use procfs::PidStack;
+
+        // Create a PidInfo with empty stack
+        let mut pidinfo = procfs::PidInfo::default();
+        pidinfo.stat.pid = Some(12345);
+        pidinfo.stat.comm = Some("test_process".to_string());
+        pidinfo.stack = Some(PidStack { frames: vec![] });
+
+        // Transform to SingleProcessModel
+        let model = SingleProcessModel::new(&pidinfo, None);
+
+        // Verify stack exists but is empty
+        assert!(model.stack.is_some());
+        let stack = model.stack.unwrap();
+        assert_eq!(stack.len(), 0);
+    }
+
+    #[test]
+    fn test_fold_sets_stack_to_none() {
+        use procfs::PidStack;
+        use procfs::StackFrame;
+
+        // Create two PidInfo with stacks
+        let mut left_pidinfo = procfs::PidInfo::default();
+        left_pidinfo.stat.pid = Some(100);
+        left_pidinfo.stack = Some(PidStack {
+            frames: vec![StackFrame {
+                function: "left_function".to_string(),
+                offset: None,
+                size: None,
+            }],
+        });
+
+        let mut right_pidinfo = procfs::PidInfo::default();
+        right_pidinfo.stat.pid = Some(200);
+        right_pidinfo.stack = Some(PidStack {
+            frames: vec![StackFrame {
+                function: "right_function".to_string(),
+                offset: None,
+                size: None,
+            }],
+        });
+
+        let left_model = SingleProcessModel::new(&left_pidinfo, None);
+        let right_model = SingleProcessModel::new(&right_pidinfo, None);
+
+        // Fold the models
+        let folded = SingleProcessModel::fold(&left_model, &right_model);
+
+        // Stack should be None after folding
+        assert!(folded.stack.is_none());
     }
 }

@@ -948,6 +948,7 @@ impl HasRenderConfig for model::SingleProcessModel {
             Cpu(field_id) => model::ProcessCpuModel::get_render_config_builder(field_id),
             Cmdline => rc.title("Cmdline").width(50),
             ExePath => rc.title("Exe Path"),
+            Stack => rc.title("Stack").width(50),
         }
     }
 }
@@ -1032,6 +1033,8 @@ impl HasRenderConfigForDump for model::SingleProcessModel {
             Cmdline => None,
             // OpenMetrics does not support strings
             ExePath => None,
+            // OpenMetrics does not support strings (stack traces are Vec<String>)
+            Stack => None,
         }
     }
 }
