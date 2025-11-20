@@ -399,6 +399,18 @@ pub struct PidIo {
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct StackFrame {
+    pub function: String,
+    pub offset: Option<u64>,
+    pub size: Option<u64>,
+}
+
+#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct PidStack {
+    pub frames: Vec<StackFrame>,
+}
+
+#[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct PidInfo {
     pub stat: PidStat,
     pub io: PidIo,
@@ -410,6 +422,7 @@ pub struct PidInfo {
     // This field was previously called "mem"
     #[serde(alias = "mem")]
     pub status: PidStatus,
+    pub stack: Option<PidStack>,
 }
 
 pub type PidMap = BTreeMap<i32, PidInfo>;

@@ -33,6 +33,7 @@ pub struct CollectorOptions {
     pub enable_ksm_stats: bool,
     pub enable_resctrl_stats: bool,
     pub enable_tc_stats: bool,
+    pub enable_process_stack_traces: bool,
     pub btrfs_samples: u64,
     pub btrfs_min_pct: f64,
     pub cgroup_re: Option<Regex>,
@@ -54,6 +55,7 @@ impl Default for CollectorOptions {
             enable_ksm_stats: false,
             enable_resctrl_stats: false,
             enable_tc_stats: false,
+            enable_process_stack_traces: false,
             btrfs_samples: btrfs::DEFAULT_SAMPLES,
             btrfs_min_pct: btrfs::DEFAULT_MIN_PCT,
             cgroup_re: None,
@@ -207,7 +209,10 @@ fn collect_sample(
             logger,
             &options.cgroup_re,
         )?,
-        processes: merge_procfs_and_exit_data(reader.read_all_pids()?, exit_pidmap),
+        processes: merge_procfs_and_exit_data(
+            reader.read_all_pids(options.enable_process_stack_traces)?,
+            exit_pidmap,
+        ),
         netstats: match procfs::NetReader::new(logger.clone()).and_then(|v| v.read_netstat()) {
             Ok(ns) => ns,
             Err(e) => {

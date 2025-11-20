@@ -1167,6 +1167,7 @@ fn record(
             enable_ksm_stats: below_config.enable_ksm_stats,
             enable_resctrl_stats: below_config.enable_resctrl_stats,
             enable_tc_stats: below_config.enable_tc_stats,
+            enable_process_stack_traces: below_config.enable_process_stack_traces,
             btrfs_samples: below_config.btrfs_samples,
             btrfs_min_pct: below_config.btrfs_min_pct,
             cgroup_re,

@@ -1192,7 +1192,7 @@ nonvoluntary_ctxt_switches:	37733";
     procfs.create_pid_file_with_content(1025, "cmdline", cmdline);
     let reader = procfs.get_reader();
 
-    let pidmap = reader.read_all_pids().expect("Failed to get all pids");
+    let pidmap = reader.read_all_pids(false).expect("Failed to get all pids");
 
     assert_eq!(pidmap[&1024].stat.comm, Some("bash".to_string()));
     assert_eq!(
@@ -1782,4 +1782,177 @@ fn test_read_sysctl() {
     let reader = procfs.get_reader();
     let sysctl = reader.read_sysctl();
     assert_eq!(sysctl.kernel_hung_task_detect_count, Some(54));
+}
+
+#[test]
+fn test_parse_stack_frame_with_offset_and_size() {
+    let reader = ProcReader::new();
+
+    // Test standard format with offset and size
+    let frame = reader
+        .parse_stack_frame("[<0>] proc_pid_stack+0x94/0x110")
+        .expect("Failed to parse stack frame");
+
+    assert_eq!(frame.function, "proc_pid_stack");
+    assert_eq!(frame.offset, Some(0x94));
+    assert_eq!(frame.size, Some(0x110));
+}
+
+#[test]
+fn test_parse_stack_frame_function_only() {
+    let reader = ProcReader::new();
+
+    // Test function name only (no offset/size)
+    let frame = reader
+        .parse_stack_frame("[<0>] schedule")
+        .expect("Failed to parse stack frame");
+
+    assert_eq!(frame.function, "schedule");
+    assert_eq!(frame.offset, None);
+    assert_eq!(frame.size, None);
+}
+
+#[test]
+fn test_parse_stack_frame_with_offset_only() {
+    let reader = ProcReader::new();
+
+    // Test with offset but no size
+    let frame = reader
+        .parse_stack_frame("[<0>] __schedule+0x2e0")
+        .expect("Failed to parse stack frame");
+
+    assert_eq!(frame.function, "__schedule");
+    assert_eq!(frame.offset, Some(0x2e0));
+    assert_eq!(frame.size, None);
+}
+
+#[test]
+fn test_parse_stack_frame_without_prefix() {
+    let reader = ProcReader::new();
+
+    // Test older kernel format without "[<0>] " prefix
+    let frame = reader
+        .parse_stack_frame("schedule_timeout+0x85/0x130")
+        .expect("Failed to parse stack frame");
+
+    assert_eq!(frame.function, "schedule_timeout");
+    assert_eq!(frame.offset, Some(0x85));
+    assert_eq!(frame.size, Some(0x130));
+}
+
+#[test]
+fn test_parse_stack_frame_without_prefix_no_offset() {
+    let reader = ProcReader::new();
+
+    // Test older kernel format without "[<0>] " prefix and no offset/size
+    let frame = reader
+        .parse_stack_frame("schedule")
+        .expect("Failed to parse stack frame");
+
+    assert_eq!(frame.function, "schedule");
+    assert_eq!(frame.offset, None);
+    assert_eq!(frame.size, None);
+}
+
+#[test]
+fn test_parse_stack_frame_with_llvm_suffix() {
+    let reader = ProcReader::new();
+
+    // Test function names with LLVM suffixes (common in production kernels)
+    let frame = reader
+        .parse_stack_frame("[<0>] proc_single_show.llvm.11776516008101009653+0x49/0x90")
+        .expect("Failed to parse stack frame");
+
+    assert_eq!(frame.function, "proc_single_show.llvm.11776516008101009653");
+    assert_eq!(frame.offset, Some(0x49));
+    assert_eq!(frame.size, Some(0x90));
+}
+
+#[test]
+fn test_parse_stack_frame_empty_line() {
+    let reader = ProcReader::new();
+
+    // Test empty line handling
+    let frame = reader.parse_stack_frame("");
+    assert!(frame.is_none());
+
+    // Test whitespace-only line
+    let frame = reader.parse_stack_frame("   ");
+    assert!(frame.is_none());
+}
+
+#[test]
+fn test_parse_stack_frame_malformed() {
+    let reader = ProcReader::new();
+
+    // Malformed input with spaces should return None
+    let frame = reader.parse_stack_frame("invalid format");
+    assert!(frame.is_none());
+}
+
+#[test]
+fn test_parse_stack_frame_valid_simple_function() {
+    let reader = ProcReader::new();
+
+    // Valid simple function name without offset/size
+    let frame = reader
+        .parse_stack_frame("do_syscall_64")
+        .expect("Failed to parse stack frame");
+
+    assert_eq!(frame.function, "do_syscall_64");
+    assert_eq!(frame.offset, None);
+    assert_eq!(frame.size, None);
+}
+
+#[test]
+fn test_read_pid_stack() {
+    let procfs = TestProcfs::new();
+    let pid = 1234;
+
+    // Create a mock /proc/<pid>/stack file
+    let stack_content = b"[<0>] io_schedule+0x12/0x40
+[<0>] wait_on_page_bit+0x7a/0xa0
+[<0>] generic_file_read_iter+0x2b4/0x410
+[<0>] ext4_file_read_iter+0x42/0x80
+[<0>] __vfs_read+0xe2/0x1a0
+[<0>] vfs_read+0x96/0x130
+[<0>] ksys_read+0x5f/0xe0
+[<0>] do_syscall_64+0x5b/0x1a0
+[<0>] entry_SYSCALL_64_after_hwframe+0x44/0xa9
+";
+
+    procfs.create_pid_file_with_content(pid, "stack", stack_content);
+
+    let reader = procfs.get_reader();
+    let stack = reader
+        .read_pid_stack(pid)
+        .expect("Failed to read pid stack");
+
+    assert_eq!(stack.frames.len(), 9);
+
+    // Verify first frame
+    assert_eq!(stack.frames[0].function, "io_schedule");
+    assert_eq!(stack.frames[0].offset, Some(0x12));
+    assert_eq!(stack.frames[0].size, Some(0x40));
+
+    // Verify last frame
+    assert_eq!(stack.frames[8].function, "entry_SYSCALL_64_after_hwframe");
+    assert_eq!(stack.frames[8].offset, Some(0x44));
+    assert_eq!(stack.frames[8].size, Some(0xa9));
+}
+
+#[test]
+fn test_read_pid_stack_empty() {
+    let procfs = TestProcfs::new();
+    let pid = 1234;
+
+    // Create an empty stack file (some processes might have this)
+    procfs.create_pid_file_with_content(pid, "stack", b"");
+
+    let reader = procfs.get_reader();
+    let stack = reader
+        .read_pid_stack(pid)
+        .expect("Failed to read pid stack");
+
+    assert_eq!(stack.frames.len(), 0);
 }

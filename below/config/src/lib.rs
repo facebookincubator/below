@@ -50,6 +50,7 @@ pub struct BelowConfig {
     pub enable_ksm_stats: bool,
     pub enable_resctrl_stats: bool,
     pub enable_tc_stats: bool,
+    pub enable_process_stack_traces: bool,
     pub mlock_record: bool,
 }
 
@@ -71,6 +72,7 @@ impl Default for BelowConfig {
             enable_ksm_stats: false,
             enable_resctrl_stats: false,
             enable_tc_stats: false,
+            enable_process_stack_traces: false,
             mlock_record: false,
         }
     }

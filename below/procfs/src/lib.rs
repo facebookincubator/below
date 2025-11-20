@@ -31,6 +31,9 @@ use std::time::Duration;
 
 use lazy_static::lazy_static;
 use libc::CLOCK_BOOTTIME;
+use libc::EACCES;
+use libc::ENOENT;
+use libc::ESRCH;
 use libc::clock_gettime;
 use libc::timespec;
 use nix::sys;
@@ -787,6 +790,108 @@ impl ProcReader {
         self.read_pid_exe_path_from_path(self.path.join(pid.to_string()))
     }
 
+    /// Parse a single stack frame line from /proc/<pid>/stack
+    ///
+    /// Formats handled:
+    /// - "[<0>] proc_pid_stack+0x94/0x110"
+    /// - "[<0>] schedule"
+    /// - "schedule_timeout+0x85/0x130" (older kernels without prefix)
+    fn parse_stack_frame(&self, line: &str) -> Option<StackFrame> {
+        let line = line.trim();
+        if line.is_empty() {
+            return None;
+        }
+
+        // Remove "[<0>] " prefix if present
+        let content = if let Some(stripped) = line.strip_prefix("[<") {
+            // Find the closing ">]" and extract what comes after
+            if let Some((_before, after)) = stripped.split_once(">]") {
+                after.trim()
+            } else {
+                // Malformed line: starts with "[<" but missing ">]"
+                return None;
+            }
+        } else {
+            line
+        };
+
+        if content.is_empty() {
+            return None;
+        }
+
+        // Parse function name and optional offset/size
+        // Format: "function_name+0xOFFSET/0xSIZE" or just "function_name"
+        let (function, offset, size) = if let Some((function, rest)) = content.split_once('+') {
+            let function = function.to_string();
+
+            // Validate function name doesn't contain whitespace
+            if function.contains(char::is_whitespace) {
+                return None;
+            }
+
+            // Parse offset and size: "0xOFFSET/0xSIZE"
+            if let Some((offset_str, size_str)) = rest.split_once('/') {
+                let offset = if let Some(hex) = offset_str.strip_prefix("0x") {
+                    u64::from_str_radix(hex, 16).ok()
+                } else {
+                    None
+                };
+
+                let size = if let Some(hex) = size_str.strip_prefix("0x") {
+                    u64::from_str_radix(hex, 16).ok()
+                } else {
+                    None
+                };
+
+                (function, offset, size)
+            } else {
+                // Only offset, no size
+                let offset = if let Some(hex) = rest.strip_prefix("0x") {
+                    u64::from_str_radix(hex, 16).ok()
+                } else {
+                    None
+                };
+                (function, offset, None)
+            }
+        } else {
+            // No offset or size, just function name
+            let function = content.to_string();
+
+            // Validate function name doesn't contain whitespace
+            if function.contains(char::is_whitespace) {
+                return None;
+            }
+
+            (function, None, None)
+        };
+
+        Some(StackFrame {
+            function,
+            offset,
+            size,
+        })
+    }
+
+    /// Read kernel stack trace from /proc/<pid>/stack
+    /// Returns PidStack containing parsed stack frames
+    fn read_pid_stack_from_path<P: AsRef<Path>>(&self, path: P) -> Result<PidStack> {
+        let stack_path = path.as_ref().join("stack");
+        let content = self.read_file_to_str(&stack_path)?;
+        let mut frames = Vec::new();
+
+        for line in content.lines() {
+            if let Some(frame) = self.parse_stack_frame(line) {
+                frames.push(frame);
+            }
+        }
+
+        Ok(PidStack { frames })
+    }
+
+    pub fn read_pid_stack(&self, pid: u32) -> Result<PidStack> {
+        self.read_pid_stack_from_path(self.path.join(pid.to_string()))
+    }
+
     fn ascii_digits_to_i32(digits: &[u8]) -> Option<i32> {
         let mut result = 0i32;
         for digit in digits {
@@ -800,7 +905,7 @@ impl ProcReader {
         Some(result)
     }
 
-    pub fn read_all_pids(&self) -> Result<PidMap> {
+    pub fn read_all_pids(&self, enable_stack_traces: bool) -> Result<PidMap> {
         let mut pidmap: PidMap = Default::default();
         for entry in
             std::fs::read_dir(&self.path).map_err(|e| Error::IoError(self.path.clone(), e))?
@@ -808,7 +913,7 @@ impl ProcReader {
             let entry = match entry {
                 Err(ref e)
                     if e.raw_os_error()
-                        .map_or(false, |ec| ec == 2 || ec == 3 /* ENOENT or ESRCH */) =>
+                        .is_some_and(|ec| ec == ENOENT || ec == ESRCH) =>
                 {
                     continue;
                 }
@@ -833,7 +938,7 @@ impl ProcReader {
             match self.read_pid_stat_from_path(entry.path()) {
                 Err(Error::IoError(_, ref e))
                     if e.raw_os_error()
-                        .map_or(false, |ec| ec == 2 || ec == 3 /* ENOENT or ESRCH */) =>
+                        .is_some_and(|ec| ec == ENOENT || ec == ESRCH) =>
                 {
                     continue;
                 }
@@ -843,7 +948,7 @@ impl ProcReader {
             match self.read_pid_status_from_path(entry.path()) {
                 Err(Error::IoError(_, ref e))
                     if e.raw_os_error()
-                        .map_or(false, |ec| ec == 2 || ec == 3 /* ENOENT or ESRCH */) =>
+                        .is_some_and(|ec| ec == ENOENT || ec == ESRCH) =>
                 {
                     continue;
                 }
@@ -853,21 +958,21 @@ impl ProcReader {
             match self.read_pid_io_from_path(entry.path()) {
                 Err(Error::IoError(_, ref e))
                     if e.raw_os_error().is_some_and(|ec| {
-                        ec == 2 || ec == 3 /* ENOENT or ESRCH */
+                        ec == ENOENT || ec == ESRCH
                     }) =>
                 {
                     continue;
                 }
                 Err(Error::IoError(_, ref e))
                     // EACCES (b/c /proc/pid/io requires elevated perms due to security concerns). Just leave io info empty
-                    if e.raw_os_error() == Some(13) => {}
+                    if e.raw_os_error() == Some(EACCES) => {}
                 res => pidinfo.io = res?,
             }
 
             match self.read_pid_cgroup_from_path(entry.path()) {
                 Err(Error::IoError(_, ref e))
                     if e.raw_os_error()
-                        .map_or(false, |ec| ec == 2 || ec == 3 /* ENOENT or ESRCH */) =>
+                        .is_some_and(|ec| ec == ENOENT || ec == ESRCH) =>
                 {
                     continue;
                 }
@@ -877,7 +982,7 @@ impl ProcReader {
             match self.read_pid_cmdline_from_path(entry.path()) {
                 Err(Error::IoError(_, ref e))
                     if e.raw_os_error()
-                        .map_or(false, |ec| ec == 2 || ec == 3 /* ENOENT or ESRCH */) =>
+                        .is_some_and(|ec| ec == ENOENT || ec == ESRCH) =>
                 {
                     continue;
                 }
@@ -889,6 +994,16 @@ impl ProcReader {
             // 2. Even with root permission, some exe will have broken link, kworker for example.
             if let Ok(s) = self.read_pid_exe_path_from_path(entry.path()) {
                 pidinfo.exe_path = Some(s);
+            }
+
+            // Read kernel stack trace ONLY for processes in D state (UninterruptibleSleep)
+            // This provides zero overhead on healthy systems with no stuck processes
+            if enable_stack_traces
+                && let Some(ref state) = pidinfo.stat.state
+                && matches!(state, PidState::UninterruptibleSleep)
+                && let Ok(stack) = self.read_pid_stack_from_path(entry.path())
+            {
+                pidinfo.stack = Some(stack)
             }
 
             pidmap.insert(pid, pidinfo);
