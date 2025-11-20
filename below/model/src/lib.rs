@@ -277,6 +277,7 @@ impl PartialOrd for Field {
             (Field::Str(s), Field::Str(o)) => s.partial_cmp(o),
             (Field::PidState(s), Field::PidState(o)) => s.partial_cmp(o),
             (Field::VecU32(s), Field::VecU32(o)) => s.partial_cmp(o),
+            (Field::VecString(s), Field::VecString(o)) => s.partial_cmp(o),
             _ => None,
         }
     }
