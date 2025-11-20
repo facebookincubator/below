@@ -220,6 +220,7 @@ pub mod default_tabs {
     use model::SingleProcessModelFieldId::NsTgid;
     use model::SingleProcessModelFieldId::Pid;
     use model::SingleProcessModelFieldId::Ppid;
+    use model::SingleProcessModelFieldId::Stack;
     use model::SingleProcessModelFieldId::State;
     use model::SingleProcessModelFieldId::UptimeSecs;
     use once_cell::sync::Lazy;
@@ -252,6 +253,7 @@ pub mod default_tabs {
             ViewItem::from_default(Cpu(NumThreads)),
             ViewItem::from_default(Io(RwbytesPerSec)),
             ViewItem::from_default(Cmdline),
+            ViewItem::from_default(Stack),
         ])
     });
 

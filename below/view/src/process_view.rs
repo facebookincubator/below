@@ -368,12 +368,41 @@ impl ViewBridge for ProcessView {
         } else {
             state.get_tag_from_tab_idx(current_tab, selected_column)
         };
+
+        // Special handling for Stack field: display full stack as numbered list
+        if matches!(tag, SingleProcessModelFieldId::Stack) {
+            let field_str = state
+                .get_model()
+                .processes
+                .get(selected_key /* pid */)
+                .and_then(|spm| spm.query(&tag))
+                .map_or("?".to_string(), |field| {
+                    if let model::Field::VecString(v) = field {
+                        if v.is_empty() {
+                            "?".to_string()
+                        } else {
+                            let mut result = String::new();
+                            for (i, frame) in v.iter().enumerate() {
+                                if i > 0 {
+                                    result.push_str("\n        ");
+                                }
+                                result.push_str(&format!("#{} {}", i, frame));
+                            }
+                            result
+                        }
+                    } else {
+                        field.to_string()
+                    }
+                });
+            return format!(" {tag}: {field_str}");
+        }
+
         let field_str = state
             .get_model()
             .processes
             .get(selected_key /* pid */)
             .and_then(|spm| spm.query(&tag))
             .map_or("?".to_string(), |field| field.to_string());
-        format!(" {tag} : {field_str} ")
+        format!(" {tag} : {field_str}")
     }
 }

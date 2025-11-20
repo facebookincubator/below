@@ -91,17 +91,20 @@ impl View for CommandPalette {
                 self.cmd_view.lock().unwrap().draw(&inner_printer);
             }
             _ => {
-                // Message should adapt the screen size
-                let mut msg_len_left = self.content.len();
-                let mut idx = 0;
+                // Split content by newlines first, then wrap each line by screen width
                 let mut line = 1;
-                while msg_len_left > printer.size.x {
-                    self.print(printer, (0, line), idx);
-                    msg_len_left -= printer.size.x;
-                    idx += printer.size.x;
+                for content_line in self.content.lines() {
+                    let mut msg_len_left = content_line.len();
+                    let mut idx = 0;
+                    while msg_len_left > printer.size.x {
+                        self.print_line(printer, (0, line), content_line, idx, printer.size.x);
+                        msg_len_left -= printer.size.x;
+                        idx += printer.size.x;
+                        line += 1;
+                    }
+                    self.print_line(printer, (0, line), content_line, idx, msg_len_left);
                     line += 1;
                 }
-                self.print(printer, (0, line), idx);
             }
         }
     }
@@ -121,7 +124,18 @@ impl View for CommandPalette {
     }
 
     fn required_size(&mut self, constraint: Vec2) -> Vec2 {
-        Vec2::new(1, self.content.len() / constraint.x + 2)
+        // Count actual lines after splitting by newlines, plus wrapping within each line
+        let mut total_lines = 1; // Start with 1 for the horizontal separator
+        for content_line in self.content.lines() {
+            // Calculate how many wrapped lines this content line needs
+            let line_len = content_line.len();
+            if line_len == 0 {
+                total_lines += 1;
+            } else {
+                total_lines += line_len.div_ceil(constraint.x);
+            }
+        }
+        Vec2::new(1, total_lines)
     }
 }
 
@@ -276,28 +290,20 @@ impl CommandPalette {
         self.fold = !self.fold;
     }
 
-    fn print_info(&self, printer: &Printer, pos: Vec2, idx: usize) {
-        if idx + printer.size.x > self.content.len() {
-            printer.print(pos, &self.content[idx..]);
-        } else {
-            printer.print(pos, &self.content[idx..idx + printer.size.x]);
-        }
-    }
-
-    fn print_alert(&self, printer: &Printer, pos: Vec2, idx: usize) {
-        printer.with_color(ColorStyle::title_primary(), |printer| {
-            if idx + printer.size.x > self.content.len() {
-                printer.print(pos, &self.content[idx..]);
-            } else {
-                printer.print(pos, &self.content[idx..idx + printer.size.x]);
-            }
-        })
-    }
-
-    fn print<T: Into<Vec2>>(&self, printer: &Printer, pos: T, idx: usize) {
+    fn print_line<T: Into<Vec2>>(
+        &self,
+        printer: &Printer,
+        pos: T,
+        line: &str,
+        start: usize,
+        len: usize,
+    ) {
+        let end = std::cmp::min(start + len, line.len());
         match self.mode {
-            CPMode::Info => self.print_info(printer, pos.into(), idx),
-            CPMode::Alert => self.print_alert(printer, pos.into(), idx),
+            CPMode::Info => printer.print(pos, &line[start..end]),
+            CPMode::Alert => printer.with_color(ColorStyle::title_primary(), |printer| {
+                printer.print(pos, &line[start..end]);
+            }),
             _ => {}
         }
     }

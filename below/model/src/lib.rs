@@ -295,7 +295,15 @@ impl fmt::Display for Field {
             Field::Str(v) => v.fmt(f),
             Field::PidState(v) => v.fmt(f),
             Field::VecU32(v) => f.write_fmt(format_args!("{:?}", v)),
-            Field::VecString(v) => f.write_fmt(format_args!("{}", v.join("\n"))),
+            Field::VecString(v) => {
+                if v.is_empty() {
+                    f.write_str("?")
+                } else if v.len() == 1 {
+                    f.write_str(&v[0])
+                } else {
+                    f.write_fmt(format_args!("{} …", v[0]))
+                }
+            }
             Field::StrSet(v) => f.write_fmt(format_args!(
                 "{}",
                 v.iter()
