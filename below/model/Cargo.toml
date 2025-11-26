@@ -22,7 +22,7 @@ gpu_stats = { package = "below-gpu-stats", version = "0.11.0", path = "../gpu_st
 hostname = "0.3"
 os_info = "3.11.0"
 procfs = { package = "fb_procfs", version = "0.11.0", path = "../procfs" }
-regex = "1.11.1"
+regex = "1.12.2"
 resctrlfs = { version = "0.11.0", path = "../resctrlfs" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
