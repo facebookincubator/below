@@ -1178,10 +1178,10 @@ mod tests {
         let dir = TempDir::with_prefix("below_store_test.").expect("tempdir failed");
         let now = SystemTime::now();
         // Ensure that the follow writes (within 60s) are to the same shard
-        let ts = if calculate_shard(now) == calculate_shard(now + Duration::from_secs(60)) {
+        let ts = if calculate_shard(now) == calculate_shard(now + Duration::from_mins(1)) {
             now
         } else {
-            now + Duration::from_secs(60)
+            now + Duration::from_mins(1)
         };
 
         {
