@@ -978,7 +978,7 @@ fn test_dump_queue_content() {
         ..Default::default()
     };
     let model = model::Model {
-        time_elapsed: Duration::from_secs(60 * 10),
+        time_elapsed: Duration::from_mins(10),
         timestamp: SystemTime::now(),
         system: model::SystemModel::default(),
         cgroup: model::CgroupModel::default(),
@@ -1333,7 +1333,7 @@ fn test_dump_tc_content() {
     ];
 
     let model = model::Model {
-        time_elapsed: Duration::from_secs(60 * 10),
+        time_elapsed: Duration::from_mins(10),
         timestamp: SystemTime::now(),
         system: model::SystemModel::default(),
         cgroup: model::CgroupModel::default(),
