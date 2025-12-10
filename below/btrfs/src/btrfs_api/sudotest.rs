@@ -42,7 +42,7 @@ fn is_btrfs(base_path: &Path) -> bool {
 
     // SAFETY: Fix when https://github.com/nix-rust/nix/issues/2546 is
     let dir = unsafe { BorrowedFd::borrow_raw(dir.as_raw_fd()) };
-    let statfs = match fstatfs(&dir) {
+    let statfs = match fstatfs(dir) {
         Ok(s) => s,
         Err(_) => {
             return false;
