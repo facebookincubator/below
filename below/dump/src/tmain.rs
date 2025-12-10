@@ -91,7 +91,7 @@ pub fn dump_timeseries(
                 // Swallow BrokenPipe error for write. Rust runtime will ignore SIGPIPE by default and
                 // propagating EPIPE upwards to the application in the form of an IoError::BrokenPipe.
                 if e.downcast_ref::<std::io::Error>()
-                    .map_or(false, |e| e.kind() == std::io::ErrorKind::BrokenPipe)
+                    .is_some_and(|e| e.kind() == std::io::ErrorKind::BrokenPipe)
                 {
                     return Ok(());
                 } else {
