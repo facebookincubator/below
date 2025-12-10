@@ -54,7 +54,7 @@ impl ViewConfig {
         match &self.view_style {
             Some(view_style) => match view_style {
                 ViewStyle::HighlightAbove(threshold) => {
-                    if field.as_ref().map_or(false, |field| field > threshold) {
+                    if field.as_ref().is_some_and(|field| field > threshold) {
                         StyledString::styled(
                             rendered,
                             cursive::theme::Color::Light(cursive::theme::BaseColor::Red),
@@ -64,7 +64,7 @@ impl ViewConfig {
                     }
                 }
                 ViewStyle::HighlightBelow(threshold) => {
-                    if field.as_ref().map_or(false, |field| field < threshold) {
+                    if field.as_ref().is_some_and(|field| field < threshold) {
                         StyledString::styled(
                             rendered,
                             cursive::theme::Color::Light(cursive::theme::BaseColor::Red),
