@@ -58,8 +58,8 @@ sudo systemctl enable --now below
 
 ### Alpine Linux
 
-`below` is packaged in Alpine Linux - it's available in (upcoming) v3.17+ and
-Edge. It can be installed with:
+`below` is packaged in Alpine Linux - it's available in v3.17+ and Edge. It can
+be installed with:
 
 ```shell
 sudo apk add below
@@ -80,6 +80,14 @@ package and can be installed with `emerge`:
 
 ```shell
 sudo emerge sys-process/below
+```
+
+### Amazon Linux
+
+`below` is packaged in Amazon Linux as of [AL2023.9](https://docs.aws.amazon.com/linux/al2023/release-notes/all-packages-AL2023.9.html), and can be installed with:
+
+```shell
+sudo dnf install below
 ```
 
 ## Installing from source
