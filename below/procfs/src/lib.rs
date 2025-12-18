@@ -56,10 +56,12 @@ pub use types::*;
     PartialEq,
     Eq,
     serde::Serialize,
-    serde::Deserialize
+    serde::Deserialize,
+    Default
 )]
 pub enum ProcessStackTraceFilter {
     /// Do not capture stack traces for any process
+    #[default]
     None,
     /// Capture stack traces only for processes in uninterruptible sleep (D state)
     Uninterruptible,
@@ -80,12 +82,6 @@ impl ProcessStackTraceFilter {
             Self::None => false,
             Self::All => true,
         }
-    }
-}
-
-impl Default for ProcessStackTraceFilter {
-    fn default() -> Self {
-        Self::None
     }
 }
 
