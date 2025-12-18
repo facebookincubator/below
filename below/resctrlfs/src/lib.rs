@@ -392,7 +392,7 @@ impl ResctrlReader {
                 Err(e) => {
                     return Err(Error::IoError(
                         path,
-                        std::io::Error::new(ErrorKind::Other, format!("Failed to fstatfs: {}", e)),
+                        std::io::Error::other(format!("Failed to fstatfs: {}", e)),
                     ));
                 }
             };
