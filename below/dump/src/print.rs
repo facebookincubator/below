@@ -188,7 +188,7 @@ pub fn dump_raw<T: HasRenderConfigForDump>(
 ) -> String {
     let mut res = String::new();
     let repeat = repeat_title.unwrap_or(0);
-    if !disable_title && (round == 0 || (repeat != 0 && round % repeat == 0)) {
+    if !disable_title && (round == 0 || (repeat != 0 && round.is_multiple_of(repeat))) {
         res.push_str(&dump_title_line(fields, " ", true));
     }
     for field in fields {
@@ -210,7 +210,7 @@ pub fn dump_raw_indented<T: HasRenderConfigForDump + Recursive>(
 ) -> String {
     let mut res = String::new();
     let repeat = repeat_title.unwrap_or(0);
-    if !disable_title && (round == 0 || (repeat != 0 && round % repeat == 0)) {
+    if !disable_title && (round == 0 || (repeat != 0 && round.is_multiple_of(repeat))) {
         res.push_str(&dump_title_line(fields, " ", true));
     }
     for field in fields {
