@@ -19,6 +19,8 @@
 use std::fs;
 use std::io;
 use std::io::BufRead;
+use std::io::BufWriter;
+use std::io::Write;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
@@ -52,6 +54,7 @@ use nix::sys::mman::MlockAllFlags;
 use nix::sys::mman::mlockall;
 use regex::Regex;
 use scopeguard::guard;
+use serde::Serialize;
 use signal_hook::iterator::Signals;
 use slog::debug;
 use slog::error;
@@ -323,6 +326,28 @@ enum DebugCommand {
         /// Pretty print in JSON
         #[clap(short, long)]
         json: bool,
+        /// Require an exact timestamp match. Do not advance to the nearest available sample.
+        #[clap(long)]
+        strict: bool,
+        #[clap(short = 's', long)]
+        host: Option<String>,
+        #[clap(long, requires("host"))]
+        port: Option<u16>,
+    },
+    DumpStoreRange {
+        #[clap(short, long, verbatim_doc_comment)]
+        begin: String,
+        #[clap(short, long, verbatim_doc_comment, group = "time")]
+        end: Option<String>,
+        #[clap(long, verbatim_doc_comment, group = "time")]
+        duration: Option<String>,
+        /// Pretty print in JSON
+        #[clap(short, long)]
+        json: bool,
+        #[clap(short = 's', long)]
+        host: Option<String>,
+        #[clap(long, requires("host"))]
+        port: Option<u16>,
     },
     /// Convert frames from an existing store and write them to a new store.
     /// This can be used to test compression/serialization formats.
@@ -885,15 +910,59 @@ fn real_main(init: init::InitToken) {
             )
         }
         Command::Debug { cmd } => match cmd {
-            DebugCommand::DumpStore { time, json } => {
+            DebugCommand::DumpStore {
+                time,
+                json,
+                strict,
+                host,
+                port,
+            } => {
                 let time = time.clone();
                 let json = *json;
+                let strict = *strict;
+                let host = host.clone();
+                let port = *port;
                 run(
                     init,
                     debug,
                     below_config,
                     Service::Off,
-                    |_, below_config, logger, _errs| dump_store(logger, time, below_config, json),
+                    |_, below_config, logger, _errs| {
+                        dump_store(logger, time, below_config, json, strict, host, port)
+                    },
+                )
+            }
+            DebugCommand::DumpStoreRange {
+                begin,
+                end,
+                duration,
+                json,
+                host,
+                port,
+            } => {
+                let begin = begin.clone();
+                let end = end.clone();
+                let duration = duration.clone();
+                let json = *json;
+                let host = host.clone();
+                let port = *port;
+                run(
+                    init,
+                    debug,
+                    below_config,
+                    Service::Off,
+                    |_, below_config, logger, _errs| {
+                        dump_store_range(
+                            logger,
+                            below_config,
+                            begin,
+                            end,
+                            duration,
+                            json,
+                            host,
+                            port,
+                        )
+                    },
                 )
             }
             DebugCommand::ConvertStore {
@@ -1482,33 +1551,105 @@ fn live(
     }
 }
 
+#[derive(Debug, Serialize)]
+pub struct TimestampedSampleRef<'a> {
+    pub timestamp: u64,
+    #[serde(borrow)]
+    pub sample: &'a model::Sample,
+}
+
+impl<'a> TimestampedSampleRef<'a> {
+    pub fn new(timestamp: SystemTime, sample: &'a model::Sample) -> Self {
+        TimestampedSampleRef {
+            timestamp: common::util::get_unix_timestamp(timestamp),
+            sample,
+        }
+    }
+}
+
 fn dump_store(
     logger: slog::Logger,
     time: String,
     below_config: &BelowConfig,
     json: bool,
+    strict: bool,
+    host: Option<String>,
+    port: Option<u16>,
 ) -> Result<()> {
     let timestamp = cliutil::system_time_from_date(time.as_str())?;
 
-    let (ts, df) = match store::read_next_sample(
-        &below_config.store_dir,
-        timestamp,
-        store::Direction::Forward,
-        logger,
-    ) {
+    let mut store: Box<dyn Store<SampleType = DataFrame>> = match host {
+        Some(host) => Box::new(store::RemoteStore::new(host, port)?),
+        None => Box::new(store::LocalStore::new(
+            logger.clone(),
+            below_config.store_dir.clone(),
+        )),
+    };
+
+    let (ts, df) = match store.get_sample_at_timestamp(timestamp, store::Direction::Forward) {
         Ok(Some((ts, df))) => (ts, df),
         Ok(None) => bail!("Data not found for requested timestamp"),
         Err(e) => bail!(e),
     };
 
-    if ts != timestamp {
+    if strict && ts != timestamp {
         bail!("Exact requested timestamp not found (would have used next datapoint)");
     }
 
+    let ts_sample = TimestampedSampleRef::new(ts, &df.sample);
+
     if json {
-        println!("{}", serde_json::to_string_pretty(&df)?);
+        println!("{}", serde_json::to_string_pretty(&ts_sample)?);
     } else {
-        println!("{:#?}", df);
+        println!("{:#?}", &ts_sample);
+    }
+
+    Ok(())
+}
+
+fn dump_store_range(
+    logger: slog::Logger,
+    below_config: &BelowConfig,
+    begin: String,
+    end: Option<String>,
+    duration: Option<String>,
+    json: bool,
+    host: Option<String>,
+    port: Option<u16>,
+) -> Result<()> {
+    let (time_begin, time_end) = cliutil::system_time_range_from_date_and_adjuster(
+        begin.as_str(),
+        end.as_deref(),
+        duration.as_deref(),
+        /* days_adjuster */ None,
+    )?;
+
+    let mut store: Box<dyn Store<SampleType = DataFrame>> = match host {
+        Some(host) => Box::new(store::RemoteStore::new(host, port)?),
+        None => Box::new(store::LocalStore::new(
+            logger.clone(),
+            below_config.store_dir.clone(),
+        )),
+    };
+
+    let mut w = BufWriter::new(std::io::stdout());
+
+    let mut current_ts = time_begin;
+    while let Some((ts, df)) =
+        store.get_sample_at_timestamp(current_ts, store::Direction::Forward)?
+    {
+        if ts > time_end {
+            break;
+        }
+        let ts_sample = TimestampedSampleRef::new(ts, &df.sample);
+        if json {
+            serde_json::to_writer(&mut w, &ts_sample)?;
+            w.write_all(b"\n")?;
+        } else {
+            writeln!(&mut w, "{:#?}", &ts_sample)?;
+        }
+        current_ts = ts + Duration::from_secs(1);
+        w.flush()?;
     }
 
     Ok(())
