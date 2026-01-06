@@ -717,6 +717,7 @@ key_values_format!(MemoryStat; memory.stat; [
     file_mapped,
     file_dirty,
     file_writeback,
+    swapcached,
     file_thp,
     anon_thp,
     shmem_thp,

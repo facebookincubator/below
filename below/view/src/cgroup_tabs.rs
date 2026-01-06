@@ -289,6 +289,7 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::SlabUnreclaimable;
     use model::CgroupMemoryModelFieldId::Sock;
     use model::CgroupMemoryModelFieldId::Swap;
+    use model::CgroupMemoryModelFieldId::Swapcached;
     use model::CgroupMemoryModelFieldId::ThpCollapseAlloc;
     use model::CgroupMemoryModelFieldId::ThpFaultAlloc;
     use model::CgroupMemoryModelFieldId::Total;
@@ -384,6 +385,7 @@ pub mod default_tabs {
             ViewItem::from_default(Mem(FileMapped)),
             ViewItem::from_default(Mem(FileDirty)),
             ViewItem::from_default(Mem(FileWriteback)),
+            ViewItem::from_default(Mem(Swapcached)),
             ViewItem::from_default(Mem(FileThp)),
             ViewItem::from_default(Mem(AnonThp)),
             ViewItem::from_default(Mem(ShmemThp)),

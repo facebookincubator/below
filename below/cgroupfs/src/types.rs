@@ -62,6 +62,7 @@ pub struct MemoryStat {
     pub file_mapped: Option<u64>,
     pub file_dirty: Option<u64>,
     pub file_writeback: Option<u64>,
+    pub swapcached: Option<u64>,
     pub file_thp: Option<u64>,
     pub anon_thp: Option<u64>,
     pub shmem_thp: Option<u64>,

@@ -204,6 +204,7 @@ pub const COMMON_MODEL_FIELD_IDS: &[&str] = &[
     "cgroup.[path:/<cgroup_path>/.]mem.file_mapped",
     "cgroup.[path:/<cgroup_path>/.]mem.file_dirty",
     "cgroup.[path:/<cgroup_path>/.]mem.file_writeback",
+    "cgroup.[path:/<cgroup_path>/.]mem.swapcached",
     "cgroup.[path:/<cgroup_path>/.]mem.file_thp",
     "cgroup.[path:/<cgroup_path>/.]mem.anon_thp",
     "cgroup.[path:/<cgroup_path>/.]mem.shmem_thp",

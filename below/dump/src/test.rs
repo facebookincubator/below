@@ -501,6 +501,7 @@ fn test_dump_cgroup_titles() {
         "File Mapped",
         "File Dirty",
         "File WB",
+        "Swap Cached",
         "File THP",
         "Anon THP",
         "Shmem THP",
