@@ -134,6 +134,7 @@ pub struct MemoryEvents {
     pub max: Option<u64>,
     pub oom: Option<u64>,
     pub oom_kill: Option<u64>,
+    pub sock_throttled: Option<u64>,
 }
 
 #[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
@@ -143,6 +144,7 @@ pub struct MemoryEventsLocal {
     pub max: Option<u64>,
     pub oom: Option<u64>,
     pub oom_kill: Option<u64>,
+    pub sock_throttled: Option<u64>,
 }
 
 #[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]

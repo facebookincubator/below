@@ -263,6 +263,7 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::EventsMax;
     use model::CgroupMemoryModelFieldId::EventsOom;
     use model::CgroupMemoryModelFieldId::EventsOomKill;
+    use model::CgroupMemoryModelFieldId::EventsSockThrottled;
     use model::CgroupMemoryModelFieldId::File;
     use model::CgroupMemoryModelFieldId::FileDirty;
     use model::CgroupMemoryModelFieldId::FileMapped;
@@ -420,6 +421,7 @@ pub mod default_tabs {
             ViewItem::from_default(Mem(EventsMax)),
             ViewItem::from_default(Mem(EventsOom)),
             ViewItem::from_default(Mem(EventsOomKill)),
+            ViewItem::from_default(Mem(EventsSockThrottled)),
         ]
     }
 

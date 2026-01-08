@@ -754,7 +754,8 @@ key_values_format!(MemoryEvents; memory.events; [
     high,
     max,
     oom,
-    oom_kill
+    oom_kill,
+    sock_throttled
 ]);
 
 key_values_format!(MemoryEventsLocal; memory.events.local; [
@@ -762,7 +763,8 @@ key_values_format!(MemoryEventsLocal; memory.events.local; [
     high,
     max,
     oom,
-    oom_kill
+    oom_kill,
+    sock_throttled
 ]);
 
 key_values_format!(CgroupStat; cgroup.stat; [nr_descendants, nr_dying_descendants]);

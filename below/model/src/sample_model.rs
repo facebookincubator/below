@@ -303,7 +303,8 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                 "events_high": 300000,
                 "events_max": 300000,
                 "events_oom": 0,
-                "events_oom_kill": 0
+                "events_oom_kill": 0,
+                "events_sock_throttled": 0
             },
             "io": null,
             "io_total": null,
@@ -399,7 +400,8 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                         "events_high": 0,
                         "events_max": 0,
                         "events_oom": 0,
-                        "events_oom_kill": 0
+                        "events_oom_kill": 0,
+                        "events_sock_throttled": 0
                     },
                     "io": null,
                     "io_total": null,
@@ -490,7 +492,8 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                         "events_high": 0,
                         "events_max": 0,
                         "events_oom": 0,
-                        "events_oom_kill": 0
+                        "events_oom_kill": 0,
+                        "events_sock_throttled": 0
                     },
                     "io": null,
                     "io_total": null,
@@ -589,7 +592,8 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                         "events_high": 0,
                         "events_max": 0,
                         "events_oom": 0,
-                        "events_oom_kill": 0
+                        "events_oom_kill": 0,
+                        "events_sock_throttled": 0
                     },
                     "io": null,
                     "io_total": null,
@@ -685,7 +689,8 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
                                 "events_high": 0,
                                 "events_max": 0,
                                 "events_oom": 0,
-                                "events_oom_kill": 0
+                                "events_oom_kill": 0,
+                                "events_sock_throttled": 0
                             },
                             "io": null,
                             "io_total": null,
