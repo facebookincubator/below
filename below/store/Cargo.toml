@@ -21,7 +21,7 @@ model = { package = "below-model", version = "0.11.0", path = "../model" }
 nix = { version = "0.30.1", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_cbor = "0.11"
-slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.8.2", features = ["max_level_trace", "nested-values"] }
 static_assertions = "1.1.0"
 zstd-safe = { version = "7.0.0", features = ["std"] }
 

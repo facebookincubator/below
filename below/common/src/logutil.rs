@@ -67,7 +67,7 @@ impl CPMsgRecord {
     // CommandPalette instead of going through the RwLock process, we need to have
     // such function to align the message format
     pub fn construct_msg(level: Level, msg: &str) -> String {
-        format!("{}: {}", level.as_str(), msg)
+        format!("{}: {}", level.as_short_str(), msg)
     }
 
     fn set_msg(&mut self, msg: String, level: Level) {

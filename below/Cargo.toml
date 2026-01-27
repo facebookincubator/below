@@ -41,7 +41,7 @@ scopeguard = "1.2.0"
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 signal-hook = "0.3"
-slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.8.2", features = ["max_level_trace", "nested-values"] }
 slog-term = "2.8"
 store = { package = "below-store", version = "0.11.0", path = "store" }
 tar = "0.4.44"
