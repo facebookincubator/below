@@ -978,6 +978,7 @@ nonvoluntary_ctxt_switches:	37733";
     assert_eq!(pidmem.pte, Some(1840 * 1024));
     assert_eq!(pidmem.swap, Some(8812 * 1024));
     assert_eq!(pidmem.huge_tlb, Some(13 * 1024));
+    assert_eq!(pidmem.cpus_allowed_list, Some((0..=23).collect()),);
 }
 
 #[test]

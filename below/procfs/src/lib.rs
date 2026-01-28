@@ -197,6 +197,23 @@ macro_rules! parse_kb {
     };
 }
 
+macro_rules! parse_cpuset {
+    ($path:expr, $rhs:expr, $line:ident) => {
+        if let Some(s) = $rhs {
+            s.parse::<Cpuset>()
+                .map(Some)
+                .map_err(|_| Error::ParseError {
+                    line: $line.to_string(),
+                    item: s.to_string(),
+                    type_name: "Cpuset".to_string(),
+                    path: $path.to_path_buf(),
+                })
+        } else {
+            Ok(None)
+        }
+    };
+}
+
 pub struct ProcReader {
     path: PathBuf,
     threadpool: ThreadPool,
@@ -683,6 +700,9 @@ impl ProcReader {
                     "VmPTE" => pidstatus.pte = parse_kb!(path, values.next(), line)?,
                     "VmSwap" => pidstatus.swap = parse_kb!(path, values.next(), line)?,
                     "HugetlbPages" => pidstatus.huge_tlb = parse_kb!(path, values.next(), line)?,
+                    "Cpus_allowed_list" => {
+                        pidstatus.cpus_allowed_list = parse_cpuset!(path, values.next(), line)?
+                    }
                     _ => {}
                 }
             }
