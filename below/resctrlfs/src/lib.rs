@@ -18,7 +18,6 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::io::ErrorKind;
 use std::os::fd::AsRawFd;
 use std::os::fd::BorrowedFd;
 use std::path::Path;
@@ -61,14 +60,13 @@ fn wrap<S: Sized>(v: std::result::Result<S, Error>) -> std::result::Result<Optio
         if e.kind() == std::io::ErrorKind::NotFound {
             return Ok(None);
         }
-        if e.kind() == std::io::ErrorKind::Other {
-            if let Some(errno) = e.raw_os_error() {
-                if errno == /* ENODEV */ 19 {
-                    // If the resctrl group is removed after a control file is opened,
-                    // ENODEV may returned. Ignore it.
-                    return Ok(None);
-                }
-            }
+        if e.kind() == std::io::ErrorKind::Other
+            && let Some(errno) = e.raw_os_error()
+            && errno == /* ENODEV */ 19
+        {
+            // If the resctrl group is removed after a control file is opened,
+            // ENODEV may returned. Ignore it.
+            return Ok(None);
         }
     }
     v.map(Some)
