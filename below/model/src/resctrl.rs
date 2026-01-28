@@ -55,7 +55,7 @@ pub struct ResctrlCtrlMonGroupModel {
 /// All data about the entire resctrl filesystem
 #[::below_derive::queriable_derives]
 pub struct ResctrlModel {
-    pub cpuset: Option<resctrlfs::Cpuset>,
+    pub cpuset: Option<Cpuset>,
     pub mode: Option<resctrlfs::GroupMode>,
     #[queriable(subquery)]
     pub mon: Option<ResctrlMonModel>,

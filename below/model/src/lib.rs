@@ -49,6 +49,7 @@ open_source_shim!(pub);
 
 pub use cgroup::*;
 pub use collector::*;
+pub use common::Cpuset;
 pub use network::*;
 pub use process::*;
 pub use resctrl::*;
@@ -72,9 +73,8 @@ pub enum Field {
     VecString(Vec<String>),
     StrSet(BTreeSet<String>),
     StrU64Map(BTreeMap<String, u64>),
-    Cpuset(cgroupfs::Cpuset),
+    Cpuset(common::Cpuset),
     MemNodes(cgroupfs::MemNodes),
-    ResctrlCpuset(resctrlfs::Cpuset),
     ResctrlGroupMode(resctrlfs::GroupMode),
 }
 
@@ -200,8 +200,8 @@ impl From<BTreeMap<String, u64>> for Field {
     }
 }
 
-impl From<cgroupfs::Cpuset> for Field {
-    fn from(v: cgroupfs::Cpuset) -> Self {
+impl From<common::Cpuset> for Field {
+    fn from(v: common::Cpuset) -> Self {
         Field::Cpuset(v)
     }
 }
@@ -209,12 +209,6 @@ impl From<cgroupfs::Cpuset> for Field {
 impl From<cgroupfs::MemNodes> for Field {
     fn from(v: cgroupfs::MemNodes) -> Self {
         Field::MemNodes(v)
-    }
-}
-
-impl From<resctrlfs::Cpuset> for Field {
-    fn from(v: resctrlfs::Cpuset) -> Self {
-        Field::ResctrlCpuset(v)
     }
 }
 
@@ -322,7 +316,6 @@ impl fmt::Display for Field {
             )),
             Field::Cpuset(v) => v.fmt(f),
             Field::MemNodes(v) => v.fmt(f),
-            Field::ResctrlCpuset(v) => v.fmt(f),
             Field::ResctrlGroupMode(v) => v.fmt(f),
         }
     }

@@ -155,21 +155,6 @@ impl FromStr for CpuMax {
     }
 }
 
-impl FromStr for Cpuset {
-    type Err = String;
-    fn from_str(s: &str) -> std::result::Result<Self, String> {
-        Ok(Cpuset {
-            cpus: nodes_from_str(s)?,
-        })
-    }
-}
-
-impl std::fmt::Display for Cpuset {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        fmt_nodes(f, &self.cpus)
-    }
-}
-
 impl FromStr for MemNodes {
     type Err = String;
     fn from_str(s: &str) -> std::result::Result<Self, String> {

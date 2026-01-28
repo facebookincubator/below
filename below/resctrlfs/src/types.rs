@@ -12,16 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use std::collections::BTreeMap;
-use std::collections::BTreeSet;
 
+pub use common::Cpuset;
 use serde::Deserialize;
 use serde::Serialize;
-
-/// Describes a set of CPUs of a resctrl group
-#[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
-pub struct Cpuset {
-    pub cpus: BTreeSet<u32>,
-}
 
 /// Represents the "mode" of a CTRL_MON group
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug, Serialize, Deserialize)]

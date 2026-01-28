@@ -15,7 +15,6 @@
 #![deny(clippy::all)]
 
 use std::collections::BTreeMap;
-use std::collections::BTreeSet;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::os::fd::AsRawFd;
@@ -70,89 +69,6 @@ fn wrap<S: Sized>(v: std::result::Result<S, Error>) -> std::result::Result<Optio
         }
     }
     v.map(Some)
-}
-
-/// Parse a node range and return the set of nodes. This is either a range "x-y"
-/// or a single value "x".
-fn parse_node_range(s: &str) -> std::result::Result<BTreeSet<u32>, String> {
-    fn parse_node(s: &str) -> std::result::Result<u32, String> {
-        s.parse()
-            .map_err(|_| format!("id must be non-negative int: {}", s))
-    }
-    match s.split_once('-') {
-        Some((first, last)) => {
-            let first = parse_node(first)?;
-            let last = parse_node(last)?;
-            if first > last {
-                return Err(format!("Invalid range: {}", s));
-            }
-            Ok((first..(last + 1)).collect())
-        }
-        None => Ok(BTreeSet::from([parse_node(s)?])),
-    }
-}
-
-/// Parse a node range list (this is the format for resctrl cpus_list file and
-/// also the format for cpusets in cgroupfs). e.g. "0-2,4" would return the set
-/// {0, 1, 2, 4}.
-fn nodes_from_str(s: &str) -> std::result::Result<BTreeSet<u32>, String> {
-    let mut nodes = BTreeSet::new();
-    if s.is_empty() {
-        return Ok(nodes);
-    }
-    for range_str in s.split(',') {
-        let mut to_append = parse_node_range(range_str)?;
-        nodes.append(&mut to_append);
-    }
-    Ok(nodes)
-}
-
-/// Format a set of nodes as a node range list. This is the inverse of
-/// `nodes_to_str`.
-fn fmt_nodes(f: &mut std::fmt::Formatter<'_>, nodes: &BTreeSet<u32>) -> std::fmt::Result {
-    fn print_range(
-        f: &mut std::fmt::Formatter<'_>,
-        range_start: u32,
-        range_end: u32,
-    ) -> std::fmt::Result {
-        if range_start == range_end {
-            write!(f, "{}", range_start)
-        } else {
-            write!(f, "{}-{}", range_start, range_end)
-        }
-    }
-
-    let mut range_start = *nodes.iter().next().unwrap_or(&u32::MAX);
-    let mut range_end = range_start;
-    for cpu in nodes {
-        if range_end + 1 == *cpu || range_end == *cpu {
-            range_end = *cpu;
-        } else {
-            print_range(f, range_start, range_end)?;
-            write!(f, ",")?;
-            range_start = *cpu;
-            range_end = *cpu;
-        }
-    }
-    if !nodes.is_empty() {
-        print_range(f, range_start, range_end)?;
-    }
-    Ok(())
-}
-
-impl FromStr for Cpuset {
-    type Err = String;
-    fn from_str(s: &str) -> std::result::Result<Self, String> {
-        Ok(Cpuset {
-            cpus: nodes_from_str(s)?,
-        })
-    }
-}
-
-impl std::fmt::Display for Cpuset {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        fmt_nodes(f, &self.cpus)
-    }
 }
 
 impl FromStr for GroupMode {

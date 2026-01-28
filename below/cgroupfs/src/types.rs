@@ -14,6 +14,7 @@
 
 use std::collections::BTreeSet;
 
+pub use common::Cpuset;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -186,11 +187,6 @@ pub struct MemoryNumaStat {
 
 // We could make this a tuple struct but it'd be better is a regular struct to
 // play well with serde serialization.
-#[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
-pub struct Cpuset {
-    pub cpus: BTreeSet<u32>,
-}
-
 #[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct MemNodes {
     pub nodes: BTreeSet<u32>,

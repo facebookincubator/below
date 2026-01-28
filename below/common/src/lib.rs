@@ -15,10 +15,13 @@
 #![deny(clippy::all)]
 
 pub mod cliutil;
+pub mod cpuset;
 pub mod dateutil;
 pub mod fileutil;
 pub mod logutil;
 pub mod util;
+
+pub use cpuset::Cpuset;
 
 // Shim between facebook types and open source types.
 //

@@ -15,6 +15,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
+pub use common::Cpuset;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -390,6 +391,7 @@ pub struct PidStatus {
     pub pte: Option<u64>,
     pub swap: Option<u64>,
     pub huge_tlb: Option<u64>,
+    pub cpus_allowed_list: Option<Cpuset>,
 }
 
 #[derive(Default, Clone, PartialEq, Debug, Serialize, Deserialize)]
