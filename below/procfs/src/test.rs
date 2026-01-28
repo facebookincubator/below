@@ -76,6 +76,25 @@ impl TestProcfs {
         self.create_file_with_content_full_path(path, content);
     }
 
+    fn create_tid_file_with_content<P: AsRef<Path>>(
+        &self,
+        pid: u32,
+        tid: u32,
+        p: P,
+        content: &[u8],
+    ) {
+        let task_dir = self
+            .path()
+            .join(pid.to_string())
+            .join("task")
+            .join(tid.to_string());
+        if !task_dir.exists() {
+            std::fs::create_dir_all(&task_dir).expect("Failed to create tid dir");
+        }
+        let path = task_dir.join(p);
+        self.create_file_with_content_full_path(path, content);
+    }
+
     fn create_pid_file_with_link<P: AsRef<Path>>(&self, pid: u32, src: P, dst: P) -> String {
         self.create_pid_file_with_content(pid, src.as_ref(), b"");
         let pid_dir = self.path().join(pid.to_string());
@@ -1958,4 +1977,187 @@ fn test_read_pid_stack_empty() {
         .expect("Failed to read pid stack");
 
     assert_eq!(stack.frames.len(), 0);
+}
+
+#[test]
+fn test_read_all_tid_info_of_pid() {
+    let stat_tid1 =
+        b"1001 (worker-1) S 1000 1000 1000 0 -1 4194304 100 0 0 0 50 25 0 0 20 0 1 0 1000 1048576 256 18446744073709551615 0 0 0 0 0 0 0 0 0 0 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
+    let stat_tid2 =
+        b"1002 (worker-2) R 1000 1000 1000 0 -1 4194304 200 0 0 0 100 50 0 0 20 0 1 0 1000 2097152 512 18446744073709551615 0 0 0 0 0 0 0 0 0 0 0 0 17 1 0 0 0 0 0 0 0 0 0 0 0 0 0";
+
+    let status_tid1 = b"Name:\tworker-1
+Umask:\t0022
+State:\tS (sleeping)
+Tgid:\t1000
+Ngid:\t0
+Pid:\t1001
+PPid:\t1000
+TracerPid:\t0
+Uid:\t1000\t1000\t1000\t1000
+Gid:\t1000\t1000\t1000\t1000
+FDSize:\t64
+Groups:\t1000
+NStgid:\t1001
+NSpid:\t1001
+NSpgid:\t1000
+NSsid:\t1000
+KvmVCPUs:\t0
+VmPeak:\t1024 kB
+VmSize:\t1024 kB
+VmLck:\t0 kB
+VmPin:\t0 kB
+VmHWM:\t256 kB
+VmRSS:\t256 kB
+RssAnon:\t128 kB
+RssFile:\t128 kB
+RssShmem:\t0 kB
+VmData:\t512 kB
+VmStk:\t128 kB
+VmExe:\t128 kB
+VmLib:\t256 kB
+VmPTE:\t32 kB
+VmSwap:\t0 kB
+HugetlbPages:\t0 kB
+CoreDumping:\t0
+THP_enabled:\t1
+Threads:\t2
+SigQ:\t0/31234
+SigPnd:\t0000000000000000
+ShdPnd:\t0000000000000000
+SigBlk:\t0000000000000000
+SigIgn:\t0000000000000000
+SigCgt:\t0000000000000000
+CapInh:\t0000000000000000
+CapPrm:\t0000000000000000
+CapEff:\t0000000000000000
+CapBnd:\t0000003fffffffff
+CapAmb:\t0000000000000000
+NoNewPrivs:\t0
+Seccomp:\t0
+Speculation_Store_Bypass:\tthread vulnerable
+Cpus_allowed:\tff
+Cpus_allowed_list:\t0-7
+Mems_allowed:\t01
+Mems_allowed_list:\t0
+voluntary_ctxt_switches:\t100
+nonvoluntary_ctxt_switches:\t10";
+
+    let status_tid2 = b"Name:\tworker-2
+Umask:\t0022
+State:\tR (running)
+Tgid:\t1000
+Ngid:\t0
+Pid:\t1002
+PPid:\t1000
+TracerPid:\t0
+Uid:\t1000\t1000\t1000\t1000
+Gid:\t1000\t1000\t1000\t1000
+FDSize:\t64
+Groups:\t1000
+NStgid:\t1002
+NSpid:\t1002
+NSpgid:\t1000
+NSsid:\t1000
+KvmVCPUs:\t0
+VmPeak:\t2048 kB
+VmSize:\t2048 kB
+VmLck:\t0 kB
+VmPin:\t0 kB
+VmHWM:\t512 kB
+VmRSS:\t512 kB
+RssAnon:\t256 kB
+RssFile:\t256 kB
+RssShmem:\t0 kB
+VmData:\t1024 kB
+VmStk:\t256 kB
+VmExe:\t256 kB
+VmLib:\t512 kB
+VmPTE:\t64 kB
+VmSwap:\t0 kB
+HugetlbPages:\t0 kB
+CoreDumping:\t0
+THP_enabled:\t1
+Threads:\t2
+SigQ:\t0/31234
+SigPnd:\t0000000000000000
+ShdPnd:\t0000000000000000
+SigBlk:\t0000000000000000
+SigIgn:\t0000000000000000
+SigCgt:\t0000000000000000
+CapInh:\t0000000000000000
+CapPrm:\t0000000000000000
+CapEff:\t0000000000000000
+CapBnd:\t0000003fffffffff
+CapAmb:\t0000000000000000
+NoNewPrivs:\t0
+Seccomp:\t0
+Speculation_Store_Bypass:\tthread vulnerable
+Cpus_allowed:\tff
+Cpus_allowed_list:\t0-7
+Mems_allowed:\t01
+Mems_allowed_list:\t0
+voluntary_ctxt_switches:\t200
+nonvoluntary_ctxt_switches:\t20";
+
+    let io_tid1 = b"rchar: 1000
+wchar: 500
+syscr: 100
+syscw: 50
+read_bytes: 4096
+write_bytes: 2048
+cancelled_write_bytes: 0
+";
+
+    let io_tid2 = b"rchar: 2000
+wchar: 1000
+syscr: 200
+syscw: 100
+read_bytes: 8192
+write_bytes: 4096
+cancelled_write_bytes: 0
+";
+
+    let cgroup = b"0::/user.slice/session.scope
+";
+
+    let cmdline = b"worker\0";
+
+    let procfs = TestProcfs::new();
+    let pid = 1000;
+    let tid1 = 1001;
+    let tid2 = 1002;
+
+    procfs.create_tid_file_with_content(pid, tid1, "stat", stat_tid1);
+    procfs.create_tid_file_with_content(pid, tid1, "status", status_tid1);
+    procfs.create_tid_file_with_content(pid, tid1, "io", io_tid1);
+    procfs.create_tid_file_with_content(pid, tid1, "cgroup", cgroup);
+    procfs.create_tid_file_with_content(pid, tid1, "cmdline", cmdline);
+
+    procfs.create_tid_file_with_content(pid, tid2, "stat", stat_tid2);
+    procfs.create_tid_file_with_content(pid, tid2, "status", status_tid2);
+    procfs.create_tid_file_with_content(pid, tid2, "io", io_tid2);
+    procfs.create_tid_file_with_content(pid, tid2, "cgroup", cgroup);
+    procfs.create_tid_file_with_content(pid, tid2, "cmdline", cmdline);
+
+    let reader = procfs.get_reader();
+    let tidmap = reader
+        .read_all_tid_info_of_pid(pid)
+        .expect("Failed to read all tid info of pid");
+
+    assert_eq!(tidmap.len(), 2);
+    assert!(tidmap.contains_key(&(tid1 as i32)));
+    assert!(tidmap.contains_key(&(tid2 as i32)));
+
+    let tid1_info = &tidmap[&(tid1 as i32)];
+    assert_eq!(tid1_info.stat.comm, Some("worker-1".to_string()));
+    assert_eq!(tid1_info.stat.state, Some(PidState::Sleeping));
+    assert_eq!(tid1_info.io.rbytes, Some(4096));
+    assert_eq!(tid1_info.io.wbytes, Some(2048));
+
+    let tid2_info = &tidmap[&(tid2 as i32)];
+    assert_eq!(tid2_info.stat.comm, Some("worker-2".to_string()));
+    assert_eq!(tid2_info.stat.state, Some(PidState::Running));
+    assert_eq!(tid2_info.io.rbytes, Some(8192));
+    assert_eq!(tid2_info.io.wbytes, Some(4096));
 }

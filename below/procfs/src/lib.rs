@@ -963,10 +963,40 @@ impl ProcReader {
     }
 
     pub fn read_all_pids(&self, stack_trace_filter: &ProcessStackTraceFilter) -> Result<PidMap> {
+        let f = |pidinfo: &mut PidInfo, entry: &std::fs::DirEntry| {
+            // Read kernel stack trace based on configured filter
+            // This provides zero overhead on healthy systems when no matching processes exist
+            if let Some(ref state) = pidinfo.stat.state
+                && stack_trace_filter.should_capture(state)
+            {
+                match self.read_pid_stack_from_path(entry.path()) {
+                    Ok(stack) => {
+                        pidinfo.stack = Some(stack);
+                    }
+                    Err(_) => {
+                        // Silently skip on error (process may have exited, or permission denied)
+                    }
+                }
+            }
+        };
+        self.read_all_pid_info_from_path(&self.path, Some(f))
+    }
+
+    /// Return a map of tid -> ProcessInfo for all threads belonging to a given PID
+    pub fn read_all_tid_info_of_pid(&self, pid: u32) -> Result<PidMap> {
+        let path = self.path.join(pid.to_string()).join("task");
+        self.read_all_pid_info_from_path(
+            &path,
+            Option::<fn(&mut PidInfo, &std::fs::DirEntry)>::None,
+        )
+    }
+
+    fn read_all_pid_info_from_path<F>(&self, path: &PathBuf, f: Option<F>) -> Result<PidMap>
+    where
+        F: Fn(&mut PidInfo, &std::fs::DirEntry),
+    {
         let mut pidmap: PidMap = Default::default();
-        for entry in
-            std::fs::read_dir(&self.path).map_err(|e| Error::IoError(self.path.clone(), e))?
-        {
+        for entry in std::fs::read_dir(path).map_err(|e| Error::IoError(path.clone(), e))? {
             let entry = match entry {
                 Err(ref e)
                     if e.raw_os_error()
@@ -974,12 +1004,12 @@ impl ProcReader {
                 {
                     continue;
                 }
-                ent => ent.map_err(|e| Error::IoError(self.path.clone(), e))?,
+                ent => ent.map_err(|e| Error::IoError(path.clone(), e))?,
             };
 
             if !entry
                 .file_type()
-                .map_err(|e| Error::IoError(self.path.clone(), e))?
+                .map_err(|e| Error::IoError(path.clone(), e))?
                 .is_dir()
             {
                 continue;
@@ -1053,19 +1083,9 @@ impl ProcReader {
                 pidinfo.exe_path = Some(s);
             }
 
-            // Read kernel stack trace based on configured filter
-            // This provides zero overhead on healthy systems when no matching processes exist
-            if let Some(ref state) = pidinfo.stat.state
-                && stack_trace_filter.should_capture(state)
-            {
-                match self.read_pid_stack_from_path(entry.path()) {
-                    Ok(stack) => {
-                        pidinfo.stack = Some(stack);
-                    }
-                    Err(_) => {
-                        // Silently skip on error (process may have exited, or permission denied)
-                    }
-                }
+            // call lambda
+            if let Some(functor) = f.as_ref() {
+                functor(&mut pidinfo, &entry);
             }
 
             pidmap.insert(pid, pidinfo);
