@@ -396,6 +396,45 @@ fn test_memory_stat_invalid_format() {
 }
 
 #[test]
+fn test_read_cgroup_procs_success() {
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content("cgroup.procs", b"123\n456\n789\n");
+
+    let cgroup_reader = cgroup.get_reader();
+    let procs = cgroup_reader
+        .read_cgroup_procs()
+        .expect("Failed to read cgroup.procs");
+    assert_eq!(procs, vec![123, 456, 789]);
+}
+
+#[test]
+fn test_read_cgroup_procs_empty() {
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content("cgroup.procs", b"");
+
+    let cgroup_reader = cgroup.get_reader();
+    let procs = cgroup_reader
+        .read_cgroup_procs()
+        .expect("Failed to read cgroup.procs");
+    assert_eq!(procs, Vec::<i32>::new());
+}
+
+#[test]
+fn test_read_cgroup_procs_invalid_content() {
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content("cgroup.procs", b"123\nnot_a_number\n456\n");
+
+    let cgroup_reader = cgroup.get_reader();
+    let err = cgroup_reader
+        .read_cgroup_procs()
+        .expect_err("Did not fail to read cgroup.procs");
+    match err {
+        Error::UnexpectedLine(_, line) => assert_eq!(line, "not_a_number"),
+        _ => panic!("Got unexpected error type: {err}"),
+    }
+}
+
+#[test]
 fn test_cpu_stat_success() {
     let cgroup = TestCgroup::new();
     cgroup.create_file_with_content("cpu.stat", b"usage_usec 1234\n");

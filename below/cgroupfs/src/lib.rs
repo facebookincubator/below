@@ -225,6 +225,10 @@ impl CgroupReader {
         CgroupReader::new_with_relative_path_inner(root, relative_path, true)
     }
 
+    pub fn new_no_fs_validation(root: PathBuf) -> Result<CgroupReader> {
+        CgroupReader::new_with_relative_path_inner(root, PathBuf::from(OsStr::new("")), false)
+    }
+
     fn new_with_relative_path_inner(
         root: PathBuf,
         relative_path: PathBuf,
@@ -338,6 +342,24 @@ impl CgroupReader {
             return Ok(BTreeSet::new());
         }
         Ok(s.split(' ').map(String::from).collect())
+    }
+
+    /// Read multi-line file with each line consistenting of single element
+    fn read_multiline_file<T: FromStr>(&self, file_name: &str) -> Result<Vec<T>> {
+        let file = self
+            .dir
+            .open_file(file_name)
+            .map_err(|e| self.io_error(file_name, e))?;
+        let content = self.read_file_to_str(file_name, &file)?;
+        let result = content
+            .lines()
+            .map(|line| {
+                line.parse::<T>()
+                    .map_err(|_| self.unexpected_line(file_name, line.to_string()))
+            })
+            .collect::<std::result::Result<Vec<T>, _>>()?;
+
+        Ok(result)
     }
 
     /// Read cgroup.controllers
@@ -485,6 +507,11 @@ impl CgroupReader {
     /// Read cpuset.mems.effective
     pub fn read_cpuset_mems_effective(&self) -> Result<MemNodes> {
         self.read_empty_or_singleline_file("cpuset.mems.effective")
+    }
+
+    /// Read cgroup.procs
+    pub fn read_cgroup_procs(&self) -> Result<Vec<i32>> {
+        self.read_multiline_file("cgroup.procs")
     }
 
     impl_read_pressure!(
