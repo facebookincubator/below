@@ -23,5 +23,5 @@ thiserror = "2.0.12"
 threadpool = "1.8.1"
 
 [dev-dependencies]
-slog-term = "2.8"
+slog-term = "2.9.2"
 tempfile = "3.22"
