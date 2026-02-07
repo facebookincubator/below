@@ -15,4 +15,4 @@ netlink-packet-route = "0.25"
 netlink-sys = "0.8"
 nix = { version = "0.30.1", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
-thiserror = "2.0.12"
+thiserror = "2.0.18"

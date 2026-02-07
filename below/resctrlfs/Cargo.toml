@@ -15,7 +15,7 @@ common = { package = "below-common", version = "0.11.0", path = "../common" }
 nix = { version = "0.30.1", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 openat = "0.1.21"
 serde = { version = "1.0.219", features = ["derive", "rc"] }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 
 [dev-dependencies]
 maplit = "1.0"
