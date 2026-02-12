@@ -15,7 +15,7 @@ chrono = { version = "0.4.41", features = ["clock", "serde", "std"], default-fea
 common = { package = "below-common", version = "0.11.0", path = "../common" }
 crossterm = { version = "0.28", features = ["event-stream", "serde"] }
 cursive = { version = "0.21.1", features = ["crossterm-backend"], default-features = false }
-enum-iterator = "2.1"
+enum-iterator = "2.3.0"
 humantime = "2.1"
 itertools = "0.14.0"
 libc = "0.2.139"

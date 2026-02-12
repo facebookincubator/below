@@ -14,7 +14,7 @@ anyhow = "1.0.98"
 below_derive = { version = "0.11.0", path = "../below_derive" }
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 common = { package = "below-common", version = "0.11.0", path = "../common" }
-enum-iterator = "2.1"
+enum-iterator = "2.3.0"
 model = { package = "below-model", version = "0.11.0", path = "../model" }
 once_cell = "1.21"
 regex = "1.12.2"
