@@ -10,7 +10,7 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 async-trait = "0.1.86"
 below_derive = { version = "0.11.0", path = "../below_derive" }
 btrfs = { package = "below-btrfs", version = "0.11.0", path = "../btrfs" }
@@ -25,7 +25,7 @@ procfs = { package = "fb_procfs", version = "0.11.0", path = "../procfs" }
 regex = "1.12.2"
 resctrlfs = { version = "0.11.0", path = "../resctrlfs" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.145", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 slog = { version = "2.8.2", features = ["max_level_trace", "nested-values"] }
 tc = { package = "below-tc", version = "0.11.0", path = "../tc" }
 
