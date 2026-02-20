@@ -15,7 +15,7 @@ chrono = { version = "0.4.41", features = ["clock", "serde", "std"], default-fea
 cursive = { version = "0.21.1", features = ["crossterm-backend"], default-features = false }
 humantime = "2.1"
 once_cell = "1.21"
-regex = "1.12.2"
+regex = "1.12.3"
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 slog = { version = "2.8.2", features = ["max_level_trace", "nested-values"] }
 slog-term = "2.9.2"
