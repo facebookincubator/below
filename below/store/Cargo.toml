@@ -10,7 +10,7 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.101"
 bitflags = { version = "2.9", features = ["serde", "std"], default-features = false }
 bytes = { version = "1.11.1", features = ["serde"] }
 common = { package = "below-common", version = "0.11.0", path = "../common" }

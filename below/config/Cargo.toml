@@ -10,7 +10,7 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.101"
 btrfs = { package = "below-btrfs", version = "0.11.0", path = "../btrfs" }
 cgroupfs = { version = "0.11.0", path = "../cgroupfs" }
 procfs = { package = "fb_procfs", version = "0.11.0", path = "../procfs" }
