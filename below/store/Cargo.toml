@@ -30,7 +30,7 @@ itertools = "0.14.0"
 lazy_static = "1.5"
 paste = "1.0.14"
 slog-term = "2.9.2"
-tempfile = "3.22"
+tempfile = "3.26.0"
 zstd = { version = "0.13.3", features = ["experimental", "zstdmt"] }
 
 [features]
