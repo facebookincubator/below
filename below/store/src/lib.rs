@@ -19,7 +19,6 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::ErrorKind;
 use std::io::Write;
-use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use std::path::PathBuf;
 use std::time::SystemTime;
@@ -181,10 +180,10 @@ pub struct StoreWriter {
     dir: PathBuf,
     /// Currently active index file. Append only so cursor always
     /// points to end of file.
-    index: File,
+    index: nix::fcntl::Flock<File>,
     /// Currently active data file. Append only so cursor always
     /// point to end of file.
-    data: File,
+    data: nix::fcntl::Flock<File>,
     /// Current length of the data file (needed to record offsets in
     /// the index)
     data_len: u64,
@@ -323,32 +322,28 @@ impl StoreWriter {
             .create(true)
             .open(index_path.as_path())
             .with_context(|| format!("Failed to open index file: {}", index_path.display()))?;
-        nix::fcntl::flock(
-            index.as_raw_fd(),
-            nix::fcntl::FlockArg::LockExclusiveNonblock,
-        )
-        .with_context(|| {
-            format!(
-                "Failed to acquire file lock on index file: {}",
-                index_path.display(),
-            )
-        })?;
+        let index = nix::fcntl::Flock::lock(index, nix::fcntl::FlockArg::LockExclusiveNonblock)
+            .map_err(|(_, errno)| errno)
+            .with_context(|| {
+                format!(
+                    "Failed to acquire file lock on index file: {}",
+                    index_path.display(),
+                )
+            })?;
 
         let data = OpenOptions::new()
             .append(true)
             .create(true)
             .open(data_path.as_path())
             .with_context(|| format!("Failed to open data file: {}", data_path.display()))?;
-        nix::fcntl::flock(
-            data.as_raw_fd(),
-            nix::fcntl::FlockArg::LockExclusiveNonblock,
-        )
-        .with_context(|| {
-            format!(
-                "Failed to acquire file lock on data file: {}",
-                data_path.display(),
-            )
-        })?;
+        let data = nix::fcntl::Flock::lock(data, nix::fcntl::FlockArg::LockExclusiveNonblock)
+            .map_err(|(_, errno)| errno)
+            .with_context(|| {
+                format!(
+                    "Failed to acquire file lock on data file: {}",
+                    data_path.display(),
+                )
+            })?;
 
         let data_len = data
             .metadata()
@@ -1639,11 +1634,9 @@ mod tests {
             .create(true)
             .open(index_path.as_path())
             .expect("Failed to create index file");
-        nix::fcntl::flock(
-            index.as_raw_fd(),
-            nix::fcntl::FlockArg::LockExclusiveNonblock,
-        )
-        .expect("Failed to acquire flock on index file");
+        let _index_lock =
+            nix::fcntl::Flock::lock(index, nix::fcntl::FlockArg::LockExclusiveNonblock)
+                .expect("Failed to acquire flock on index file");
 
         assert!(
             StoreWriter::new(get_logger(), &dir, compression_mode, format).is_err(),
