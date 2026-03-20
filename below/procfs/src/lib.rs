@@ -65,6 +65,8 @@ pub enum ProcessStackTraceFilter {
     None,
     /// Capture stack traces only for processes in uninterruptible sleep (D state)
     Uninterruptible,
+    /// Capture stack traces only for processes in uninterruptible sleep (D state) or zombie (Z state)
+    UninterruptibleAndZombie,
     /// Capture stack traces for processes in uninterruptible sleep (D) or running (R) states
     UninterruptibleAndRunning,
     /// Capture stack traces for all processes regardless of state
@@ -76,6 +78,9 @@ impl ProcessStackTraceFilter {
     pub fn should_capture(&self, state: &PidState) -> bool {
         match self {
             Self::Uninterruptible => matches!(state, PidState::UninterruptibleSleep),
+            Self::UninterruptibleAndZombie => {
+                matches!(state, PidState::UninterruptibleSleep | PidState::Zombie)
+            }
             Self::UninterruptibleAndRunning => {
                 matches!(state, PidState::UninterruptibleSleep | PidState::Running)
             }
