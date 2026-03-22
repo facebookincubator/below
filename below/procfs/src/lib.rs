@@ -852,6 +852,24 @@ impl ProcReader {
         self.read_pid_exe_path_from_path(self.path.join(pid.to_string()))
     }
 
+    fn read_pid_ns_from_path<P: AsRef<Path>>(&self, path: P) -> Result<u32> {
+        let path = path.as_ref().join("ns").join("pid");
+        let link = std::fs::read_link(path.clone()).map_err(|e| Error::IoError(path.clone(), e))?;
+        let link_str = link.to_string_lossy();
+        // Format: "pid:[<ino>]"
+        let ino_str = link_str
+            .strip_prefix("pid:[")
+            .and_then(|s| s.strip_suffix(']'))
+            .ok_or_else(|| Error::InvalidFileFormat(path.clone()))?;
+        ino_str
+            .parse::<u32>()
+            .map_err(|_| Error::InvalidFileFormat(path))
+    }
+
+    pub fn read_pid_ns(&self, pid: u32) -> Result<u32> {
+        self.read_pid_ns_from_path(self.path.join(pid.to_string()))
+    }
+
     /// Parse a single stack frame line from /proc/<pid>/stack
     ///
     /// Formats handled:
@@ -1086,6 +1104,13 @@ impl ProcReader {
             // 2. Even with root permission, some exe will have broken link, kworker for example.
             if let Ok(s) = self.read_pid_exe_path_from_path(entry.path()) {
                 pidinfo.exe_path = Some(s);
+            }
+
+            match self.read_pid_ns_from_path(entry.path()) {
+                Err(Error::IoError(_, ref e))
+                    if e.raw_os_error()
+                        .is_some_and(|ec| ec == ENOENT || ec == ESRCH || ec == EACCES) => {}
+                res => pidinfo.pid_ns = Some(res?),
             }
 
             // call lambda

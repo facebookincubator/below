@@ -425,6 +425,7 @@ pub struct PidInfo {
     #[serde(alias = "mem")]
     pub status: PidStatus,
     pub stack: Option<PidStack>,
+    pub pid_ns: Option<u32>,
 }
 
 pub type PidMap = BTreeMap<i32, PidInfo>;

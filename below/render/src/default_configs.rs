@@ -945,6 +945,7 @@ impl HasRenderConfig for model::SingleProcessModel {
             Pid => rc.title("Pid"),
             Ppid => rc.title("Ppid"),
             NsTgid => rc.title("NStgid").width(12),
+            PidNs => rc.title("PID NS"),
             Comm => rc.title("Comm").width(30),
             State => rc.title("State"),
             UptimeSecs => rc.title("Uptime(sec)").format(DurationSec),
@@ -1002,6 +1003,8 @@ impl HasRenderConfigForDump for model::SingleProcessModel {
             Ppid => None,
             // Same as ppid
             NsTgid => None,
+            // Static metadata, not a metric
+            PidNs => None,
             // OpenMetrics does not support strings
             Comm => None,
             // OpenMetrics does not support strings

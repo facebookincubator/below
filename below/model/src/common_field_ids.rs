@@ -345,6 +345,7 @@ pub const COMMON_MODEL_FIELD_IDS: &[&str] = &[
     "process.processes.<key>.pid",
     "process.processes.<key>.ppid",
     "process.processes.<key>.ns_tgid",
+    "process.processes.<key>.pid_ns",
     "process.processes.<key>.comm",
     "process.processes.<key>.state",
     "process.processes.<key>.uptime_secs",

@@ -1205,11 +1205,19 @@ nonvoluntary_ctxt_switches:	37733";
     procfs.create_pid_file_with_content(1024, "status", status);
     procfs.create_pid_file_with_content(1024, "cgroup", cgroup);
     procfs.create_pid_file_with_content(1024, "cmdline", cmdline);
+    let pid_dir_1024 = procfs.path().join("1024");
+    std::fs::create_dir_all(pid_dir_1024.join("ns")).expect("Failed to create ns dir");
+    symlink("pid:[4026531836]", pid_dir_1024.join("ns").join("pid"))
+        .expect("Failed to create ns/pid symlink");
     procfs.create_pid_file_with_content(1025, "stat", stat);
     procfs.create_pid_file_with_content(1025, "status", status);
     procfs.create_pid_file_with_content(1025, "io", io);
     procfs.create_pid_file_with_content(1025, "cgroup", cgroup);
     procfs.create_pid_file_with_content(1025, "cmdline", cmdline);
+    let pid_dir_1025 = procfs.path().join("1025");
+    std::fs::create_dir_all(pid_dir_1025.join("ns")).expect("Failed to create ns dir");
+    symlink("pid:[4026531836]", pid_dir_1025.join("ns").join("pid"))
+        .expect("Failed to create ns/pid symlink");
     let reader = procfs.get_reader();
 
     let pidmap = reader
@@ -1632,6 +1640,30 @@ fn test_read_pid_exec() {
         .expect("Failed to read pid exe file");
 
     assert_eq!(exe_path, res);
+}
+
+#[test]
+fn test_read_pid_ns() {
+    let procfs = TestProcfs::new();
+    let pid_dir = procfs.path().join("1234");
+    std::fs::create_dir_all(pid_dir.join("ns")).expect("Failed to create ns dir");
+    symlink("pid:[4026532198]", pid_dir.join("ns").join("pid"))
+        .expect("Failed to create ns/pid symlink");
+
+    let reader = procfs.get_reader();
+    let ino = reader.read_pid_ns(1234).expect("Failed to read pid ns");
+    assert_eq!(ino, 4026532198);
+}
+
+#[test]
+fn test_read_pid_ns_malformed() {
+    let procfs = TestProcfs::new();
+    let pid_dir = procfs.path().join("1234");
+    std::fs::create_dir_all(pid_dir.join("ns")).expect("Failed to create ns dir");
+    symlink("malformed", pid_dir.join("ns").join("pid")).expect("Failed to create ns/pid symlink");
+
+    let reader = procfs.get_reader();
+    assert!(reader.read_pid_ns(1234).is_err());
 }
 
 #[test]
@@ -2133,12 +2165,28 @@ cancelled_write_bytes: 0
     procfs.create_tid_file_with_content(pid, tid1, "io", io_tid1);
     procfs.create_tid_file_with_content(pid, tid1, "cgroup", cgroup);
     procfs.create_tid_file_with_content(pid, tid1, "cmdline", cmdline);
+    let tid1_dir = procfs
+        .path()
+        .join(pid.to_string())
+        .join("task")
+        .join(tid1.to_string());
+    std::fs::create_dir_all(tid1_dir.join("ns")).expect("Failed to create ns dir");
+    symlink("pid:[4026531836]", tid1_dir.join("ns").join("pid"))
+        .expect("Failed to create ns/pid symlink");
 
     procfs.create_tid_file_with_content(pid, tid2, "stat", stat_tid2);
     procfs.create_tid_file_with_content(pid, tid2, "status", status_tid2);
     procfs.create_tid_file_with_content(pid, tid2, "io", io_tid2);
     procfs.create_tid_file_with_content(pid, tid2, "cgroup", cgroup);
     procfs.create_tid_file_with_content(pid, tid2, "cmdline", cmdline);
+    let tid2_dir = procfs
+        .path()
+        .join(pid.to_string())
+        .join("task")
+        .join(tid2.to_string());
+    std::fs::create_dir_all(tid2_dir.join("ns")).expect("Failed to create ns dir");
+    symlink("pid:[4026531836]", tid2_dir.join("ns").join("pid"))
+        .expect("Failed to create ns/pid symlink");
 
     let reader = procfs.get_reader();
     let tidmap = reader
