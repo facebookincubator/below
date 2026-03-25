@@ -20,4 +20,4 @@ thiserror = "2.0.18"
 [dev-dependencies]
 maplit = "1.0"
 paste = "1.0.14"
-tempfile = "3.26.0"
+tempfile = "3.27.0"
