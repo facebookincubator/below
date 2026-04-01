@@ -408,6 +408,37 @@ make_event_controller!(
     }
 );
 
+// Increase column width
+make_event_controller!(
+    IncreaseWidth,
+    "increase_width",
+    "iw",
+    vec![Event::Char('>')],
+    |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        c.user_data::<ViewState>()
+            .expect("No data stored in Cursive object!")
+            .width_delta += 10;
+        refresh(c)
+    }
+);
+
+// Decrease column width
+make_event_controller!(
+    DecreaseWidth,
+    "decrease_width",
+    "dw",
+    vec![Event::Char('<')],
+    |_view: &mut StatsView<T>, _cmd_vec: &[&str]| {},
+    |c: &mut Cursive, _cmd_vec: &[&str]| {
+        let view_state = c
+            .user_data::<ViewState>()
+            .expect("No data stored in Cursive object!");
+        view_state.width_delta = (view_state.width_delta - 10).max(-20);
+        refresh(c)
+    }
+);
+
 make_event_controller!(
     NextSelectionImpl,
     "next_selection",

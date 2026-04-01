@@ -49,6 +49,8 @@ filter = 'u'
 clear_filter = 'v'
 next_page = 'Y'
 prev_page = 'y'
+increase_width = '1'
+decrease_width = '2'
 ";
     let cmdrc_val = toml::from_str::<Value>(cmdrc_str).expect("Failed to parse test cmdrc");
     let event_controllers = make_event_controller_map(&mut fake_view.inner, &Some(cmdrc_val));
@@ -148,6 +150,14 @@ prev_page = 'y'
     assert_eq!(
         event_controllers.get(&Event::Char('y')),
         Some(&Controllers::PrevPage)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('1')),
+        Some(&Controllers::IncWidth)
+    );
+    assert_eq!(
+        event_controllers.get(&Event::Char('2')),
+        Some(&Controllers::DecWidth)
     );
 }
 

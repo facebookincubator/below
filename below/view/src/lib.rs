@@ -194,6 +194,12 @@ pub enum ViewMode {
 // Invoked either when the data view was explicitly advanced, or
 // periodically (during live mode)
 fn refresh(c: &mut Cursive) {
+    let width_delta = c
+        .user_data::<ViewState>()
+        .expect("No data stored in Cursive object!")
+        .width_delta;
+    base_render::set_width_delta(width_delta);
+
     status_bar::refresh(c);
     summary_view::refresh(c);
     let current_state = c
@@ -254,6 +260,8 @@ pub struct ViewState {
     pub viewrc_error: Option<String>,
     pub event_controllers: Arc<Mutex<HashMap<Event, controllers::Controllers>>>,
     pub cmd_controllers: Arc<Mutex<HashMap<&'static str, controllers::Controllers>>>,
+    /// Delta applied to all column widths. Adjusted by `>` and `<` keys.
+    pub width_delta: i32,
 }
 
 impl ViewState {
@@ -299,6 +307,7 @@ impl ViewState {
             viewrc_error,
             event_controllers: Arc::new(Mutex::new(HashMap::new())),
             cmd_controllers: Arc::new(Mutex::new(controllers::make_cmd_controller_map())),
+            width_delta: 0,
         }
     }
 

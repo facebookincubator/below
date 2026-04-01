@@ -137,4 +137,6 @@ make_controllers!(
     PrevPage: PrevPageImpl,
     NextSelection: NextSelectionImpl,
     PrevSelection: PrevSelectionImpl,
+    IncWidth: IncreaseWidth,
+    DecWidth: DecreaseWidth,
 );

@@ -419,10 +419,43 @@ impl<V: 'static + ViewBridge> StatsView<V> {
         }
     }
 
+    /// Regenerate column title strings for the current tab without resetting
+    /// the selected column or scroll position.
+    ///
+    /// This must be called on every refresh so that title widths stay in sync
+    /// with data column widths (which depend on the runtime `WIDTH_DELTA`).
+    fn refresh_titles(&mut self) {
+        let cur_tab = self.get_tab_view().get_cur_selected().to_string();
+        let bridge = self
+            .tab_view_map
+            .get(&cur_tab)
+            .unwrap_or_else(|| panic!("Fail to query bridge from tab {}", cur_tab));
+        let new_titles = bridge.get_titles();
+
+        // Apply the fresh title strings directly to the live TabView widget
+        // while preserving the current column selection and scroll position.
+        let mut title_view = self.get_title_view();
+        title_view.tabs.clone_from(&new_titles.titles);
+        title_view.total_length = title_view.tabs.iter().fold(0, |acc, x| acc + x.len() + 1);
+        // Recalculate cur_length up to and including the selected column.
+        title_view.cur_length = title_view
+            .tabs
+            .iter()
+            .take(title_view.current_selected + 1)
+            .fold(0, |acc, x| acc + x.len() + 1);
+
+        // Also update the cached map so that update_title() (used on tab
+        // switch) sees fresh values.
+        self.tab_titles_map.insert(cur_tab, new_titles);
+    }
+
     // Function to refresh the view.
     // A potential optimize here is put the model of the cursive view_state as Rc<RefCell>
     // member of StatsView. In that case, we don't need to borrow the cursive object here.
     pub fn refresh(&mut self, c: &mut Cursive) {
+        // Regenerate column titles so they reflect the current WIDTH_DELTA.
+        self.refresh_titles();
+
         {
             let cur_tab = self.get_tab_view().get_cur_selected().to_string();
             let mut select_view = self.get_detail_view();

@@ -102,6 +102,8 @@ fn get_description(controller: &Controllers) -> &'static str {
         Controllers::Fold => "Fold processes (post filter) and display aggregated values.",
         Controllers::NextPage => "Scroll down 15 lines primary display.",
         Controllers::PrevPage => "Scroll up 15 lines primary display.",
+        Controllers::IncWidth => "Increase column width by 10 characters.",
+        Controllers::DecWidth => "Decrease column width by 10 characters.",
         _ => "Unknown",
     }
 }
@@ -179,6 +181,8 @@ fn fill_controllers(
         cmd_map.get(&Controllers::System).unwrap().to_string(),
         cmd_map.get(&Controllers::NextPage).unwrap().to_string(),
         cmd_map.get(&Controllers::PrevPage).unwrap().to_string(),
+        cmd_map.get(&Controllers::IncWidth).unwrap().to_string(),
+        cmd_map.get(&Controllers::DecWidth).unwrap().to_string(),
     ];
 
     controllers.extend(crate::get_extra_controller_str(&cmd_map));

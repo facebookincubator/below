@@ -62,6 +62,14 @@ fn get_content(c: &mut Cursive) -> impl Into<StyledString> + use<> {
     header_str.append_plain(get_spacing());
     header_str.append_plain(view_state.view_mode_str());
 
+    if view_state.width_delta != 0 {
+        header_str.append_plain(format!(
+            "{}[Width: {:+}]",
+            get_spacing(),
+            view_state.width_delta
+        ));
+    }
+
     header_str
 }
 

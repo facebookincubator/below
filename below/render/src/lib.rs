@@ -14,6 +14,7 @@
 
 #![deny(clippy::all)]
 
+use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -31,6 +32,22 @@ use model::Field;
 use model::Queriable;
 
 open_source_shim!();
+
+thread_local! {
+    /// Delta applied to all column widths. Set by the view layer before each
+    /// refresh cycle. Positive values widen columns, negative values narrow them.
+    static WIDTH_DELTA: Cell<i32> = const { Cell::new(0) };
+}
+
+/// Set the column width delta for the current thread.
+pub fn set_width_delta(delta: i32) {
+    WIDTH_DELTA.with(|d| d.set(delta));
+}
+
+/// Get the current column width delta.
+pub fn get_width_delta() -> i32 {
+    WIDTH_DELTA.with(|d| d.get())
+}
 
 /// Specifies how to format a Field into String
 #[derive(Clone)]
@@ -328,10 +345,12 @@ impl RenderConfig {
     }
 
     /// Value for fixed-width rendering, with default as title width + 2 and
-    /// minimum width 10.
+    /// minimum width 10. The global width delta is applied to allow the user
+    /// to widen or narrow all columns at runtime.
     fn get_width(&self) -> usize {
         const MIN_WIDTH: usize = 10;
-        std::cmp::max(MIN_WIDTH, self.width.unwrap_or(self.get_title().len() + 2))
+        let base = self.width.unwrap_or(self.get_title().len() + 2);
+        (base as i32 + get_width_delta()).max(MIN_WIDTH as i32) as usize
     }
 
     pub fn render_title(&self, fixed_width: bool) -> String {
@@ -603,4 +622,54 @@ fn test_openmetrics_labels() {
 my_key{label1="value1",label2="value2",label3="zzz"} 1.23 1234
 "#;
     assert_eq!(text, expected);
+}
+
+#[test]
+fn test_width_delta_default() {
+    // Reset to known state
+    set_width_delta(0);
+    assert_eq!(get_width_delta(), 0);
+
+    let rc = RenderConfigBuilder::new().title("test").width(20).get();
+    assert_eq!(rc.get_width(), 20);
+}
+
+#[test]
+fn test_width_delta_positive() {
+    set_width_delta(10);
+    let rc = RenderConfigBuilder::new().title("test").width(20).get();
+    assert_eq!(rc.get_width(), 30, "width 20 + delta 10 = 30");
+    set_width_delta(0);
+}
+
+#[test]
+fn test_width_delta_negative_clamped() {
+    set_width_delta(-15);
+    let rc = RenderConfigBuilder::new().title("test").width(20).get();
+    // 20 - 15 = 5, but MIN_WIDTH is 10
+    assert_eq!(rc.get_width(), 10, "width should be clamped to MIN_WIDTH");
+    set_width_delta(0);
+}
+
+#[test]
+fn test_width_delta_no_explicit_width() {
+    set_width_delta(5);
+    // title "ab" has len 2, default width = 2 + 2 = 4, but MIN_WIDTH is 10
+    let rc = RenderConfigBuilder::new().title("ab").get();
+    // base=4, 4+5=9, but min is 10
+    assert_eq!(
+        rc.get_width(),
+        10,
+        "adjusted width below MIN_WIDTH is clamped"
+    );
+
+    // title with longer name
+    let rc2 = RenderConfigBuilder::new().title("a_long_title").get();
+    // base = 12+2 = 14, 14+5 = 19
+    assert_eq!(
+        rc2.get_width(),
+        19,
+        "adjusted width above MIN_WIDTH is kept"
+    );
+    set_width_delta(0);
 }
