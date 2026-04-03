@@ -44,7 +44,7 @@ signal-hook = "0.3.18"
 slog = { version = "2.8.2", features = ["max_level_trace", "nested-values"] }
 slog-term = "2.9.2"
 store = { package = "below-store", version = "0.11.0", path = "store" }
-tar = "0.4.44"
+tar = "0.4.45"
 tempfile = "3.27.0"
 tokio = { version = "1.50.0", features = ["full", "test-util", "tracing"] }
 view = { package = "below-view", version = "0.11.0", path = "view" }

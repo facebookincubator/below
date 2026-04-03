@@ -22,6 +22,6 @@ render = { package = "below-render", version = "0.11.0", path = "../render" }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 slog = { version = "2.8.2", features = ["max_level_trace", "nested-values"] }
 store = { package = "below-store", version = "0.11.0", path = "../store" }
-tar = "0.4.44"
+tar = "0.4.45"
 tempfile = "3.27.0"
 toml = { version = "0.9.12", features = ["preserve_order"] }
