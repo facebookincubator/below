@@ -257,8 +257,8 @@ impl BtrfsReader {
         .map_err(Error::SysError)?;
 
         let mut roots = Roots::new(fd);
-        let uniform = Uniform::new(0, total_chunk_length);
-        let mut rng = rand::thread_rng();
+        let uniform = Uniform::new(0, total_chunk_length).unwrap();
+        let mut rng = rand::rng();
 
         let mut sample_tree = SampleTree::new();
         let mut total_samples = 0;
