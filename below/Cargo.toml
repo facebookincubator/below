@@ -29,7 +29,7 @@ config = { package = "below-config", version = "0.11.0", path = "config" }
 cursive = { version = "0.21.1", features = ["crossterm-backend"], default-features = false }
 dump = { package = "below-dump", version = "0.11.0", path = "dump" }
 indicatif = { version = "0.18.4", features = ["futures", "improved_unicode", "rayon", "tokio"] }
-libbpf-rs = { version = "0.26.1", default-features = false }
+libbpf-rs = { version = "0.26.2", default-features = false }
 libc = "0.2.183"
 model = { package = "below-model", version = "0.11.0", path = "model" }
 nix = { version = "0.30.1", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
@@ -54,7 +54,7 @@ maplit = "1.0"
 portpicker = "0.1.1"
 
 [build-dependencies]
-libbpf-cargo = { version = "0.26.1", default-features = false }
+libbpf-cargo = { version = "0.26.2", default-features = false }
 
 [features]
 default = ["libbpf-cargo/default", "libbpf-rs/default"]
