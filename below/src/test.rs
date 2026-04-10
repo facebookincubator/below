@@ -228,8 +228,11 @@ fn default_cgroup_io_model() {
     let duration = Duration::from_secs(5);
 
     let model = Model::new(SystemTime::now(), &sample, Some((&last_sample, duration)));
-    assert!(model.cgroup.data.io_total.is_some());
-    let io_total = model.cgroup.data.io_total.unwrap();
+    let io_total = model
+        .cgroup
+        .data
+        .io_total
+        .expect("io_total should be present when io_stat is set");
     assert_eq!(io_total.rbytes_per_sec, Some(0.0));
     assert_eq!(io_total.wbytes_per_sec, Some(0.0));
     assert_eq!(io_total.rios_per_sec, Some(0.0));
