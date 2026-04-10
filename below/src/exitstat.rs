@@ -142,7 +142,10 @@ impl ExitstatDriver {
 
         // handle.lock() only fails if a thread holding the lock panic'd, in which
         // case we should probably panic too.
-        handle.lock().unwrap().insert(event.meta.tid, pidinfo);
+        handle
+            .lock()
+            .expect("lock poisoned: a thread holding the lock panicked")
+            .insert(event.meta.tid, pidinfo);
     }
 
     fn handle_lost_events(logger: &slog::Logger, cpu: i32, count: u64) {
