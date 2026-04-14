@@ -1670,8 +1670,8 @@ fn test_read_pid_ns_malformed() {
 fn test_read_mountinfo() {
     let mountinfo = b"
     56 1 0:26 / / rw,relatime shared:1 - btrfs /dev/vda3 rw,compress-force=zstd:3,discard,space_cache,subvolid=5,subvol=/
-    31 20 0:7 / /sys/kernel/debug rw,relatime shared:15 - debugfs debugfs rw,mode=755
-    36 56 253:1 / /boot rw,relatime shared:20 - ext4 /dev/vda1 rw";
+    31 20 0:7 / /sys/kernel/debug rw,relatime shared:15 master:1 - debugfs debugfs rw,mode=755
+    36 56 253:1 / /boot rw,relatime - ext4 /dev/vda1 rw";
 
     let procfs = TestProcfs::new();
     procfs.create_dir("self");

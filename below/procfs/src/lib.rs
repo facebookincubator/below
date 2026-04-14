@@ -541,7 +541,9 @@ impl ProcReader {
             ..Default::default()
         };
 
-        let mut items = items.skip(2);
+        // Skip zero or more optional fields
+        let mut items = items.skip_while(|item| item != &"-").skip(1);
+
         mount_info.fs_type = parse_item!(path, items.next(), String, line)?;
         mount_info.mount_source = parse_item!(path, items.next(), String, line)?;
 
