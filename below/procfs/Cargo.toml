@@ -16,7 +16,7 @@ lazy_static = "1.5"
 libc = "0.2.183"
 nix = { version = "0.30.1", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 openat = "0.1.21"
-parking_lot = { version = "0.12.1", features = ["send_guard"] }
+parking_lot = { version = "0.12.3", features = ["send_guard"] }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 slog = { version = "2.8.2", features = ["max_level_trace", "nested-values"] }
 thiserror = "2.0.18"
