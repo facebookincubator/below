@@ -46,7 +46,7 @@ slog-term = "2.9.2"
 store = { package = "below-store", version = "0.11.0", path = "store" }
 tar = "0.4.45"
 tempfile = "3.27.0"
-tokio = { version = "1.50.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.52.1", features = ["full", "test-util", "tracing"] }
 view = { package = "below-view", version = "0.11.0", path = "view" }
 
 [dev-dependencies]
