@@ -23,7 +23,7 @@ unit-scripts = "../etc"
 anyhow = "1.0.102"
 cgroupfs = { version = "0.11.0", path = "cgroupfs" }
 clap = { version = "4.6.0", features = ["derive", "env", "string", "unicode", "wrap_help"] }
-clap_complete = "4.6.0"
+clap_complete = "4.6.2"
 common = { package = "below-common", version = "0.11.0", path = "common" }
 config = { package = "below-config", version = "0.11.0", path = "config" }
 cursive = { version = "0.21.1", features = ["crossterm-backend"], default-features = false }
