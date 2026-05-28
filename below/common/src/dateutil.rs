@@ -104,11 +104,20 @@ const TIME_OF_DAY_FORMATS: [&str; 6] = [
     "%H:%M:%S",
 ];
 
-const INVALID_OFFSET: i32 = i32::max_value();
+const INVALID_OFFSET: i32 = i32::MAX;
 static DEFAUL_OFFSET: AtomicI32 = AtomicI32::new(INVALID_OFFSET);
 
 fn today() -> NaiveDate {
-    Local::now().date_naive()
+    let offset = DEFAUL_OFFSET.load(Ordering::SeqCst);
+    if is_valid_offset(offset) {
+        // When a default offset is configured, derive "today" from UTC
+        // adjusted by that offset so relative dates ("today", "tomorrow")
+        // are consistent with HgTime::now().
+        let utc_now = chrono::Utc::now().naive_utc();
+        (utc_now - Duration::seconds(offset as i64)).date()
+    } else {
+        Local::now().date_naive()
+    }
 }
 
 impl HgTime {
@@ -300,14 +309,12 @@ impl HgTime {
 
         // Hg internal format. "unixtime offset"
         let parts: Vec<_> = date.split(' ').collect();
-        if parts.len() == 2 {
-            if let Ok(unixtime) = parts[0].parse() {
-                if let Ok(offset) = parts[1].parse() {
-                    if is_valid_offset(offset) {
-                        return Some(Self { unixtime, offset });
-                    }
-                }
-            }
+        if parts.len() == 2
+            && let Ok(unixtime) = parts[0].parse()
+            && let Ok(offset) = parts[1].parse()
+            && is_valid_offset(offset)
+        {
+            return Some(Self { unixtime, offset });
         }
 
         // Normalize UTC timezone name to +0000. The parser does not know
@@ -437,7 +444,7 @@ impl HgTime {
 
     pub fn max_value() -> Self {
         Self {
-            unixtime: u64::max_value() >> 2,
+            unixtime: u64::MAX >> 2,
             offset: 0,
         }
     }
@@ -484,7 +491,7 @@ impl<Tz: TimeZone> From<DateTime<Tz>> for HgTime {
 
 impl From<NaiveDateTime> for HgTime {
     fn from(time: NaiveDateTime) -> Self {
-        let timestamp = time.timestamp();
+        let timestamp = time.and_utc().timestamp();
         // Use local offset. (Is there a better way to do this?)
         let offset = Self::now().offset;
         // XXX: This might silently change negative time to 0.
