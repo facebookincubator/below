@@ -15,16 +15,11 @@
 # limitations under the License.
 
 import argparse
-import json
 import logging
 import os
-import random
-import string
 import subprocess
 import tempfile
 import time
-from collections import namedtuple
-from enum import Enum
 from pathlib import Path
 
 DOCKER_BIN = os.environ.get("DOCKER", "docker")
