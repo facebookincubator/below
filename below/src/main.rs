@@ -65,6 +65,8 @@ use tempfile::TempDir;
 use tokio::runtime::Builder as TB;
 
 mod exitstat;
+#[cfg(not(fbcode_build))]
+mod remote_server;
 #[cfg(test)]
 mod test;
 
@@ -721,6 +723,17 @@ where
         below_config.store_dir.clone(),
         err_sender,
     );
+    // Open-source remote-viewing server. In the fbcode build this is handled by
+    // `facebook::init` above instead.
+    #[cfg(not(fbcode_build))]
+    if let Service::On(port) = _service {
+        if let Err(e) =
+            remote_server::start(logger.clone(), below_config.store_dir.clone(), port)
+        {
+            error!(logger, "Failed to start remote viewing server: {:#}", e);
+            return 1;
+        }
+    }
     let res = command(init, below_config, logger.clone(), err_receiver);
 
     match res {
