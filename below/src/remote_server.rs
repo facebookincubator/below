@@ -27,11 +27,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use slog::error;
 use slog::info;
 use slog::warn;
@@ -55,23 +55,61 @@ struct ServerState {
 }
 
 /// Start the remote-viewing server. Binding happens synchronously so a failure
-/// (e.g. address in use) is reported to the caller; request handling runs on
-/// detached worker threads for the lifetime of the process.
-pub fn start(logger: slog::Logger, store_dir: PathBuf, port: Option<u16>) -> Result<()> {
+/// (e.g. address in use, bad certificate) is reported to the caller; request
+/// handling runs on detached worker threads for the lifetime of the process.
+///
+/// When `tls_cert` and `tls_key` (PEM files) are both supplied, the server
+/// listens over HTTPS; otherwise plain HTTP.
+pub fn start(
+    logger: slog::Logger,
+    store_dir: PathBuf,
+    port: Option<u16>,
+    tls_cert: Option<PathBuf>,
+    tls_key: Option<PathBuf>,
+) -> Result<()> {
     let port = port.unwrap_or(DEFAULT_REMOTE_PORT);
     let addr = format!("0.0.0.0:{port}");
-    let server = Server::http(&addr)
-        .map_err(|e| anyhow::anyhow!("Failed to bind remote viewing server on {addr}: {e}"))?;
+
+    let (server, scheme) = match (tls_cert, tls_key) {
+        (Some(cert), Some(key)) => {
+            let certificate = std::fs::read(&cert)
+                .with_context(|| format!("Failed to read --tls-cert {cert:?}"))?;
+            let private_key = std::fs::read(&key)
+                .with_context(|| format!("Failed to read --tls-key {key:?}"))?;
+            let config = tiny_http::SslConfig {
+                certificate,
+                private_key,
+            };
+            let server = Server::https(&addr, config)
+                .map_err(|e| anyhow::anyhow!("Failed to bind HTTPS server on {addr}: {e}"))?;
+            (server, "https")
+        }
+        (None, None) => {
+            let server = Server::http(&addr)
+                .map_err(|e| anyhow::anyhow!("Failed to bind HTTP server on {addr}: {e}"))?;
+            (server, "http")
+        }
+        _ => bail!("both --tls-cert and --tls-key must be provided to enable TLS"),
+    };
 
     let token = read_token()?;
-    if token.is_some() {
-        info!(logger, "Remote viewing server listening on {addr} (token auth)");
-    } else {
-        warn!(
+    match (scheme, token.is_some()) {
+        ("https", true) => info!(logger, "Remote viewing server listening on https://{addr} (TLS, token auth)"),
+        ("https", false) => warn!(
             logger,
-            "Remote viewing server listening on {addr} WITHOUT authentication. Set \
-             BELOW_REMOTE_TOKEN (or BELOW_REMOTE_TOKEN_FILE) to require a token."
-        );
+            "Remote viewing server listening on https://{addr} (TLS) WITHOUT authentication. \
+             Set BELOW_REMOTE_TOKEN (or BELOW_REMOTE_TOKEN_FILE) to require a token."
+        ),
+        (_, true) => warn!(
+            logger,
+            "Remote viewing server listening on http://{addr} (token auth, NO transport \
+             encryption). Provide --tls-cert/--tls-key or terminate TLS in a proxy/mesh."
+        ),
+        (_, false) => warn!(
+            logger,
+            "Remote viewing server listening on http://{addr} WITHOUT TLS or authentication. \
+             Set --tls-cert/--tls-key and BELOW_REMOTE_TOKEN to secure it."
+        ),
     }
 
     let state = Arc::new(ServerState {

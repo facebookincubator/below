@@ -21,13 +21,22 @@
 //! Authentication is a shared bearer token, intended to be delivered as a
 //! Kubernetes Secret. The token is read from the `BELOW_REMOTE_TOKEN`
 //! environment variable, or from the file named by `BELOW_REMOTE_TOKEN_FILE`.
-//! When neither is set the client sends no credentials (for use inside a
-//! trusted network or behind a TLS-terminating proxy/service mesh).
 //!
-//! Transport security (TLS) is intentionally delegated to the platform (service
-//! mesh or ingress), matching how this is typically deployed in Kubernetes.
+//! TLS is opt-in via environment variables (so no per-command flags are
+//! required):
+//!   * `BELOW_REMOTE_TLS=1`        -- connect over HTTPS, verifying the server
+//!                                    against the system trust store.
+//!   * `BELOW_REMOTE_CA_FILE=<pem>`-- connect over HTTPS, verifying against this
+//!                                    CA bundle (for self-signed / internal CAs).
+//!   * `BELOW_REMOTE_TLS_INSECURE=1` -- connect over HTTPS without verifying the
+//!                                    server certificate (testing only).
 
+use std::fs::File;
+use std::io::BufReader;
 use std::io::Read;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
@@ -36,6 +45,17 @@ use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
+use rustls::ClientConfig;
+use rustls::DigitallySignedStruct;
+use rustls::RootCertStore;
+use rustls::SignatureScheme;
+use rustls::client::danger::HandshakeSignatureValid;
+use rustls::client::danger::ServerCertVerified;
+use rustls::client::danger::ServerCertVerifier;
+use rustls::crypto::CryptoProvider;
+use rustls::pki_types::CertificateDer;
+use rustls::pki_types::ServerName;
+use rustls::pki_types::UnixTime;
 
 use crate::DataFrame;
 use crate::Direction;
@@ -44,6 +64,16 @@ use crate::Direction;
 pub const DEFAULT_REMOTE_PORT: u16 = 1969;
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// How the client should verify the server when TLS is enabled.
+enum TlsMode {
+    /// Verify against the system trust store.
+    Default,
+    /// Verify against a specific CA bundle (PEM).
+    Ca(PathBuf),
+    /// Do not verify the server certificate (testing only).
+    Insecure,
+}
 
 pub struct RemoteStore {
     base_url: String,
@@ -54,13 +84,26 @@ pub struct RemoteStore {
 impl RemoteStore {
     pub fn new(host: String, port: Option<u16>) -> Result<RemoteStore> {
         let port = port.unwrap_or(DEFAULT_REMOTE_PORT);
-        let agent = ureq::AgentBuilder::new()
-            .timeout(REQUEST_TIMEOUT)
-            .build();
+        let tls = read_tls_mode();
+        let scheme = if tls.is_some() { "https" } else { "http" };
+
+        let mut builder = ureq::AgentBuilder::new().timeout(REQUEST_TIMEOUT);
+        match &tls {
+            Some(TlsMode::Ca(path)) => {
+                builder = builder.tls_config(Arc::new(build_ca_config(path)?));
+            }
+            Some(TlsMode::Insecure) => {
+                builder = builder.tls_config(Arc::new(build_insecure_config()));
+            }
+            // Default TLS uses ureq's built-in rustls config (system roots);
+            // plain HTTP needs no TLS config.
+            Some(TlsMode::Default) | None => {}
+        }
+
         Ok(RemoteStore {
-            base_url: format!("http://{host}:{port}"),
+            base_url: format!("{scheme}://{host}:{port}"),
             token: read_token()?,
-            agent,
+            agent: builder.build(),
         })
     }
 
@@ -109,6 +152,61 @@ impl RemoteStore {
     }
 }
 
+/// Determine the TLS mode from the environment, or `None` for plain HTTP.
+fn read_tls_mode() -> Option<TlsMode> {
+    if env_truthy("BELOW_REMOTE_TLS_INSECURE") {
+        return Some(TlsMode::Insecure);
+    }
+    if let Some(ca) = std::env::var_os("BELOW_REMOTE_CA_FILE") {
+        return Some(TlsMode::Ca(PathBuf::from(ca)));
+    }
+    if env_truthy("BELOW_REMOTE_TLS") {
+        return Some(TlsMode::Default);
+    }
+    None
+}
+
+fn env_truthy(key: &str) -> bool {
+    match std::env::var(key) {
+        Ok(v) => matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"),
+        Err(_) => false,
+    }
+}
+
+/// Build a TLS client config that verifies the server against a CA bundle.
+fn build_ca_config(ca_path: &Path) -> Result<ClientConfig> {
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let mut roots = RootCertStore::empty();
+    let mut reader = BufReader::new(
+        File::open(ca_path).with_context(|| format!("Failed to open CA file {ca_path:?}"))?,
+    );
+    for cert in rustls_pemfile::certs(&mut reader) {
+        let cert = cert.with_context(|| format!("Failed to parse CA file {ca_path:?}"))?;
+        roots
+            .add(cert)
+            .context("Failed to add CA certificate to root store")?;
+    }
+    if roots.is_empty() {
+        bail!("No certificates found in CA file {ca_path:?}");
+    }
+    Ok(ClientConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .context("Failed to initialize TLS protocol versions")?
+        .with_root_certificates(roots)
+        .with_no_client_auth())
+}
+
+/// Build a TLS client config that skips server certificate verification.
+fn build_insecure_config() -> ClientConfig {
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    ClientConfig::builder_with_provider(provider.clone())
+        .with_safe_default_protocol_versions()
+        .expect("ring provider supports default protocol versions")
+        .dangerous()
+        .with_custom_certificate_verifier(Arc::new(InsecureVerifier { provider }))
+        .with_no_client_auth()
+}
+
 /// Read the bearer token from `BELOW_REMOTE_TOKEN` or `BELOW_REMOTE_TOKEN_FILE`.
 fn read_token() -> Result<Option<String>> {
     if let Ok(token) = std::env::var("BELOW_REMOTE_TOKEN") {
@@ -122,4 +220,57 @@ fn read_token() -> Result<Option<String>> {
         return Ok(Some(token.trim().to_owned()));
     }
     Ok(None)
+}
+
+/// Verifier that accepts any server certificate. Insecure; testing only.
+#[derive(Debug)]
+struct InsecureVerifier {
+    provider: Arc<CryptoProvider>,
+}
+
+impl ServerCertVerifier for InsecureVerifier {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &CertificateDer<'_>,
+        _intermediates: &[CertificateDer<'_>],
+        _server_name: &ServerName<'_>,
+        _ocsp_response: &[u8],
+        _now: UnixTime,
+    ) -> std::result::Result<ServerCertVerified, rustls::Error> {
+        Ok(ServerCertVerified::assertion())
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> std::result::Result<HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls12_signature(
+            message,
+            cert,
+            dss,
+            &self.provider.signature_verification_algorithms,
+        )
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> std::result::Result<HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls13_signature(
+            message,
+            cert,
+            dss,
+            &self.provider.signature_verification_algorithms,
+        )
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        self.provider
+            .signature_verification_algorithms
+            .supported_schemes()
+    }
 }
