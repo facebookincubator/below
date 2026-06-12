@@ -65,6 +65,8 @@ use tempfile::TempDir;
 use tokio::runtime::Builder as TB;
 
 mod exitstat;
+#[cfg(not(fbcode_build))]
+mod remote_server;
 #[cfg(test)]
 mod test;
 
@@ -199,6 +201,13 @@ enum Command {
         /// Override default port for remote viewing server
         #[clap(long)]
         port: Option<u16>,
+        /// PEM certificate (chain) file to serve remote viewing over TLS.
+        /// Requires --tls-key.
+        #[clap(long, value_name = "PEM", requires = "tls_key")]
+        tls_cert: Option<PathBuf>,
+        /// PEM private key file for --tls-cert.
+        #[clap(long, value_name = "PEM", requires = "tls_cert")]
+        tls_key: Option<PathBuf>,
         /// Threshold for hold long data collection takes to trigger warnings.
         #[clap(long, default_value = "500")]
         skew_detection_threshold_ms: u64,
@@ -813,6 +822,8 @@ fn real_main(init: init::InitToken) {
             store_size_limit,
             collect_io_stat,
             port,
+            tls_cert,
+            tls_key,
             skew_detection_threshold_ms,
             disable_disk_stat,
             disable_exitstats,
@@ -820,11 +831,14 @@ fn real_main(init: init::InitToken) {
             writer_buffer_size,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
+            let port = *port;
+            let tls_cert = tls_cert.clone();
+            let tls_key = tls_key.clone();
             run(
                 init,
                 debug,
                 below_config,
-                Service::On(*port),
+                Service::On(port),
                 |init, below_config, logger, errs| {
                     record(
                         init,
@@ -841,6 +855,9 @@ fn real_main(init: init::InitToken) {
                         *disable_exitstats,
                         compress_opts,
                         *writer_buffer_size,
+                        port,
+                        tls_cert,
+                        tls_key,
                     )
                 },
             )
@@ -1181,8 +1198,24 @@ fn record(
     disable_exitstats: bool,
     compress_opts: &CompressOpts,
     writer_buffer_size: usize,
+    port: Option<u16>,
+    tls_cert: Option<PathBuf>,
+    tls_key: Option<PathBuf>,
 ) -> Result<()> {
     debug!(logger, "Starting up!");
+
+    // Start the open-source remote-viewing server. In the fbcode build, serving
+    // is handled by `facebook::init` in `run()` instead.
+    #[cfg(not(fbcode_build))]
+    remote_server::start(
+        logger.clone(),
+        below_config.store_dir.clone(),
+        port,
+        tls_cert,
+        tls_key,
+    )?;
+    #[cfg(fbcode_build)]
+    let _ = (port, tls_cert, tls_key);
 
     if !disable_exitstats {
         bump_memlock_rlimit()?;
