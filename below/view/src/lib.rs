@@ -87,6 +87,7 @@ use model::GpuModel;
 use model::Model;
 use model::NetworkModel;
 use model::ProcessModel;
+use model::ResctrlModel;
 use model::SystemModel;
 use store::Advance;
 use toml::value::Value;
@@ -251,6 +252,7 @@ pub struct ViewState {
     pub cgroup: Arc<Mutex<CgroupModel>>,
     pub process: Arc<Mutex<ProcessModel>>,
     pub network: Arc<Mutex<NetworkModel>>,
+    pub resctrl: Arc<Mutex<Option<ResctrlModel>>>,
     #[cfg(fbcode_build)]
     pub gpu: Arc<Mutex<Option<GpuModel>>>,
     pub main_view_state: MainViewState,
@@ -276,6 +278,7 @@ impl ViewState {
         *self.cgroup.lock().unwrap() = model.cgroup;
         *self.process.lock().unwrap() = model.process;
         *self.network.lock().unwrap() = model.network;
+        *self.resctrl.lock().unwrap() = model.resctrl;
         #[cfg(fbcode_build)]
         {
             *self.gpu.lock().unwrap() = model.gpu;
@@ -298,6 +301,7 @@ impl ViewState {
             cgroup: Arc::new(Mutex::new(model.cgroup)),
             process: Arc::new(Mutex::new(model.process)),
             network: Arc::new(Mutex::new(model.network)),
+            resctrl: Arc::new(Mutex::new(model.resctrl)),
             #[cfg(fbcode_build)]
             gpu: Arc::new(Mutex::new(model.gpu)),
             main_view_state,

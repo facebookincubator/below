@@ -18,6 +18,8 @@ use common::util::get_prefix;
 use cursive::utils::markup::StyledString;
 use model::BtrfsModel;
 use model::Queriable;
+use model::ResctrlL3MonModel;
+use model::ResctrlL3MonModelFieldId;
 use model::SingleSlabModel;
 use model::system::BtrfsModelFieldId;
 use model::system::KsmModelFieldId;
@@ -371,6 +373,137 @@ impl SystemTab for SystemBtrfs {
     }
 }
 
+// Wide enough for an indented mon group name like
+// "  MON_409e00b71d974765888774189e179920" (a "MON_" prefix + 32 hex chars,
+// plus indentation) without clipping.
+const RESCTRL_GROUP_WIDTH: usize = 42;
+const RESCTRL_MODE_WIDTH: usize = 15;
+
+/// The L3 monitoring fields rendered (as the per-group total) by the Resctrl tab.
+const RESCTRL_L3_FIELDS: [ResctrlL3MonModelFieldId; 3] = [
+    ResctrlL3MonModelFieldId::LlcOccupancyBytes,
+    ResctrlL3MonModelFieldId::MbmTotalBytesPerSec,
+    ResctrlL3MonModelFieldId::MbmLocalBytesPerSec,
+];
+
+/// Renders a single resctrl group as a row: group name (indented by `depth`),
+/// mode, the L3 total monitoring stats, and finally the cpuset. The cpuset is
+/// last because it is variable length and can be wide.
+fn render_resctrl_row(
+    name: &str,
+    depth: usize,
+    mode: &str,
+    cpuset: &str,
+    l3: Option<&ResctrlL3MonModel>,
+) -> StyledString {
+    let mut line = StyledString::new();
+    let indented_name = format!("{:indent$}{}", "", name, indent = depth * 2);
+    line.append_plain(get_fixed_width(&indented_name, RESCTRL_GROUP_WIDTH));
+    line.append_plain(get_fixed_width(mode, RESCTRL_MODE_WIDTH));
+
+    let default_l3 = ResctrlL3MonModel::default();
+    let l3 = l3.unwrap_or(&default_l3);
+    for field_id in RESCTRL_L3_FIELDS.iter() {
+        line.append(ViewItem::from_default(field_id.clone()).render(l3));
+        line.append_plain(" ");
+    }
+
+    // Cpuset is the final column, so render it in full rather than truncating.
+    line.append_plain(cpuset);
+    line
+}
+
+#[derive(Default, Clone)]
+pub struct SystemResctrl;
+
+impl SystemTab for SystemResctrl {
+    fn get_titles(&self) -> ColumnTitles {
+        let mut titles = vec![
+            get_fixed_width("Group", RESCTRL_GROUP_WIDTH),
+            get_fixed_width("Mode", RESCTRL_MODE_WIDTH),
+        ];
+        titles.extend(RESCTRL_L3_FIELDS.iter().map(|field_id| {
+            ViewItem::from_default(field_id.clone())
+                .config
+                .render_title()
+        }));
+        titles.push("Cpuset".to_owned());
+        ColumnTitles {
+            titles,
+            pinned_titles: 1,
+        }
+    }
+
+    fn get_rows(&self, state: &SystemState, _offset: Option<usize>) -> Vec<(StyledString, String)> {
+        let resctrl = state.resctrl.lock().unwrap();
+        let model = match resctrl.as_ref() {
+            Some(model) => model,
+            None => return Vec::new(),
+        };
+
+        // Root group, followed by its directly-nested MON groups.
+        let root_mode = model
+            .mode
+            .as_ref()
+            .map_or_else(|| "-".to_owned(), |mode| format!("{:?}", mode));
+        let root_cpuset = model
+            .cpuset
+            .as_ref()
+            .map_or_else(|| "-".to_owned(), |cpuset| cpuset.to_string());
+        let root_row = std::iter::once((
+            render_resctrl_row(
+                "<root>",
+                0,
+                &root_mode,
+                &root_cpuset,
+                model.mon.as_ref().map(|mon| &mon.total),
+            ),
+            "<root>".to_owned(),
+        ));
+        let root_mon_groups = model.mon_groups.iter().map(|(name, mon_group)| {
+            (
+                render_resctrl_row(name, 1, "-", "-", Some(&mon_group.mon.total)),
+                mon_group.full_path.clone(),
+            )
+        });
+
+        // Each CTRL_MON group, followed by its nested MON groups.
+        let ctrl_mon_groups = model.ctrl_mon_groups.iter().flat_map(|(name, ctrl)| {
+            let mode = ctrl
+                .mode
+                .as_ref()
+                .map_or_else(|| "-".to_owned(), |mode| format!("{:?}", mode));
+            let cpuset = ctrl
+                .cpuset
+                .as_ref()
+                .map_or_else(|| "-".to_owned(), |cpuset| cpuset.to_string());
+            std::iter::once((
+                render_resctrl_row(name, 0, &mode, &cpuset, Some(&ctrl.mon.total)),
+                ctrl.full_path.clone(),
+            ))
+            .chain(ctrl.mon_groups.iter().map(|(name, mon_group)| {
+                (
+                    render_resctrl_row(name, 1, "-", "-", Some(&mon_group.mon.total)),
+                    mon_group.full_path.clone(),
+                )
+            }))
+            .collect::<Vec<_>>()
+        });
+
+        root_row
+            .chain(root_mon_groups)
+            .chain(ctrl_mon_groups)
+            .filter(|(line, _)| {
+                if let Some((_, filter)) = &state.filter_info {
+                    line.source().contains(filter)
+                } else {
+                    true
+                }
+            })
+            .collect()
+    }
+}
+
 pub mod default_tabs {
     use model::BtrfsModelFieldId::DiskBytes;
     use model::BtrfsModelFieldId::DiskFraction;
@@ -388,5 +521,102 @@ pub mod default_tabs {
     });
     pub enum SystemTabs {
         Btrfs(&'static SystemBtrfs),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+    use std::sync::Arc;
+    use std::sync::Mutex;
+
+    use model::ResctrlCtrlMonGroupModel;
+    use model::ResctrlL3MonModel;
+    use model::ResctrlModel;
+    use model::ResctrlMonModel;
+
+    use super::*;
+
+    fn l3(llc_occupancy_bytes: u64) -> ResctrlL3MonModel {
+        ResctrlL3MonModel {
+            llc_occupancy_bytes: Some(llc_occupancy_bytes),
+            mbm_total_bytes_per_sec: Some(llc_occupancy_bytes * 2),
+            mbm_local_bytes_per_sec: Some(llc_occupancy_bytes),
+        }
+    }
+
+    fn mon(total: ResctrlL3MonModel) -> ResctrlMonModel {
+        ResctrlMonModel {
+            total,
+            ..Default::default()
+        }
+    }
+
+    fn model_with_one_ctrl_mon_group() -> ResctrlModel {
+        let mut ctrl_mon_groups = BTreeMap::new();
+        ctrl_mon_groups.insert(
+            "group1".to_owned(),
+            ResctrlCtrlMonGroupModel {
+                name: "group1".to_owned(),
+                full_path: "group1".to_owned(),
+                mon: mon(l3(512 * 1024)),
+                ..Default::default()
+            },
+        );
+        ResctrlModel {
+            mon: Some(mon(l3(1024 * 1024))),
+            ctrl_mon_groups,
+            ..Default::default()
+        }
+    }
+
+    fn state_with(model: Option<ResctrlModel>) -> SystemState {
+        SystemState {
+            resctrl: Arc::new(Mutex::new(model)),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_resctrl_get_rows() {
+        let state = state_with(Some(model_with_one_ctrl_mon_group()));
+        let rows = SystemResctrl.get_rows(&state, None);
+
+        // One row for the <root> group plus one for the single CTRL_MON group.
+        assert_eq!(rows.len(), 2, "expected root + one ctrl_mon group row");
+        assert_eq!(rows[0].1, "<root>");
+        assert_eq!(rows[1].1, "group1");
+        assert!(
+            rows[0].0.source().contains("<root>"),
+            "root row should render the group name"
+        );
+        // The root group's 1 MiB LLC occupancy should render as a readable size.
+        assert!(
+            rows[0].0.source().contains("MB") || rows[0].0.source().contains("MiB"),
+            "root row should render LLC occupancy as a human-readable size, got: {}",
+            rows[0].0.source()
+        );
+    }
+
+    #[test]
+    fn test_resctrl_get_rows_filter() {
+        let mut state = state_with(Some(model_with_one_ctrl_mon_group()));
+        state.filter_info = Some((
+            SystemStateFieldId::Resctrl(ResctrlL3MonModelFieldId::LlcOccupancyBytes),
+            "group1".to_owned(),
+        ));
+
+        let rows = SystemResctrl.get_rows(&state, None);
+        assert_eq!(rows.len(), 1, "filter should keep only the matching group");
+        assert_eq!(rows[0].1, "group1");
+    }
+
+    #[test]
+    fn test_resctrl_get_rows_no_data() {
+        let state = state_with(None);
+        assert!(
+            SystemResctrl.get_rows(&state, None).is_empty(),
+            "absent resctrl data should yield no rows"
+        );
     }
 }

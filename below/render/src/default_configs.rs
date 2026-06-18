@@ -1601,6 +1601,18 @@ impl HasRenderConfigForDump for model::BtrfsModel {
     }
 }
 
+impl HasRenderConfig for model::ResctrlL3MonModel {
+    fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
+        use model::ResctrlL3MonModelFieldId::*;
+        let rc = RenderConfigBuilder::new();
+        match field_id {
+            LlcOccupancyBytes => rc.title("LLC Occupancy").format(ReadableSize),
+            MbmTotalBytesPerSec => rc.title("MBM Total").format(ReadableSize).suffix("/s"),
+            MbmLocalBytesPerSec => rc.title("MBM Local").format(ReadableSize).suffix("/s"),
+        }
+    }
+}
+
 impl HasRenderConfig for model::CgroupStatModel {
     fn get_render_config_builder(field_id: &Self::FieldId) -> RenderConfigBuilder {
         use model::CgroupStatModelFieldId::*;

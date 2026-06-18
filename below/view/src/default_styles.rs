@@ -105,3 +105,5 @@ impl HasViewStyle for model::KsmModel {}
 impl HasViewStyle for model::SingleDiskModel {}
 
 impl HasViewStyle for model::BtrfsModel {}
+
+impl HasViewStyle for model::ResctrlL3MonModel {}

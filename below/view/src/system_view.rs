@@ -27,6 +27,8 @@ use cursive::views::ViewRef;
 use model::BtrfsModelFieldId;
 use model::KsmModelFieldId;
 use model::MemoryModelFieldId;
+use model::ResctrlL3MonModelFieldId;
+use model::ResctrlModel;
 use model::SingleCpuModelFieldId;
 use model::SingleDiskModelFieldId;
 use model::SingleSlabModelFieldId;
@@ -51,6 +53,7 @@ pub struct SystemState {
     pub filter_info: Option<(SystemStateFieldId, String)>,
     pub collapsed_disk: HashSet<String>,
     pub model: Arc<Mutex<SystemModel>>,
+    pub resctrl: Arc<Mutex<Option<ResctrlModel>>>,
     pub sort_order: Option<SystemStateFieldId>,
     pub sort_tags: HashMap<String, default_tabs::SystemTabs>,
     pub reverse: bool,
@@ -65,6 +68,7 @@ pub enum SystemStateFieldId {
     Vm(VmModelFieldId),
     Slab(SingleSlabModelFieldId),
     Ksm(KsmModelFieldId),
+    Resctrl(ResctrlL3MonModelFieldId),
 }
 
 impl std::fmt::Display for SystemStateFieldId {
@@ -77,6 +81,7 @@ impl std::fmt::Display for SystemStateFieldId {
             Self::Vm(field) => write!(f, "{}", field),
             Self::Slab(field) => write!(f, "{}", field),
             Self::Ksm(field) => write!(f, "{}", field),
+            Self::Resctrl(field) => write!(f, "{}", field),
         }
     }
 }
@@ -129,6 +134,9 @@ impl StateCommon for SystemState {
                     .expect("Tag out of range"),
             ),
             "Ksm" => SystemStateFieldId::Ksm(KsmModelFieldId::FullScans),
+            // tab Resctrl filters on the first column ('Group') only; the
+            // field given to filter_info isn't used to filter (see get_rows).
+            "Resctrl" => SystemStateFieldId::Resctrl(ResctrlL3MonModelFieldId::LlcOccupancyBytes),
             _ => panic!("bug: got unsupported tab {}", tab),
         }
     }
@@ -210,6 +218,7 @@ pub enum SystemView {
     Ksm(SystemKsm),
     Disk(SystemDisk),
     Btrfs(SystemBtrfs),
+    Resctrl(SystemResctrl),
 }
 
 impl SystemView {
@@ -241,6 +250,7 @@ impl SystemView {
             "Ksm".into(),
             "Disk".into(),
             "Btrfs".into(),
+            "Resctrl".into(),
         ];
         let mut tabs_map: HashMap<String, SystemView> = HashMap::new();
         tabs_map.insert("CPU".into(), SystemView::Cpu(Default::default()));
@@ -250,15 +260,18 @@ impl SystemView {
         tabs_map.insert("Ksm".into(), SystemView::Ksm(Default::default()));
         tabs_map.insert("Disk".into(), SystemView::Disk(Default::default()));
         tabs_map.insert("Btrfs".into(), SystemView::Btrfs(Default::default()));
+        tabs_map.insert("Resctrl".into(), SystemView::Resctrl(Default::default()));
         let user_data = c
             .user_data::<ViewState>()
             .expect("No data stored in Cursive Object!");
+        let mut state = SystemState::new(user_data.system.clone());
+        state.resctrl = user_data.resctrl.clone();
         StatsView::new(
             "system",
             tabs,
             tabs_map,
             list,
-            SystemState::new(user_data.system.clone()),
+            state,
             user_data.event_controllers.clone(),
             user_data.cmd_controllers.clone(),
         )
@@ -283,6 +296,7 @@ impl SystemView {
             Self::Ksm(inner) => Box::new(inner.clone()),
             Self::Disk(inner) => Box::new(inner.clone()),
             Self::Btrfs(inner) => Box::new(inner.clone()),
+            Self::Resctrl(inner) => Box::new(inner.clone()),
         }
     }
 }
