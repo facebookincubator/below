@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use std::collections::BTreeMap;
+use std::sync::LazyLock;
 
-use lazy_static::lazy_static;
 use maplit::btreemap;
 
 use crate::*;
@@ -47,45 +47,46 @@ struct WithOptionalPayload {
     payload: Option<Payload>,
 }
 
-lazy_static! {
-    static ref NO_PAYLOAD_REORDERED: NoPayloadReordered = NoPayloadReordered {
-        name: "alice".to_owned(),
-        t: 1234,
-    };
-    static ref WITH_PAYLOAD: WithPayload = WithPayload {
-        name: "alice".to_owned(),
-        t: 1234,
-        payload: btreemap! {
-            1 => PayloadValue {
-                id: Some(1),
-                list: Some(vec!["a".to_owned()]),
-            },
-            2 => PayloadValue {
-                id: Some(1),
-                list: Some(vec!["b".to_owned(), "cd".to_owned()]),
-            }
+static NO_PAYLOAD_REORDERED: LazyLock<NoPayloadReordered> = LazyLock::new(|| NoPayloadReordered {
+    name: "alice".to_owned(),
+    t: 1234,
+});
+
+static WITH_PAYLOAD: LazyLock<WithPayload> = LazyLock::new(|| WithPayload {
+    name: "alice".to_owned(),
+    t: 1234,
+    payload: btreemap! {
+        1 => PayloadValue {
+            id: Some(1),
+            list: Some(vec!["a".to_owned()]),
         },
-    };
-    static ref WITH_NO_PAYLOAD: WithOptionalPayload = WithOptionalPayload {
-        name: "alice".to_owned(),
-        t: 1234,
-        payload: None,
-    };
-    static ref WITH_SOME_PAYLOAD: WithOptionalPayload = WithOptionalPayload {
-        name: "alice".to_owned(),
-        t: 1234,
-        payload: Some(btreemap! {
-            1 => PayloadValue {
-                id: Some(1),
-                list: Some(vec!["a".to_owned()]),
-            },
-            2 => PayloadValue {
-                id: Some(1),
-                list: Some(vec!["b".to_owned(), "cd".to_owned()]),
-            }
-        }),
-    };
-}
+        2 => PayloadValue {
+            id: Some(1),
+            list: Some(vec!["b".to_owned(), "cd".to_owned()]),
+        }
+    },
+});
+
+static WITH_NO_PAYLOAD: LazyLock<WithOptionalPayload> = LazyLock::new(|| WithOptionalPayload {
+    name: "alice".to_owned(),
+    t: 1234,
+    payload: None,
+});
+
+static WITH_SOME_PAYLOAD: LazyLock<WithOptionalPayload> = LazyLock::new(|| WithOptionalPayload {
+    name: "alice".to_owned(),
+    t: 1234,
+    payload: Some(btreemap! {
+        1 => PayloadValue {
+            id: Some(1),
+            list: Some(vec!["a".to_owned()]),
+        },
+        2 => PayloadValue {
+            id: Some(1),
+            list: Some(vec!["b".to_owned(), "cd".to_owned()]),
+        }
+    }),
+});
 
 #[test]
 fn test_serialize_deserialize() {

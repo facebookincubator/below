@@ -27,9 +27,9 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::time::Duration;
 
-use lazy_static::lazy_static;
 use libc::CLOCK_BOOTTIME;
 use libc::EACCES;
 use libc::ENOENT;
@@ -99,23 +99,15 @@ pub const KSM_SYSFS: &str = "/sys/kernel/mm/ksm";
 pub const NET_SYSFS: &str = "/sys/class/net/";
 pub const NET_PROCFS: &str = "/proc/net";
 
-lazy_static! {
-    /// The number of microseconds per clock tick
-    ///
-    /// Calculated from `sysconf(_SC_CLK_TCK)`
-    static ref MICROS_PER_TICK: u64 = {
-        1_000_000 / ticks_per_second()
-    };
+/// The number of microseconds per clock tick
+///
+/// Calculated from `sysconf(_SC_CLK_TCK)`
+static MICROS_PER_TICK: LazyLock<u64> = LazyLock::new(|| 1_000_000 / ticks_per_second());
 
-    static ref TICKS_PER_SECOND: u64 = {
-        ticks_per_second()
-    };
+static TICKS_PER_SECOND: LazyLock<u64> = LazyLock::new(ticks_per_second);
 
-    /// Size of page in bytes
-    static ref PAGE_SIZE: u64 = {
-        page_size()
-    };
-}
+/// Size of page in bytes
+static PAGE_SIZE: LazyLock<u64> = LazyLock::new(page_size);
 
 fn ticks_per_second() -> u64 {
     match unsafe { libc::sysconf(libc::_SC_CLK_TCK) } {
