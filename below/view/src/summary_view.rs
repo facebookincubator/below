@@ -25,6 +25,7 @@ mod render_impl {
     use std::collections::BTreeMap;
     use std::collections::HashMap;
     use std::str::FromStr;
+    use std::sync::LazyLock;
 
     use base_render::RenderConfig;
     use cursive::utils::markup::StyledString;
@@ -36,7 +37,6 @@ mod render_impl {
     use model::SingleDiskModel;
     use model::SingleNetModel;
     use model::SystemModel;
-    use once_cell::sync::Lazy;
     use procfs::PidState;
 
     use crate::render::ViewItem;
@@ -45,7 +45,7 @@ mod render_impl {
     /// Renders corresponding Fields From SystemModel.
     type SummaryViewItem = ViewItem<model::SystemModelFieldId>;
 
-    static SYS_CPU_ITEMS: Lazy<Vec<SummaryViewItem>> = Lazy::new(|| {
+    static SYS_CPU_ITEMS: LazyLock<Vec<SummaryViewItem>> = LazyLock::new(|| {
         use model::SingleCpuModelFieldId::NicePct;
         use model::SingleCpuModelFieldId::SystemPct;
         use model::SingleCpuModelFieldId::UsagePct;
@@ -59,7 +59,7 @@ mod render_impl {
         ]
     });
 
-    static SYS_MEM_ITEMS: Lazy<Vec<SummaryViewItem>> = Lazy::new(|| {
+    static SYS_MEM_ITEMS: LazyLock<Vec<SummaryViewItem>> = LazyLock::new(|| {
         use model::MemoryModelFieldId::Anon;
         use model::MemoryModelFieldId::File;
         use model::MemoryModelFieldId::Free;
@@ -73,7 +73,7 @@ mod render_impl {
         ]
     });
 
-    static SYS_VM_ITEMS: Lazy<Vec<SummaryViewItem>> = Lazy::new(|| {
+    static SYS_VM_ITEMS: LazyLock<Vec<SummaryViewItem>> = LazyLock::new(|| {
         use model::SystemModelFieldId::Vm;
         use model::VmModelFieldId::PgpginPerSec;
         use model::VmModelFieldId::PgpgoutPerSec;

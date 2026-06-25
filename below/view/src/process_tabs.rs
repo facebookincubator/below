@@ -190,6 +190,8 @@ impl ProcessTab {
 }
 
 pub mod default_tabs {
+    use std::sync::LazyLock;
+
     use common::util::get_prefix;
     use model::ProcessCpuModelFieldId::NumThreads;
     use model::ProcessCpuModelFieldId::Processor;
@@ -223,19 +225,18 @@ pub mod default_tabs {
     use model::SingleProcessModelFieldId::Stack;
     use model::SingleProcessModelFieldId::State;
     use model::SingleProcessModelFieldId::UptimeSecs;
-    use once_cell::sync::Lazy;
 
     use super::*;
 
-    pub static COMM_VIEW_ITEM: Lazy<ProcessViewItem> = Lazy::new(|| {
+    pub static COMM_VIEW_ITEM: LazyLock<ProcessViewItem> = LazyLock::new(|| {
         use base_render::RenderConfigBuilder;
         ViewItem::from_default(Comm)
             .update(RenderConfigBuilder::new().indented_prefix(get_prefix(false)))
     });
-    pub static CGROUP_VIEW_ITEM: Lazy<ProcessViewItem> =
-        Lazy::new(|| ViewItem::from_default(Cgroup));
+    pub static CGROUP_VIEW_ITEM: LazyLock<ProcessViewItem> =
+        LazyLock::new(|| ViewItem::from_default(Cgroup));
 
-    pub static PROCESS_GENERAL_TAB: Lazy<ProcessTab> = Lazy::new(|| {
+    pub static PROCESS_GENERAL_TAB: LazyLock<ProcessTab> = LazyLock::new(|| {
         ProcessTab::new(vec![
             ViewItem::from_default(Pid),
             ViewItem::from_default(Ppid),
@@ -257,7 +258,7 @@ pub mod default_tabs {
         ])
     });
 
-    pub static PROCESS_CPU_TAB: Lazy<ProcessTab> = Lazy::new(|| {
+    pub static PROCESS_CPU_TAB: LazyLock<ProcessTab> = LazyLock::new(|| {
         ProcessTab::new(vec![
             ViewItem::from_default(Cpu(UserPct)),
             ViewItem::from_default(Cpu(SystemPct)),
@@ -267,7 +268,7 @@ pub mod default_tabs {
         ])
     });
 
-    pub static PROCESS_MEM_TAB: Lazy<ProcessTab> = Lazy::new(|| {
+    pub static PROCESS_MEM_TAB: LazyLock<ProcessTab> = LazyLock::new(|| {
         ProcessTab::new(vec![
             ViewItem::from_default(Mem(RssBytes)),
             ViewItem::from_default(Mem(VmSize)),
@@ -284,7 +285,7 @@ pub mod default_tabs {
         ])
     });
 
-    pub static PROCESS_IO_TAB: Lazy<ProcessTab> = Lazy::new(|| {
+    pub static PROCESS_IO_TAB: LazyLock<ProcessTab> = LazyLock::new(|| {
         ProcessTab::new(vec![
             ViewItem::from_default(Io(RbytesPerSec)),
             ViewItem::from_default(Io(WbytesPerSec)),

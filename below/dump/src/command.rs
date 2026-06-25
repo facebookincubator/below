@@ -14,6 +14,7 @@
 
 use std::fmt::Display;
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -29,7 +30,6 @@ use model::SingleProcessModelFieldId;
 use model::SingleQueueModelFieldId;
 use model::SingleTcModelFieldId;
 use model::SystemModelFieldId;
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::CommonField;
@@ -209,7 +209,7 @@ pub static DEFAULT_SYSTEM_FIELDS: &[SystemOptionField] = &[
 const SYSTEM_ABOUT: &str = "Dump system stats";
 
 /// Generated about message for System dump so supported fields are up-to-date.
-static SYSTEM_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+static SYSTEM_LONG_ABOUT: LazyLock<String> = LazyLock::new(|| {
     format!(
         r#"{about}
 
@@ -314,7 +314,7 @@ pub static DEFAULT_DISK_FIELDS: &[DiskOptionField] = &[
 const DISK_ABOUT: &str = "Dump disk stats";
 
 /// Generated about message for System dump so supported fields are up-to-date.
-static DISK_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+static DISK_LONG_ABOUT: LazyLock<String> = LazyLock::new(|| {
     format!(
         r#"{about}
 
@@ -396,7 +396,7 @@ pub static DEFAULT_BTRFS_FIELDS: &[BtrfsOptionField] = &[
 
 const BTRFS_ABOUT: &str = "Dump btrfs Stats";
 
-static BTRFS_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+static BTRFS_LONG_ABOUT: LazyLock<String> = LazyLock::new(|| {
     format!(
         r#"{about}
 
@@ -492,7 +492,7 @@ pub static DEFAULT_PROCESS_FIELDS: &[ProcessOptionField] = &[
 const PROCESS_ABOUT: &str = "Dump process stats";
 
 /// Generated about message for Process dump so supported fields are up-to-date.
-static PROCESS_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+static PROCESS_LONG_ABOUT: LazyLock<String> = LazyLock::new(|| {
     format!(
         r#"{about}
 
@@ -607,7 +607,7 @@ pub static DEFAULT_CGROUP_FIELDS: &[CgroupOptionField] = &[
 const CGROUP_ABOUT: &str = "Dump cgroup stats";
 
 /// Generated about message for Cgroup dump so supported fields are up-to-date.
-static CGROUP_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+static CGROUP_LONG_ABOUT: LazyLock<String> = LazyLock::new(|| {
     format!(
         r#"{about}
 
@@ -740,7 +740,7 @@ pub static DEFAULT_IFACE_FIELDS: &[IfaceOptionField] = &[
 const IFACE_ABOUT: &str = "Dump the link layer iface stats";
 
 /// Generated about message for Iface dump so supported fields are up-to-date.
-static IFACE_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+static IFACE_LONG_ABOUT: LazyLock<String> = LazyLock::new(|| {
     format!(
         r#"{about}
 
@@ -836,7 +836,7 @@ pub static DEFAULT_NETWORK_FIELDS: &[NetworkOptionField] = &[
 const NETWORK_ABOUT: &str = "Dump the network layer stats including ip and icmp";
 
 /// Generated about message for Network dump so supported fields are up-to-date.
-static NETWORK_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+static NETWORK_LONG_ABOUT: LazyLock<String> = LazyLock::new(|| {
     format!(
         r#"{about}
 
@@ -922,7 +922,7 @@ pub static DEFAULT_TRANSPORT_FIELDS: &[TransportOptionField] = &[
 const TRANSPORT_ABOUT: &str = "Dump the transport layer stats including tcp and udp";
 
 /// Generated about message for Transport dump so supported fields are up-to-date.
-static TRANSPORT_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+static TRANSPORT_LONG_ABOUT: LazyLock<String> = LazyLock::new(|| {
     format!(
         r#"{about}
 
@@ -1006,7 +1006,7 @@ pub static DEFAULT_ETHTOOL_QUEUE_FIELDS: &[EthtoolQueueOptionField] = &[
 const ETHTOOL_QUEUE_ABOUT: &str = "Dump network interface queue stats";
 
 /// Generated about message for Ethtool Queue dump so supported fields are up-to-date.
-static ETHTOOL_QUEUE_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+static ETHTOOL_QUEUE_LONG_ABOUT: LazyLock<String> = LazyLock::new(|| {
     format!(
         r#"{about}
 
@@ -1093,7 +1093,7 @@ pub static DEFAULT_TC_FIELDS: &[TcOptionField] = &[
 const TC_ABOUT: &str = "Dump the tc related stats with qdiscs";
 
 /// Generated about message for tc (traffic control) dump so supported fields are up-to-date.
-static TC_LONG_ABOUT: Lazy<String> = Lazy::new(|| {
+static TC_LONG_ABOUT: LazyLock<String> = LazyLock::new(|| {
     format!(
         r#"{about}
 ********************** Available fields **********************

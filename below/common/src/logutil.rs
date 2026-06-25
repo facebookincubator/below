@@ -14,10 +14,10 @@
 
 use std::io;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::sync::Mutex;
 use std::sync::RwLock;
 
-use once_cell::sync::Lazy;
 use slog::Drain;
 use slog::Level;
 
@@ -28,8 +28,8 @@ pub enum TargetLog {
     Term,
 }
 
-pub static LOG_TARGET: Lazy<Arc<RwLock<TargetLog>>> =
-    Lazy::new(|| Arc::new(RwLock::new(TargetLog::All)));
+pub static LOG_TARGET: LazyLock<Arc<RwLock<TargetLog>>> =
+    LazyLock::new(|| Arc::new(RwLock::new(TargetLog::All)));
 
 pub fn get_current_log_target() -> TargetLog {
     *LOG_TARGET
@@ -95,8 +95,8 @@ impl CPMsgRecord {
 //    able to downcast it.
 // c. Only reference the CommandPalette inside the log is not acceptable since
 //    there no implementation of IntoBoxedView<RefCell<View>>
-pub static LAST_LOG_TO_DISPLAY: Lazy<Arc<Mutex<CPMsgRecord>>> =
-    Lazy::new(|| Arc::new(Mutex::new(CPMsgRecord::new())));
+pub static LAST_LOG_TO_DISPLAY: LazyLock<Arc<Mutex<CPMsgRecord>>> =
+    LazyLock::new(|| Arc::new(Mutex::new(CPMsgRecord::new())));
 
 pub fn get_last_log_to_display() -> Option<String> {
     LAST_LOG_TO_DISPLAY

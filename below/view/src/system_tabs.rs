@@ -505,14 +505,15 @@ impl SystemTab for SystemResctrl {
 }
 
 pub mod default_tabs {
+    use std::sync::LazyLock;
+
     use model::BtrfsModelFieldId::DiskBytes;
     use model::BtrfsModelFieldId::DiskFraction;
     use model::BtrfsModelFieldId::Name;
-    use once_cell::sync::Lazy;
 
     use super::*;
 
-    pub static SYSTEM_BTRFS_TAB: Lazy<SystemBtrfs> = Lazy::new(|| {
+    pub static SYSTEM_BTRFS_TAB: LazyLock<SystemBtrfs> = LazyLock::new(|| {
         SystemBtrfs::new(vec![
             ViewItem::from_default(Name),
             ViewItem::from_default(DiskFraction),

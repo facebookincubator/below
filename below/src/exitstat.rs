@@ -16,6 +16,7 @@ use core::time::Duration;
 use std::ffi::CStr;
 use std::mem::MaybeUninit;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::sync::Mutex;
 
 use anyhow::Context;
@@ -23,13 +24,12 @@ use anyhow::Result;
 use libbpf_rs::skel::OpenSkel as _;
 use libbpf_rs::skel::Skel as _;
 use libbpf_rs::skel::SkelBuilder as _;
-use once_cell::sync::Lazy;
 use plain::Plain;
 use slog::warn;
 
 use crate::ExitstatSkelBuilder;
 
-static PAGE_SIZE: Lazy<u64> = Lazy::new(page_size);
+static PAGE_SIZE: LazyLock<u64> = LazyLock::new(page_size);
 
 #[repr(C)]
 #[derive(Default)]
