@@ -18,15 +18,14 @@ use syn::Ident;
 use syn::Token;
 use syn::parse::Parse;
 use syn::punctuated::Punctuated;
-use syn::spanned::Spanned;
 
 /// Adapted from strum_macros
-pub fn get_metadata<'a, T: Parse + Spanned>(
+pub fn get_metadata<'a, T: Parse>(
     name: &str,
     it: impl IntoIterator<Item = &'a Attribute>,
 ) -> syn::Result<Vec<T>> {
     it.into_iter()
-        .filter(|attr| attr.path.is_ident(name))
+        .filter(|attr| attr.path().is_ident(name))
         .try_fold(Vec::new(), |mut vec, attr| {
             vec.extend(attr.parse_args_with(Punctuated::<T, Token![,]>::parse_terminated)?);
             Ok(vec)

@@ -21,7 +21,7 @@ use syn::Ident;
 use syn::Token;
 use syn::parse::Parse;
 use syn::parse::ParseStream;
-use syn::spanned::Spanned;
+use syn::spanned::Spanned as _;
 
 use crate::helper::get_metadata;
 use crate::helper::occurrence_error;
@@ -58,14 +58,6 @@ impl Parse for StructMeta {
     }
 }
 
-impl Spanned for StructMeta {
-    fn span(&self) -> Span {
-        match self {
-            StructMeta::FieldIdName { kw, .. } => kw.span,
-        }
-    }
-}
-
 pub enum FieldMeta {
     Ignore(kw::ignore),
     Subquery(kw::subquery),
@@ -89,16 +81,6 @@ impl Parse for FieldMeta {
             Ok(FieldMeta::PreferredName { kw, value })
         } else {
             Err(lookahead.error())
-        }
-    }
-}
-
-impl Spanned for FieldMeta {
-    fn span(&self) -> Span {
-        match self {
-            FieldMeta::Ignore(kw) => kw.span,
-            FieldMeta::Subquery(kw) => kw.span,
-            FieldMeta::PreferredName { kw, .. } => kw.span,
         }
     }
 }
