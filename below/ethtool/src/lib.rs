@@ -22,6 +22,7 @@ mod ethtool_sys;
 mod reader;
 mod types;
 
+#[cfg(test)]
 mod test;
 
 use std::collections::BTreeMap;
