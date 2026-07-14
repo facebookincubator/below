@@ -18,7 +18,7 @@
 #![allow(non_snake_case)]
 
 mod errors;
-mod ethtool_sys;
+pub mod ethtool_sys;
 mod reader;
 mod types;
 
