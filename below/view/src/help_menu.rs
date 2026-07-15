@@ -200,6 +200,7 @@ fn fill_reserved(v: &mut LinearLayout) {
         " <End>          - scroll to end of primary display\n",
         " <Enter>        - collapse/expand cgroup tree, submit command if command palette activated\n",
         " '='            - collapse immediate children of selected cgroup\n",
+        " 'e'            - toggle showing processes of the selected cgroup (cgroup view only)\n",
         " <Ctrl>-r       - refresh the screen",
         " 'P'            - sort by pid (process view only)\n",
         " 'N'            - sort by name (process view only)\n",
