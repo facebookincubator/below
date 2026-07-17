@@ -27,6 +27,7 @@ use model::SingleProcessModel;
 use model::sort_queriables;
 
 use crate::cgroup_view::CgroupState;
+use crate::render::ViewConfig;
 use crate::render::ViewItem;
 use crate::stats_view::ColumnTitles;
 use crate::stats_view::StateCommon;
@@ -88,7 +89,7 @@ pub struct CgroupTab {
     cgroup_name: CgroupViewItem,
     cgroup_name_collapsed: CgroupViewItem,
     process_name: ProcessViewItem,
-    process_name_header: ProcessViewItem,
+    process_name_header: ViewConfig,
 }
 
 /// Defines how to iterate through the cgroup and generate get_rows function for ViewBridge
@@ -98,6 +99,10 @@ impl CgroupTab {
         use base_render::RenderConfigBuilder as Rc;
         use common::util::get_prefix;
         let cgroup_name_item = ViewItem::from_default(SingleCgroupModelFieldId::Name);
+        let process_name = ViewItem::from_default(model::SingleProcessModelFieldId::Comm)
+            .update(cgroup_name_config.clone())
+            .update(Rc::new().indented_prefix(" ".repeat(get_prefix(false).chars().count())));
+        let process_name_header = process_name.config.clone();
         Self {
             view_items,
             cgroup_name: cgroup_name_item
@@ -107,14 +112,8 @@ impl CgroupTab {
             cgroup_name_collapsed: cgroup_name_item
                 .update(cgroup_name_config.clone())
                 .update(Rc::new().indented_prefix(get_prefix(true))),
-            process_name: ViewItem::from_default(model::SingleProcessModelFieldId::Comm)
-                .update(cgroup_name_config.clone())
-                .update(Rc::new().indented_prefix(get_prefix(false))),
-            // Same alignment as process_name but with a blank prefix, for the
-            // column title row shown above the process rows
-            process_name_header: ViewItem::from_default(model::SingleProcessModelFieldId::Comm)
-                .update(cgroup_name_config.clone())
-                .update(Rc::new().indented_prefix(" ".repeat(get_prefix(false).chars().count()))),
+            process_name,
+            process_name_header,
         }
     }
 
@@ -154,7 +153,14 @@ impl CgroupTab {
         depth: usize,
         offset: Option<usize>,
     ) -> StyledString {
-        let mut line = self.process_name.render_indented_depth(model, depth);
+        // Color the process name to mark the row as a process row. The stat
+        // fields keep their own rendering so field highlights still apply.
+        let mut line = StyledString::styled(
+            self.process_name
+                .render_indented_depth(model, depth)
+                .source(),
+            cursive::theme::Color::Light(cursive::theme::BaseColor::Blue),
+        );
         line.append_plain(" ");
 
         for item in EXPANDED_PROCS_VIEW_ITEMS.iter().skip(offset.unwrap_or(0)) {
@@ -162,11 +168,7 @@ impl CgroupTab {
             line.append_plain(" ");
         }
 
-        // Color process rows to distinguish them from cgroup rows
-        StyledString::styled(
-            line.source(),
-            cursive::theme::Color::Light(cursive::theme::BaseColor::Blue),
-        )
+        line
     }
 
     /// Column title row shown above the process rows of an expanded cgroup,
@@ -174,13 +176,11 @@ impl CgroupTab {
     fn get_process_header_line(&self, depth: usize, offset: Option<usize>) -> StyledString {
         let title = self
             .process_name_header
-            .config
             .render_config
             .get_title()
             .to_owned();
         let mut line = self
             .process_name_header
-            .config
             .render_indented(Some(model::Field::Str(title)), depth);
         line.append_plain(" ");
 
@@ -207,7 +207,7 @@ impl CgroupTab {
         cgroup: &CgroupModel,
         state: &CgroupState,
         filtered_set: &Option<HashSet<String>>,
-        cgroup_to_procs: &Option<HashMap<&str, Vec<&SingleProcessModel>>>,
+        cgroup_to_procs: &HashMap<&str, Vec<&SingleProcessModel>>,
         output: &mut Vec<(StyledString, String)>,
         offset: Option<usize>,
     ) {
@@ -240,9 +240,7 @@ impl CgroupTab {
             // Show member processes of an expanded cgroup as child rows. They
             // carry the cgroup's full_path as key so that path-based handlers
             // act on the enclosing cgroup when a process row is selected.
-            if let Some(procs_map) = cgroup_to_procs
-                && let Some(procs) = procs_map.get(cgroup.data.full_path.as_str())
-            {
+            if let Some(procs) = cgroup_to_procs.get(cgroup.data.full_path.as_str()) {
                 let depth = cgroup.data.depth as usize + 1;
                 output.push((
                     self.get_process_header_line(depth, offset),
@@ -297,36 +295,32 @@ impl CgroupTab {
         // directly in an expanded cgroup are included, not those in descendant
         // cgroups, so a process shows up only under its own cgroup.
         let process_model = state.process_model.lock().unwrap();
-        let cgroup_to_procs: Option<HashMap<&str, Vec<&SingleProcessModel>>> =
-            if state.expanded_procs_cgroups.is_empty() {
-                None
-            } else {
-                let mut map: HashMap<&str, Vec<&SingleProcessModel>> = HashMap::new();
-                for spm in process_model.processes.values() {
-                    // Processes in the root cgroup report "/" while the root
-                    // cgroup's full_path is ""
-                    let cgroup = match spm.cgroup.as_deref() {
-                        Some("/") => "",
-                        Some(cgroup) => cgroup,
-                        None => continue,
-                    };
-                    if state.expanded_procs_cgroups.contains(cgroup) {
-                        map.entry(cgroup).or_default().push(spm);
-                    }
+        let mut cgroup_to_procs: HashMap<&str, Vec<&SingleProcessModel>> = HashMap::new();
+        if !state.expanded_procs_cgroups.is_empty() {
+            for spm in process_model.processes.values() {
+                // Processes in the root cgroup report "/" while the root
+                // cgroup's full_path is ""
+                let cgroup = match spm.cgroup.as_deref() {
+                    Some("/") => "",
+                    Some(cgroup) => cgroup,
+                    None => continue,
+                };
+                if state.expanded_procs_cgroups.contains(cgroup) {
+                    cgroup_to_procs.entry(cgroup).or_default().push(spm);
                 }
-                // Follow the view's sort order when it maps to a process
-                // field. Otherwise keep pid order from BTreeMap iteration.
-                if let Some(process_sort) = state
-                    .sort_order
-                    .as_ref()
-                    .and_then(cgroup_sort_to_process_sort)
-                {
-                    for procs in map.values_mut() {
-                        sort_queriables(procs, &process_sort, state.reverse);
-                    }
+            }
+            // Follow the view's sort order when it maps to a process
+            // field. Otherwise keep pid order from BTreeMap iteration.
+            if let Some(process_sort) = state
+                .sort_order
+                .as_ref()
+                .and_then(cgroup_sort_to_process_sort)
+            {
+                for procs in cgroup_to_procs.values_mut() {
+                    sort_queriables(procs, &process_sort, state.reverse);
                 }
-                Some(map)
-            };
+            }
+        }
         let mut rows = Vec::new();
         self.output_cgroup(
             &state.get_model(),
@@ -708,10 +702,13 @@ mod tests {
 
     fn fake_process_model() -> ProcessModel {
         let mut processes = BTreeMap::new();
-        processes.insert(
-            100,
-            fake_process(100, "proc_a", "/bin/proc_a --flag", "/child1"),
-        );
+        let mut proc_a = fake_process(100, "proc_a", "/bin/proc_a --flag", "/child1");
+        // Above the cpu highlight threshold so that below renders the number red
+        proc_a.cpu = Some(model::ProcessCpuModel {
+            usage_pct: Some(150.0),
+            ..Default::default()
+        });
+        processes.insert(100, proc_a);
         processes.insert(
             200,
             fake_process(200, "proc_b", "/bin/proc_b", "/child1/nested"),
@@ -796,12 +793,22 @@ mod tests {
                 .any(|(row, _key)| row.source().contains("proc_b")),
             "expansion should only show the cgroup's own processes"
         );
+        let span_color = |color: cursive::theme::BaseColor| {
+            cursive::theme::ColorType::Color(cursive::theme::Color::Light(color))
+        };
+        // The process name is colored blue to mark the row, while the stat
+        // fields are left alone so below can still color them its usual way
+        // e.g. turning the cpu stat red when a process is over a threshold.
+        assert_eq!(
+            proc_row.spans().next().unwrap().attr.color.front,
+            span_color(cursive::theme::BaseColor::Blue),
+            "process name should render in blue"
+        );
         assert!(
-            proc_row.spans().all(|span| span.attr.color.front
-                == cursive::theme::ColorType::Color(cursive::theme::Color::Light(
-                    cursive::theme::BaseColor::Blue
-                ))),
-            "process rows should render in blue"
+            proc_row
+                .spans()
+                .any(|span| span.attr.color.front == span_color(cursive::theme::BaseColor::Red)),
+            "cpu over the highlight threshold should render highlighted"
         );
     }
 
