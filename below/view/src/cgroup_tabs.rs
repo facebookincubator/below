@@ -88,6 +88,7 @@ pub struct CgroupTab {
     cgroup_name: CgroupViewItem,
     cgroup_name_collapsed: CgroupViewItem,
     process_name: ProcessViewItem,
+    process_name_header: ProcessViewItem,
 }
 
 /// Defines how to iterate through the cgroup and generate get_rows function for ViewBridge
@@ -109,6 +110,11 @@ impl CgroupTab {
             process_name: ViewItem::from_default(model::SingleProcessModelFieldId::Comm)
                 .update(cgroup_name_config.clone())
                 .update(Rc::new().indented_prefix(get_prefix(false))),
+            // Same alignment as process_name but with a blank prefix, for the
+            // column title row shown above the process rows
+            process_name_header: ViewItem::from_default(model::SingleProcessModelFieldId::Comm)
+                .update(cgroup_name_config.clone())
+                .update(Rc::new().indented_prefix(" ".repeat(get_prefix(false).chars().count()))),
         }
     }
 
@@ -163,6 +169,29 @@ impl CgroupTab {
         )
     }
 
+    /// Column title row shown above the process rows of an expanded cgroup,
+    /// since the view's own column titles describe cgroup fields.
+    fn get_process_header_line(&self, depth: usize, offset: Option<usize>) -> StyledString {
+        let title = self
+            .process_name_header
+            .config
+            .render_config
+            .get_title()
+            .to_owned();
+        let mut line = self
+            .process_name_header
+            .config
+            .render_indented(Some(model::Field::Str(title)), depth);
+        line.append_plain(" ");
+
+        for item in EXPANDED_PROCS_VIEW_ITEMS.iter().skip(offset.unwrap_or(0)) {
+            line.append_plain(item.config.render_title());
+            line.append_plain(" ");
+        }
+
+        line
+    }
+
     pub fn get_titles(&self) -> ColumnTitles {
         ColumnTitles {
             titles: std::iter::once(&self.cgroup_name)
@@ -215,6 +244,10 @@ impl CgroupTab {
                 && let Some(procs) = procs_map.get(cgroup.data.full_path.as_str())
             {
                 let depth = cgroup.data.depth as usize + 1;
+                output.push((
+                    self.get_process_header_line(depth, offset),
+                    cgroup.data.full_path.clone(),
+                ));
                 for process in procs {
                     output.push((
                         self.get_process_line(process, depth, offset),
@@ -720,13 +753,38 @@ mod tests {
         state.expanded_procs_cgroups.insert("/child1".to_owned());
         let rows = tab().get_rows(&state, None);
 
-        // Process row shows up directly under its cgroup, keyed by the
-        // cgroup's full path
+        // A header row and the process row show up directly under the
+        // expanded cgroup, keyed by the cgroup's full path
         assert_eq!(
             keys(&rows),
-            vec!["", "/child1", "/child1", "/child1/nested", "/other"]
+            vec![
+                "",
+                "/child1",
+                "/child1",
+                "/child1",
+                "/child1/nested",
+                "/other"
+            ]
         );
-        let proc_row = &rows[2].0;
+        let header_row = &rows[2].0;
+        assert!(
+            header_row.source().contains("Comm"),
+            "got: {}",
+            header_row.source()
+        );
+        assert!(
+            header_row.source().contains("Pid"),
+            "got: {}",
+            header_row.source()
+        );
+        assert!(
+            !header_row.spans().any(|span| span.attr.color.front
+                == cursive::theme::ColorType::Color(cursive::theme::Color::Light(
+                    cursive::theme::BaseColor::Blue
+                ))),
+            "header row should keep the default color"
+        );
+        let proc_row = &rows[3].0;
         let source = proc_row.source();
         assert!(source.contains("proc_a"), "got: {}", source);
         assert!(source.contains("100"), "got: {}", source);
@@ -774,9 +832,10 @@ mod tests {
         let rows = tab().get_rows(&state, None);
         assert_eq!(
             keys(&rows),
-            vec!["", "", "/child1", "/child1/nested", "/other"]
+            vec!["", "", "", "/child1", "/child1/nested", "/other"]
         );
-        assert!(rows[1].0.source().contains("proc_root"));
+        assert!(rows[1].0.source().contains("Comm"));
+        assert!(rows[2].0.source().contains("proc_root"));
     }
 
     #[test]
