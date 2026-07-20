@@ -1104,6 +1104,7 @@ impl ProcReader {
                 Err(Error::IoError(_, ref e))
                     if e.raw_os_error()
                         .is_some_and(|ec| ec == ENOENT || ec == ESRCH || ec == EACCES) => {}
+                Err(Error::InvalidFileFormat(_)) => {}
                 res => pidinfo.pid_ns = Some(res?),
             }
 
