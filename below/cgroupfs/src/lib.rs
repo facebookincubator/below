@@ -608,7 +608,7 @@ impl CgroupReader {
             return Err(self.invalid_file_format(file_name));
         }
 
-        for (_node, memory_numa_stat) in s.iter() {
+        for memory_numa_stat in s.values() {
             if *memory_numa_stat == MemoryNumaStat::default() {
                 return Err(self.invalid_file_format(file_name));
             }
