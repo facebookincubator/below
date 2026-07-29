@@ -313,6 +313,11 @@ impl<FrameType, ModelType> Advance<FrameType, ModelType> {
         model
     }
 
+    /// Move past a missing sample while preserving the cached sample used to build the next model.
+    pub fn skip_next_sample(&mut self) {
+        self.target_timestamp = self.get_next_ts();
+    }
+
     /// Syntactic sugar for getting lastest sample
     pub fn get_latest_sample(&mut self) -> Option<ModelType> {
         self.jump_sample_to(SystemTime::now())
@@ -808,6 +813,10 @@ mod tests {
         assert_eq!(advance.get_next_ts(), util::get_system_time(3));
         advance.initialize();
         assert_eq!(advance.get_next_ts(), util::get_system_time(4));
+        advance.skip_next_sample();
+        assert_eq!(advance.get_next_ts(), util::get_system_time(5));
+        advance.skip_next_sample();
+        assert_eq!(advance.get_next_ts(), util::get_system_time(6));
         advance.advance(Direction::Forward);
         advance.advance(Direction::Reverse);
         assert_eq!(advance.get_next_ts(), util::get_system_time(2));
