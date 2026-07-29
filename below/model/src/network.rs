@@ -43,7 +43,7 @@ impl NetworkModel {
 
         let mut iface_names = BTreeSet::new();
         if let Some(ifaces) = net_stats.interfaces.as_ref() {
-            for (interface, _) in ifaces.iter() {
+            for interface in ifaces.keys() {
                 iface_names.insert(interface.to_string());
             }
         }
