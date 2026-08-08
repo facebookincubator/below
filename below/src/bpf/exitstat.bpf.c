@@ -137,12 +137,12 @@ int tracepoint__sched__sched_process_exit(
     u64 anon_pages = 0;
     u64 shmem_pages = 0;
     if (bpf_core_type_matches(struct mm_struct___pre62)) {
-      const struct mm_struct___pre62 *mms = mm;
+      const struct mm_struct___pre62 *mms = (const struct mm_struct___pre62 *)mm;
       file_pages = BPF_CORE_READ(mms, rss_stat.count[MM_FILEPAGES].counter);
       anon_pages = BPF_CORE_READ(mms, rss_stat.count[MM_ANONPAGES].counter);
       shmem_pages = BPF_CORE_READ(mms, rss_stat.count[MM_SHMEMPAGES].counter);
     } else if (bpf_core_type_matches(struct mm_struct___post62)) {
-      const struct mm_struct___post62 *mms = mm;
+      const struct mm_struct___post62 *mms = (const struct mm_struct___post62 *)mm;
       struct percpu_counter file_fbc = BPF_CORE_READ(mms, rss_stat[MM_FILEPAGES]);
       struct percpu_counter anon_fbc = BPF_CORE_READ(mms, rss_stat[MM_ANONPAGES]);
       struct percpu_counter shmem_fbc = BPF_CORE_READ(mms, rss_stat[MM_SHMEMPAGES]);
