@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::env;
+use std::ffi::OsString;
 use std::path::PathBuf;
 
 use libbpf_cargo::SkeletonBuilder;
@@ -24,8 +25,15 @@ fn main() {
         PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR must be set in build script"));
     out.push("exitstat.skel.rs");
 
+    // exitstat.bpf.c includes <vmlinux.h> from the shared below-vmlinux crate in
+    // the open-source build; add its published header directory (exposed as
+    // DEP_BELOW_VMLINUX_INCLUDE) to the include path.
+    let vmlinux_include = env::var_os("DEP_BELOW_VMLINUX_INCLUDE")
+        .expect("DEP_BELOW_VMLINUX_INCLUDE must be set by the below-vmlinux build dependency");
+
     let mut builder = SkeletonBuilder::new();
     builder.source(SRC);
+    builder.clang_args([OsString::from("-I"), vmlinux_include]);
     if let Some(clang) = option_env!("CLANG") {
         builder.clang(clang);
     }

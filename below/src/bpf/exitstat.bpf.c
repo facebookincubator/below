@@ -15,7 +15,10 @@
 #ifdef FBCODE_BUILD
 #include <bpf/vmlinux/vmlinux.h>
 #else
-#include "../open_source/vmlinux/vmlinux.h"
+// Shared vendored BTF from the below-vmlinux crate; found on the include path
+// via DEP_BELOW_VMLINUX_INCLUDE in build.rs (cargo/open-source build only --
+// the buck build takes the FBCODE_BUILD branch above).
+#include <vmlinux.h>
 #endif // FBCODE_BUILD
 
 #include <bpf/bpf_core_read.h>

@@ -1,3 +1,14 @@
+// @generated
+// Vendored kernel BTF (bpftool btf dump file /sys/kernel/btf/vmlinux format c)
+// from a Linux 6.01 kernel. Byte-identical to the copy below shipped at
+// src/open_source/vmlinux/vmlinux_601.h, apart from this comment: @generated is
+// what keeps the formatter off a 98k-line dump.
+//
+// Do not hand-add anything. A counter this dump lacks, or one the kernel later
+// moved between enums, is read by an index that user space resolves from the
+// running kernel's BTF (see cgroupfs/src/cgroup_bpf/coverage.rs), so nothing
+// here has to be patched and a newer dump can be dropped in as-is.
+
 #ifndef __VMLINUX_H__
 #define __VMLINUX_H__
 

@@ -53,6 +53,7 @@ maplit = "1.0"
 portpicker = "0.1.1"
 
 [build-dependencies]
+below-vmlinux = { version = "0.11.0", path = "vmlinux" }
 libbpf-cargo = { version = "0.27.0", default-features = false }
 
 [features]

@@ -16,6 +16,7 @@ members = [
   "below/store",
   "below/tc",
   "below/view",
+  "below/vmlinux",
 ]
 resolver = "2"
 
