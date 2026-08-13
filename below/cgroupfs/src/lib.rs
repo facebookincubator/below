@@ -66,10 +66,17 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub struct CgroupReader {
+pub struct CgroupReader<'snapshot> {
     relative_path: PathBuf,
     dir: Dir,
     buffer: RefCell<Vec<u8>>,
+    /// What BPF already read for this cgroup, when a snapshot was supplied. Each
+    /// read_* below prefers it and falls back to the file, so callers do not
+    /// have to know where a value came from. Borrowed, so the snapshot has to
+    /// outlive the reader.
+    bpf: Option<&'snapshot CgroupBpfStat>,
+    /// The whole snapshot, kept so child readers can find their own entry.
+    bpf_snapshot: Option<&'snapshot CgroupBpfSnapshot>,
 }
 
 fn parse_integer_or_max(s: &str) -> std::result::Result<i64, String> {
@@ -219,16 +226,19 @@ macro_rules! parse_and_set_fields {
     )
 }
 
-impl CgroupReader {
-    pub fn new(root: PathBuf) -> Result<CgroupReader> {
+impl<'snapshot> CgroupReader<'snapshot> {
+    pub fn new(root: PathBuf) -> Result<CgroupReader<'snapshot>> {
         CgroupReader::new_with_relative_path(root, PathBuf::from(OsStr::new("")))
     }
 
-    pub fn new_with_relative_path(root: PathBuf, relative_path: PathBuf) -> Result<CgroupReader> {
+    pub fn new_with_relative_path(
+        root: PathBuf,
+        relative_path: PathBuf,
+    ) -> Result<CgroupReader<'snapshot>> {
         CgroupReader::new_with_relative_path_inner(root, relative_path, true)
     }
 
-    pub fn new_no_fs_validation(root: PathBuf) -> Result<CgroupReader> {
+    pub fn new_no_fs_validation(root: PathBuf) -> Result<CgroupReader<'snapshot>> {
         CgroupReader::new_with_relative_path_inner(root, PathBuf::from(OsStr::new("")), false)
     }
 
@@ -236,7 +246,7 @@ impl CgroupReader {
         root: PathBuf,
         relative_path: PathBuf,
         validate: bool,
-    ) -> Result<CgroupReader> {
+    ) -> Result<CgroupReader<'snapshot>> {
         let mut path = root;
         match relative_path.strip_prefix("/") {
             Ok(p) => path.push(p),
@@ -268,10 +278,30 @@ impl CgroupReader {
             relative_path,
             dir,
             buffer: RefCell::new(Vec::new()),
+            bpf: None,
+            bpf_snapshot: None,
         })
     }
 
-    pub fn root() -> Result<CgroupReader> {
+    /// Serve stats from this BPF snapshot wherever it has them, instead of
+    /// reading the file. Child readers from `child_cgroup_iter` inherit it.
+    pub fn with_bpf_snapshot(mut self, snapshot: &'snapshot CgroupBpfSnapshot) -> Self {
+        self.bpf = self.bpf_stat_for_self(snapshot);
+        self.bpf_snapshot = Some(snapshot);
+        self
+    }
+
+    /// This cgroup's entry in the snapshot. The key is the cgroup id, which is
+    /// the cgroup directory's inode.
+    fn bpf_stat_for_self(
+        &self,
+        snapshot: &'snapshot CgroupBpfSnapshot,
+    ) -> Option<&'snapshot CgroupBpfStat> {
+        let inode = self.read_inode_number().ok()?;
+        snapshot.get(&inode)
+    }
+
+    pub fn root() -> Result<CgroupReader<'snapshot>> {
         CgroupReader::new(Path::new(DEFAULT_CG_ROOT).to_path_buf())
     }
 
@@ -388,24 +418,36 @@ impl CgroupReader {
     /// Read memory.min - returning memory.min limit in bytes
     /// Will return -1 if the content is max
     pub fn read_memory_min(&self) -> Result<i64> {
+        if let Some(bpf) = self.bpf.and_then(|b| b.memory_min) {
+            return Ok(bpf);
+        }
         self.read_singleline_integer_or_max_stat_file("memory.min")
     }
 
     /// Read memory.low - returning memory.low limit in bytes
     /// Will return -1 if the content is max
     pub fn read_memory_low(&self) -> Result<i64> {
+        if let Some(bpf) = self.bpf.and_then(|b| b.memory_low) {
+            return Ok(bpf);
+        }
         self.read_singleline_integer_or_max_stat_file("memory.low")
     }
 
     /// Read memory.high - returning memory.high limit in bytes
     /// Will return -1 if the content is max
     pub fn read_memory_high(&self) -> Result<i64> {
+        if let Some(bpf) = self.bpf.and_then(|b| b.memory_high) {
+            return Ok(bpf);
+        }
         self.read_singleline_integer_or_max_stat_file("memory.high")
     }
 
     /// Read memory.max - returning memory.max max in bytes
     /// Will return -1 if the content is max
     pub fn read_memory_max(&self) -> Result<i64> {
+        if let Some(bpf) = self.bpf.and_then(|b| b.memory_max) {
+            return Ok(bpf);
+        }
         self.read_singleline_integer_or_max_stat_file("memory.max")
     }
 
@@ -428,12 +470,18 @@ impl CgroupReader {
 
     /// Read memory.oom.group - returning 0/1 if oom group is disabled/enabled
     pub fn read_memory_oom_group(&self) -> Result<u32> {
+        if let Some(bpf) = self.bpf.and_then(|b| b.memory_oom_group) {
+            return Ok(bpf);
+        }
         self.read_singleline_file("memory.oom.group")
     }
 
     /// Read memory.current - returning current cgroup memory
     /// consumption in bytes
     pub fn read_memory_current(&self) -> Result<u64> {
+        if let Some(bpf) = self.bpf.and_then(|b| b.memory_current) {
+            return Ok(bpf as u64);
+        }
         self.read_singleline_file("memory.current")
     }
 
@@ -451,6 +499,9 @@ impl CgroupReader {
 
     /// Read cpu.stat - returning assorted cpu consumption statistics
     pub fn read_cpu_stat(&self) -> Result<CpuStat> {
+        if let Some(bpf) = self.bpf.and_then(|b| b.cpu_stat.clone()) {
+            return Ok(bpf);
+        }
         CpuStat::read(self)
     }
 
@@ -462,18 +513,34 @@ impl CgroupReader {
     /// Read memory.stat - returning assorted memory consumption
     /// statistics
     pub fn read_memory_stat(&self) -> Result<MemoryStat> {
+        if let Some(bpf) = self.bpf.and_then(|b| b.memory_stat.clone()) {
+            return Ok(bpf);
+        }
         MemoryStat::read(self)
     }
 
     pub fn read_memory_events(&self) -> Result<MemoryEvents> {
+        if let Some(bpf) = self.bpf.and_then(|b| b.memory_events.clone()) {
+            return Ok(bpf);
+        }
         MemoryEvents::read(self)
     }
 
     pub fn read_memory_events_local(&self) -> Result<MemoryEventsLocal> {
+        if let Some(bpf) = self
+            .bpf
+            .as_ref()
+            .and_then(|b| b.memory_events_local.clone())
+        {
+            return Ok(bpf);
+        }
         MemoryEventsLocal::read(self)
     }
 
     pub fn read_cgroup_stat(&self) -> Result<CgroupStat> {
+        if let Some(bpf) = self.bpf.and_then(|b| b.cgroup_stat.clone()) {
+            return Ok(bpf);
+        }
         CgroupStat::read(self)
     }
 
@@ -621,7 +688,7 @@ impl CgroupReader {
     }
 
     /// Return an iterator over child cgroups
-    pub fn child_cgroup_iter(&self) -> Result<impl Iterator<Item = CgroupReader> + '_> {
+    pub fn child_cgroup_iter(&self) -> Result<impl Iterator<Item = CgroupReader<'snapshot>> + '_> {
         Ok(self
             .dir
             .list_dir(".")
@@ -634,11 +701,19 @@ impl CgroupReader {
                     };
                     let mut relative_path = self.relative_path.clone();
                     relative_path.push(entry.file_name());
-                    Some(CgroupReader {
+                    let mut child = CgroupReader {
                         relative_path,
                         dir,
                         buffer: RefCell::new(Vec::new()),
-                    })
+                        bpf: None,
+                        bpf_snapshot: self.bpf_snapshot,
+                    };
+                    // Only stat for the inode when there is a snapshot to look
+                    // the cgroup up in.
+                    if let Some(snapshot) = child.bpf_snapshot {
+                        child.bpf = child.bpf_stat_for_self(snapshot);
+                    }
+                    Some(child)
                 }
                 _ => None,
             }))

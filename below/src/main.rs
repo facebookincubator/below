@@ -1242,6 +1242,8 @@ fn record(
             cgroup_re,
             gpu_stats_receiver,
             tc_stats_receiver,
+            // Wired to the BPF driver in a later diff; None keeps the file path.
+            cgroup_bpf: None,
         },
     );
 
@@ -1601,7 +1603,7 @@ fn dump_store(
     if json {
         println!("{}", serde_json::to_string_pretty(&ts_sample)?);
     } else {
-        println!("{:#?}", &ts_sample);
+        println!("{:#?}", ts_sample);
     }
 
     Ok(())
@@ -1646,7 +1648,7 @@ fn dump_store_range(
             serde_json::to_writer(&mut w, &ts_sample)?;
             w.write_all(b"\n")?;
         } else {
-            writeln!(&mut w, "{:#?}", &ts_sample)?;
+            writeln!(&mut w, "{:#?}", ts_sample)?;
         }
         current_ts = ts + Duration::from_secs(1);
         w.flush()?;
@@ -1703,10 +1705,7 @@ fn convert_store(
             Box::new(store::RemoteStore::new(host, port)?)
         }
         (None, None) => {
-            pb.set_message(format!(
-                "Using local store at {:?}",
-                &below_config.store_dir
-            ));
+            pb.set_message(format!("Using local store at {:?}", below_config.store_dir));
             Box::new(store::LocalStore::new(
                 logger.clone(),
                 below_config.store_dir.clone(),

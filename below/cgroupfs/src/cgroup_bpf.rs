@@ -106,8 +106,11 @@ impl CgroupBpfDriver {
                 // Tell the program what this kernel lets it read, before the
                 // first traversal.
                 BpfReadConfig::detect().write_to(skip, features, items);
+                // Outside the loop: the cpu user/system split is clamped against
+                // what the previous sample reported.
+                let mut cputime = CputimeAdjuster::default();
                 while self.req.recv().is_ok() {
-                    let snapshot = collect_once(link, map);
+                    let snapshot = collect_once(link, map, &mut cputime);
                     if self.resp.send(snapshot).is_err() {
                         break;
                     }
@@ -161,7 +164,7 @@ fn bpf_loads_skeleton_attach_iter<T>(
 
 /// Drain the results map into a snapshot and clear it for the next run. Each map
 /// value is one raw record, decoded directly into the below-side stat.
-fn drain_map(map: &MapMut<'_>) -> Result<CgroupBpfSnapshot> {
+fn drain_map(map: &MapMut<'_>, cputime: &mut CputimeAdjuster) -> Result<CgroupBpfSnapshot> {
     let keys: Vec<Vec<u8>> = map.keys().collect();
     let mut snapshot = CgroupBpfSnapshot::with_capacity(keys.len());
     for key in &keys {
@@ -178,12 +181,13 @@ fn drain_map(map: &MapMut<'_>) -> Result<CgroupBpfSnapshot> {
                 // and `value` holds at least that many bytes; read_unaligned
                 // needs no alignment.
                 let rec = unsafe { (value.as_ptr() as *const CgroupBpfRecord).read_unaligned() };
-                snapshot.insert(rec.cgroup_id, decode_record(&rec));
+                snapshot.insert(rec.cgroup_id, decode_record(&rec, cputime));
             }
         }
         // Clear the entry so stale cgroups (deleted since) don't accumulate.
         let _ = map.delete(key);
     }
+    cputime.forget_dead(&snapshot);
     Ok(snapshot)
 }
 
@@ -191,10 +195,14 @@ fn drain_map(map: &MapMut<'_>) -> Result<CgroupBpfSnapshot> {
 /// runs the BPF program for every cgroup, which populates (and self-flushes) the
 /// results map that we then drain. The program writes nothing to the seq stream,
 /// so this is one read with no size limit.
-fn collect_once(link: &Link, map: &MapMut<'_>) -> Result<CgroupBpfSnapshot> {
+fn collect_once(
+    link: &Link,
+    map: &MapMut<'_>,
+    cputime: &mut CputimeAdjuster,
+) -> Result<CgroupBpfSnapshot> {
     let mut iter = Iter::new(link).context("Failed to create cgroup iterator instance")?;
     let mut sink = Vec::new();
     iter.read_to_end(&mut sink)
         .context("Failed to drive cgroup iterator")?;
-    drain_map(map)
+    drain_map(map, cputime)
 }

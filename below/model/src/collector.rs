@@ -25,6 +25,9 @@ use crate::collector_plugin;
 
 pub struct CollectorOptions {
     pub cgroup_root: PathBuf,
+    /// When set, cgroup stats come from one BPF snapshot per sample, with a
+    /// per-field fall back to the cgroupfs files. `None` reads only files.
+    pub cgroup_bpf: Option<cgroupfs::CgroupBpfHandle>,
     pub exit_data: Arc<Mutex<procfs::PidMap>>,
     pub collect_io_stat: bool,
     pub disable_disk_stat: bool,
@@ -47,6 +50,7 @@ impl Default for CollectorOptions {
     fn default() -> Self {
         Self {
             cgroup_root: Path::new(cgroupfs::DEFAULT_CG_ROOT).to_path_buf(),
+            cgroup_bpf: None,
             exit_data: Default::default(),
             collect_io_stat: true,
             disable_disk_stat: false,
@@ -202,9 +206,22 @@ fn collect_sample(
             .expect("tried to acquire poisoned lock"),
     );
 
+    // One BPF snapshot per sample, attached to the reader the walk starts from.
+    // Child readers inherit it, and whatever it lacks is read from the file.
+    // The reader borrows it, so it is bound here to outlive the walk.
+    let cgroup_bpf_snapshot = options
+        .cgroup_bpf
+        .as_ref()
+        .and_then(|handle| handle.collect());
+    let cgroup_reader = cgroupfs::CgroupReader::new(options.cgroup_root.to_owned())?;
+    let cgroup_reader = match cgroup_bpf_snapshot.as_ref() {
+        Some(snapshot) => cgroup_reader.with_bpf_snapshot(snapshot),
+        None => cgroup_reader,
+    };
+
     Ok(Sample {
         cgroup: collect_cgroup_sample(
-            &cgroupfs::CgroupReader::new(options.cgroup_root.to_owned())?,
+            &cgroup_reader,
             options.collect_io_stat,
             logger,
             &options.cgroup_re,

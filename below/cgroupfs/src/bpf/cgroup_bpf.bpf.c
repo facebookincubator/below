@@ -296,9 +296,8 @@ static __always_inline bool memcg_flush_applied(void) {
 
 // cpu.stat: raw bstat cputime (usage), plus cfs_bandwidth throttle when the cpu
 // controller is enabled.
-static __always_inline void collect_cpu(
-    struct cgroup* cgrp,
-    struct cgroup_bpf_record* rec) {
+static __always_inline void
+collect_cpu(struct cgroup* cgrp, struct cgroup_bpf_record* rec, u32 skip) {
   // The root cgroup's cpu.stat is special: the kernel computes it from global
   // per-CPU kcpustat (root_cgroup_cputime), not from cgrp->bstat, which is
   // 0/undefined for the root. Reading bstat here would report 0 for the root
@@ -316,6 +315,8 @@ static __always_inline void collect_cpu(
   // The throttle lines need the cpu controller's cfs_bandwidth, which exists
   // only with CONFIG_CFS_BANDWIDTH. Reading it unguarded would fail to relocate
   // and the whole program would not load.
+  if (skip & CGROUP_FILE_BIT(CGROUP_FILES_CPU_THROTTLE))
+    return;
   if (!bpf_core_enum_value_exists(enum cgroup_subsys_id, cpu_cgrp_id) ||
       !bpf_core_field_exists(struct task_group, cfs_bandwidth))
     return;
@@ -370,9 +371,11 @@ collect_memory(struct cgroup* cgrp, struct cgroup_bpf_record* rec, u32 skip) {
     return;
   struct mem_cgroup* memcg = (struct mem_cgroup*)mem_css;
 
-  rec->memory_current_pages = BPF_CORE_READ(memcg, memory.usage.counter);
-  rec->valid |=
-      CGROUP_FILE_BIT(CGROUP_FILES_MEM_CURRENT); // setup bitmask for userspace
+  if (!(skip & CGROUP_FILE_BIT(CGROUP_FILES_MEM_CURRENT))) {
+    rec->memory_current_pages = BPF_CORE_READ(memcg, memory.usage.counter);
+    rec->valid |= CGROUP_FILE_BIT(
+        CGROUP_FILES_MEM_CURRENT); // setup bitmask for userspace
+  }
 
   // memory.events / memory.events.local: fixed atomic arrays indexed directly
   // by enum memcg_memory_event (low..oom_kill are stable indices 0..4).
@@ -396,13 +399,15 @@ collect_memory(struct cgroup* cgrp, struct cgroup_bpf_record* rec, u32 skip) {
 
   // memory.{min,low,high,max} limits (page_counter, in pages) +
   // memory.oom.group.
-  rec->mem_min = BPF_CORE_READ(memcg, memory.min);
-  rec->mem_low = BPF_CORE_READ(memcg, memory.low);
-  rec->mem_high = BPF_CORE_READ(memcg, memory.high);
-  rec->mem_max = BPF_CORE_READ(memcg, memory.max);
-  rec->mem_oom_group = BPF_CORE_READ(memcg, oom_group) ? 1 : 0;
-  rec->valid |=
-      CGROUP_FILE_BIT(CGROUP_FILES_MEM_LIMITS); // setup bitmask for userspace
+  if (!(skip & CGROUP_FILE_BIT(CGROUP_FILES_MEM_LIMITS))) {
+    rec->mem_min = BPF_CORE_READ(memcg, memory.min);
+    rec->mem_low = BPF_CORE_READ(memcg, memory.low);
+    rec->mem_high = BPF_CORE_READ(memcg, memory.high);
+    rec->mem_max = BPF_CORE_READ(memcg, memory.max);
+    rec->mem_oom_group = BPF_CORE_READ(memcg, oom_group) ? 1 : 0;
+    rec->valid |=
+        CGROUP_FILE_BIT(CGROUP_FILES_MEM_LIMITS); // setup bitmask for userspace
+  }
 }
 
 // memory.stat via the memcg kfuncs. Read only when flush_rstat covered memcg
@@ -560,7 +565,7 @@ int cgroup_bpf_read(struct bpf_iter__cgroup* ctx) {
   u32 feats = feats_ptr ? *feats_ptr : 0;
 
   if (!(skip_mask & CGROUP_FILE_BIT(CGROUP_FILES_CPU_USAGE)))
-    collect_cpu(cgrp, rec); // for cpu.stat
+    collect_cpu(cgrp, rec, skip_mask); // for cpu.stat
   if (!(skip_mask & CGROUP_FILE_BIT(CGROUP_FILES_CGROUP_STAT)))
     collect_cgroup_stat(cgrp, rec); // for cgroup.stat
   if (!(skip_mask & CGROUP_FILE_BIT(CGROUP_FILES_MEM_STAT)))

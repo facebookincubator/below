@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Data types and pure decoding for the BPF cgroup reader.
+//! Data types and decoding for the BPF cgroup reader.
 //!
 //! Holds the wire record the BPF program emits, the below-side stats it decodes
-//! into, the snapshot/handle the collector uses, and the pure functions that turn
-//! one into the other. Nothing here touches libbpf; the driver in the parent
-//! module owns that.
+//! into, the snapshot/handle the collector uses, and the functions that turn one
+//! into the other. Decoding is a pure function of the record except for the cpu
+//! user/system split, which has to remember what it last reported per cgroup.
+//! Nothing here touches libbpf; the driver in the parent module owns that.
 
+use std::collections::HashMap;
 use std::sync::LazyLock;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
@@ -73,22 +75,82 @@ impl CgroupBpfRecordExt for CgroupBpfRecord {
     }
 }
 
-/// Give the (user_ns, system_ns) split that cpu.stat reports, computed like the
-/// kernel's `cputime_adjust()`: scale the raw bstat utime/stime to sum to
-/// `sum_exec_runtime`, keeping their ratio (cpu.stat prints these scaled values,
-/// not the raw utime/stime). We skip the kernel's stateful monotonicity clamp, so
-/// the split can drift a few percent on long-running cgroups; the sum stays exact,
-/// so usage and rates are unaffected. Nanoseconds in and out.
-pub(crate) fn adjust_cputime(utime_ns: u64, stime_ns: u64, rtime_ns: u64) -> (u64, u64) {
-    if utime_ns == 0 {
-        (0, rtime_ns)
-    } else if stime_ns == 0 {
-        (rtime_ns, 0)
-    } else {
-        let total = utime_ns as u128 + stime_ns as u128;
-        // 128-bit intermediate: stime_ns * rtime_ns can overflow u64.
-        let stime_adj = (stime_ns as u128 * rtime_ns as u128 / total) as u64;
-        (rtime_ns.saturating_sub(stime_adj), stime_adj)
+/// The last (user_ns, system_ns) reported for one cgroup. The kernel keeps the
+/// same pair per task in `struct prev_cputime`.
+#[derive(Clone, Copy, Default)]
+pub(crate) struct PrevCputime {
+    user_ns: u64,
+    system_ns: u64,
+}
+
+/// Give the (user_ns, system_ns) split that cpu.stat reports, for one cgroup at
+/// a time, remembering what it last reported for each.
+///
+/// The memory is what makes the split usable. Scaling alone is not monotonic:
+/// with raw stime unchanged and utime growing, `stime * rtime / (utime + stime)`
+/// shrinks, so the reported system time falls. below turns a counter that goes
+/// backwards into no reading at all, which showed up as a missing cpu.system for
+/// light cgroups. The kernel has the same problem and solves it by clamping
+/// against the values it reported last, which is what this copies.
+#[derive(Default)]
+pub(crate) struct CputimeAdjuster {
+    prev: HashMap<u64, PrevCputime>,
+}
+
+impl CputimeAdjuster {
+    /// The split for one cgroup, given its raw bstat times. Nanoseconds in and
+    /// out.
+    pub(crate) fn adjust(
+        &mut self,
+        cgroup_id: u64,
+        utime_ns: u64,
+        stime_ns: u64,
+        rtime_ns: u64,
+    ) -> (u64, u64) {
+        let prev = self.prev.entry(cgroup_id).or_default();
+
+        // Runtime has not moved past what was already reported, so repeat it.
+        // The kernel does the same, and it keeps the rest below monotonic.
+        if prev.user_ns.saturating_add(prev.system_ns) >= rtime_ns {
+            return (prev.user_ns, prev.system_ns);
+        }
+
+        // stime first, like the kernel: with no ticks yet both are 0, and it
+        // gives that runtime to user. Testing utime first would call the same
+        // cgroup all system.
+        let mut system_ns = if stime_ns == 0 {
+            0
+        } else if utime_ns == 0 {
+            rtime_ns
+        } else {
+            let total = utime_ns as u128 + stime_ns as u128;
+            // 128-bit intermediate: stime_ns * rtime_ns can overflow u64.
+            (stime_ns as u128 * rtime_ns as u128 / total) as u64
+        };
+
+        // Hold each side at its last value, then give the remainder of runtime
+        // to the other. Runtime is monotonic, so this keeps both monotonic.
+        if system_ns < prev.system_ns {
+            system_ns = prev.system_ns;
+        }
+        let mut user_ns = rtime_ns.saturating_sub(system_ns);
+        if user_ns < prev.user_ns {
+            user_ns = prev.user_ns;
+            system_ns = rtime_ns.saturating_sub(user_ns);
+        }
+
+        prev.user_ns = user_ns;
+        prev.system_ns = system_ns;
+        (user_ns, system_ns)
+    }
+
+    /// Drop the cgroups that are gone, so the state cannot outgrow the tree.
+    /// Every live cgroup is in each snapshot, so anything absent is dead.
+    pub(crate) fn forget_dead(&mut self, live: &CgroupBpfSnapshot) {
+        if self.prev.len() > live.len() {
+            self.prev
+                .retain(|cgroup_id, _| live.contains_key(cgroup_id));
+        }
     }
 }
 
@@ -96,10 +158,11 @@ pub(crate) fn adjust_cputime(utime_ns: u64, stime_ns: u64, rtime_ns: u64) -> (u6
 /// memory.current pages->bytes, and honor the `valid` bitmask (a clear bit ->
 /// `None`, so the collector reads that file). memory.stat values are already in
 /// the file's unit (from the memcg kfuncs), so they are copied as is.
-pub(crate) fn decode_record(rec: &CgroupBpfRecord) -> CgroupBpfStat {
+pub(crate) fn decode_record(rec: &CgroupBpfRecord, cputime: &mut CputimeAdjuster) -> CgroupBpfStat {
     let cpu_stat = if rec.is_valid(CGROUP_FILES_CPU_USAGE) {
         let has_throttle = rec.is_valid(CGROUP_FILES_CPU_THROTTLE);
-        let (user_ns, system_ns) = adjust_cputime(
+        let (user_ns, system_ns) = cputime.adjust(
+            rec.cgroup_id,
             rec.cpu_utime_ns,
             rec.cpu_stime_ns,
             rec.cpu_sum_exec_runtime_ns,
@@ -282,7 +345,7 @@ pub struct CgroupBpfStat {
 /// A sample's BPF-collected cgroup stats, keyed by cgroup id -- which equals the
 /// cgroup directory inode `CgroupReader::read_inode_number` returns, so it joins
 /// directly against the cgroupfs walk.
-pub type CgroupBpfSnapshot = std::collections::HashMap<u64, CgroupBpfStat>;
+pub type CgroupBpfSnapshot = HashMap<u64, CgroupBpfStat>;
 
 /// Handle for obtaining a fresh BPF snapshot each sample. It carries only
 /// channels, so the collector can request a snapshot without touching libbpf.
