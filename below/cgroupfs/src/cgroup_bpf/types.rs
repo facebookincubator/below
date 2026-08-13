@@ -377,3 +377,6 @@ impl CgroupBpfHandle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

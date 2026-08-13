@@ -54,6 +54,9 @@ use crate::CgroupBpfSkelBuilder;
 mod coverage;
 pub(crate) use coverage::*;
 
+#[cfg(test)]
+mod tests;
+
 mod types;
 pub use types::*;
 

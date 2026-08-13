@@ -304,3 +304,6 @@ impl BpfReadConfig {
 fn write_entry(map: &MapMut<'_>, key: u32, value: &[u8]) {
     let _ = map.update(&key.to_ne_bytes(), value, MapFlags::ANY);
 }
+
+#[cfg(test)]
+mod tests;
