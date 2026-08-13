@@ -544,6 +544,31 @@ fn start_tc_stats_thread_and_get_stats_receiver(
     Ok(receiver)
 }
 
+/// Start the cgroup-stat BPF driver, or fall back to reading the cgroupfs files.
+///
+/// BPF is an optimization here, so a kernel that cannot run it is not an error
+/// worth exiting for: say why once and carry on reading files, which is what
+/// `None` makes the collector do.
+fn start_cgroup_bpf_or_read_files(
+    logger: &slog::Logger,
+    below_config: &BelowConfig,
+    debug: bool,
+) -> Option<cgroupfs::CgroupBpfHandle> {
+    if !below_config.enable_cgroup_bpf {
+        return None;
+    }
+    match cgroupfs::start_cgroup_bpf(debug, below_config.cgroup_root.clone()) {
+        Ok(handle) => handle,
+        Err(e) => {
+            error!(
+                logger,
+                "Failed to start cgroup BPF collection, reading cgroup files instead: {:#}", e
+            );
+            None
+        }
+    }
+}
+
 /// Returns true if other end disconnected, false otherwise
 fn check_for_exitstat_errors(logger: &slog::Logger, receiver: &Receiver<Error>) -> bool {
     // Print an error but don't exit on bpf issues. Do this b/c we can't always
@@ -1186,6 +1211,17 @@ fn record(
 
     if !disable_exitstats {
         bump_memlock_rlimit()?;
+    } else if below_config.enable_cgroup_bpf {
+        // Only warn here: cgroup BPF collection reads the cgroup files when it
+        // cannot start, so a limit we fail to raise costs data, not startup.
+        // exitstat above has no such fallback, which is why it still bails.
+        if let Err(e) = bump_memlock_rlimit() {
+            warn!(
+                logger,
+                "Failed to raise memlock limit, cgroup BPF collection may read cgroup files instead: {:#}",
+                e
+            );
+        }
     }
 
     let (exit_buffer, bpf_errs) = if disable_exitstats {
@@ -1194,6 +1230,8 @@ fn record(
         start_exitstat(logger.clone(), debug)
     };
     let mut bpf_err_warned = false;
+
+    let cgroup_bpf = start_cgroup_bpf_or_read_files(&logger, below_config, debug);
 
     // Handle cgroup filter from conf and generate Regex
     let cgroup_re = if !below_config.cgroup_filter_out.is_empty() {
@@ -1242,8 +1280,7 @@ fn record(
             cgroup_re,
             gpu_stats_receiver,
             tc_stats_receiver,
-            // Wired to the BPF driver in a later diff; None keeps the file path.
-            cgroup_bpf: None,
+            cgroup_bpf,
         },
     );
 
@@ -1373,6 +1410,8 @@ fn live_local(
     let (exit_buffer, bpf_errs) = start_exitstat(logger.clone(), debug);
     let mut bpf_err_warned = false;
 
+    let cgroup_bpf = start_cgroup_bpf_or_read_files(&logger, below_config, debug);
+
     let gpu_stats_receiver = if below_config.enable_gpu_stats {
         Some(start_gpu_stats_thread_and_get_stats_receiver(
             init,
@@ -1396,6 +1435,7 @@ fn live_local(
             btrfs_samples: below_config.btrfs_samples,
             btrfs_min_pct: below_config.btrfs_min_pct,
             gpu_stats_receiver,
+            cgroup_bpf,
             ..Default::default()
         },
     );

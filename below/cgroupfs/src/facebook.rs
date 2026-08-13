@@ -14,7 +14,6 @@
 
 mod network_counters;
 
-// The loaded-skel type is only named by the #[cfg(test)] parity-test helpers.
-#[cfg(test)]
+// The driver names the loaded-skel type to hold it across samples.
 pub use cgroup_bpf::CgroupBpfSkel;
 pub use cgroup_bpf::CgroupBpfSkelBuilder;

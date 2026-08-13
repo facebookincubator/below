@@ -56,12 +56,15 @@ const MOUNTINFO_PATH: &str = "/proc/self/mountinfo";
 
 /// What this host offers the BPF program. Facts only; the rules are below.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-struct KernelSupport {
+pub(crate) struct KernelSupport {
     /// False when the kernel's BTF could not be read, so nothing else was
     /// checked either.
     btf_readable: bool,
     /// The kernel exports every memcg read kfunc, which read all of memory.stat.
     memcg_kfuncs: bool,
+    /// The kernel exports an rstat flush kfunc, so the program can make the
+    /// stats current before reading them.
+    flush_kfunc: bool,
     /// The kernel has memory.events' newer `sock_throttled` counter.
     sock_throttled: bool,
     /// The kernel was built with CONFIG_ZSWAP, so memory.stat has the zswap
@@ -73,6 +76,16 @@ struct KernelSupport {
     /// Per `enum cgroup_bpf_item` slot: the kfunc to read that counter with, and
     /// its index. `ABSENT` when this kernel has neither.
     items: [(u32, i32); CGROUP_BPF_ITEM_NUM as usize],
+}
+
+impl KernelSupport {
+    /// Whether BPF can be used here at all. The program flushes rstat in-kernel
+    /// before reading; with no flush kfunc the stats could be stale and there is
+    /// no clean way to refresh them, so the driver does not start and every
+    /// cgroup is read from its file.
+    pub(crate) fn can_flush_rstat(&self) -> bool {
+        self.flush_kfunc
+    }
 }
 
 /// The counters the program reads by index, with the enumerator to look up. The
@@ -92,7 +105,7 @@ const ITEMS_READ_BY_INDEX: [(u32, &str); CGROUP_BPF_ITEM_NUM as usize] = [
 
 /// Check the running kernel and the cgroup2 mount. Called once at startup; only
 /// the mount option could change, and only on a remount.
-fn probe_host() -> KernelSupport {
+pub(crate) fn probe_host() -> KernelSupport {
     let mut support = KernelSupport {
         hugetlb_accounting: read_hugetlb_accounting(),
         ..Default::default()
@@ -102,6 +115,7 @@ fn probe_host() -> KernelSupport {
     };
     support.btf_readable = true;
     support.memcg_kfuncs = has_memcg_kfuncs(&btf);
+    support.flush_kfunc = has_flush_kfunc(&btf);
     support.sock_throttled = btf_enum_has_item(&btf, "memcg_memory_event", "MEMCG_SOCK_THROTTLED");
     // CONFIG_ZSWAP drops the ZSWPIN event, so its absence stands for the option.
     support.zswap = btf_enum_has_item(&btf, "vm_event_item", "ZSWPIN");
@@ -136,6 +150,18 @@ fn has_memcg_kfuncs(btf: &Btf<'_>) -> bool {
     ]
     .iter()
     .all(|name| btf.type_by_name::<Func<'_>>(name).is_some())
+}
+
+/// True when the kernel exports an rstat flush kfunc. Any one of the three will
+/// do, matching the `bpf_ksym_exists` guards in the program.
+fn has_flush_kfunc(btf: &Btf<'_>) -> bool {
+    [
+        "bpf_cgroup_rstat_flush",
+        "cgroup_rstat_flush",
+        "css_rstat_flush",
+    ]
+    .iter()
+    .any(|name| btf.type_by_name::<Func<'_>>(name).is_some())
 }
 
 /// Find an enumerator's value: both whether this kernel tracks that counter and
@@ -192,13 +218,8 @@ pub(crate) struct BpfReadConfig {
 }
 
 impl BpfReadConfig {
-    /// Check this host and decide from it what BPF should read.
-    pub(crate) fn detect() -> Self {
-        Self::from_support(&probe_host())
-    }
-
-    /// The decision rules, over what the host was found to support.
-    fn from_support(support: &KernelSupport) -> Self {
+    /// Decide what BPF should read, from what the host was found to support.
+    pub(crate) fn from_support(support: &KernelSupport) -> Self {
         let mut config = Self {
             items: support.items,
             ..Default::default()
