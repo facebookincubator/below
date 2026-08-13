@@ -13,3 +13,10 @@
 // limitations under the License.
 
 mod network_counters;
+
+mod cgroup_bpf_skel {
+    include!(concat!(env!("OUT_DIR"), "/cgroup_bpf.skel.rs"));
+}
+#[cfg(test)]
+pub use cgroup_bpf_skel::CgroupBpfSkel;
+pub use cgroup_bpf_skel::CgroupBpfSkelBuilder;

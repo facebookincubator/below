@@ -37,6 +37,9 @@ use thiserror::Error;
 mod types;
 pub use types::*;
 
+mod cgroup_bpf;
+pub use cgroup_bpf::*;
+
 #[cfg(test)]
 mod test;
 

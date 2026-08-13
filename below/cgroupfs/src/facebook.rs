@@ -13,3 +13,8 @@
 // limitations under the License.
 
 mod network_counters;
+
+// The loaded-skel type is only named by the #[cfg(test)] parity-test helpers.
+#[cfg(test)]
+pub use cgroup_bpf::CgroupBpfSkel;
+pub use cgroup_bpf::CgroupBpfSkelBuilder;

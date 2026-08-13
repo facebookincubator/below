@@ -11,12 +11,24 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
+anyhow = "1.0.104"
 common = { package = "below-common", version = "0.11.0", path = "../common" }
+libbpf-rs = { version = "0.27.0", default-features = false }
+libc = "0.2.186"
 nix = { version = "0.30.1", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 openat = "0.1.21"
 serde = { version = "1.0.229", features = ["derive", "rc"] }
+serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 thiserror = "2.0.19"
 
 [dev-dependencies]
 paste = "1.0.14"
 tempfile = "3.27.0"
+
+[build-dependencies]
+below-vmlinux = { version = "0.11.0", path = "../vmlinux" }
+bindgen = { version = "0.72.1", features = ["logging", "prettyplease", "static"], default-features = false }
+libbpf-cargo = { version = "0.27.0", default-features = false }
+
+[features]
+default = ["libbpf-cargo/default", "libbpf-rs/default"]
