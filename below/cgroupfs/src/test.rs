@@ -248,7 +248,12 @@ fn cpuset_format_test() {
         "0,2-3,5-9999",
         "0-1,3,5-7,9,11-12",
     ] {
-        assert_eq!(Cpuset::from_str(s).unwrap().to_string(), s)
+        assert_eq!(
+            Cpuset::from_str(s)
+                .expect("Failed to parse cpuset")
+                .to_string(),
+            s
+        )
     }
 
     for s in ["a", "-1", "-1-2", "0--2", "0-2-", "0,2-"] {
