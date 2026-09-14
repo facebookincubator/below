@@ -13,7 +13,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "1.0.104"
 common = { package = "below-common", version = "0.11.0", path = "../common" }
-libbpf-rs = { version = "0.27.0", default-features = false }
+libbpf-rs = { version = "0.27.1", default-features = false }
 libc = "0.2.186"
 nix = { version = "0.31.3", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 openat = "0.1.21"
