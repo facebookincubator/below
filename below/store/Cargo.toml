@@ -30,7 +30,7 @@ itertools = "0.15.0"
 paste = "1.0.14"
 slog-term = "2.9.2"
 tempfile = "3.27.0"
-zstd = { version = "0.13.3", features = ["experimental", "zstdmt"] }
+zstd = { version = "0.14.0", features = ["experimental", "zstdmt"] }
 
 [features]
 no-vendor = ["zstd-safe/pkg-config", "zstd/pkg-config"]
