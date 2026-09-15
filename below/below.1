@@ -113,6 +113,14 @@ Disable collection of disk statistics.
 Disable eBPF-based exit statistics.
 
 .TP
+.B --watchdog-timeout-s <WATCHDOG_TIMEOUT_S>
+Report a combined record and store-writer kernel-stack sample to \fB/dev/kmsg\fR
+after this many seconds without record-loop progress, then at that interval until
+progress resumes. The integer must exceed \fB--interval-s\fR (or one second,
+whichever is greater) and be at most 86400; omitting the option disables the
+watchdog.
+
+.TP
 .B --compress
 Enable zstd compression for data files. Expect approximately 10x smaller files.
 

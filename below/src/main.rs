@@ -21,6 +21,7 @@ use std::io;
 use std::io::BufRead;
 use std::io::BufWriter;
 use std::io::Write;
+use std::num::NonZeroU64;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
@@ -67,6 +68,7 @@ use tokio::runtime::Builder as TB;
 mod exitstat;
 #[cfg(test)]
 mod test;
+mod watchdog;
 
 use common::cliutil;
 use common::logutil;
@@ -116,6 +118,22 @@ struct CompressOpts {
     /// 20-30x smaller data files.
     #[clap(long, requires("compress"), value_parser = parse_chunk_size)]
     dict_compress_chunk_size: Option<u32>,
+}
+
+const MAX_WATCHDOG_TIMEOUT_S: u64 = 86_400;
+
+fn parse_watchdog_timeout_s(value: &str) -> Result<NonZeroU64> {
+    let timeout = value
+        .parse::<NonZeroU64>()
+        .with_context(|| format!("{value} is not a positive integer"))?;
+    if timeout.get() > MAX_WATCHDOG_TIMEOUT_S {
+        bail!(
+            "{} is greater than the maximum watchdog timeout of {} seconds",
+            timeout,
+            MAX_WATCHDOG_TIMEOUT_S
+        );
+    }
+    Ok(timeout)
 }
 
 impl CompressOpts {
@@ -214,6 +232,11 @@ enum Command {
         /// Max number of samples we will buffer before writing becomes blocking
         #[clap(short, default_value = "10")]
         writer_buffer_size: usize,
+        /// Report to /dev/kmsg after this many seconds without record-loop progress,
+        /// then at that interval while stalled. The integer must exceed
+        /// max(--interval-s, 1) and be at most 86400. Omit to disable.
+        #[clap(long, value_parser = parse_watchdog_timeout_s)]
+        watchdog_timeout_s: Option<NonZeroU64>,
     },
     /// Replay historical data (interactive)
     Replay {
@@ -630,11 +653,15 @@ fn start_store_writer_thread(
     store_size_limit: Option<u64>,
     retention: Option<Duration>,
     writer_buffer_size: usize,
-) -> Result<(JoinHandle<()>, SyncSender<WorkerTask>)> {
+) -> Result<(JoinHandle<()>, SyncSender<WorkerTask>, libc::pid_t)> {
     let (send_task, recv_task) = sync_channel::<WorkerTask>(writer_buffer_size);
+    let (send_started, recv_started) = sync_channel(0);
     let handle = thread::Builder::new()
         .name("store_writer".to_owned())
         .spawn(move || {
+            if send_started.send(watchdog::current_tid()).is_err() {
+                return;
+            }
             loop {
                 let loop_start_time = Instant::now();
                 match recv_task.recv() {
@@ -676,7 +703,10 @@ fn start_store_writer_thread(
                     .expect("cleanup_store failed");
             }
         })?;
-    Ok((handle, send_task))
+    let writer_tid = recv_started
+        .recv()
+        .context("store_writer exited before publishing its thread ID")?;
+    Ok((handle, send_task, writer_tid))
 }
 
 /// Special Error that indicates the program should stop now. It represents an
@@ -843,6 +873,7 @@ fn real_main(init: init::InitToken) {
             disable_exitstats,
             compress_opts,
             writer_buffer_size,
+            watchdog_timeout_s,
         } => {
             logutil::set_current_log_target(logutil::TargetLog::Term);
             run(
@@ -866,6 +897,7 @@ fn real_main(init: init::InitToken) {
                         *disable_exitstats,
                         compress_opts,
                         *writer_buffer_size,
+                        watchdog_timeout_s.map(|timeout| Duration::from_secs(timeout.get())),
                     )
                 },
             )
@@ -1206,7 +1238,9 @@ fn record(
     disable_exitstats: bool,
     compress_opts: &CompressOpts,
     writer_buffer_size: usize,
+    watchdog_timeout: Option<Duration>,
 ) -> Result<()> {
+    validate_watchdog_timeout(interval, watchdog_timeout)?;
     debug!(logger, "Starting up!");
 
     if !disable_exitstats {
@@ -1293,7 +1327,7 @@ fn record(
 
     let mut stats = statistics::Statistics::new(init);
 
-    let (writer_thread, send_task) = start_store_writer_thread(
+    let (writer_thread, send_task, writer_tid) = start_store_writer_thread(
         logger.clone(),
         store,
         store_size_limit,
@@ -1317,7 +1351,26 @@ fn record(
         }
     }
 
+    let watchdog =
+        watchdog_timeout.and_then(
+            |timeout| match watchdog::Watchdog::start(timeout, writer_tid) {
+                Ok(watchdog) => Some(watchdog),
+                Err(e) => {
+                    warn!(
+                        logger,
+                        "Failed to start record watchdog; continuing without stall detection: {}",
+                        e
+                    );
+                    None
+                }
+            },
+        );
+
     loop {
+        if let Some(watchdog) = watchdog.as_ref() {
+            watchdog.beat();
+        }
+
         if !disable_exitstats && !bpf_err_warned {
             bpf_err_warned = check_for_exitstat_errors(
                 &logger,
@@ -1378,6 +1431,10 @@ fn record(
             Duration::from_secs(1)
         };
 
+        if let Some(watchdog) = watchdog.as_ref() {
+            watchdog.beat();
+        }
+
         // Use recv timeout as loop interval
         match errs.recv_timeout(sleep_duration) {
             // SIGTERM/SIGINT or any genral error. Stop loop immediately.
@@ -1387,6 +1444,16 @@ fn record(
             Err(RecvTimeoutError::Disconnected) => bail!("error channel disconnected"),
         };
     }
+}
+
+fn validate_watchdog_timeout(interval: Duration, watchdog_timeout: Option<Duration>) -> Result<()> {
+    let normal_sleep = interval.max(Duration::from_secs(1));
+    if let Some(timeout) = watchdog_timeout.filter(|timeout| *timeout <= normal_sleep) {
+        bail!(
+            "watchdog timeout ({timeout:?}) must exceed the maximum normal sleep ({normal_sleep:?})"
+        );
+    }
+    Ok(())
 }
 
 fn live_local(
