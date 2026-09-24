@@ -7,22 +7,52 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_push:
+  build:
     if: github.repository == 'facebookincubator/below'
-    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            arch: amd64
+          - runner: ubuntu-22.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
     steps:
     - uses: actions/checkout@v2
-    - name: Build docker image
-      run: >
-        docker build
-        -t below
-        .
-    - name: Tag docker image
-      run: docker tag below below/below:latest
     - name: Authenticate with docker registry
       env:
         DOCKER_USER: ${{ secrets.DOCKER_USER }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
-    - name: Push docker image
-      run: docker push below/below:latest
+    - name: Build and push docker image by digest
+      run: |
+        docker buildx create --use
+        docker buildx build \
+          --output "type=image,name=below/below,push-by-digest=true,name-canonical=true,push=true" \
+          --metadata-file metadata.json \
+          .
+    - name: Upload metadata
+      uses: actions/upload-artifact@v4
+      with:
+        name: metadata-${{ matrix.arch }}
+        path: metadata.json
+
+  merge_manifests_push:
+    if: github.repository == 'facebookincubator/below'
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Download metadata
+      uses: actions/download-artifact@v4
+      with:
+        path: metadata
+        pattern: metadata-*
+    - name: Authenticate with docker registry
+      env:
+        DOCKER_USER: ${{ secrets.DOCKER_USER }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
+    - name: Merge manifests and push
+      run: |
+        docker buildx imagetools create -t below/below:latest \
+          $(for f in metadata/*/metadata.json; do echo "below/below@$(jq -r '."containerimage.digest"' "$f")"; done)
