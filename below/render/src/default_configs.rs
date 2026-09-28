@@ -1415,10 +1415,10 @@ impl HasRenderConfigForDump for model::VmModel {
             PgpgoutPerSec => Some(gauge()),
             PswpinPerSec => Some(gauge()),
             PswpoutPerSec => Some(gauge()),
-            PgstealKswapd => Some(counter()),
-            PgstealDirect => Some(counter()),
-            PgscanKswapd => Some(counter()),
-            PgscanDirect => Some(counter()),
+            PgstealKswapd => Some(gauge()),
+            PgstealDirect => Some(gauge()),
+            PgscanKswapd => Some(gauge()),
+            PgscanDirect => Some(gauge()),
             OomKill => Some(counter()),
         }
     }
