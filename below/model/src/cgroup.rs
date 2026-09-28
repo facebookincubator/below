@@ -550,6 +550,14 @@ pub struct CgroupMemoryModel {
     pub pgrefill: Option<u64>,
     pub pgscan: Option<u64>,
     pub pgsteal: Option<u64>,
+    pub pgscan_kswapd: Option<u64>,
+    pub pgscan_direct: Option<u64>,
+    pub pgscan_khugepaged: Option<u64>,
+    pub pgscan_proactive: Option<u64>,
+    pub pgsteal_kswapd: Option<u64>,
+    pub pgsteal_direct: Option<u64>,
+    pub pgsteal_khugepaged: Option<u64>,
+    pub pgsteal_proactive: Option<u64>,
     pub pgactivate: Option<u64>,
     pub pgdeactivate: Option<u64>,
     pub pglazyfree: Option<u64>,
@@ -634,6 +642,14 @@ impl std::ops::Add for CgroupMemoryModel {
             pgrefill: opt_add(self.pgrefill, other.pgrefill),
             pgscan: opt_add(self.pgscan, other.pgscan),
             pgsteal: opt_add(self.pgsteal, other.pgsteal),
+            pgscan_kswapd: opt_add(self.pgscan_kswapd, other.pgscan_kswapd),
+            pgscan_direct: opt_add(self.pgscan_direct, other.pgscan_direct),
+            pgscan_khugepaged: opt_add(self.pgscan_khugepaged, other.pgscan_khugepaged),
+            pgscan_proactive: opt_add(self.pgscan_proactive, other.pgscan_proactive),
+            pgsteal_kswapd: opt_add(self.pgsteal_kswapd, other.pgsteal_kswapd),
+            pgsteal_direct: opt_add(self.pgsteal_direct, other.pgsteal_direct),
+            pgsteal_khugepaged: opt_add(self.pgsteal_khugepaged, other.pgsteal_khugepaged),
+            pgsteal_proactive: opt_add(self.pgsteal_proactive, other.pgsteal_proactive),
             pgactivate: opt_add(self.pgactivate, other.pgactivate),
             pgdeactivate: opt_add(self.pgdeactivate, other.pgdeactivate),
             pglazyfree: opt_add(self.pglazyfree, other.pglazyfree),
@@ -807,6 +823,38 @@ impl CgroupMemoryModel {
                 model.pgrefill = count_per_sec!(last_stat.pgrefill, stat.pgrefill, delta, u64);
                 model.pgscan = count_per_sec!(last_stat.pgscan, stat.pgscan, delta, u64);
                 model.pgsteal = count_per_sec!(last_stat.pgsteal, stat.pgsteal, delta, u64);
+                model.pgscan_kswapd =
+                    count_per_sec!(last_stat.pgscan_kswapd, stat.pgscan_kswapd, delta, u64);
+                model.pgscan_direct =
+                    count_per_sec!(last_stat.pgscan_direct, stat.pgscan_direct, delta, u64);
+                model.pgscan_khugepaged = count_per_sec!(
+                    last_stat.pgscan_khugepaged,
+                    stat.pgscan_khugepaged,
+                    delta,
+                    u64
+                );
+                model.pgscan_proactive = count_per_sec!(
+                    last_stat.pgscan_proactive,
+                    stat.pgscan_proactive,
+                    delta,
+                    u64
+                );
+                model.pgsteal_kswapd =
+                    count_per_sec!(last_stat.pgsteal_kswapd, stat.pgsteal_kswapd, delta, u64);
+                model.pgsteal_direct =
+                    count_per_sec!(last_stat.pgsteal_direct, stat.pgsteal_direct, delta, u64);
+                model.pgsteal_khugepaged = count_per_sec!(
+                    last_stat.pgsteal_khugepaged,
+                    stat.pgsteal_khugepaged,
+                    delta,
+                    u64
+                );
+                model.pgsteal_proactive = count_per_sec!(
+                    last_stat.pgsteal_proactive,
+                    stat.pgsteal_proactive,
+                    delta,
+                    u64
+                );
                 model.pgactivate =
                     count_per_sec!(last_stat.pgactivate, stat.pgactivate, delta, u64);
                 model.pgdeactivate =

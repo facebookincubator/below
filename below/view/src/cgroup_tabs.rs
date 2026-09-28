@@ -123,7 +123,7 @@ impl CgroupTab {
             // Each row is (label, value), where label is visible and value is used
             // as identifier to correlate the row with its state in global data.
             if cgroup.recreate_flag {
-                output.push((row, format!("[RECREATED] {}", &cgroup.data.full_path)));
+                output.push((row, format!("[RECREATED] {}", cgroup.data.full_path)));
             } else {
                 output.push((row, cgroup.data.full_path.clone()));
             }
@@ -282,7 +282,15 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::Pgmajfault;
     use model::CgroupMemoryModelFieldId::Pgrefill;
     use model::CgroupMemoryModelFieldId::Pgscan;
+    use model::CgroupMemoryModelFieldId::PgscanDirect;
+    use model::CgroupMemoryModelFieldId::PgscanKhugepaged;
+    use model::CgroupMemoryModelFieldId::PgscanKswapd;
+    use model::CgroupMemoryModelFieldId::PgscanProactive;
     use model::CgroupMemoryModelFieldId::Pgsteal;
+    use model::CgroupMemoryModelFieldId::PgstealDirect;
+    use model::CgroupMemoryModelFieldId::PgstealKhugepaged;
+    use model::CgroupMemoryModelFieldId::PgstealKswapd;
+    use model::CgroupMemoryModelFieldId::PgstealProactive;
     use model::CgroupMemoryModelFieldId::Shmem;
     use model::CgroupMemoryModelFieldId::ShmemThp;
     use model::CgroupMemoryModelFieldId::Slab;
@@ -410,6 +418,14 @@ pub mod default_tabs {
             ViewItem::from_default(Mem(Pgrefill)),
             ViewItem::from_default(Mem(Pgscan)),
             ViewItem::from_default(Mem(Pgsteal)),
+            ViewItem::from_default(Mem(PgscanKswapd)),
+            ViewItem::from_default(Mem(PgscanDirect)),
+            ViewItem::from_default(Mem(PgscanKhugepaged)),
+            ViewItem::from_default(Mem(PgscanProactive)),
+            ViewItem::from_default(Mem(PgstealKswapd)),
+            ViewItem::from_default(Mem(PgstealDirect)),
+            ViewItem::from_default(Mem(PgstealKhugepaged)),
+            ViewItem::from_default(Mem(PgstealProactive)),
             ViewItem::from_default(Mem(Pgactivate)),
             ViewItem::from_default(Mem(Pgdeactivate)),
             ViewItem::from_default(Mem(Pglazyfree)),

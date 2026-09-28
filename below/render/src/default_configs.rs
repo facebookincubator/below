@@ -97,7 +97,15 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
         use model::CgroupMemoryModelFieldId::Pgmajfault;
         use model::CgroupMemoryModelFieldId::Pgrefill;
         use model::CgroupMemoryModelFieldId::Pgscan;
+        use model::CgroupMemoryModelFieldId::PgscanDirect;
+        use model::CgroupMemoryModelFieldId::PgscanKhugepaged;
+        use model::CgroupMemoryModelFieldId::PgscanKswapd;
+        use model::CgroupMemoryModelFieldId::PgscanProactive;
         use model::CgroupMemoryModelFieldId::Pgsteal;
+        use model::CgroupMemoryModelFieldId::PgstealDirect;
+        use model::CgroupMemoryModelFieldId::PgstealKhugepaged;
+        use model::CgroupMemoryModelFieldId::PgstealKswapd;
+        use model::CgroupMemoryModelFieldId::PgstealProactive;
         use model::CgroupMemoryModelFieldId::Shmem;
         use model::CgroupMemoryModelFieldId::Slab;
         use model::CgroupMemoryModelFieldId::Sock;
@@ -163,6 +171,14 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
             Mem(Pgrefill) => rc.title("Pgrefill"),
             Mem(Pgscan) => rc.title("Pgscan"),
             Mem(Pgsteal) => rc.title("Pgsteal"),
+            Mem(PgscanKswapd) => rc.title("Pgscan Kswapd"),
+            Mem(PgscanDirect) => rc.title("Pgscan Direct"),
+            Mem(PgscanKhugepaged) => rc.title("Pgscan Khugepaged"),
+            Mem(PgscanProactive) => rc.title("Pgscan Proactive"),
+            Mem(PgstealKswapd) => rc.title("Pgsteal Kswapd"),
+            Mem(PgstealDirect) => rc.title("Pgsteal Direct"),
+            Mem(PgstealKhugepaged) => rc.title("Pgsteal Khugepaged"),
+            Mem(PgstealProactive) => rc.title("Pgsteal Proactive"),
             Mem(Pgactivate) => rc.title("Pgactivate"),
             Mem(Pgdeactivate) => rc.title("Pgdeactivate"),
             Mem(Pglazyfree) => rc.title("Pglazyfree"),
@@ -279,6 +295,14 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
                 Pgrefill => Some(gauge.help("Pgrefill per second")),
                 Pgscan => Some(gauge.help("Pgscan per second")),
                 Pgsteal => Some(gauge.help("Pgsteal per second")),
+                PgscanKswapd => Some(gauge.help("Pgscan Kswapd per second")),
+                PgscanDirect => Some(gauge.help("Pgscan Direct per second")),
+                PgscanKhugepaged => Some(gauge.help("Pgscan Khugepaged per second")),
+                PgscanProactive => Some(gauge.help("Pgscan Proactive per second")),
+                PgstealKswapd => Some(gauge.help("Pgsteal Kswapd per second")),
+                PgstealDirect => Some(gauge.help("Pgsteal Direct per second")),
+                PgstealKhugepaged => Some(gauge.help("Pgsteal Khugepaged per second")),
+                PgstealProactive => Some(gauge.help("Pgsteal Proactive per second")),
                 Pgactivate => Some(gauge.help("Pgactivate per second")),
                 Pgdeactivate => Some(gauge.help("Pgdeactivate per second")),
                 Pglazyfree => Some(gauge.help("Pglazyfree per second")),
@@ -416,6 +440,14 @@ impl HasRenderConfig for model::CgroupMemoryModel {
             Pgrefill => rc.title("Pgrefill/s"),
             Pgscan => rc.title("Pgscan/s"),
             Pgsteal => rc.title("Pgsteal/s"),
+            PgscanKswapd => rc.title("Pgscan Kswapd/s"),
+            PgscanDirect => rc.title("Pgscan Direct/s"),
+            PgscanKhugepaged => rc.title("Pgscan Khugepaged/s"),
+            PgscanProactive => rc.title("Pgscan Proactive/s"),
+            PgstealKswapd => rc.title("Pgsteal Kswapd/s"),
+            PgstealDirect => rc.title("Pgsteal Direct/s"),
+            PgstealKhugepaged => rc.title("Pgsteal Khugepaged/s"),
+            PgstealProactive => rc.title("Pgsteal Proactive/s"),
             Pgactivate => rc.title("Pgactivate/s"),
             Pgdeactivate => rc.title("Pgdeactivate/s"),
             Pglazyfree => rc.title("Pglazyfree/s"),

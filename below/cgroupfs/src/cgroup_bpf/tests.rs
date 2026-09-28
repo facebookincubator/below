@@ -115,13 +115,21 @@ fn read_all(reader: &CgroupReader<'_>) -> FileRead {
 /// The memory.stat counters that only ever rise. Everything else in the file is
 /// a gauge that moves both ways, which a live tree cannot pin down; those are
 /// checked for presence here and compared by value on an idle cgroup.
-fn rising_memory_stat_counters(stat: &crate::MemoryStat) -> [(&'static str, Option<u64>); 17] {
+fn rising_memory_stat_counters(stat: &crate::MemoryStat) -> [(&'static str, Option<u64>); 25] {
     [
         ("pgfault", stat.pgfault),
         ("pgmajfault", stat.pgmajfault),
         ("pgrefill", stat.pgrefill),
         ("pgscan", stat.pgscan),
         ("pgsteal", stat.pgsteal),
+        ("pgscan_kswapd", stat.pgscan_kswapd),
+        ("pgscan_direct", stat.pgscan_direct),
+        ("pgscan_khugepaged", stat.pgscan_khugepaged),
+        ("pgscan_proactive", stat.pgscan_proactive),
+        ("pgsteal_kswapd", stat.pgsteal_kswapd),
+        ("pgsteal_direct", stat.pgsteal_direct),
+        ("pgsteal_khugepaged", stat.pgsteal_khugepaged),
+        ("pgsteal_proactive", stat.pgsteal_proactive),
         ("pgactivate", stat.pgactivate),
         ("pgdeactivate", stat.pgdeactivate),
         ("pglazyfree", stat.pglazyfree),

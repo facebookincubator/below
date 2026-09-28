@@ -185,8 +185,6 @@ struct cgroup_bpf_record {
   MEM_STAT_PAGE_STATE_FIELDS(X)
 #undef X
   // pgscan/pgsteal are the file's aggregate, the sum of their four components.
-  // below reads only the aggregates today; the components are recorded anyway
-  // so the record mirrors memory.stat's full breakdown.
   unsigned long long ms_pgscan;
   unsigned long long ms_pgsteal;
   // The counters read by index (hugetlb included), declared from their X-list.
