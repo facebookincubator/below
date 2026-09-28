@@ -41,6 +41,7 @@ mod test;
 const LOCALHOST: &str = "127.0.0.1";
 const DYNOLOG_SERVICE_PORT: u16 = 1777;
 const RGPU_SERVICE_PORT: u16 = 5829;
+const RGPU_PROCESSING_TIMEOUT_MS: u64 = 6000;
 
 const KB_PER_MB: u64 = 1024;
 const MB: u64 = 1024 * 1024;
@@ -1203,6 +1204,12 @@ impl GpuStatsCollector {
         let conn_config = hashmap! {
             "retries_per_reason".to_owned() => "all=0".into(),
         };
+        // getGPUInfoCache may block on a synchronous NVML collection when the
+        // RGPU per-group cache is stale, bounded server-side at 5s.
+        let rgpu_conn_config = hashmap! {
+            "retries_per_reason".to_owned() => "all=0".into(),
+            "processing_timeout".to_owned() => RGPU_PROCESSING_TIMEOUT_MS.to_string(),
+        };
         let dynolog_client = make_DynoLogService_srclient!(
             fb,
             tiername = "",
@@ -1213,7 +1220,7 @@ impl GpuStatsCollector {
             fb,
             tiername = "",
             with_service_options = &rgpu_service_opts,
-            with_conn_config = &conn_config
+            with_conn_config = &rgpu_conn_config
         )?;
         Ok(Self {
             logger,
