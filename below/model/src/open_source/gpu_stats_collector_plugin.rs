@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::time::Duration;
+
 use anyhow::Result;
 use async_trait::async_trait;
 
@@ -22,7 +24,7 @@ pub type SampleType = gpu_stats::GpuSample;
 pub struct GpuStatsCollectorPlugin {}
 
 impl GpuStatsCollectorPlugin {
-    pub fn new(_logger: slog::Logger) -> Result<Self> {
+    pub fn new(_logger: slog::Logger, _rgpu_interval: Duration) -> Result<Self> {
         Ok(Self {})
     }
 }

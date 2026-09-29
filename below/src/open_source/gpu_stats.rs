@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::time::Duration;
+
 use anyhow::Result;
 
 use crate::init::InitToken;
@@ -19,6 +21,7 @@ use crate::init::InitToken;
 pub fn get_gpu_stats_collector_plugin(
     _init: InitToken,
     logger: slog::Logger,
+    rgpu_interval: Duration,
 ) -> Result<model::gpu_stats_collector_plugin::GpuStatsCollectorPlugin> {
-    model::gpu_stats_collector_plugin::GpuStatsCollectorPlugin::new(logger)
+    model::gpu_stats_collector_plugin::GpuStatsCollectorPlugin::new(logger, rgpu_interval)
 }

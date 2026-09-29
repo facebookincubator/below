@@ -441,14 +441,21 @@ fn start_exitstat(
     (exit_buffer, Some(bpf_err_recv))
 }
 
+// rgpu refreshes its cache when a read finds it stale, so reading it every
+// sample adds NVML load on the GPU. Keep this under 2x rgpu's hot-group cache
+// TTL (currently 25s), or reads block on a synchronous refresh.
+const RGPU_INTERVAL: Duration = Duration::from_secs(30);
+
 pub fn start_gpu_stats_thread_and_get_stats_receiver(
     init: init::InitToken,
     logger: slog::Logger,
     interval: Duration,
+    rgpu_interval: Duration,
 ) -> Result<model::collector_plugin::Consumer<model::gpu_stats_collector_plugin::SampleType>> {
     let target_interval = interval;
-    let gpu_collector = gpu_stats::get_gpu_stats_collector_plugin(init, logger.clone())
-        .context("Failed to initialize GPU stats collector")?;
+    let gpu_collector =
+        gpu_stats::get_gpu_stats_collector_plugin(init, logger.clone(), rgpu_interval)
+            .context("Failed to initialize GPU stats collector")?;
     let (mut collector, receiver) = model::collector_plugin::collector_consumer(gpu_collector);
     thread::Builder::new()
         .name("gpu_stats_collector".to_owned())
@@ -1282,6 +1289,7 @@ fn record(
             init,
             logger.clone(),
             interval,
+            RGPU_INTERVAL,
         )?)
     } else {
         None
@@ -1484,6 +1492,7 @@ fn live_local(
             init,
             logger.clone(),
             interval,
+            RGPU_INTERVAL,
         )?)
     } else {
         None
