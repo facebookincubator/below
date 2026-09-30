@@ -381,6 +381,52 @@ fn testing_fold_string() {
     );
 }
 
+/// A local store holding `frames`, and a config that points at it.
+#[cfg(not(feature = "vmtest"))]
+fn store_with(frames: Vec<(SystemTime, Sample)>) -> (TempDir, crate::BelowConfig) {
+    let store_dir = TempDir::with_prefix("below_snapshot_test.").expect("tempdir failed");
+    let mut writer = store::StoreWriter::new(
+        get_logger(),
+        &store_dir,
+        CompressionMode::None,
+        store::Format::Cbor,
+    )
+    .expect("Failed to create store");
+    for (timestamp, sample) in frames {
+        writer
+            .put(timestamp, &DataFrame { sample })
+            .expect("failed to store sample");
+    }
+    let below_config = crate::BelowConfig {
+        store_dir: store_dir.path().to_path_buf(),
+        ..Default::default()
+    };
+    (store_dir, below_config)
+}
+
+/// Snapshots the store `below_config` points at into a new temp dir.
+#[cfg(not(feature = "vmtest"))]
+fn snapshot_of(
+    below_config: &crate::BelowConfig,
+    begin: SystemTime,
+    end: SystemTime,
+    purpose: crate::SnapshotPurpose,
+) -> (TempDir, crate::SnapshotFile) {
+    let output_dir = TempDir::with_prefix("below_snapshot_test_out.").expect("tempdir failed");
+    let snapshot = crate::create_snapshot(
+        get_logger(),
+        below_config,
+        begin,
+        end,
+        Some(output_dir.path().join("snapshot.tar")),
+        /* host */ None,
+        /* port */ None,
+        purpose,
+    )
+    .expect("failed to create snapshot");
+    (output_dir, snapshot)
+}
+
 /// Unpacks a snapshot tarball into `dir` the way `replay --snapshot` does.
 #[cfg(not(feature = "vmtest"))]
 fn open_snapshot(
@@ -396,44 +442,127 @@ fn open_snapshot(
 
 #[cfg(not(feature = "vmtest"))]
 #[test]
+fn only_upload_snapshots_are_redacted() {
+    use store::Store;
+
+    let mut pid_info = procfs::PidInfo::default();
+    pid_info.stat.comm = Some("tool".to_owned());
+    pid_info.cmdline_vec = Some(vec![
+        "/home/alice/bin/tool".to_owned(),
+        "--token=secret".to_owned(),
+    ]);
+    pid_info.exe_path = Some("/home/alice/bin/tool".to_owned());
+    let mut sample = Sample::default();
+    sample.system.hostname = "host.example.com".to_owned();
+    sample.processes.insert(1234, pid_info.clone());
+    let timestamp = UNIX_EPOCH + Duration::from_secs(554433);
+    let (_store_dir, below_config) = store_with(vec![(timestamp, sample)]);
+
+    let snapshot_process = |purpose| {
+        let (output_dir, snapshot) = snapshot_of(
+            &below_config,
+            timestamp,
+            timestamp + Duration::from_secs(1),
+            purpose,
+        );
+        let samples = snapshot.samples.expect("snapshot should have samples");
+        assert_eq!(samples.count, 1);
+        assert_eq!((samples.first, samples.last), (timestamp, timestamp));
+        assert_eq!(samples.hostname, "host.example.com");
+        let (_, frame) = open_snapshot(get_logger(), &snapshot.path, output_dir.path())
+            .get_sample_at_timestamp(timestamp, store::Direction::Forward)
+            .expect("failed to read snapshot")
+            .expect("snapshot has no samples");
+        frame.sample.processes[&1234].clone()
+    };
+
+    assert_eq!(
+        snapshot_process(crate::SnapshotPurpose::Local),
+        pid_info,
+        "a local snapshot should keep processes as recorded"
+    );
+    let redacted = snapshot_process(crate::SnapshotPurpose::Upload);
+    assert_eq!(
+        redacted.cmdline_vec,
+        Some(vec!["/home/alice/bin/tool".to_owned()])
+    );
+    assert_eq!(
+        procfs::PidInfo {
+            cmdline_vec: pid_info.cmdline_vec.clone(),
+            ..redacted
+        },
+        pid_info,
+        "only the command line should change"
+    );
+}
+
+#[cfg(not(feature = "vmtest"))]
+#[test]
+fn upload_snapshots_depend_only_on_samples() {
+    let t0 = UNIX_EPOCH + Duration::from_secs(554433);
+    let t1 = t0 + Duration::from_secs(100);
+    let (_store_dir, below_config) =
+        store_with(vec![(t0, Sample::default()), (t1, Sample::default())]);
+    let second = Duration::from_secs(1);
+
+    let (_exact_dir, exact) = snapshot_of(&below_config, t0, t1, crate::SnapshotPurpose::Upload);
+    let (_wider_dir, wider) = snapshot_of(
+        &below_config,
+        t0 - 10 * second,
+        t1 + 10 * second,
+        crate::SnapshotPurpose::Upload,
+    );
+    let bytes = |snapshot: &crate::SnapshotFile| {
+        std::fs::read(&snapshot.path).expect("failed to read snapshot")
+    };
+    assert!(
+        bytes(&exact) == bytes(&wider),
+        "windows holding the same samples should give the same tarball"
+    );
+    let samples = wider.samples.expect("snapshot should have samples");
+    assert_eq!((samples.first, samples.last), (t0, t1));
+
+    let mut tarball =
+        tar::Archive::new(std::fs::File::open(&wider.path).expect("failed to open snapshot"));
+    let entries = tarball
+        .entries()
+        .expect("failed to read snapshot")
+        .map(|entry| {
+            let entry = entry.expect("failed to read entry");
+            let header = entry.header();
+            (
+                entry.path().expect("bad path").display().to_string(),
+                header.mtime().expect("bad mtime"),
+                header.uid().expect("bad uid"),
+            )
+        })
+        .collect::<Vec<_>>();
+    // The samples are in the shard for 1970-01-07. The store writer also
+    // creates an empty shard for today, which is left out.
+    assert_eq!(
+        entries,
+        vec![
+            ("store".to_owned(), 1153704088, 0),
+            ("store/data_00000518400".to_owned(), 1153704088, 0),
+            ("store/index_00000518400".to_owned(), 1153704088, 0),
+        ]
+    );
+}
+
+#[cfg(not(feature = "vmtest"))]
+#[test]
 fn snapshot_stops_at_end_of_window() {
     use store::Store;
 
-    let logger = get_logger();
-    let store_dir = TempDir::with_prefix("below_snapshot_window_test.").expect("tempdir failed");
     let t0 = UNIX_EPOCH + Duration::from_secs(554433);
     let t1 = t0 + Duration::from_secs(100);
-    let mut writer = store::StoreWriter::new(
-        logger.clone(),
-        &store_dir,
-        CompressionMode::None,
-        store::Format::Cbor,
-    )
-    .expect("Failed to create store");
-    for timestamp in [t0, t1] {
-        writer
-            .put(timestamp, &DataFrame::default())
-            .expect("failed to store sample");
-    }
-    let below_config = crate::BelowConfig {
-        store_dir: store_dir.path().to_path_buf(),
-        ..Default::default()
-    };
+    let (_store_dir, below_config) =
+        store_with(vec![(t0, Sample::default()), (t1, Sample::default())]);
 
     let snapshot_timestamps = |begin: SystemTime, end: SystemTime| {
-        let output_dir =
-            TempDir::with_prefix("below_snapshot_window_test_out.").expect("tempdir failed");
-        let tarball = crate::create_snapshot(
-            logger.clone(),
-            &below_config,
-            begin,
-            end,
-            Some(output_dir.path().join("snapshot.tar")),
-            /* host */ None,
-            /* port */ None,
-        )
-        .expect("failed to create snapshot");
-        let mut store = open_snapshot(logger.clone(), &tarball, output_dir.path());
+        let (output_dir, snapshot) =
+            snapshot_of(&below_config, begin, end, crate::SnapshotPurpose::Local);
+        let mut store = open_snapshot(get_logger(), &snapshot.path, output_dir.path());
         let mut timestamps = Vec::new();
         while let Some((timestamp, _)) = store
             .get_sample_at_timestamp(
@@ -446,6 +575,10 @@ fn snapshot_stops_at_end_of_window() {
         {
             timestamps.push(timestamp);
         }
+        assert_eq!(
+            snapshot.samples.map_or(0, |samples| samples.count),
+            timestamps.len()
+        );
         timestamps
     };
 

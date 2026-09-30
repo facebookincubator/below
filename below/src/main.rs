@@ -314,6 +314,8 @@ enum Command {
         /// Override default port to connect to remote
         #[clap(long, requires("host"))]
         port: Option<u16>,
+        #[clap(flatten)]
+        upload: commands::SnapshotUpload,
     },
     /// Inspect historical data (experimental)
     #[clap(hide = true, long_about = format!(r#"Inspect historical data (experimental)
@@ -950,6 +952,7 @@ fn real_main(init: init::InitToken) {
             output,
             host,
             port,
+            upload,
         } => {
             let begin = begin.clone();
             let end = end.clone();
@@ -962,8 +965,9 @@ fn real_main(init: init::InitToken) {
                 debug,
                 below_config,
                 Service::Off,
-                |_, below_config, logger, _errs| {
+                |init, below_config, logger, _errs| {
                     snapshot(
+                        init,
                         logger,
                         below_config,
                         begin,
@@ -972,6 +976,7 @@ fn real_main(init: init::InitToken) {
                         output,
                         host,
                         port,
+                        upload,
                     )
                 },
             )
@@ -1068,7 +1073,9 @@ fn real_main(init: init::InitToken) {
                             host,
                             port,
                             compress_opts,
+                            /* redact */ false,
                         )
+                        .map(|_| ())
                     },
                 )
             }
@@ -1803,12 +1810,16 @@ fn convert_store(
     host: Option<String>,
     port: Option<u16>,
     compress_opts: &CompressOpts,
-) -> Result<()> {
+    redact: bool,
+) -> Result<Option<SnapshotSamples>> {
     let (timestamp_begin, timestamp_end) = (
         common::util::get_unix_timestamp(time_begin),
         common::util::get_unix_timestamp(time_end),
     );
     let pb = ProgressBar::new(timestamp_end - timestamp_begin);
+    // A remote host serves samples it has redacted already, and redacting
+    // twice would drop Python script names.
+    let redact = redact && host.is_none();
 
     let mut store: Box<dyn Store<SampleType = DataFrame>> = match (from_store_dir, host) {
         (Some(_from_store_dir), Some(_host)) => {
@@ -1841,15 +1852,33 @@ fn convert_store(
     pb.set_message(format!("Writing to local store at {:?}", to_store_dir));
 
     let mut nr_samples = 0;
+    let mut samples: Option<SnapshotSamples> = None;
     let mut cur_time = time_begin;
     while cur_time < time_end {
         match store.get_sample_at_timestamp(cur_time, store::Direction::Forward)? {
             Some((frame_time, _)) if frame_time > time_end => break,
-            Some((frame_time, frame)) => {
+            Some((frame_time, mut frame)) => {
                 cur_time = frame_time;
                 pb.set_message(format!("Storing frame at t = {:?}", frame_time));
+                if redact {
+                    model::redact::redact_sample(&mut frame.sample);
+                }
                 dest_store.put(frame_time, &frame)?;
                 nr_samples += 1;
+                match samples.as_mut() {
+                    Some(samples) => {
+                        samples.count += 1;
+                        samples.last = frame_time;
+                    }
+                    None => {
+                        samples = Some(SnapshotSamples {
+                            count: 1,
+                            first: frame_time,
+                            last: frame_time,
+                            hostname: frame.sample.system.hostname,
+                        })
+                    }
+                }
             }
             None => {
                 pb.set_message(format!(
@@ -1863,10 +1892,11 @@ fn convert_store(
         cur_time += Duration::from_secs(1); // To actually move forward
     }
     pb.set_message(format!("Done. Logged {} samples.", nr_samples));
-    Ok(())
+    Ok(samples)
 }
 
 fn snapshot(
+    init: init::InitToken,
     logger: slog::Logger,
     below_config: &BelowConfig,
     begin: String,
@@ -1875,6 +1905,7 @@ fn snapshot(
     output: Option<PathBuf>,
     host: Option<String>,
     port: Option<u16>,
+    upload: &commands::SnapshotUpload,
 ) -> Result<()> {
     let (time_begin, time_end) = cliutil::system_time_range_from_date_and_adjuster(
         begin.as_str(),
@@ -1882,7 +1913,18 @@ fn snapshot(
         duration.as_deref(),
         /* days_adjuster */ None,
     )?;
-    let tarball = create_snapshot(
+    if let Some(uploader) = commands::snapshot_uploader(init, upload, time_begin, time_end)? {
+        return upload_snapshot(
+            logger,
+            below_config,
+            time_begin,
+            time_end,
+            host,
+            port,
+            uploader,
+        );
+    }
+    let snapshot = create_snapshot(
         logger,
         below_config,
         time_begin,
@@ -1890,15 +1932,80 @@ fn snapshot(
         output,
         host,
         port,
+        SnapshotPurpose::Local,
     )?;
-    println!("Snapshot has been created at {}", tarball.display());
+    println!("Snapshot has been created at {}", snapshot.path.display());
     Ok(())
+}
+
+/// Uploads a snapshot tarball made with [`SnapshotPurpose::Upload`].
+pub type SnapshotUploader = Box<dyn FnOnce(&Path, SnapshotSamples) -> Result<()>>;
+
+fn upload_snapshot(
+    logger: slog::Logger,
+    below_config: &BelowConfig,
+    time_begin: SystemTime,
+    time_end: SystemTime,
+    host: Option<String>,
+    port: Option<u16>,
+    uploader: SnapshotUploader,
+) -> Result<()> {
+    let temp_dir = TempDir::with_prefix("below_upload.")?;
+    let snapshot = create_snapshot(
+        logger,
+        below_config,
+        time_begin,
+        time_end,
+        Some(temp_dir.path().join("snapshot.tar")),
+        host,
+        port,
+        SnapshotPurpose::Upload,
+    )?;
+    let Some(samples) = snapshot.samples else {
+        bail!(
+            "No samples found between {} and {}",
+            common::util::systemtime_to_datetime(time_begin),
+            common::util::systemtime_to_datetime(time_end),
+        );
+    };
+    println!(
+        "Snapshot has {} samples of {} from {} to {}",
+        samples.count,
+        samples.hostname,
+        common::util::systemtime_to_datetime(samples.first),
+        common::util::systemtime_to_datetime(samples.last),
+    );
+    uploader(&snapshot.path, samples)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum SnapshotPurpose {
+    /// A file on this host, as `below snapshot` has always written.
+    Local,
+    /// An upload off the host. Command lines go through
+    /// `model::redact::redact_sample`, and the tarball's bytes depend only on
+    /// the samples, so uploads of the same samples can be matched by content.
+    Upload,
+}
+
+pub struct SnapshotFile {
+    pub path: PathBuf,
+    /// None if there were no samples.
+    pub samples: Option<SnapshotSamples>,
+}
+
+pub struct SnapshotSamples {
+    pub count: usize,
+    pub first: SystemTime,
+    pub last: SystemTime,
+    /// Recorded in the first sample.
+    pub hostname: String,
 }
 
 /// Write the samples between `time_begin` and `time_end` from the local store,
 /// or from `host` if set, to a snapshot tarball that `dump --snapshot` and
-/// `replay --snapshot` can read. Returns the path of the tarball, which is
-/// `output` if set and otherwise a new file in the current directory.
+/// `replay --snapshot` can read. The tarball is `output` if set and otherwise
+/// a new file in the current directory.
 pub fn create_snapshot(
     logger: slog::Logger,
     below_config: &BelowConfig,
@@ -1907,7 +2014,8 @@ pub fn create_snapshot(
     output: Option<PathBuf>,
     host: Option<String>,
     port: Option<u16>,
-) -> Result<PathBuf> {
+    purpose: SnapshotPurpose,
+) -> Result<SnapshotFile> {
     let (timestamp_begin, timestamp_end) = (
         common::util::get_unix_timestamp(time_begin),
         common::util::get_unix_timestamp(time_end),
@@ -1927,7 +2035,7 @@ pub fn create_snapshot(
         compress: true,
         dict_compress_chunk_size: Some(16),
     };
-    convert_store(
+    let samples = convert_store(
         logger,
         below_config,
         time_begin,
@@ -1937,6 +2045,7 @@ pub fn create_snapshot(
         host,
         port,
         &compress_opts,
+        purpose == SnapshotPurpose::Upload,
     )
     .context("Failed to convert store for snapshot")?;
 
@@ -1954,12 +2063,38 @@ pub fn create_snapshot(
         .with_context(|| format!("Failed to create snapshot file {}", tarball.display()))?;
     // Create a new tarball with the snapshot dir name
     let mut tar = TarBuilder::new(file);
-    tar.append_dir_all("store", snapshot_store_path)
-        .context("Failed to add snapshot store to tar builder")?;
+    match purpose {
+        SnapshotPurpose::Local => tar.append_dir_all("store", snapshot_store_path),
+        SnapshotPurpose::Upload => append_store_reproducibly(&mut tar, snapshot_store_path),
+    }
+    .context("Failed to add snapshot store to tar builder")?;
     tar.finish()
         .context("Failed to build compressed snapshot file.")?;
 
-    Ok(tarball)
+    Ok(SnapshotFile {
+        path: tarball,
+        samples,
+    })
+}
+
+/// Adds `store` so the bytes only depend on the samples in it: fixed file
+/// metadata, a fixed order, and no empty shard, like the one the store writer
+/// creates for the current day.
+fn append_store_reproducibly(tar: &mut TarBuilder<fs::File>, store: &Path) -> io::Result<()> {
+    tar.mode(tar::HeaderMode::Deterministic);
+    tar.append_dir("store", store)?;
+    let mut files = fs::read_dir(store)?
+        .map(|entry| Ok(entry?.path()))
+        .collect::<io::Result<Vec<_>>>()?;
+    files.sort();
+    for path in files {
+        if fs::metadata(&path)?.len() == 0 {
+            continue;
+        }
+        let name = Path::new("store").join(path.file_name().unwrap_or_default());
+        tar.append_path_with_name(&path, name)?;
+    }
+    Ok(())
 }
 
 #[cfg(feature = "enable_backtrace")]
