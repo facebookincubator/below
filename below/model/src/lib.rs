@@ -38,6 +38,7 @@ pub mod collector_plugin;
 mod common_field_ids;
 pub mod network;
 pub mod process;
+pub mod redact;
 pub mod resctrl;
 pub mod sample;
 mod sample_model;
