@@ -181,7 +181,8 @@ enum Command {
     Live {
         #[clap(short, long, default_value = "5")]
         interval_s: u64,
-        /// Supply hostname to activate remote viewing
+        /// Supply hostname to activate remote viewing. Custom identifiers
+        /// may also be resolved to the hostname.
         #[clap(short = 's', long)]
         host: Option<String>,
         /// Override default port to connect remote viewing to
@@ -249,7 +250,8 @@ enum Command {
         /// _
         #[clap(short, long, verbatim_doc_comment)]
         time: String,
-        /// Supply hostname to activate remote viewing
+        /// Supply hostname to activate remote viewing. Custom identifiers
+        /// may also be resolved to the hostname at the requested time.
         #[clap(short = 's', long)]
         host: Option<String>,
         /// Override default port to connect remote viewing to
@@ -1173,7 +1175,10 @@ fn replay(
         (None, None) => {
             new_advance_local(logger.clone(), below_config.store_dir.clone(), timestamp)
         }
-        (Some(host), None) => new_advance_remote(logger.clone(), host, port, timestamp)?,
+        (Some(host), None) => {
+            let host = remote_host::resolve_remote_host(&logger, host, timestamp)?;
+            new_advance_remote(logger.clone(), host, port, timestamp)?
+        }
         (None, Some(snapshot)) => {
             let mut tarball =
                 Archive::new(fs::File::open(snapshot).context("Failed to open snapshot file")?);
@@ -1596,6 +1601,7 @@ fn live_remote(
     let timestamp = SystemTime::now()
         .checked_sub(Duration::from_secs(LIVE_REMOTE_MAX_LATENCY_SEC))
         .expect("Fail to construct timestamp with latency allowance in live remote.");
+    let host = remote_host::resolve_remote_host(&logger, host, SystemTime::now())?;
     let mut advance = new_advance_remote(logger.clone(), host, port, timestamp)?;
 
     advance.initialize();

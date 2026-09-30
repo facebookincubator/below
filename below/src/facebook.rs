@@ -50,6 +50,7 @@ pub mod commands;
 pub mod gpu_stats;
 pub mod init;
 pub mod logging;
+pub mod remote_host;
 mod remote_server;
 pub mod statistics;
 
