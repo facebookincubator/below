@@ -22,6 +22,7 @@ use std::io::BufRead;
 use std::io::BufWriter;
 use std::io::Write;
 use std::num::NonZeroU64;
+use std::path::Path;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
@@ -1041,11 +1042,7 @@ fn real_main(init: init::InitToken) {
                 port,
                 compress_opts,
             } => {
-                let begin = begin.clone();
-                let end = end.clone();
-                let duration = duration.clone();
                 let from_store_dir = from_store_dir.clone();
-                let to_store_dir = to_store_dir.clone();
                 let host = host.clone();
                 let port = *port;
                 run(
@@ -1054,12 +1051,18 @@ fn real_main(init: init::InitToken) {
                     below_config,
                     Service::Off,
                     |_, below_config, logger, _errs| {
+                        let (time_begin, time_end) =
+                            cliutil::system_time_range_from_date_and_adjuster(
+                                begin.as_str(),
+                                end.as_deref(),
+                                duration.as_deref(),
+                                /* days_adjuster */ None,
+                            )?;
                         convert_store(
                             logger,
                             below_config,
-                            begin,
-                            end,
-                            duration,
+                            time_begin,
+                            time_end,
                             from_store_dir,
                             to_store_dir,
                             host,
@@ -1793,21 +1796,14 @@ fn generate_completions(shell: Shell, output: Option<PathBuf>) -> Result<()> {
 fn convert_store(
     logger: slog::Logger,
     below_config: &BelowConfig,
-    begin: String,
-    end: Option<String>,
-    duration: Option<String>,
+    time_begin: SystemTime,
+    time_end: SystemTime,
     from_store_dir: Option<PathBuf>,
-    to_store_dir: PathBuf,
+    to_store_dir: &Path,
     host: Option<String>,
     port: Option<u16>,
     compress_opts: &CompressOpts,
 ) -> Result<()> {
-    let (time_begin, time_end) = cliutil::system_time_range_from_date_and_adjuster(
-        begin.as_str(),
-        end.as_deref(),
-        duration.as_deref(),
-        /* days_adjuster */ None,
-    )?;
     let (timestamp_begin, timestamp_end) = (
         common::util::get_unix_timestamp(time_begin),
         common::util::get_unix_timestamp(time_end),
@@ -1837,7 +1833,7 @@ fn convert_store(
 
     let mut dest_store = store::StoreWriter::new(
         logger.clone(),
-        &to_store_dir,
+        to_store_dir,
         compress_opts.to_compression_mode()?,
         store::Format::Cbor,
     )?;
@@ -1885,6 +1881,32 @@ fn snapshot(
         duration.as_deref(),
         /* days_adjuster */ None,
     )?;
+    let tarball = create_snapshot(
+        logger,
+        below_config,
+        time_begin,
+        time_end,
+        output,
+        host,
+        port,
+    )?;
+    println!("Snapshot has been created at {}", tarball.display());
+    Ok(())
+}
+
+/// Write the samples between `time_begin` and `time_end` from the local store,
+/// or from `host` if set, to a snapshot tarball that `dump --snapshot` and
+/// `replay --snapshot` can read. Returns the path of the tarball, which is
+/// `output` if set and otherwise a new file in the current directory.
+pub fn create_snapshot(
+    logger: slog::Logger,
+    below_config: &BelowConfig,
+    time_begin: SystemTime,
+    time_end: SystemTime,
+    output: Option<PathBuf>,
+    host: Option<String>,
+    port: Option<u16>,
+) -> Result<PathBuf> {
     let (timestamp_begin, timestamp_end) = (
         common::util::get_unix_timestamp(time_begin),
         common::util::get_unix_timestamp(time_end),
@@ -1897,7 +1919,7 @@ fn snapshot(
         timestamp_begin, timestamp_end
     ))
     .context("Failed to create temporary folder for snapshot")?;
-    let snapshot_store_path = temp_folder.keep();
+    let snapshot_store_path = temp_folder.path();
 
     // Build compression options to ensure snapshot is compressed before tarball
     let compress_opts = CompressOpts {
@@ -1907,11 +1929,10 @@ fn snapshot(
     convert_store(
         logger,
         below_config,
-        begin,
-        end,
-        duration,
+        time_begin,
+        time_end,
         None,
-        snapshot_store_path.clone(),
+        snapshot_store_path,
         host,
         port,
         &compress_opts,
@@ -1924,7 +1945,6 @@ fn snapshot(
         output
     } else {
         snapshot_store_path
-            .as_path()
             .file_name()
             .with_context(|| "path has no filename")?
             .into()
@@ -1933,13 +1953,12 @@ fn snapshot(
         .with_context(|| format!("Failed to create snapshot file {}", tarball.display()))?;
     // Create a new tarball with the snapshot dir name
     let mut tar = TarBuilder::new(file);
-    tar.append_dir_all("store", snapshot_store_path.as_path())
+    tar.append_dir_all("store", snapshot_store_path)
         .context("Failed to add snapshot store to tar builder")?;
     tar.finish()
         .context("Failed to build compressed snapshot file.")?;
 
-    println!("Snapshot has been created at {}", tarball.display());
-    Ok(())
+    Ok(tarball)
 }
 
 #[cfg(feature = "enable_backtrace")]
