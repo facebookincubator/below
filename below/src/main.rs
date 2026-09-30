@@ -1844,6 +1844,7 @@ fn convert_store(
     let mut cur_time = time_begin;
     while cur_time < time_end {
         match store.get_sample_at_timestamp(cur_time, store::Direction::Forward)? {
+            Some((frame_time, _)) if frame_time > time_end => break,
             Some((frame_time, frame)) => {
                 cur_time = frame_time;
                 pb.set_message(format!("Storing frame at t = {:?}", frame_time));

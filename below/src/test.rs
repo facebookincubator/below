@@ -380,3 +380,85 @@ fn testing_fold_string() {
         "d/...aaaaa"
     );
 }
+
+/// Unpacks a snapshot tarball into `dir` the way `replay --snapshot` does.
+#[cfg(not(feature = "vmtest"))]
+fn open_snapshot(
+    logger: slog::Logger,
+    tarball: &std::path::Path,
+    dir: &std::path::Path,
+) -> store::LocalStore {
+    tar::Archive::new(std::fs::File::open(tarball).expect("failed to open snapshot"))
+        .unpack(dir)
+        .expect("failed to unpack snapshot");
+    store::LocalStore::new(logger, dir.join("store"))
+}
+
+#[cfg(not(feature = "vmtest"))]
+#[test]
+fn snapshot_stops_at_end_of_window() {
+    use store::Store;
+
+    let logger = get_logger();
+    let store_dir = TempDir::with_prefix("below_snapshot_window_test.").expect("tempdir failed");
+    let t0 = UNIX_EPOCH + Duration::from_secs(554433);
+    let t1 = t0 + Duration::from_secs(100);
+    let mut writer = store::StoreWriter::new(
+        logger.clone(),
+        &store_dir,
+        CompressionMode::None,
+        store::Format::Cbor,
+    )
+    .expect("Failed to create store");
+    for timestamp in [t0, t1] {
+        writer
+            .put(timestamp, &DataFrame::default())
+            .expect("failed to store sample");
+    }
+    let below_config = crate::BelowConfig {
+        store_dir: store_dir.path().to_path_buf(),
+        ..Default::default()
+    };
+
+    let snapshot_timestamps = |begin: SystemTime, end: SystemTime| {
+        let output_dir =
+            TempDir::with_prefix("below_snapshot_window_test_out.").expect("tempdir failed");
+        let tarball = crate::create_snapshot(
+            logger.clone(),
+            &below_config,
+            begin,
+            end,
+            Some(output_dir.path().join("snapshot.tar")),
+            /* host */ None,
+            /* port */ None,
+        )
+        .expect("failed to create snapshot");
+        let mut store = open_snapshot(logger.clone(), &tarball, output_dir.path());
+        let mut timestamps = Vec::new();
+        while let Some((timestamp, _)) = store
+            .get_sample_at_timestamp(
+                timestamps
+                    .last()
+                    .map_or(UNIX_EPOCH, |last| *last + Duration::from_secs(1)),
+                store::Direction::Forward,
+            )
+            .expect("failed to read snapshot")
+        {
+            timestamps.push(timestamp);
+        }
+        timestamps
+    };
+
+    let second = Duration::from_secs(1);
+    assert_eq!(
+        snapshot_timestamps(t0, t1),
+        vec![t0, t1],
+        "both ends of the window are included"
+    );
+    assert_eq!(snapshot_timestamps(t0, t1 - second), vec![t0]);
+    assert_eq!(
+        snapshot_timestamps(t0 + second, t1 - second),
+        Vec::<SystemTime>::new(),
+        "a sample after the window must not be included"
+    );
+}
