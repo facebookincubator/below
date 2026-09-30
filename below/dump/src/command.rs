@@ -1308,3 +1308,21 @@ pub enum DumpCommand {
         pattern: Option<String>,
     },
 }
+
+impl DumpCommand {
+    /// The options every subcommand has.
+    pub fn general_opts(&self) -> &GeneralOpt {
+        match self {
+            Self::System { opts, .. }
+            | Self::Disk { opts, .. }
+            | Self::Btrfs { opts, .. }
+            | Self::Process { opts, .. }
+            | Self::Cgroup { opts, .. }
+            | Self::Iface { opts, .. }
+            | Self::Network { opts, .. }
+            | Self::Transport { opts, .. }
+            | Self::EthtoolQueue { opts, .. }
+            | Self::Tc { opts, .. } => opts,
+        }
+    }
+}

@@ -269,6 +269,8 @@ enum Command {
         /// command instead of from the store directory.
         #[clap(long, conflicts_with("host"))]
         snapshot: Option<String>,
+        #[clap(flatten)]
+        source: commands::SnapshotSource,
     },
     /// Debugging facilities (for development use)
     Debug {
@@ -287,6 +289,8 @@ enum Command {
         /// command instead of from the store directory.
         #[clap(long, conflicts_with("host"))]
         snapshot: Option<String>,
+        #[clap(flatten)]
+        source: commands::SnapshotSource,
         #[clap(subcommand)]
         cmd: DumpCommand,
     },
@@ -920,6 +924,7 @@ fn real_main(init: init::InitToken) {
             port,
             yesterdays,
             snapshot,
+            source,
         } => {
             let time = time.clone();
             let host = host.clone();
@@ -931,7 +936,16 @@ fn real_main(init: init::InitToken) {
                 debug,
                 below_config,
                 Service::Off,
-                |_, below_config, logger, errs| {
+                |init, below_config, logger, errs| {
+                    let (host, snapshot) =
+                        commands::find_snapshot(init, source, host, snapshot, || {
+                            let timestamp = cliutil::system_time_from_date_and_adjuster(
+                                time.as_str(),
+                                days_adjuster.as_deref(),
+                            )?;
+                            Ok((timestamp, timestamp))
+                        })?;
+                    let (snapshot, _download) = commands::fetch_snapshot(init, snapshot)?;
                     replay(
                         logger,
                         errs,
@@ -1084,6 +1098,7 @@ fn real_main(init: init::InitToken) {
             host,
             port,
             snapshot,
+            source,
             cmd,
         } => {
             let store_dir = below_config.store_dir.clone();
@@ -1096,7 +1111,18 @@ fn real_main(init: init::InitToken) {
                 debug,
                 below_config,
                 Service::Off,
-                |_, _below_config, logger, errs| {
+                |init, _below_config, logger, errs| {
+                    let (host, snapshot) =
+                        commands::find_snapshot(init, source, host, snapshot, || {
+                            let opts = cmd.general_opts();
+                            cliutil::system_time_range_from_date_and_adjuster(
+                                opts.begin.as_str(),
+                                opts.end.as_deref(),
+                                opts.duration.as_deref(),
+                                opts.yesterdays.as_deref(),
+                            )
+                        })?;
+                    let (snapshot, _download) = commands::fetch_snapshot(init, snapshot)?;
                     dump::run(logger, errs, store_dir, host, port, snapshot, cmd)
                 },
             )
