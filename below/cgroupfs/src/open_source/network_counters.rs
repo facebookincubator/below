@@ -16,7 +16,7 @@ use crate::CgroupReader;
 use crate::NetworkCounters;
 use crate::Result;
 
-impl CgroupReader {
+impl CgroupReader<'_> {
     /// Stub implementation for open source - network counters not available
     pub fn read_network_counters(&self) -> Result<NetworkCounters> {
         // Return empty counters for open source builds
