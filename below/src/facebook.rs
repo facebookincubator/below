@@ -25,14 +25,6 @@ use below_thrift_service::SERVICE_PORT;
 use below_thrift_service_services::make_BelowService_server;
 use cli_usage::UsageMetadata;
 pub use exitstat::ExitstatSkelBuilder;
-use fb303::fb_status;
-use fb303_core_services::BaseService;
-use fb303_core_services::errors::GetNameExn;
-use fb303_core_services::errors::GetStatusDetailsExn;
-use fb303_core_services::errors::GetStatusExn;
-use fb303_core_services::make_BaseService_server;
-use fb303_services::FacebookService;
-use fb303_services::make_FacebookService_server;
 pub use fbinit::FacebookInit;
 use srserver::ThriftServer;
 use srserver::ThriftServerBuilder;
@@ -57,26 +49,6 @@ pub mod statistics;
 #[cfg(test)]
 mod test;
 
-#[derive(Clone)]
-pub struct FacebookServiceImpl;
-
-impl FacebookService for FacebookServiceImpl {}
-
-#[async_trait]
-impl BaseService for FacebookServiceImpl {
-    async fn getName(&self) -> Result<String, GetNameExn> {
-        Ok("Below Service".to_string())
-    }
-
-    async fn getStatusDetails(&self) -> Result<String, GetStatusDetailsExn> {
-        Ok("Alive and running.".to_string())
-    }
-
-    async fn getStatus(&self) -> Result<fb_status, GetStatusExn> {
-        Ok(fb_status::ALIVE)
-    }
-}
-
 fn build_remote_viewing_service(
     fb: FacebookInit,
     logger: slog::Logger,
@@ -85,8 +57,6 @@ fn build_remote_viewing_service(
     port: Option<u16>,
 ) -> anyhow::Result<ServiceFramework> {
     let logger_clone = logger.clone();
-    let fb303_base = |proto| make_BaseService_server(proto, FacebookServiceImpl);
-    let fb303 = move |proto| make_FacebookService_server(proto, FacebookServiceImpl, fb303_base);
     let below_svc = move |proto| {
         let service_impl = remote_server::BelowServiceImpl::new(
             // Need to clone the logger again here to closure implements
@@ -95,7 +65,7 @@ fn build_remote_viewing_service(
             store_dir.clone(),
         );
 
-        make_BelowService_server(proto, service_impl, fb303)
+        make_BelowService_server(proto, service_impl)
     };
 
     // Reserved in port_registry.cconf
