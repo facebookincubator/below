@@ -88,7 +88,6 @@ fn ino_lookup_test() {
 }
 
 #[test]
-#[ignore]
 fn tree_search_cb_test() {
     let base_path = Path::new(&"/");
     if is_btrfs(base_path) {
@@ -126,7 +125,6 @@ fn find_root_backref_test() {
 }
 
 #[test]
-#[ignore]
 fn test_sample() {
     if is_btrfs(Path::new(&"/")) {
         let logger = get_logger();

@@ -216,24 +216,18 @@ pub fn tree_search_cb(
         }
 
         let mut ptr = args.buf.as_ptr() as *const u8;
-        let mut last_search_header: *const btrfs_ioctl_search_header = std::ptr::null();
+        let mut min_key = SearchKey::MIN;
         for _ in 0..args.key.nr_items {
-            let search_header =
-                unsafe { get_and_move_typed::<btrfs_ioctl_search_header>(&mut ptr) };
-
-            let data = unsafe {
-                std::slice::from_raw_parts(
-                    get_and_move(&mut ptr, (*search_header).len as usize),
-                    (*search_header).len as usize,
-                )
+            // Headers are packed back to back after variable-length item
+            // data, so they are not necessarily 8-byte aligned.
+            let search_header = unsafe {
+                get_and_move_typed::<btrfs_ioctl_search_header>(&mut ptr).read_unaligned()
             };
-            last_search_header = search_header;
-            unsafe {
-                cb(&*search_header, data);
-            }
+            let len = search_header.len as usize;
+            let data = unsafe { std::slice::from_raw_parts(get_and_move(&mut ptr, len), len) };
+            min_key = SearchKey::from(&search_header).next();
+            cb(&search_header, data);
         }
-
-        let min_key = unsafe { SearchKey::from(&*last_search_header).next() };
 
         args.key.min_objectid = min_key.objectid;
         args.key.min_type = min_key.typ as u32;
