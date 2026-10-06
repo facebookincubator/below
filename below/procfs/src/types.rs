@@ -268,8 +268,18 @@ pub struct VmStat {
     pub pswpout: Option<u64>,
     pub pgsteal_kswapd: Option<u64>,
     pub pgsteal_direct: Option<u64>,
+    pub pgsteal_khugepaged: Option<u64>,
+    pub pgsteal_proactive: Option<u64>,
     pub pgscan_kswapd: Option<u64>,
     pub pgscan_direct: Option<u64>,
+    pub pgscan_khugepaged: Option<u64>,
+    pub pgscan_proactive: Option<u64>,
+    pub allocstall: Option<u64>,
+    pub pageoutrun: Option<u64>,
+    pub kswapd_low_wmark_hit_quickly: Option<u64>,
+    pub kswapd_high_wmark_hit_quickly: Option<u64>,
+    pub compact_stall: Option<u64>,
+    pub compact_fail: Option<u64>,
     pub oom_kill: Option<u64>,
 }
 

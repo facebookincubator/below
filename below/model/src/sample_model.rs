@@ -127,8 +127,18 @@ pub const SAMPLE_MODEL_JSON: &str = r#"
             "pswpout_per_sec": 0.0,
             "pgsteal_kswapd": 0,
             "pgsteal_direct": 0,
+            "pgsteal_khugepaged": 0,
+            "pgsteal_proactive": 0,
             "pgscan_kswapd": 0,
             "pgscan_direct": 0,
+            "pgscan_khugepaged": 0,
+            "pgscan_proactive": 0,
+            "allocstall": 0,
+            "pageoutrun": 0,
+            "kswapd_low_wmark_hit_quickly": 0,
+            "kswapd_high_wmark_hit_quickly": 0,
+            "compact_stall": 0,
+            "compact_fail": 0,
             "oom_kill": 0
         },
         "slab": [

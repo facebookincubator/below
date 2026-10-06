@@ -445,6 +445,39 @@ impl ProcReader {
                     "pgscan_direct" => {
                         vmstat.pgscan_direct = parse_item!(path, items.next(), u64, line)?
                     }
+                    "pgsteal_khugepaged" => {
+                        vmstat.pgsteal_khugepaged = parse_item!(path, items.next(), u64, line)?
+                    }
+                    "pgsteal_proactive" => {
+                        vmstat.pgsteal_proactive = parse_item!(path, items.next(), u64, line)?
+                    }
+                    "pgscan_khugepaged" => {
+                        vmstat.pgscan_khugepaged = parse_item!(path, items.next(), u64, line)?
+                    }
+                    "pgscan_proactive" => {
+                        vmstat.pgscan_proactive = parse_item!(path, items.next(), u64, line)?
+                    }
+                    "pageoutrun" => vmstat.pageoutrun = parse_item!(path, items.next(), u64, line)?,
+                    "kswapd_low_wmark_hit_quickly" => {
+                        vmstat.kswapd_low_wmark_hit_quickly =
+                            parse_item!(path, items.next(), u64, line)?
+                    }
+                    "kswapd_high_wmark_hit_quickly" => {
+                        vmstat.kswapd_high_wmark_hit_quickly =
+                            parse_item!(path, items.next(), u64, line)?
+                    }
+                    "compact_stall" => {
+                        vmstat.compact_stall = parse_item!(path, items.next(), u64, line)?
+                    }
+                    "compact_fail" => {
+                        vmstat.compact_fail = parse_item!(path, items.next(), u64, line)?
+                    }
+                    // Summed over zones; kernels before 4.10 print a single "allocstall".
+                    k if k == "allocstall" || k.starts_with("allocstall_") => {
+                        if let Some(v) = parse_item!(path, items.next(), u64, line)? {
+                            *vmstat.allocstall.get_or_insert(0) += v;
+                        }
+                    }
                     "oom_kill" => vmstat.oom_kill = parse_item!(path, items.next(), u64, line)?,
                     _ => {}
                 }
@@ -1355,7 +1388,7 @@ impl NetReader {
                 }
 
                 res.insert(
-                    format!("{}_{}", key_header, &k),
+                    format!("{}_{}", key_header, k),
                     v.parse::<u64>().map_err(|_| Error::ParseError {
                         line: k.into(),
                         item: v.into(),

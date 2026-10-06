@@ -345,8 +345,18 @@ pub struct VmModel {
     pub pswpout_per_sec: Option<f64>,
     pub pgsteal_kswapd: Option<u64>,
     pub pgsteal_direct: Option<u64>,
+    pub pgsteal_khugepaged: Option<u64>,
+    pub pgsteal_proactive: Option<u64>,
     pub pgscan_kswapd: Option<u64>,
     pub pgscan_direct: Option<u64>,
+    pub pgscan_khugepaged: Option<u64>,
+    pub pgscan_proactive: Option<u64>,
+    pub allocstall: Option<u64>,
+    pub pageoutrun: Option<u64>,
+    pub kswapd_low_wmark_hit_quickly: Option<u64>,
+    pub kswapd_high_wmark_hit_quickly: Option<u64>,
+    pub compact_stall: Option<u64>,
+    pub compact_fail: Option<u64>,
     pub oom_kill: Option<u64>,
 }
 
@@ -359,8 +369,48 @@ impl VmModel {
             pswpout_per_sec: count_per_sec!(begin.pswpout, end.pswpout, duration),
             pgsteal_kswapd: count_per_sec!(begin.pgsteal_kswapd, end.pgsteal_kswapd, duration, u64),
             pgsteal_direct: count_per_sec!(begin.pgsteal_direct, end.pgsteal_direct, duration, u64),
+            pgsteal_khugepaged: count_per_sec!(
+                begin.pgsteal_khugepaged,
+                end.pgsteal_khugepaged,
+                duration,
+                u64
+            ),
+            pgsteal_proactive: count_per_sec!(
+                begin.pgsteal_proactive,
+                end.pgsteal_proactive,
+                duration,
+                u64
+            ),
             pgscan_kswapd: count_per_sec!(begin.pgscan_kswapd, end.pgscan_kswapd, duration, u64),
             pgscan_direct: count_per_sec!(begin.pgscan_direct, end.pgscan_direct, duration, u64),
+            pgscan_khugepaged: count_per_sec!(
+                begin.pgscan_khugepaged,
+                end.pgscan_khugepaged,
+                duration,
+                u64
+            ),
+            pgscan_proactive: count_per_sec!(
+                begin.pgscan_proactive,
+                end.pgscan_proactive,
+                duration,
+                u64
+            ),
+            allocstall: count_per_sec!(begin.allocstall, end.allocstall, duration, u64),
+            pageoutrun: count_per_sec!(begin.pageoutrun, end.pageoutrun, duration, u64),
+            kswapd_low_wmark_hit_quickly: count_per_sec!(
+                begin.kswapd_low_wmark_hit_quickly,
+                end.kswapd_low_wmark_hit_quickly,
+                duration,
+                u64
+            ),
+            kswapd_high_wmark_hit_quickly: count_per_sec!(
+                begin.kswapd_high_wmark_hit_quickly,
+                end.kswapd_high_wmark_hit_quickly,
+                duration,
+                u64
+            ),
+            compact_stall: count_per_sec!(begin.compact_stall, end.compact_stall, duration, u64),
+            compact_fail: count_per_sec!(begin.compact_fail, end.compact_fail, duration, u64),
             oom_kill: end.oom_kill,
         }
     }

@@ -415,8 +415,12 @@ pglazyfreed 0
 pgrefill 820237987
 pgsteal_kswapd 1709049230
 pgsteal_direct 5652651
+pgsteal_khugepaged 12345
+pgsteal_proactive 67890
 pgscan_kswapd 1743683511
 pgscan_direct 5877901
+pgscan_khugepaged 23456
+pgscan_proactive 78901
 pgscan_direct_throttle 0
 zone_reclaim_failed 0
 pginodesteal 18572761
@@ -484,6 +488,16 @@ swap_ra_hit 139012
     assert_eq!(vmstat.pgsteal_direct, Some(5_652_651));
     assert_eq!(vmstat.pgscan_kswapd, Some(1_743_683_511));
     assert_eq!(vmstat.pgscan_direct, Some(5_877_901));
+    assert_eq!(vmstat.pgsteal_khugepaged, Some(12_345));
+    assert_eq!(vmstat.pgsteal_proactive, Some(67_890));
+    assert_eq!(vmstat.pgscan_khugepaged, Some(23_456));
+    assert_eq!(vmstat.pgscan_proactive, Some(78_901));
+    assert_eq!(vmstat.allocstall, Some(66_453));
+    assert_eq!(vmstat.pageoutrun, Some(350_010));
+    assert_eq!(vmstat.kswapd_low_wmark_hit_quickly, Some(222_842));
+    assert_eq!(vmstat.kswapd_high_wmark_hit_quickly, Some(16_537));
+    assert_eq!(vmstat.compact_stall, Some(80_260));
+    assert_eq!(vmstat.compact_fail, Some(78_220));
     assert_eq!(vmstat.oom_kill, Some(0));
 }
 
