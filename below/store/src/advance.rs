@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 use std::time::SystemTime;
@@ -26,6 +27,7 @@ use crate::Direction;
 use crate::LocalStore;
 use crate::RemoteStore;
 use crate::Store;
+use crate::snapshot::SnapshotStore;
 
 /// A SamplePackage consists of enough information to construct a Model.
 // A SamplePackage consists of the sample(newer_sample) at target timestamp
@@ -148,6 +150,14 @@ impl ModelStore for LocalStore {
 }
 
 impl ModelStore for RemoteStore {
+    type ModelType = Model;
+
+    fn to_model(&self, sample_package: &SamplePackage<DataFrame>) -> Option<Model> {
+        Some(sample_package.to_model())
+    }
+}
+
+impl ModelStore for SnapshotStore {
     type ModelType = Model;
 
     fn to_model(&self, sample_package: &SamplePackage<DataFrame>) -> Option<Model> {
@@ -379,6 +389,22 @@ pub fn new_advance_remote(
         store: crate::remote_store::RemoteStore::new(host, port)?,
     });
 
+    Ok(Advance {
+        logger,
+        store,
+        cached_sample: None,
+        target_timestamp: timestamp,
+        current_direction: Direction::Forward,
+    })
+}
+
+/// Construct a new Advance object reading a snapshot tarball
+pub fn new_advance_snapshot(
+    logger: slog::Logger,
+    tarball: &Path,
+    timestamp: SystemTime,
+) -> Result<Advance<DataFrame, Model>> {
+    let store = Box::new(SnapshotStore::open(logger.clone(), tarball)?);
     Ok(Advance {
         logger,
         store,

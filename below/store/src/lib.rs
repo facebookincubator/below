@@ -44,6 +44,7 @@ use crate::cursor::StoreCursor;
 pub mod advance;
 pub mod compression;
 pub mod cursor;
+mod snapshot;
 #[cfg(test)]
 mod test;
 
@@ -1283,15 +1284,15 @@ mod tests {
             // Inject an extra byte to corrupt data file
             for entry in fs::read_dir(&dir).expect("Failed to read dir") {
                 let entry = entry.expect("Failed to list entry");
-                if let Some(name) = entry.path().file_name() {
-                    if name.to_string_lossy().starts_with("data_") {
-                        OpenOptions::new()
-                            .append(true)
-                            .open(entry.path())
-                            .expect("Failed to open data file")
-                            .write_all(&[0])
-                            .expect("Failed to write to data file");
-                    }
+                if let Some(name) = entry.path().file_name()
+                    && name.to_string_lossy().starts_with("data_")
+                {
+                    OpenOptions::new()
+                        .append(true)
+                        .open(entry.path())
+                        .expect("Failed to open data file")
+                        .write_all(&[0])
+                        .expect("Failed to write to data file");
                 }
             }
 

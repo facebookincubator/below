@@ -15,19 +15,17 @@
 #![deny(clippy::all)]
 #![allow(clippy::too_many_arguments)]
 
-use std::fs;
 use std::fs::File;
 use std::io;
 use std::io::Write;
+use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::mpsc::Receiver;
 use std::time::SystemTime;
 
-use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use anyhow::bail;
 use common::cliutil;
 use common::util::get_belowrc_dump_section_key;
@@ -42,8 +40,7 @@ use store::Advance;
 use store::Direction;
 use store::advance::new_advance_local;
 use store::advance::new_advance_remote;
-use tar::Archive;
-use tempfile::TempDir;
+use store::advance::new_advance_snapshot;
 use toml::value::Value as TValue;
 
 pub mod btrfs;
@@ -143,17 +140,7 @@ fn get_advance(
         (None, None) => new_advance_local(logger.clone(), dir, time_begin),
         (Some(host), None) => new_advance_remote(logger.clone(), host, port, time_begin)?,
         (None, Some(snapshot)) => {
-            let mut tarball =
-                Archive::new(fs::File::open(snapshot).context("Failed to open snapshot file")?);
-            let mut snapshot_dir = TempDir::with_prefix("snapshot_replay.")?.into_path();
-            tarball
-                .unpack(&snapshot_dir)
-                .map_err(|_| anyhow!("Failed to unpack snapshot file"))?;
-            // Find and append the name of the original snapshot directory
-            for path in fs::read_dir(&snapshot_dir)? {
-                snapshot_dir.push(path.unwrap().file_name());
-            }
-            new_advance_local(logger.clone(), snapshot_dir, time_begin)
+            new_advance_snapshot(logger.clone(), Path::new(&snapshot), time_begin)?
         }
         (Some(_), Some(_)) => {
             bail!("--host and --snapshot are incompatible options")

@@ -61,7 +61,6 @@ use signal_hook::iterator::Signals;
 use slog::debug;
 use slog::error;
 use slog::warn;
-use tar::Archive;
 use tar::Builder as TarBuilder;
 use tempfile::TempDir;
 use tokio::runtime::Builder as TB;
@@ -82,6 +81,7 @@ use store::DataFrame;
 use store::Store;
 use store::advance::new_advance_local;
 use store::advance::new_advance_remote;
+use store::advance::new_advance_snapshot;
 use view::ViewState;
 
 open_source_shim!();
@@ -1216,15 +1216,7 @@ fn replay(
             new_advance_remote(logger.clone(), host, port, timestamp)?
         }
         (None, Some(snapshot)) => {
-            let mut tarball =
-                Archive::new(fs::File::open(snapshot).context("Failed to open snapshot file")?);
-            let mut snapshot_dir = TempDir::with_prefix("snapshot_replay.")?.keep();
-            tarball.unpack(&snapshot_dir)?;
-            // Find and append the name of the original snapshot directory
-            for path in fs::read_dir(&snapshot_dir)? {
-                snapshot_dir.push(path?.file_name());
-            }
-            new_advance_local(logger.clone(), snapshot_dir, timestamp)
+            new_advance_snapshot(logger.clone(), Path::new(&snapshot), timestamp)?
         }
         (Some(_), Some(_)) => {
             bail!("--host and --snapshot are incompatible options")
