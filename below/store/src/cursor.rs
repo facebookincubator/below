@@ -293,10 +293,10 @@ impl StoreCursor {
                 }
             };
 
-            if let Some(shard) = self.shard.as_ref() {
-                if entry_shard.cmp(shard) == direction.get_skip_order() {
-                    continue;
-                }
+            if let Some(shard) = self.shard.as_ref()
+                && entry_shard.cmp(shard) == direction.get_skip_order()
+            {
+                continue;
             }
 
             // Try to refresh the current shard (any new entries appended?) or
@@ -417,7 +417,7 @@ impl StoreCursor {
         index_offset: usize,
         chunk_compress_size_po2: u32,
         decompressor: &mut Option<Decompressor<(u64, usize)>>,
-    ) -> Result<SerializedFrame> {
+    ) -> Result<SerializedFrame<'_>> {
         // Calculate offset into the chunk. If this is 0, then this
         // is the first frame and hence key frame of the chunk.
         let chunk_mask = (INDEX_ENTRY_SIZE << chunk_compress_size_po2) - 1;
@@ -490,7 +490,7 @@ impl StoreCursor {
     fn get_index_and_serialized_frame_at(
         &self,
         index_offset: usize,
-    ) -> Result<(&IndexEntry, SerializedFrame)> {
+    ) -> Result<(&IndexEntry, SerializedFrame<'_>)> {
         let (index_entry, data_slice) = self.get_index_and_data_at(index_offset)?;
         let chunk_compress_size_po2 = index_entry.flags.get_chunk_compress_size_po2();
         let uncompressed_frame = if chunk_compress_size_po2 > 0 {
@@ -551,11 +551,11 @@ impl Cursor for StoreCursor {
     }
 
     fn set_offset(&mut self, offset: StoreOffset) {
-        if let Some(shard) = offset.get_shard() {
-            if self.shard == Some(shard) || self.update_shard(shard).unwrap_or(false) {
-                self.index_offset = offset.get_index_offset();
-                return;
-            }
+        if let Some(shard) = offset.get_shard()
+            && (self.shard == Some(shard) || self.update_shard(shard).unwrap_or(false))
+        {
+            self.index_offset = offset.get_index_offset();
+            return;
         }
         // Set the shard even if it does not exist so that advance still finds
         // the closest valid shard. Clear index_mmap as it no longer corresponds
@@ -629,21 +629,21 @@ impl KeyedCursor<u64> for StoreCursor {
         let shard = key - time_offset;
         self.set_offset(StoreOffset::new(Some(shard), None));
         // Move to the end of the shard.
-        if self.advance_index(Direction::Reverse) {
-            if let Some(last_entry) = self.get_index_entry() {
-                let last_entry_index_offset = self
-                    .get_offset()
-                    .get_index_offset()
-                    .expect("get_index_offset should return Some if get_index_entry returns Some");
-                let last_entry_time_offset = last_entry.timestamp % SHARD_TIME;
-                if last_entry_time_offset != 0 {
-                    // Assume samples are recorded in constant interval and
-                    // scale index offset by time offset
-                    let index_offset_hint = (last_entry_index_offset as f64
-                        / last_entry_time_offset as f64
-                        * time_offset as f64) as usize;
-                    self.set_offset(StoreOffset::new(Some(shard), Some(index_offset_hint)));
-                }
+        if self.advance_index(Direction::Reverse)
+            && let Some(last_entry) = self.get_index_entry()
+        {
+            let last_entry_index_offset = self
+                .get_offset()
+                .get_index_offset()
+                .expect("get_index_offset should return Some if get_index_entry returns Some");
+            let last_entry_time_offset = last_entry.timestamp % SHARD_TIME;
+            if last_entry_time_offset != 0 {
+                // Assume samples are recorded in constant interval and
+                // scale index offset by time offset
+                let index_offset_hint = (last_entry_index_offset as f64
+                    / last_entry_time_offset as f64
+                    * time_offset as f64) as usize;
+                self.set_offset(StoreOffset::new(Some(shard), Some(index_offset_hint)));
             }
         }
     }

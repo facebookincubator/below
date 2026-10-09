@@ -48,19 +48,15 @@ impl Dumper for Disk {
         let mut disks: Vec<_> = model
             .system
             .disks
-            .iter()
-            .filter_map(
-                |(_, model)| match (self.select.as_ref(), self.opts.filter.as_ref()) {
-                    (Some(field_id), Some(filter))
-                        if !filter.is_match(
-                            &model
-                                .query(field_id)
-                                .map_or("?".to_owned(), |v| v.to_string()),
-                        ) =>
-                    {
-                        None
-                    }
-                    _ => Some(model),
+            .values()
+            .filter(
+                |model| match (self.select.as_ref(), self.opts.filter.as_ref()) {
+                    (Some(field_id), Some(filter)) => filter.is_match(
+                        &model
+                            .query(field_id)
+                            .map_or("?".to_owned(), |v| v.to_string()),
+                    ),
+                    _ => true,
                 },
             )
             .collect();

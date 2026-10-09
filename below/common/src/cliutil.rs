@@ -40,7 +40,7 @@ pub fn system_time_from_date(date: &str) -> Result<SystemTime> {
                 Relative short: Mixed {{time_digit}}{{time_unit_char}}. E.g. 10m, 3d2H, 5h30s, 10m5h\n\t\
                 Absolute: \"Jan 01 23:59\", \"01/01/1970 11:59PM\", \"1970-01-01 23:59:59\"\n\t\
                 Unix Epoch: 1589808367",
-                    &date
+                    date
                 )
             })?
             .unixtime,

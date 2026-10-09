@@ -30,7 +30,7 @@ use store::DataFrame;
 use store::advance::new_advance_local;
 use tempfile::TempDir;
 
-#[cfg_attr(not(feature = "vmtest"), test)]
+#[test]
 fn record_replay_integration() {
     let logger = get_logger();
     let dir = TempDir::with_prefix("below_record_replay_test.").expect("tempdir failed");
@@ -120,7 +120,7 @@ fn record_replay_integration() {
     );
 }
 
-#[cfg_attr(not(feature = "vmtest"), test)]
+#[test]
 fn advance_forward_and_reverse() {
     let logger = get_logger();
     let dir = TempDir::with_prefix("below_record_replay_test.").expect("tempdir failed");
@@ -183,7 +183,7 @@ fn advance_forward_and_reverse() {
     );
 }
 
-#[cfg_attr(not(feature = "vmtest"), test)]
+#[test]
 fn disable_io_stat() {
     let logger = get_logger();
     let sample = Collector::new(
@@ -200,7 +200,7 @@ fn disable_io_stat() {
     assert_eq!(sample.cgroup.io_stat, None);
 }
 
-#[cfg_attr(not(feature = "vmtest"), test)]
+#[test]
 fn disable_disk_stat() {
     let logger = get_logger();
     let sample = Collector::new(
@@ -216,7 +216,7 @@ fn disable_disk_stat() {
     assert!(sample.system.disks.is_empty());
 }
 
-#[cfg_attr(not(feature = "vmtest"), test)]
+#[test]
 /// For cgroup io stat that's empty, make sure we report zero's instead of None
 fn default_cgroup_io_model() {
     let mut sample: Sample = Default::default();
@@ -241,7 +241,7 @@ fn default_cgroup_io_model() {
     assert_eq!(io_total.dios_per_sec, Some(0.0));
 }
 
-#[cfg_attr(not(feature = "vmtest"), test)]
+#[test]
 /// When at least one of IO stat sample is None, the IO model should also be.
 fn no_cgroup_io_model() {
     let mut sample: Sample = Default::default();
@@ -261,7 +261,7 @@ fn no_cgroup_io_model() {
     }
 }
 
-#[cfg_attr(not(feature = "vmtest"), test)]
+#[test]
 fn calculate_cpu_usage() {
     let mut sample: Sample = Default::default();
     let mut last_sample: Sample = Default::default();
@@ -302,7 +302,7 @@ fn calculate_cpu_usage() {
     assert_eq!(total_cpu.system_pct, Some(30.0));
 }
 
-#[cfg_attr(not(feature = "vmtest"), test)]
+#[test]
 fn calculate_pressure() {
     let mut sample: Sample = Default::default();
     let mut last_sample: Sample = Default::default();
@@ -367,7 +367,7 @@ fn calculate_pressure() {
     );
 }
 
-#[cfg_attr(not(feature = "vmtest"), test)]
+#[test]
 fn testing_fold_string() {
     assert_eq!(fold_string("demacia", 0, 0, |_| true), "demacia");
     assert_eq!(fold_string("demacia", 3, 0, |_| true), "demacia");
@@ -382,7 +382,6 @@ fn testing_fold_string() {
 }
 
 /// A local store holding `frames`, and a config that points at it.
-#[cfg(not(feature = "vmtest"))]
 fn store_with(frames: Vec<(SystemTime, Sample)>) -> (TempDir, crate::BelowConfig) {
     let store_dir = TempDir::with_prefix("below_snapshot_test.").expect("tempdir failed");
     let mut writer = store::StoreWriter::new(
@@ -405,7 +404,6 @@ fn store_with(frames: Vec<(SystemTime, Sample)>) -> (TempDir, crate::BelowConfig
 }
 
 /// Snapshots the store `below_config` points at into a new temp dir.
-#[cfg(not(feature = "vmtest"))]
 fn snapshot_of(
     below_config: &crate::BelowConfig,
     begin: SystemTime,
@@ -428,7 +426,6 @@ fn snapshot_of(
 }
 
 /// Unpacks a snapshot tarball into `dir` the way `replay --snapshot` does.
-#[cfg(not(feature = "vmtest"))]
 fn open_snapshot(
     logger: slog::Logger,
     tarball: &std::path::Path,
@@ -440,7 +437,6 @@ fn open_snapshot(
     store::LocalStore::new(logger, dir.join("store"))
 }
 
-#[cfg(not(feature = "vmtest"))]
 #[test]
 fn only_upload_snapshots_are_redacted() {
     use store::Store;
@@ -496,7 +492,6 @@ fn only_upload_snapshots_are_redacted() {
     );
 }
 
-#[cfg(not(feature = "vmtest"))]
 #[test]
 fn upload_snapshots_depend_only_on_samples() {
     let t0 = UNIX_EPOCH + Duration::from_secs(554433);
@@ -549,7 +544,6 @@ fn upload_snapshots_depend_only_on_samples() {
     );
 }
 
-#[cfg(not(feature = "vmtest"))]
 #[test]
 fn snapshot_stops_at_end_of_window() {
     use store::Store;

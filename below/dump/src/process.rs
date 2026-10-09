@@ -48,18 +48,14 @@ impl Dumper for Process {
         let mut processes: Vec<_> = model
             .process
             .processes
-            .iter()
-            .filter_map(
-                |(_, spm)| match (self.select.as_ref(), self.opts.filter.as_ref()) {
-                    (Some(field_id), Some(filter))
-                        if !filter.is_match(
-                            &spm.query(field_id)
-                                .map_or("?".to_owned(), |v| v.to_string()),
-                        ) =>
-                    {
-                        None
-                    }
-                    _ => Some(spm),
+            .values()
+            .filter(
+                |spm| match (self.select.as_ref(), self.opts.filter.as_ref()) {
+                    (Some(field_id), Some(filter)) => filter.is_match(
+                        &spm.query(field_id)
+                            .map_or("?".to_owned(), |v| v.to_string()),
+                    ),
+                    _ => true,
                 },
             )
             .collect();

@@ -66,7 +66,7 @@ use tempfile::TempDir;
 use tokio::runtime::Builder as TB;
 
 mod exitstat;
-#[cfg(test)]
+#[cfg(all(test, not(feature = "vmtest")))]
 mod test;
 mod watchdog;
 
