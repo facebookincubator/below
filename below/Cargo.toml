@@ -38,6 +38,7 @@ plain = "0.2"
 procfs = { package = "fb_procfs", version = "0.11.0", path = "procfs" }
 regex = "1.13.1"
 scopeguard = "1.2.0"
+sd-notify = "0.4.5"
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 signal-hook = "0.3.18"

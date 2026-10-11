@@ -56,6 +56,7 @@ use nix::sys::mman::MlockAllFlags;
 use nix::sys::mman::mlockall;
 use regex::Regex;
 use scopeguard::guard;
+use sd_notify::NotifyState;
 use serde::Serialize;
 use signal_hook::iterator::Signals;
 use slog::debug;
@@ -1407,6 +1408,7 @@ fn record(
             },
         );
 
+    let mut notified_ready = false;
     loop {
         if let Some(watchdog) = watchdog.as_ref() {
             watchdog.beat();
@@ -1449,6 +1451,14 @@ fn record(
                         data: DataFrame { sample: s },
                     })
                     .expect("Failed to send write task");
+                // Readiness means a sample was collected, not merely that the
+                // process started. A no-op when not run by systemd.
+                if !notified_ready {
+                    if let Err(e) = sd_notify::notify(false, &[NotifyState::Ready]) {
+                        warn!(logger, "Failed to notify systemd of readiness: {:#}", e);
+                    }
+                    notified_ready = true;
+                }
             }
             Err(e) => {
                 // Handle cgroupfs errors
