@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::mpsc::Receiver;
 use std::time::SystemTime;
 
+use anyhow::Error;
 use anyhow::Result;
 use clap::Args;
 use clap::Parser;
@@ -53,6 +55,7 @@ pub fn find_snapshots(
 pub fn fetch_snapshots(
     _init: crate::init::InitToken,
     snapshots: Vec<String>,
+    _errs: &Receiver<Error>,
 ) -> Result<(Vec<String>, Option<TempDir>)> {
     Ok((snapshots, None))
 }
