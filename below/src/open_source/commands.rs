@@ -39,21 +39,21 @@ pub fn snapshot_uploader(
 #[derive(Debug, Args)]
 pub struct SnapshotSource {}
 
-pub fn find_snapshot(
+pub fn find_snapshots(
     _init: crate::init::InitToken,
     _source: &SnapshotSource,
     host: Option<String>,
-    snapshot: Option<String>,
+    snapshots: Vec<String>,
     _time_range: impl FnOnce() -> Result<(SystemTime, SystemTime)>,
-) -> Result<(Option<String>, Option<String>)> {
-    Ok((host, snapshot))
+) -> Result<(Option<String>, Vec<String>)> {
+    Ok((host, snapshots))
 }
 
-pub fn fetch_snapshot(
+pub fn fetch_snapshots(
     _init: crate::init::InitToken,
-    snapshot: Option<String>,
-) -> Result<(Option<String>, Option<TempDir>)> {
-    Ok((snapshot, None))
+    snapshots: Vec<String>,
+) -> Result<(Vec<String>, Option<TempDir>)> {
+    Ok((snapshots, None))
 }
 
 pub fn run_command(

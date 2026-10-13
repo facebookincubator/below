@@ -82,7 +82,7 @@ use store::DataFrame;
 use store::Store;
 use store::advance::new_advance_local;
 use store::advance::new_advance_remote;
-use store::advance::new_advance_snapshot;
+use store::advance::new_advance_snapshots;
 use view::ViewState;
 
 open_source_shim!();
@@ -931,22 +931,23 @@ fn real_main(init: init::InitToken) {
             let host = host.clone();
             let port = *port;
             let days_adjuster = yesterdays.clone();
-            let snapshot = snapshot.clone();
+            let snapshots = snapshot.iter().cloned().collect();
             run(
                 init,
                 debug,
                 below_config,
                 Service::Off,
                 |init, below_config, logger, errs| {
-                    let (host, snapshot) =
-                        commands::find_snapshot(init, source, host, snapshot, || {
+                    let (host, snapshots) =
+                        commands::find_snapshots(init, source, host, snapshots, || {
                             let timestamp = cliutil::system_time_from_date_and_adjuster(
                                 time.as_str(),
                                 days_adjuster.as_deref(),
                             )?;
                             Ok((timestamp, timestamp))
                         })?;
-                    let (snapshot, _download) = commands::fetch_snapshot(init, snapshot)?;
+                    let (snapshots, _downloads) =
+                        commands::fetch_snapshots(init, snapshots, &errs)?;
                     replay(
                         logger,
                         errs,
@@ -955,7 +956,7 @@ fn real_main(init: init::InitToken) {
                         host,
                         port,
                         days_adjuster,
-                        snapshot,
+                        snapshots,
                     )
                 },
             )
@@ -1105,7 +1106,7 @@ fn real_main(init: init::InitToken) {
             let store_dir = below_config.store_dir.clone();
             let host = host.clone();
             let port = *port;
-            let snapshot = snapshot.clone();
+            let snapshots = snapshot.iter().cloned().collect();
             let cmd = cmd.clone();
             run(
                 init,
@@ -1113,8 +1114,8 @@ fn real_main(init: init::InitToken) {
                 below_config,
                 Service::Off,
                 |init, _below_config, logger, errs| {
-                    let (host, snapshot) =
-                        commands::find_snapshot(init, source, host, snapshot, || {
+                    let (host, snapshots) =
+                        commands::find_snapshots(init, source, host, snapshots, || {
                             let opts = cmd.general_opts();
                             cliutil::system_time_range_from_date_and_adjuster(
                                 opts.begin.as_str(),
@@ -1123,8 +1124,9 @@ fn real_main(init: init::InitToken) {
                                 opts.yesterdays.as_deref(),
                             )
                         })?;
-                    let (snapshot, _download) = commands::fetch_snapshot(init, snapshot)?;
-                    dump::run(logger, errs, store_dir, host, port, snapshot, cmd)
+                    let (snapshots, _downloads) =
+                        commands::fetch_snapshots(init, snapshots, &errs)?;
+                    dump::run(logger, errs, store_dir, host, port, snapshots, cmd)
                 },
             )
         }
@@ -1203,23 +1205,19 @@ fn replay(
     host: Option<String>,
     port: Option<u16>,
     days_adjuster: Option<String>,
-    snapshot: Option<String>,
+    snapshots: Vec<String>,
 ) -> Result<()> {
     let timestamp =
         cliutil::system_time_from_date_and_adjuster(time.as_str(), days_adjuster.as_deref())?;
 
-    let mut advance = match (host, snapshot) {
-        (None, None) => {
-            new_advance_local(logger.clone(), below_config.store_dir.clone(), timestamp)
-        }
-        (Some(host), None) => {
+    let mut advance = match (host, snapshots.as_slice()) {
+        (None, []) => new_advance_local(logger.clone(), below_config.store_dir.clone(), timestamp),
+        (Some(host), []) => {
             let host = remote_host::resolve_remote_host(&logger, host, timestamp)?;
             new_advance_remote(logger.clone(), host, port, timestamp)?
         }
-        (None, Some(snapshot)) => {
-            new_advance_snapshot(logger.clone(), Path::new(&snapshot), timestamp)?
-        }
-        (Some(_), Some(_)) => {
+        (None, snapshots) => new_advance_snapshots(logger.clone(), snapshots, timestamp)?,
+        (Some(_), _) => {
             bail!("--host and --snapshot are incompatible options")
         }
     };

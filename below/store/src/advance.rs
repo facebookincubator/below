@@ -398,13 +398,13 @@ pub fn new_advance_remote(
     })
 }
 
-/// Construct a new Advance object reading a snapshot tarball
-pub fn new_advance_snapshot(
+/// Construct a new Advance object reading snapshot tarballs as one store
+pub fn new_advance_snapshots(
     logger: slog::Logger,
-    tarball: &Path,
+    tarballs: &[impl AsRef<Path>],
     timestamp: SystemTime,
 ) -> Result<Advance<DataFrame, Model>> {
-    let store = Box::new(SnapshotStore::open(logger.clone(), tarball)?);
+    let store = Box::new(SnapshotStore::open(logger.clone(), tarballs)?);
     Ok(Advance {
         logger,
         store,
