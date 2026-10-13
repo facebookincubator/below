@@ -45,6 +45,7 @@ pub fn find_snapshots(
     host: Option<String>,
     snapshots: Vec<String>,
     _time_range: impl FnOnce() -> Result<(SystemTime, SystemTime)>,
+    _store_has_samples_before: impl FnOnce(SystemTime) -> bool,
 ) -> Result<(Option<String>, Vec<String>)> {
     Ok((host, snapshots))
 }

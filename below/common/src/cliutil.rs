@@ -23,7 +23,7 @@ use anyhow::bail;
 use crate::dateutil;
 use crate::util;
 
-const MISSING_SAMPLE_WARN_DURATION_S: u64 = 60;
+pub const MISSING_SAMPLE_WARN_DURATION_S: u64 = 60;
 
 /// Convert from date to `SystemTime`
 pub fn system_time_from_date(date: &str) -> Result<SystemTime> {

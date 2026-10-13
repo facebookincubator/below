@@ -938,26 +938,33 @@ fn real_main(init: init::InitToken) {
                 below_config,
                 Service::Off,
                 |init, below_config, logger, errs| {
-                    let (host, snapshots) =
-                        commands::find_snapshots(init, source, host, snapshots, || {
-                            let timestamp = cliutil::system_time_from_date_and_adjuster(
-                                time.as_str(),
-                                days_adjuster.as_deref(),
-                            )?;
-                            Ok((timestamp, timestamp))
-                        })?;
+                    let timestamp = cliutil::system_time_from_date_and_adjuster(
+                        time.as_str(),
+                        days_adjuster.as_deref(),
+                    )?;
+                    let host = host
+                        .map(|host| remote_host::resolve_remote_host(&logger, host, timestamp))
+                        .transpose()?;
+                    // Replay shows a later sample within this without a warning.
+                    let margin = Duration::from_secs(cliutil::MISSING_SAMPLE_WARN_DURATION_S);
+                    let (host, snapshots) = commands::find_snapshots(
+                        init,
+                        source,
+                        host.clone(),
+                        snapshots,
+                        || Ok((timestamp, timestamp)),
+                        |time| {
+                            store_has_samples_before(
+                                &below_config.store_dir,
+                                host,
+                                port,
+                                time + margin,
+                            )
+                        },
+                    )?;
                     let (snapshots, _downloads) =
                         commands::fetch_snapshots(init, snapshots, &errs)?;
-                    replay(
-                        logger,
-                        errs,
-                        time,
-                        below_config,
-                        host,
-                        port,
-                        days_adjuster,
-                        snapshots,
-                    )
+                    replay(logger, errs, timestamp, below_config, host, port, snapshots)
                 },
             )
         }
@@ -1114,8 +1121,12 @@ fn real_main(init: init::InitToken) {
                 below_config,
                 Service::Off,
                 |init, _below_config, logger, errs| {
-                    let (host, snapshots) =
-                        commands::find_snapshots(init, source, host, snapshots, || {
+                    let (host, snapshots) = commands::find_snapshots(
+                        init,
+                        source,
+                        host.clone(),
+                        snapshots,
+                        || {
                             let opts = cmd.general_opts();
                             cliutil::system_time_range_from_date_and_adjuster(
                                 opts.begin.as_str(),
@@ -1123,7 +1134,9 @@ fn real_main(init: init::InitToken) {
                                 opts.duration.as_deref(),
                                 opts.yesterdays.as_deref(),
                             )
-                        })?;
+                        },
+                        |time| store_has_samples_before(&store_dir, host, port, time),
+                    )?;
                     let (snapshots, _downloads) =
                         commands::fetch_snapshots(init, snapshots, &errs)?;
                     dump::run(logger, errs, store_dir, host, port, snapshots, cmd)
@@ -1197,25 +1210,41 @@ fn inspect(
     Ok(())
 }
 
+/// Whether the store `replay` and `dump` read by default, the local one or
+/// `host`'s, has samples at or before `time`. A store that rotated `time` out,
+/// was wiped since, or can't be read, e.g. because the host is down, has none.
+fn store_has_samples_before(
+    store_dir: &Path,
+    host: Option<String>,
+    port: Option<u16>,
+    time: SystemTime,
+) -> bool {
+    let sample = match host {
+        Some(host) => store::RemoteStore::new(host, port)
+            .and_then(|mut store| store.get_sample_at_timestamp(time, store::Direction::Reverse)),
+        // Reading a day the store lacks logs a warning, which the command
+        // repeats if it reads the store.
+        None => store::LocalStore::new(
+            slog::Logger::root(slog::Discard, slog::o!()),
+            store_dir.to_path_buf(),
+        )
+        .get_sample_at_timestamp(time, store::Direction::Reverse),
+    };
+    matches!(sample, Ok(Some(_)))
+}
+
 fn replay(
     logger: slog::Logger,
     errs: Receiver<Error>,
-    time: String,
+    timestamp: SystemTime,
     below_config: &BelowConfig,
     host: Option<String>,
     port: Option<u16>,
-    days_adjuster: Option<String>,
     snapshots: Vec<String>,
 ) -> Result<()> {
-    let timestamp =
-        cliutil::system_time_from_date_and_adjuster(time.as_str(), days_adjuster.as_deref())?;
-
     let mut advance = match (host, snapshots.as_slice()) {
         (None, []) => new_advance_local(logger.clone(), below_config.store_dir.clone(), timestamp),
-        (Some(host), []) => {
-            let host = remote_host::resolve_remote_host(&logger, host, timestamp)?;
-            new_advance_remote(logger.clone(), host, port, timestamp)?
-        }
+        (Some(host), []) => new_advance_remote(logger.clone(), host, port, timestamp)?,
         (None, snapshots) => new_advance_snapshots(logger.clone(), snapshots, timestamp)?,
         (Some(_), _) => {
             bail!("--host and --snapshot are incompatible options")

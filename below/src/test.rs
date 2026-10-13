@@ -589,3 +589,22 @@ fn snapshot_stops_at_end_of_window() {
         "a sample after the window must not be included"
     );
 }
+
+#[test]
+fn store_has_samples_before_a_time() {
+    let t0 = UNIX_EPOCH + Duration::from_secs(554433);
+    let t1 = t0 + Duration::from_secs(5);
+    let (store_dir, _) = store_with(vec![(t0, Sample::default()), (t1, Sample::default())]);
+    let before = |time| crate::store_has_samples_before(store_dir.path(), None, None, time);
+
+    assert!(before(t0));
+    assert!(
+        before(t1 + Duration::from_secs(24 * 60 * 60)),
+        "long after the store ends"
+    );
+    assert!(!before(t0 - Duration::from_secs(1)));
+    assert!(
+        !crate::store_has_samples_before(&store_dir.path().join("missing"), None, None, t1),
+        "a store that can't be read has none"
+    );
+}
