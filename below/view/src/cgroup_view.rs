@@ -28,6 +28,7 @@ use model::CgroupCpuModelFieldId;
 use model::CgroupIoModelFieldId;
 use model::CgroupMemoryModelFieldId;
 use model::CgroupModel;
+use model::ProcessModel;
 use model::Queriable;
 use model::SingleCgroupModelFieldId;
 
@@ -58,6 +59,10 @@ pub struct CgroupState {
     pub reverse: bool,
     pub model: Arc<Mutex<CgroupModel>>,
     pub collapse_all_top_level_cgroup: bool,
+    // Cgroups whose processes are shown inline as child rows
+    pub expanded_procs_cgroups: HashSet<String>,
+    // Process model for rendering the processes of expanded cgroups
+    pub process_model: Arc<Mutex<ProcessModel>>,
 }
 
 impl StateCommon for CgroupState {
@@ -156,6 +161,8 @@ impl StateCommon for CgroupState {
             reverse: false,
             model,
             collapse_all_top_level_cgroup: false,
+            expanded_procs_cgroups: HashSet::new(),
+            process_model: Default::default(),
         }
     }
 }
@@ -201,6 +208,18 @@ impl CgroupState {
                 .lock()
                 .unwrap()
                 .extend(cur.children.iter().map(|c| &c.data.full_path).cloned());
+        }
+    }
+
+    pub fn toggle_procs_for_selected_cgroup(&mut self) {
+        let cgroup = self.current_selected_cgroup.clone();
+        // Keys that don't resolve to a live cgroup (e.g. "[RECREATED] ..." rows)
+        // can't be expanded
+        if self.get_model().get_by_path_str(&cgroup).is_none() {
+            return;
+        }
+        if !self.expanded_procs_cgroups.remove(&cgroup) {
+            self.expanded_procs_cgroups.insert(cgroup);
         }
     }
 }
@@ -326,6 +345,7 @@ impl CgroupView {
             },
         );
         let mut cgroup_state = CgroupState::new(user_data.cgroup.clone());
+        cgroup_state.process_model = user_data.process.clone();
         if user_data.viewrc.collapse_cgroups == Some(true) {
             cgroup_state.collapse_all_top_level_cgroup = true;
         }
@@ -378,6 +398,14 @@ impl CgroupView {
                 .lock()
                 .unwrap()
                 .collapse_selected_cgroup_children();
+            view.refresh(c);
+        })
+        .on_event('e', |c| {
+            let mut view = Self::get_cgroup_view(c);
+            view.state
+                .lock()
+                .unwrap()
+                .toggle_procs_for_selected_cgroup();
             view.refresh(c);
         })
         .with_name(Self::get_view_name())
