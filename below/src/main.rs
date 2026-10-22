@@ -493,7 +493,7 @@ pub fn start_gpu_stats_thread_and_get_stats_receiver(
                         );
                         error!(
                             logger,
-                            "GPU stats collection backing off {:?} because of unrecoverable error: {:?}",
+                            "GPU stats collection backing off {:?} because of unrecoverable error: {:#}",
                             interval,
                             e
                         );
@@ -556,7 +556,7 @@ fn start_tc_stats_thread_and_get_stats_receiver(
                         );
                         error!(
                             logger,
-                            "TC stats collection backing off {:?} because of unrecoverable error: {:?}",
+                            "TC stats collection backing off {:?} because of unrecoverable error: {:#}",
                             interval,
                             e
                         );
