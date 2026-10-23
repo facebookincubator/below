@@ -13,7 +13,8 @@
 // limitations under the License.
 
 use std::collections::BTreeMap;
-use std::net::ToSocketAddrs;
+use std::net::Ipv4Addr;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
@@ -25,25 +26,35 @@ use anyhow::anyhow;
 use anyhow::bail;
 use common::util::every_n;
 use dynolog_service_clients::DynoLogService;
-use dynolog_service_srclients::make_DynoLogService_srclient;
+use dynolog_service_nativeclients::DynoLogServiceExtNativeClient;
+use dynolog_service_nativeclients::build_DynoLogService_ext_client_with_compact_protocol;
 use fbinit::FacebookInit;
 use futures::TryFutureExt;
-use maplit::hashmap;
+use nativeclient::Executor;
+use nativeclient::NativeChannelBuilder;
+use nativeclient::ThriftError;
 use rgpu_service_clients::RgpuService;
-use rgpu_service_srclients::make_RgpuService_srclient;
+use rgpu_service_nativeclients::RgpuServiceExtNativeClient;
+use rgpu_service_nativeclients::build_RgpuService_ext_client_with_compact_protocol;
 use serde::Deserialize;
 use serde::Serialize;
 use slog::debug;
 use slog::error;
 use slog::warn;
+use tokio::runtime::Runtime;
 
 #[cfg(test)]
 mod test;
 
-const LOCALHOST: &str = "127.0.0.1";
 const DYNOLOG_SERVICE_PORT: u16 = 1777;
 const RGPU_SERVICE_PORT: u16 = 5829;
-const RGPU_PROCESSING_TIMEOUT_MS: u64 = 6000;
+const CONN_TIMEOUT_MS: u32 = 1000;
+// ServiceRouter gave dynolog no processing timeout, so it timed out after
+// about 60ms of network padding.
+const DYNOLOG_RECV_TIMEOUT_MS: u32 = 100;
+// getGPUInfoCache may block on a synchronous NVML collection when the RGPU
+// per-group cache is stale, bounded server-side at 5s.
+const RGPU_RECV_TIMEOUT_MS: u32 = 6000;
 
 const KB_PER_MB: u64 = 1024;
 const MB: u64 = 1024 * 1024;
@@ -1149,17 +1160,14 @@ macro_rules! handle_fbthrift_error {
         match $result {
             Ok(v) => Ok(Some(v)),
             Err(e) => {
-                if let T::ThriftError(e) = &e {
-                    if let Some(sre) =
-                        e.downcast_ref::<dynolog_service_srclients::srclient::TServiceRouterException>()
-                    {
-                        // Request is safe to try if it never made it to
-                        // the server. See https://fburl.com/code/1fvbyil4
-                        if sre.is_retry_safe() {
-                            warn!($logger, "{:?}", sre);
-                            return Ok(None);
-                        }
-                    }
+                // The daemon is down or restarting. Every call here is a read,
+                // so skip the sample rather than back off.
+                if let T::ThriftError(e) = &e
+                    && let Some(ThriftError::Connect { .. } | ThriftError::ConnectionClosed(_)) =
+                        e.downcast_ref::<ThriftError>()
+                {
+                    warn!($logger, "{}", e);
+                    return Ok(None);
                 }
                 Err(anyhow!(e))
             }
@@ -1179,14 +1187,17 @@ fn handle_fbthrift_error<T>(
 /// Calls rgpu at most once per `interval` and reuses the last successful
 /// response in between.
 struct RgpuReader {
-    client: Arc<dyn RgpuService + Send + Sync>,
     interval: Duration,
     last_success: Option<(Instant, GpuMap)>,
 }
 
 impl RgpuReader {
     // Returning `None` means there was a recoverable error.
-    async fn read(&mut self, logger: &slog::Logger) -> Result<Option<GpuMap>> {
+    async fn read(
+        &mut self,
+        client: &(dyn RgpuService + Send + Sync),
+        logger: &slog::Logger,
+    ) -> Result<Option<GpuMap>> {
         if let Some((fetched_at, gpu_map)) = &self.last_success
             && fetched_at.elapsed() < self.interval
         {
@@ -1195,7 +1206,7 @@ impl RgpuReader {
 
         let fetched_at = Instant::now();
         let gpu_info_response = match handle_fbthrift_error!(
-            self.client
+            client
                 .getGPUInfoCache(&rgpu_service::GetGPUInfoCacheRequest {
                     ..Default::default()
                 })
@@ -1220,97 +1231,175 @@ impl RgpuReader {
     }
 }
 
+type DynologClient = Arc<dyn DynoLogService + Send + Sync>;
+type RgpuClient = Arc<dyn RgpuService + Send + Sync>;
+
+enum Clients {
+    Supplied {
+        dynolog: DynologClient,
+        rgpu: RgpuClient,
+    },
+    Local(LocalDaemons),
+}
+
+/// Clients for the local dynolog and rgpu daemons, driven by a one-thread
+/// runtime of their own. Each is built on first use, so failing to load TLS
+/// credentials costs samples rather than stopping `below record`, and rebuilt
+/// once its connection has dropped, because a channel never redials.
+struct LocalDaemons {
+    dynolog: Option<DynoLogServiceExtNativeClient>,
+    rgpu: Option<RgpuServiceExtNativeClient>,
+    // Only `None` once dropped.
+    runtime: Option<Runtime>,
+}
+
+impl Drop for LocalDaemons {
+    fn drop(&mut self) {
+        // A plain drop blocks on the worker, which panics in async code.
+        if let Some(runtime) = self.runtime.take() {
+            runtime.shutdown_background();
+        }
+    }
+}
+
+impl LocalDaemons {
+    fn try_new() -> Result<Self> {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .thread_name("gpu-stats-io")
+            .enable_all()
+            .build()
+            .context("Failed to start GPU stats I/O runtime")?;
+        Ok(Self {
+            dynolog: None,
+            rgpu: None,
+            runtime: Some(runtime),
+        })
+    }
+
+    fn clients(&mut self) -> Result<(DynologClient, RgpuClient)> {
+        let dynolog = match self.dynolog.take() {
+            Some(client) if client.transport().good() => client,
+            _ => build_DynoLogService_ext_client_with_compact_protocol(
+                self.channel(DYNOLOG_SERVICE_PORT, DYNOLOG_RECV_TIMEOUT_MS)?,
+            )?,
+        };
+        self.dynolog = Some(dynolog.clone());
+        let rgpu = match self.rgpu.take() {
+            Some(client) if client.transport().good() => client,
+            _ => build_RgpuService_ext_client_with_compact_protocol(
+                self.channel(RGPU_SERVICE_PORT, RGPU_RECV_TIMEOUT_MS)?,
+            )?,
+        };
+        self.rgpu = Some(rgpu.clone());
+        Ok((dynolog, rgpu))
+    }
+
+    /// Both daemons require TLS, which is the builder's default.
+    fn channel(&self, port: u16, recv_timeout_ms: u32) -> Result<NativeChannelBuilder> {
+        let handle = self
+            .runtime
+            .as_ref()
+            .expect("should only be taken in drop")
+            .handle();
+        Ok(
+            NativeChannelBuilder::from_sock_addr(SocketAddr::from((Ipv4Addr::LOCALHOST, port)))?
+                .with_channel_pool(false)
+                .with_conn_timeout(CONN_TIMEOUT_MS)
+                .with_recv_timeout(recv_timeout_ms)
+                .with_executor(Executor::Handle(handle.clone())),
+        )
+    }
+}
+
+/// Daemons that a call in the current collection could not reach. Their
+/// clients are rebuilt even if they still look good, in case the connection
+/// task died without marking its channel bad.
+#[derive(Default)]
+struct Unreachable {
+    dynolog: bool,
+    rgpu: bool,
+}
+
 pub struct GpuStatsCollector {
     logger: slog::Logger,
-    dynolog_client: Arc<dyn DynoLogService + Send + Sync>,
+    clients: Clients,
     rgpu: RgpuReader,
+    unreachable: Unreachable,
 }
 
 impl GpuStatsCollector {
     /// rgpu is called at most once per `rgpu_interval`; collections in between
     /// reuse its last successful response. Dynolog is called on every
     /// collection.
-    pub fn new(fb: FacebookInit, logger: slog::Logger, rgpu_interval: Duration) -> Result<Self> {
-        // We are talking to local dynolog. That said, we should
-        // still use ServiceRouter rather than raw thrift client. See
-        // https://fburl.com/v48pmqn1
-        let dynolog_addr = match (LOCALHOST, DYNOLOG_SERVICE_PORT).to_socket_addrs()?.next() {
-            Some(addr) => addr,
-            None => bail!("Could not get socket"),
-        };
-        let dynolog_service_opts = hashmap! {
-            "single_host".to_owned() => vec![dynolog_addr.ip().to_string(), dynolog_addr.port().to_string()],
-        };
-        let rgpu_addr = match (LOCALHOST, RGPU_SERVICE_PORT).to_socket_addrs()?.next() {
-            Some(addr) => addr,
-            None => bail!("Could not get socket"),
-        };
-        let rgpu_service_opts = hashmap! {
-            "single_host".to_owned() => vec![rgpu_addr.ip().to_string(), rgpu_addr.port().to_string()],
-        };
-        // Override default config found here:
-        // https://www.internalfb.com/intern/wiki/ServiceRouter/Configuration/
-        let conn_config = hashmap! {
-            "retries_per_reason".to_owned() => "all=0".into(),
-        };
-        // getGPUInfoCache may block on a synchronous NVML collection when the
-        // RGPU per-group cache is stale, bounded server-side at 5s.
-        let rgpu_conn_config = hashmap! {
-            "retries_per_reason".to_owned() => "all=0".into(),
-            "processing_timeout".to_owned() => RGPU_PROCESSING_TIMEOUT_MS.to_string(),
-        };
-        let dynolog_client = make_DynoLogService_srclient!(
-            fb,
-            tiername = "",
-            with_service_options = &dynolog_service_opts,
-            with_conn_config = &conn_config,
-        )?;
-        let rgpu_client = make_RgpuService_srclient!(
-            fb,
-            tiername = "",
-            with_service_options = &rgpu_service_opts,
-            with_conn_config = &rgpu_conn_config
-        )?;
-        Ok(Self::new_with_client(
+    pub fn new(_fb: FacebookInit, logger: slog::Logger, rgpu_interval: Duration) -> Result<Self> {
+        Ok(Self::with_clients(
             logger,
-            dynolog_client,
-            rgpu_client,
+            Clients::Local(LocalDaemons::try_new()?),
             rgpu_interval,
         ))
     }
 
     pub fn new_with_client(
         logger: slog::Logger,
-        dynolog_client: Arc<dyn DynoLogService + Send + Sync>,
-        rgpu_client: Arc<dyn RgpuService + Send + Sync>,
+        dynolog_client: DynologClient,
+        rgpu_client: RgpuClient,
         rgpu_interval: Duration,
     ) -> Self {
+        Self::with_clients(
+            logger,
+            Clients::Supplied {
+                dynolog: dynolog_client,
+                rgpu: rgpu_client,
+            },
+            rgpu_interval,
+        )
+    }
+
+    fn with_clients(logger: slog::Logger, clients: Clients, rgpu_interval: Duration) -> Self {
         Self {
             logger,
-            dynolog_client,
+            clients,
             rgpu: RgpuReader {
-                client: rgpu_client,
                 interval: rgpu_interval,
                 last_success: None,
             },
+            unreachable: Unreachable::default(),
         }
     }
 
     // Should match `try_collect()` signature of `model::AsyncCollectorPlugin`.
     // Returning `None` means there was a recoverable error.
     pub async fn try_collect(&mut self) -> Result<Option<GpuSample>> {
-        let result = self.collect().await;
+        let (dynolog, rgpu) = match &mut self.clients {
+            Clients::Supplied { dynolog, rgpu } => (dynolog.clone(), rgpu.clone()),
+            Clients::Local(daemons) => daemons.clients()?,
+        };
+        let result = self.collect(&*dynolog, &*rgpu).await;
         if result.is_err() {
             // The reused rgpu response may be what failed, e.g. if a GPU went
             // away, so fetch a fresh one next time.
             self.rgpu.forget();
         }
+        let unreachable = std::mem::take(&mut self.unreachable);
+        if let Clients::Local(daemons) = &mut self.clients {
+            if unreachable.dynolog {
+                daemons.dynolog = None;
+            }
+            if unreachable.rgpu {
+                daemons.rgpu = None;
+            }
+        }
         result
     }
 
-    async fn collect(&mut self) -> Result<Option<GpuSample>> {
+    async fn collect(
+        &mut self,
+        dynolog: &(dyn DynoLogService + Send + Sync),
+        rgpu: &(dyn RgpuService + Send + Sync),
+    ) -> Result<Option<GpuSample>> {
         let read_ts = common::util::get_unix_timestamp(SystemTime::now());
-        let asicmon_future = self.dynolog_client.listAsicIDs().and_then(|asic_ids| {
+        let asicmon_future = dynolog.listAsicIDs().and_then(|asic_ids| {
             // listAsicIDs() will return something like:
             // [
             //   "3.gi2",
@@ -1326,18 +1415,24 @@ impl GpuStatsCollector {
                 asic_ids
                     .iter()
                     .filter(|id| id.parse::<u32>().is_ok())
-                    .map(|id| self.dynolog_client.getBaseStatsForDevice(id)),
+                    .map(|id| dynolog.getBaseStatsForDevice(id)),
             )
         });
 
-        let mut gpu_map = match self.rgpu.read(&self.logger).await? {
+        let mut gpu_map = match self.rgpu.read(rgpu, &self.logger).await? {
             // return early on recoverable error
-            None => return Ok(None),
+            None => {
+                self.unreachable.rgpu = true;
+                return Ok(None);
+            }
             Some(gpu_map) => gpu_map,
         };
 
         let maybe_asicmon_stats_response =
             handle_fbthrift_error(asicmon_future.await, &self.logger)?;
+        if maybe_asicmon_stats_response.is_none() {
+            self.unreachable.dynolog = true;
+        }
 
         if let Some(asicmon_stats_response) = maybe_asicmon_stats_response {
             if let Some(base_stats_map) =
