@@ -33,6 +33,7 @@ fn test_config_default() {
     assert_eq!(below_config.cgroup_filter_out, String::new());
     assert!(!below_config.enable_gpu_stats);
     assert!(!below_config.enable_btrfs_stats);
+    assert_eq!(below_config.btrfs_commit_root, btrfs::CommitRootMode::Auto);
 }
 
 #[test]
@@ -320,4 +321,30 @@ fn test_config_invalid_stack_trace_filter_empty_value() {
             assert!(err_msg.contains("unknown variant"));
         }
     }
+}
+
+#[test]
+fn test_config_btrfs_commit_root() {
+    let tempdir = TempDir::with_prefix("below_config_btrfs.").expect("Failed to create temp dir");
+    let path = tempdir.path().join("below.config");
+
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(&path)
+        .expect("Fail to open below.conf in tempdir");
+    let config_str = r#"
+        btrfs_commit_root = "Require"
+    "#;
+    file.write_all(config_str.as_bytes())
+        .expect("Failed to write temp conf file");
+    file.flush().expect("Failed to flush");
+
+    let below_config = BelowConfig::load(&path).expect("Should load valid config");
+    assert_eq!(
+        below_config.btrfs_commit_root,
+        btrfs::CommitRootMode::Require
+    );
 }

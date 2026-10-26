@@ -62,6 +62,32 @@ pub const DEFAULT_ROOT: &str = "/";
 pub const DEFAULT_SAMPLES: u64 = 100;
 pub const DEFAULT_MIN_PCT: f64 = 0.0;
 
+/// Whether LOGICAL_INO_V2 resolves samples against the commit roots
+/// (BTRFS_LOGICAL_INO_ARGS_COMMIT_ROOT) or the current trees. Resolving against
+/// the current trees enables the filesystem wide tree modification log while
+/// the walk runs; the commit roots avoid that at the cost of results being up
+/// to one commit interval stale.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    Default
+)]
+pub enum CommitRootMode {
+    /// Use the commit roots if the kernel supports it, else the current trees
+    #[default]
+    Auto,
+    /// Use the commit roots, and disable btrfs stats if the kernel does not
+    /// support it
+    Require,
+    /// Always use the current trees
+    Never,
+}
+
 // The SampleTree structure stores a hierarchical structure
 // of path names that we have some size estimations for. This
 // is supposed to follow the structure of files in the subvolume
@@ -193,11 +219,37 @@ impl Roots {
     }
 }
 
+/// Returns whether LOGICAL_INO_V2 on the filesystem at `path` accepts
+/// BTRFS_LOGICAL_INO_ARGS_COMMIT_ROOT. Flags are validated before the lookup,
+/// so probing address 0 yields ENOENT if the flag is supported and EINVAL if it
+/// is not. Any other failure (not btrfs, no LOGICAL_INO_V2, no CAP_SYS_ADMIN)
+/// is also reported as unsupported.
+pub fn commit_root_supported(path: &Path) -> bool {
+    let f = match File::open(path) {
+        Ok(f) => f,
+        Err(_) => return false,
+    };
+    let mut supported = false;
+    btrfs_api::logical_ino(
+        f.as_raw_fd(),
+        0,
+        btrfs_api::BTRFS_LOGICAL_INO_ARGS_COMMIT_ROOT,
+        |res| {
+            supported = matches!(
+                res,
+                Ok(_) | Err(btrfs_api::Error::SysError(nix::errno::Errno::ENOENT))
+            );
+        },
+    );
+    supported
+}
+
 pub struct BtrfsReader {
     samples: u64,
     min_pct: f64,
     path: PathBuf,
     logger: slog::Logger,
+    commit_root: bool,
 }
 
 impl BtrfsReader {
@@ -216,7 +268,15 @@ impl BtrfsReader {
             min_pct,
             path: p.into(),
             logger,
+            commit_root: false,
         }
+    }
+
+    /// Resolve samples against the commit roots. Only set this if
+    /// `commit_root_supported` returned true for the same filesystem.
+    pub fn with_commit_root(mut self, commit_root: bool) -> BtrfsReader {
+        self.commit_root = commit_root;
+        self
     }
 
     pub fn sample(&self) -> Result<BtrfsMap> {
@@ -269,6 +329,11 @@ impl BtrfsReader {
         }
         random_positions.sort_unstable();
 
+        let flags = if self.commit_root {
+            btrfs_api::BTRFS_LOGICAL_INO_ARGS_COMMIT_ROOT
+        } else {
+            0
+        };
         let mut chunk_idx = 0;
         for random_position in &random_positions {
             while random_position > &(chunks[chunk_idx].pos + chunks[chunk_idx].chunk_length) {
@@ -282,7 +347,7 @@ impl BtrfsReader {
                     let random_offset =
                         random_chunk.chunk_offset + (random_position - random_chunk.pos);
                     let mut err = Ok(());
-                    btrfs_api::logical_ino(fd, random_offset, false, |res| match res {
+                    btrfs_api::logical_ino(fd, random_offset, flags, |res| match res {
                         Ok(inodes) => {
                             for inode in inodes {
                                 btrfs_api::ino_lookup(fd, inode.root, inode.inum, |res| match res {

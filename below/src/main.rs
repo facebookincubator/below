@@ -1380,6 +1380,7 @@ fn record(
             process_stack_trace_filter: below_config.process_stack_trace_filter,
             btrfs_samples: below_config.btrfs_samples,
             btrfs_min_pct: below_config.btrfs_min_pct,
+            btrfs_commit_root: below_config.btrfs_commit_root,
             cgroup_re,
             gpu_stats_receiver,
             tc_stats_receiver,
@@ -1580,6 +1581,7 @@ fn live_local(
             process_stack_trace_filter: below_config.process_stack_trace_filter,
             btrfs_samples: below_config.btrfs_samples,
             btrfs_min_pct: below_config.btrfs_min_pct,
+            btrfs_commit_root: below_config.btrfs_commit_root,
             gpu_stats_receiver,
             cgroup_bpf,
             ..Default::default()

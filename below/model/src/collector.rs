@@ -19,6 +19,8 @@ use std::sync::Mutex;
 
 use regex::Regex;
 use slog::error;
+use slog::info;
+use slog::warn;
 
 use super::*;
 use crate::collector_plugin;
@@ -39,6 +41,7 @@ pub struct CollectorOptions {
     pub process_stack_trace_filter: procfs::ProcessStackTraceFilter,
     pub btrfs_samples: u64,
     pub btrfs_min_pct: f64,
+    pub btrfs_commit_root: btrfs::CommitRootMode,
     pub cgroup_re: Option<Regex>,
     pub gpu_stats_receiver:
         Option<collector_plugin::Consumer<crate::gpu_stats_collector_plugin::SampleType>>,
@@ -62,6 +65,7 @@ impl Default for CollectorOptions {
             process_stack_trace_filter: Default::default(),
             btrfs_samples: btrfs::DEFAULT_SAMPLES,
             btrfs_min_pct: btrfs::DEFAULT_MIN_PCT,
+            btrfs_commit_root: Default::default(),
             cgroup_re: None,
             gpu_stats_receiver: None,
             tc_stats_receiver: None,
@@ -75,20 +79,56 @@ pub struct Collector {
     proc_reader: procfs::ProcReader,
     prev_sample: Option<(Sample, Instant)>,
     collector_options: CollectorOptions,
+    btrfs_commit_root: bool,
 }
 
 impl Collector {
-    pub fn new(logger: slog::Logger, collector_options: CollectorOptions) -> Self {
+    pub fn new(logger: slog::Logger, mut collector_options: CollectorOptions) -> Self {
+        let mut btrfs_commit_root = false;
+        if collector_options.enable_btrfs_stats {
+            let mode = collector_options.btrfs_commit_root;
+            if mode != btrfs::CommitRootMode::Never {
+                btrfs_commit_root = btrfs::commit_root_supported(Path::new(btrfs::DEFAULT_ROOT));
+            }
+            if btrfs_commit_root {
+                info!(
+                    logger,
+                    "btrfs stats: resolving samples against commit roots"
+                );
+            } else if mode == btrfs::CommitRootMode::Require {
+                warn!(
+                    logger,
+                    "Disabling btrfs stats: kernel does not support LOGICAL_INO_V2 with BTRFS_LOGICAL_INO_ARGS_COMMIT_ROOT"
+                );
+                collector_options.enable_btrfs_stats = false;
+            } else if mode == btrfs::CommitRootMode::Never {
+                info!(
+                    logger,
+                    "btrfs stats: resolving samples against current trees"
+                );
+            } else {
+                info!(
+                    logger,
+                    "btrfs stats: kernel does not support BTRFS_LOGICAL_INO_ARGS_COMMIT_ROOT, resolving samples against current trees"
+                );
+            }
+        }
         Self {
             logger,
             proc_reader: procfs::ProcReader::new(),
             prev_sample: None,
             collector_options,
+            btrfs_commit_root,
         }
     }
 
     pub fn collect_sample(&mut self) -> Result<Sample> {
-        collect_sample(&self.logger, &mut self.proc_reader, &self.collector_options)
+        collect_sample(
+            &self.logger,
+            &mut self.proc_reader,
+            &self.collector_options,
+            self.btrfs_commit_root,
+        )
     }
 
     /// Collect a new `Sample`, returning an updated Model
@@ -190,9 +230,11 @@ fn collect_sample(
     logger: &slog::Logger,
     reader: &mut procfs::ProcReader,
     options: &CollectorOptions,
+    btrfs_commit_root: bool,
 ) -> Result<Sample> {
     let btrfs_reader =
-        btrfs::BtrfsReader::new(options.btrfs_samples, options.btrfs_min_pct, logger.clone());
+        btrfs::BtrfsReader::new(options.btrfs_samples, options.btrfs_min_pct, logger.clone())
+            .with_commit_root(btrfs_commit_root);
     let ethtool_reader = ethtool::EthtoolReader::new();
     let ksm_reader = procfs::KsmReader::new();
 

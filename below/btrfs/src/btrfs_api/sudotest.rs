@@ -58,7 +58,7 @@ fn logical_ino_test() {
     if is_btrfs(base_path) {
         let f = File::open(base_path).expect("Failed to open file");
         let fd = f.as_raw_fd();
-        logical_ino(fd, 0, false, |res| match res {
+        logical_ino(fd, 0, 0, |res| match res {
             Ok(_) => {}
             // it's OK for now to have the offset not pointing to any extent
             Err(Error::SysError(nix::errno::Errno::ENOENT)) => {}

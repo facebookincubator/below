@@ -78,10 +78,17 @@ pub struct LogicalInoItem {
     pub root: u64,
 }
 
+// Resolve backrefs against the commit roots instead of the current trees, which
+// avoids enabling the filesystem wide tree modification log. Results can be up
+// to one commit interval stale. Kernels without support fail with EINVAL.
+// Defined here rather than taken from btrfs_sys as it is newer than the headers
+// the bindings were generated from.
+pub const BTRFS_LOGICAL_INO_ARGS_COMMIT_ROOT: u64 = 1 << 1;
+
 pub fn logical_ino(
     fd: i32,
     logical: u64,
-    ignoring_offset: bool,
+    flags: u64,
     mut cb: impl FnMut(Result<&[LogicalInoItem]>),
 ) {
     let mut data = WithMemAfter::<btrfs_data_container, 4096>::new();
@@ -90,11 +97,7 @@ pub fn logical_ino(
         logical,
         size: data.total_size() as u64,
         reserved: Default::default(),
-        flags: if ignoring_offset {
-            BTRFS_LOGICAL_INO_ARGS_IGNORE_OFFSET as u64
-        } else {
-            0
-        },
+        flags,
         inodes: data.as_mut_ptr() as u64,
     };
     unsafe {
