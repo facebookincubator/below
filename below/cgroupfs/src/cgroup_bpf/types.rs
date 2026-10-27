@@ -32,6 +32,7 @@ use crate::CpuStat;
 use crate::MemoryEvents;
 use crate::MemoryEventsLocal;
 use crate::MemoryStat;
+use crate::MemorySwapEvents;
 
 pub(crate) static PAGE_SIZE: LazyLock<u64> = LazyLock::new(|| {
     // SAFETY: sysconf() with a valid _SC_* name has no preconditions and is
@@ -221,6 +222,13 @@ pub(crate) fn decode_record(rec: &CgroupBpfRecord, cputime: &mut CputimeAdjuster
         sock_throttled: None,
     });
 
+    let has_swap_events = rec.is_valid(CGROUP_FILES_MEM_SWAP_EVENTS);
+    let memory_swap_events = has_swap_events.then_some(MemorySwapEvents {
+        high: Some(rec.mse_high),
+        max: Some(rec.mse_max),
+        fail: Some(rec.mse_fail),
+    });
+
     // memory.{min,low,high,max} limits + memory.oom.group.
     let has_limits = rec.is_valid(CGROUP_FILES_MEM_LIMITS);
     let lim = |raw: u64| -> i64 {
@@ -246,6 +254,7 @@ pub(crate) fn decode_record(rec: &CgroupBpfRecord, cputime: &mut CputimeAdjuster
         cgroup_stat,
         memory_events,
         memory_events_local,
+        memory_swap_events,
         memory_min,
         memory_low,
         memory_high,
@@ -323,6 +332,9 @@ fn decode_memory_stat(rec: &CgroupBpfRecord) -> MemoryStat {
         pgdeactivate: ms(rec.ms_pgdeactivate),
         pglazyfree: ms(rec.ms_pglazyfree),
         pglazyfreed: ms(rec.ms_pglazyfreed),
+        zswpin: ms(rec.ms_zswpin),
+        zswpout: ms(rec.ms_zswpout),
+        zswpwb: ms(rec.ms_zswpwb),
         thp_fault_alloc: ms(rec.ms_thp_fault_alloc),
         thp_collapse_alloc: ms(rec.ms_thp_collapse_alloc),
     }
@@ -343,6 +355,7 @@ pub struct CgroupBpfStat {
     pub cgroup_stat: Option<CgroupStat>,
     pub memory_events: Option<MemoryEvents>,
     pub memory_events_local: Option<MemoryEventsLocal>,
+    pub memory_swap_events: Option<MemorySwapEvents>,
     pub memory_min: Option<i64>,
     pub memory_low: Option<i64>,
     pub memory_high: Option<i64>,

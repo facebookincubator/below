@@ -15,6 +15,7 @@ fn capable_host() -> KernelSupport {
         flush_kfunc: true,
         sock_throttled: false,
         zswap: true,
+        swap: true,
         hugetlb_accounting: Some(false),
         items: [(CGROUP_BPF_ITEM_ABSENT, 0); CGROUP_BPF_ITEM_NUM as usize],
     };
@@ -32,6 +33,10 @@ fn skips_memory_events(config: &BpfReadConfig) -> bool {
     config.skip_files & (1 << CGROUP_FILES_MEM_EVENTS) != 0
 }
 
+fn skips_memory_swap_events(config: &BpfReadConfig) -> bool {
+    config.skip_files & (1 << CGROUP_FILES_MEM_SWAP_EVENTS) != 0
+}
+
 fn reads(config: &BpfReadConfig, feature: u32) -> bool {
     config.extra_reads & (1 << feature) != 0
 }
@@ -41,10 +46,11 @@ fn reads(config: &BpfReadConfig, feature: u32) -> bool {
 /// on it to the file reader, and leaves the rest to BPF.
 #[test]
 fn capabilities_decide_which_files_bpf_supplies() {
-    // Everything available: BPF supplies both files.
+    // Everything available: BPF supplies every file.
     let all = BpfReadConfig::from_support(&capable_host());
     assert!(!skips_memory_stat(&all));
     assert!(!skips_memory_events(&all));
+    assert!(!skips_memory_swap_events(&all));
 
     // No kernel BTF: nothing could be checked, so neither file is trusted
     // to BPF.
@@ -53,6 +59,7 @@ fn capabilities_decide_which_files_bpf_supplies() {
         ..capable_host()
     });
     assert!(skips_memory_stat(&config) && skips_memory_events(&config));
+    assert!(skips_memory_swap_events(&config));
 
     // memory.stat comes from the memcg kfuncs; without them the whole file
     // is read instead.
@@ -74,6 +81,19 @@ fn capabilities_decide_which_files_bpf_supplies() {
     });
     assert!(skips_memory_events(&config));
     assert!(!skips_memory_stat(&config));
+    assert!(
+        !skips_memory_swap_events(&config),
+        "memory.swap.events has no sock_throttled line"
+    );
+
+    // Without CONFIG_SWAP there is no memory.swap.events for BPF to stand in
+    // for; nothing else depends on it.
+    let config = BpfReadConfig::from_support(&KernelSupport {
+        swap: false,
+        ..capable_host()
+    });
+    assert!(skips_memory_swap_events(&config));
+    assert!(!skips_memory_stat(&config) && !skips_memory_events(&config));
 
     // zswap and hugetlb lines exist only under an option; read them only
     // where the file prints them.

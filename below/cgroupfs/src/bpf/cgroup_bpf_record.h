@@ -49,6 +49,7 @@ enum cgroup_files {
   CGROUP_FILES_CGROUP_STAT,
   CGROUP_FILES_MEM_EVENTS,
   CGROUP_FILES_MEM_LIMITS,
+  CGROUP_FILES_MEM_SWAP_EVENTS,
   CGROUP_FILES_NUM,
 };
 
@@ -74,7 +75,8 @@ enum cgroup_bpf_features {
 // The program cannot name these. The reclaim counters were vm_event_item until
 // Linux 7.1 moved them to node_stat_item, and C allows one enumerator of a
 // given name per file, so a header can spell them one way or the other but
-// never both; NR_HUGETLB is simply newer than the pinned dump. Instead user
+// never both; NR_HUGETLB is simply newer than the pinned dump, and the pinned
+// dump was built without CONFIG_ZSWAP, so it has no ZSWP* events. Instead user
 // space finds each one in the running kernel's BTF and puts its index in the
 // `item_index` map, which works whichever enum holds it and needs no
 // kernel-version test.
@@ -88,7 +90,10 @@ enum cgroup_bpf_features {
   X(PGSTEAL_KSWAPD, ms_pgsteal_kswapd)         \
   X(PGSTEAL_DIRECT, ms_pgsteal_direct)         \
   X(PGSTEAL_KHUGEPAGED, ms_pgsteal_khugepaged) \
-  X(PGSTEAL_PROACTIVE, ms_pgsteal_proactive)
+  X(PGSTEAL_PROACTIVE, ms_pgsteal_proactive)   \
+  X(ZSWPIN, ms_zswpin)                         \
+  X(ZSWPOUT, ms_zswpout)                       \
+  X(ZSWPWB, ms_zswpwb)
 
 // Slot of each of those counters in the `item_index` map.
 enum cgroup_bpf_item {
@@ -210,6 +215,10 @@ struct cgroup_bpf_record {
   unsigned long long mel_max;
   unsigned long long mel_oom;
   unsigned long long mel_oom_kill;
+  // memory.swap.events (raw event counts from the same memory_events array).
+  unsigned long long mse_high;
+  unsigned long long mse_max;
+  unsigned long long mse_fail;
   // memory.{min,low,high,max} limits: raw page_counter values (pages); user
   // space applies the PAGE_COUNTER_MAX -> "max"(-1) sentinel and pages->bytes.
   unsigned long long mem_min;

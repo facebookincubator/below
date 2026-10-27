@@ -349,14 +349,15 @@ static __always_inline void collect_cgroup_stat(
       CGROUP_FILE_BIT(CGROUP_FILES_CGROUP_STAT); // setup bitmask for userspace
 }
 
-// memory.current, memory.events(.local), and the memory.{min,low,high,max} +
-// memory.oom.group limits -- all read directly off the memcg. memory.events is
-// gated by `skip`, since a newer kernel prints a line here that we do not read
-// (see coverage.rs).
+// memory.current, memory.events(.local), memory.swap.events, and the
+// memory.{min,low,high,max} + memory.oom.group limits -- all read directly off
+// the memcg. memory.events is gated by `skip`, since a newer kernel prints a
+// line here that we do not read, and so is memory.swap.events, which exists
+// only with CONFIG_SWAP (see coverage.rs).
 static __always_inline void
 collect_memory(struct cgroup* cgrp, struct cgroup_bpf_record* rec, u32 skip) {
   // The root cgroup has no memory.current / memory.events(.local) /
-  // memory.{min,low,high,max} / memory.oom.group interface files
+  // memory.swap.events / memory.{min,low,high,max} / memory.oom.group files
   // (root_mem_cgroup is not a real charge target), so reading them off the
   // memcg would report values the file omits. Skip the root (level 0) and let
   // user space read the absent file -> None, matching the file path (same
@@ -395,6 +396,28 @@ collect_memory(struct cgroup* cgrp, struct cgroup_bpf_record* rec, u32 skip) {
         BPF_CORE_READ(memcg, memory_events_local[MEMCG_OOM_KILL].counter);
     rec->valid |=
         CGROUP_FILE_BIT(CGROUP_FILES_MEM_EVENTS); // setup bitmask for userspace
+  }
+
+  // memory.swap.events: the MEMCG_SWAP_* slots of the same array. Unlike
+  // low..oom_kill they shifted once (MEMCG_OOM_GROUP_KILL, 5.16), so they are
+  // read only where the running kernel numbers them as the pinned header does;
+  // elsewhere the valid bit stays clear and user space reads the file.
+  if (!(skip & CGROUP_FILE_BIT(CGROUP_FILES_MEM_SWAP_EVENTS)) &&
+      bpf_core_enum_value_exists(enum memcg_memory_event, MEMCG_SWAP_HIGH) &&
+      bpf_core_enum_value_exists(enum memcg_memory_event, MEMCG_SWAP_MAX) &&
+      bpf_core_enum_value_exists(enum memcg_memory_event, MEMCG_SWAP_FAIL) &&
+      bpf_core_enum_value(enum memcg_memory_event, MEMCG_SWAP_HIGH) ==
+          MEMCG_SWAP_HIGH &&
+      bpf_core_enum_value(enum memcg_memory_event, MEMCG_SWAP_MAX) ==
+          MEMCG_SWAP_MAX &&
+      bpf_core_enum_value(enum memcg_memory_event, MEMCG_SWAP_FAIL) ==
+          MEMCG_SWAP_FAIL) {
+    rec->mse_high =
+        BPF_CORE_READ(memcg, memory_events[MEMCG_SWAP_HIGH].counter);
+    rec->mse_max = BPF_CORE_READ(memcg, memory_events[MEMCG_SWAP_MAX].counter);
+    rec->mse_fail =
+        BPF_CORE_READ(memcg, memory_events[MEMCG_SWAP_FAIL].counter);
+    rec->valid |= CGROUP_FILE_BIT(CGROUP_FILES_MEM_SWAP_EVENTS);
   }
 
   // memory.{min,low,high,max} limits (page_counter, in pages) +
@@ -508,6 +531,13 @@ static __always_inline void collect_memory_stat(
       pgsteal,
       pgsteal_any);
   rec->ms_pgsteal = pgsteal_any ? pgsteal : (u64)-1;
+
+  // zswap events, also read by index: the pinned header has no ZSWP* items.
+  // They exist only with CONFIG_ZSWAP (ZSWPWB since 6.8), exactly when
+  // memory.stat prints them, so an absent item leaves the -1 sentinel.
+  rec->ms_zswpin = read_by_index(memcg, CGROUP_BPF_ITEM_ZSWPIN);
+  rec->ms_zswpout = read_by_index(memcg, CGROUP_BPF_ITEM_ZSWPOUT);
+  rec->ms_zswpwb = read_by_index(memcg, CGROUP_BPF_ITEM_ZSWPWB);
 
   // event counters (vm_event_item), read from the shared X-list.
 #define X(field, item) KF_EVENT(field, item);

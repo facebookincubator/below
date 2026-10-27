@@ -91,6 +91,7 @@ impl Drop for FixtureCgroup {
 struct FileRead {
     cpu: Option<crate::CpuStat>,
     events: Option<crate::MemoryEvents>,
+    swap_events: Option<crate::MemorySwapEvents>,
     memory_stat: Option<crate::MemoryStat>,
     current: Option<u64>,
     min: Option<i64>,
@@ -103,6 +104,7 @@ fn read_all(reader: &CgroupReader<'_>) -> FileRead {
     FileRead {
         cpu: reader.read_cpu_stat().ok(),
         events: reader.read_memory_events().ok(),
+        swap_events: reader.read_memory_swap_events().ok(),
         memory_stat: reader.read_memory_stat().ok(),
         current: reader.read_memory_current().ok(),
         min: reader.read_memory_min().ok(),
@@ -115,7 +117,7 @@ fn read_all(reader: &CgroupReader<'_>) -> FileRead {
 /// The memory.stat counters that only ever rise. Everything else in the file is
 /// a gauge that moves both ways, which a live tree cannot pin down; those are
 /// checked for presence here and compared by value on an idle cgroup.
-fn rising_memory_stat_counters(stat: &crate::MemoryStat) -> [(&'static str, Option<u64>); 25] {
+fn rising_memory_stat_counters(stat: &crate::MemoryStat) -> [(&'static str, Option<u64>); 28] {
     [
         ("pgfault", stat.pgfault),
         ("pgmajfault", stat.pgmajfault),
@@ -134,6 +136,9 @@ fn rising_memory_stat_counters(stat: &crate::MemoryStat) -> [(&'static str, Opti
         ("pgdeactivate", stat.pgdeactivate),
         ("pglazyfree", stat.pglazyfree),
         ("pglazyfreed", stat.pglazyfreed),
+        ("zswpin", stat.zswpin),
+        ("zswpout", stat.zswpout),
+        ("zswpwb", stat.zswpwb),
         ("thp_fault_alloc", stat.thp_fault_alloc),
         ("thp_collapse_alloc", stat.thp_collapse_alloc),
         ("workingset_refault_anon", stat.workingset_refault_anon),
@@ -250,11 +255,11 @@ fn configured_values_match_the_file_exactly() {
     assert_eq!(stat.memory_max, Some(8388608));
 }
 
-/// Exercises the BPF read of cpu.stat, memory.events and the memory limits
-/// against the same cgroups' files, over every cgroup on the host. This is the
-/// broad check: hundreds of cgroups with genuinely varied values, which no
-/// fixture reaches. It also checks the join by cgroup id lines the two sources
-/// up on the same cgroup.
+/// Exercises the BPF read of cpu.stat, memory.events, memory.swap.events and
+/// the memory limits against the same cgroups' files, over every cgroup on the
+/// host. This is the broad check: hundreds of cgroups with genuinely varied
+/// values, which no fixture reaches. It also checks the join by cgroup id lines
+/// the two sources up on the same cgroup.
 #[cfg_attr(feature = "vmtest", test)]
 fn values_match_the_file_across_the_live_tree() {
     let root = CgroupReader::root().expect("failed to open the cgroup root");
@@ -352,6 +357,23 @@ fn values_match_the_file_across_the_live_tree() {
                 bpf.oom_kill,
                 a.oom_kill,
             );
+            compared += 1;
+        }
+
+        // Present on one side only is a disagreement, as for memory.current.
+        assert_eq!(
+            stat.memory_swap_events.is_some(),
+            before[i].swap_events.is_some(),
+            "{name}: memory.swap.events present in one source and not the other"
+        );
+        if let (Some(bpf), Some(b), Some(a)) = (
+            &stat.memory_swap_events,
+            &before[i].swap_events,
+            &after[i].swap_events,
+        ) {
+            assert_between("memory.swap.events.high", name, b.high, bpf.high, a.high);
+            assert_between("memory.swap.events.max", name, b.max, bpf.max, a.max);
+            assert_between("memory.swap.events.fail", name, b.fail, bpf.fail, a.fail);
             compared += 1;
         }
 
@@ -457,6 +479,7 @@ fn root_cgroup_is_left_to_the_file() {
     assert!(stat.memory_current.is_none());
     assert!(stat.memory_stat.is_none());
     assert!(stat.memory_events.is_none());
+    assert!(stat.memory_swap_events.is_none());
     assert!(stat.memory_min.is_none());
 
     // cgroup.stat is read off the cgroup itself, and the root has that file.

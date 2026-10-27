@@ -30,6 +30,7 @@ use crate::Cpuset;
 use crate::Error;
 use crate::MemNodes;
 use crate::MemoryNumaStat;
+use crate::MemorySwapEvents;
 
 struct TestCgroup {
     tempdir: TempDir,
@@ -353,6 +354,23 @@ fn test_memory_stat_success() {
         .read_memory_stat()
         .expect("Failed to read memory.stat");
     assert_eq!(val.slab.expect("Failed to populate slab field"), 1234);
+}
+
+#[test]
+fn test_memory_stat_zswap_events() {
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content(
+        "memory.stat",
+        b"zswap 4096\nzswpin 1\nzswpout 2\nzswpwb 3\n",
+    );
+
+    let val = cgroup
+        .get_reader()
+        .read_memory_stat()
+        .expect("Failed to read memory.stat");
+    assert_eq!(val.zswpin, Some(1));
+    assert_eq!(val.zswpout, Some(2));
+    assert_eq!(val.zswpwb, Some(3));
 }
 
 #[test]
@@ -754,6 +772,40 @@ fn test_root_cgroup_name_is_empty() {
 fn test_validate_cgroup2_fs() {
     let root = TestCgroup::new();
     assert!(root.get_reader_validate().is_err());
+}
+
+#[test]
+fn test_memory_swap_events_success() {
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content("memory.swap.events", b"high 1\nmax 2\nfail 3\n");
+
+    let val = cgroup
+        .get_reader()
+        .read_memory_swap_events()
+        .expect("Failed to read memory.swap.events");
+    assert_eq!(
+        val,
+        MemorySwapEvents {
+            high: Some(1),
+            max: Some(2),
+            fail: Some(3),
+        }
+    );
+}
+
+#[test]
+fn test_memory_swap_events_invalid_format() {
+    let cgroup = TestCgroup::new();
+    cgroup.create_file_with_content("memory.swap.events", b"");
+
+    let err = cgroup
+        .get_reader()
+        .read_memory_swap_events()
+        .expect_err("Did not fail to read memory.swap.events");
+    match err {
+        Error::InvalidFileFormat(_) => {}
+        _ => panic!("Got unexpected error type: {err}"),
+    }
 }
 
 #[test]

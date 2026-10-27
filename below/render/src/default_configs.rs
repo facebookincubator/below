@@ -122,6 +122,9 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
         use model::CgroupMemoryModelFieldId::WorkingsetRestoreFile;
         use model::CgroupMemoryModelFieldId::Zswap;
         use model::CgroupMemoryModelFieldId::Zswapped;
+        use model::CgroupMemoryModelFieldId::Zswpin;
+        use model::CgroupMemoryModelFieldId::Zswpout;
+        use model::CgroupMemoryModelFieldId::Zswpwb;
         use model::CgroupNetworkModelFieldId::RxBytesPerSec;
         use model::CgroupNetworkModelFieldId::RxPacketsPerSec;
         use model::CgroupNetworkModelFieldId::TxBytesPerSec;
@@ -183,6 +186,9 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
             Mem(Pgdeactivate) => rc.title("Pgdeactivate"),
             Mem(Pglazyfree) => rc.title("Pglazyfree"),
             Mem(Pglazyfreed) => rc.title("Pglazyfreed"),
+            Mem(Zswpin) => rc.title("Zswpin"),
+            Mem(Zswpout) => rc.title("Zswpout"),
+            Mem(Zswpwb) => rc.title("Zswpwb"),
             Mem(ThpFaultAlloc) => rc.title("THP Fault Alloc"),
             Mem(ThpCollapseAlloc) => rc.title("THP Collapse Alloc"),
             Pressure(MemorySomePct) => rc.title("Mem Some Pressure"),
@@ -259,6 +265,9 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
                 EventsLocalOom => Some(counter),
                 EventsLocalOomKill => Some(counter),
                 EventsLocalSockThrottled => Some(counter),
+                SwapEventsHigh => None,
+                SwapEventsMax => None,
+                SwapEventsFail => Some(counter),
                 Anon => Some(gauge.unit("bytes")),
                 File => Some(gauge.unit("bytes")),
                 Kernel => Some(gauge.unit("bytes")),
@@ -307,6 +316,9 @@ impl HasRenderConfigForDump for model::SingleCgroupModel {
                 Pgdeactivate => Some(gauge.help("Pgdeactivate per second")),
                 Pglazyfree => Some(gauge.help("Pglazyfree per second")),
                 Pglazyfreed => Some(gauge.help("Pglazyfreed per second")),
+                Zswpin => Some(gauge.help("Pages moved in to memory from zswap per second")),
+                Zswpout => Some(gauge.help("Pages moved out of memory to zswap per second")),
+                Zswpwb => Some(gauge.help("Pages written from zswap to swap per second")),
                 ThpFaultAlloc => Some(gauge.help("THP Fault Alloc per second")),
                 ThpCollapseAlloc => Some(gauge.help("THP Collapse Alloc per second")),
             },
@@ -404,6 +416,9 @@ impl HasRenderConfig for model::CgroupMemoryModel {
             EventsLocalOom => rc.title("Events Local OOM/s"),
             EventsLocalOomKill => rc.title("Events Local Kill/s"),
             EventsLocalSockThrottled => rc.title("Events Local Sock Throttled/s"),
+            SwapEventsHigh => rc.title("Swap Events High/s"),
+            SwapEventsMax => rc.title("Swap Events Max/s"),
+            SwapEventsFail => rc.title("Swap Events Fail/s"),
             Anon => rc.title("Anon").format(ReadableSize),
             File => rc.title("File").format(ReadableSize),
             Kernel => rc.title("Kernel").format(ReadableSize),
@@ -452,6 +467,9 @@ impl HasRenderConfig for model::CgroupMemoryModel {
             Pgdeactivate => rc.title("Pgdeactivate/s"),
             Pglazyfree => rc.title("Pglazyfree/s"),
             Pglazyfreed => rc.title("Pglazyfreed/s"),
+            Zswpin => rc.title("Zswpin/s"),
+            Zswpout => rc.title("Zswpout/s"),
+            Zswpwb => rc.title("Zswpwb/s"),
             ThpFaultAlloc => rc.title("THP Fault Alloc/s"),
             ThpCollapseAlloc => rc.title("THP Collapse Alloc/s"),
         }

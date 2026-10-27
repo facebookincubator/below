@@ -15,6 +15,7 @@ fn valid_record() -> CgroupBpfRecord {
             | (1 << CGROUP_FILES_MEM_STAT)
             | (1 << CGROUP_FILES_MEM_EVENTS)
             | (1 << CGROUP_FILES_MEM_LIMITS)
+            | (1 << CGROUP_FILES_MEM_SWAP_EVENTS)
             | (1 << CGROUP_FILES_CGROUP_STAT),
         ..Default::default()
     }
@@ -39,6 +40,7 @@ fn unset_valid_bits_yield_no_data() {
     assert!(stat.memory_stat.is_none());
     assert!(stat.memory_events.is_none());
     assert!(stat.memory_events_local.is_none());
+    assert!(stat.memory_swap_events.is_none());
     assert!(stat.cgroup_stat.is_none());
     assert!(stat.memory_min.is_none());
     assert!(stat.memory_low.is_none());
@@ -71,6 +73,11 @@ fn each_valid_bit_unlocks_only_its_own_group() {
     let events = only(CGROUP_FILES_MEM_EVENTS);
     assert!(events.memory_events.is_some() && events.memory_events_local.is_some());
     assert!(events.memory_min.is_none() && events.cpu_stat.is_none());
+    assert!(events.memory_swap_events.is_none());
+
+    let swap_events = only(CGROUP_FILES_MEM_SWAP_EVENTS);
+    assert!(swap_events.memory_swap_events.is_some());
+    assert!(swap_events.memory_events.is_none() && swap_events.memory_min.is_none());
 
     let limits = only(CGROUP_FILES_MEM_LIMITS);
     assert!(limits.memory_min.is_some() && limits.memory_oom_group.is_some());
@@ -217,6 +224,8 @@ fn unavailable_counters_decode_to_none() {
         ms_anon: u64::MAX,
         ms_file: 0,
         ms_zswap: u64::MAX,
+        ms_zswpin: 0,
+        ms_zswpwb: u64::MAX,
         ms_slab_reclaimable: u64::MAX,
         ms_slab_unreclaimable: 8,
         ..valid_record()
@@ -225,9 +234,30 @@ fn unavailable_counters_decode_to_none() {
     assert_eq!(stat.anon, None, "untracked counter must not read as 0");
     assert_eq!(stat.file, Some(0), "a tracked zero is a real value");
     assert_eq!(stat.zswap, None);
+    // A kernel older than 6.8 has zswpin but not zswpwb.
+    assert_eq!(stat.zswpin, Some(0));
+    assert_eq!(stat.zswpwb, None);
     // The sum needs both halves; one missing makes the total unknown, not
     // partial.
     assert_eq!(stat.slab, None);
+}
+
+/// Exercises the memory.swap.events decode. Three distinct values catch two of
+/// the counters being swapped.
+#[test]
+fn swap_events_decode_by_name() {
+    let rec = CgroupBpfRecord {
+        mse_high: 1,
+        mse_max: 2,
+        mse_fail: 3,
+        ..valid_record()
+    };
+    let events = decode(&rec)
+        .memory_swap_events
+        .expect("memory.swap.events is valid");
+    assert_eq!(events.high, Some(1));
+    assert_eq!(events.max, Some(2));
+    assert_eq!(events.fail, Some(3));
 }
 
 /// Exercises the memory limit decode: the file's "max" sentinel and its
@@ -300,4 +330,9 @@ fn decoded_presence_matches_the_contract() {
             .expect("memory.events.local is valid"),
     );
     assert_eq!(empty(&local), vec!["sock_throttled".to_owned()]);
+    let swap_events = to_json(
+        stat.memory_swap_events
+            .expect("memory.swap.events is valid"),
+    );
+    assert_eq!(empty(&swap_events), Vec::<String>::new());
 }

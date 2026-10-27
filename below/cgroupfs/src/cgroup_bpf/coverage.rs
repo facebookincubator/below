@@ -47,8 +47,12 @@ use super::CGROUP_BPF_ITEM_PGSTEAL_KHUGEPAGED;
 use super::CGROUP_BPF_ITEM_PGSTEAL_KSWAPD;
 use super::CGROUP_BPF_ITEM_PGSTEAL_PROACTIVE;
 use super::CGROUP_BPF_ITEM_VM_EVENT;
+use super::CGROUP_BPF_ITEM_ZSWPIN;
+use super::CGROUP_BPF_ITEM_ZSWPOUT;
+use super::CGROUP_BPF_ITEM_ZSWPWB;
 use super::CGROUP_FILES_MEM_EVENTS;
 use super::CGROUP_FILES_MEM_STAT;
+use super::CGROUP_FILES_MEM_SWAP_EVENTS;
 use super::cgroup_bpf_item_index;
 
 // check the config in host
@@ -70,6 +74,9 @@ pub(crate) struct KernelSupport {
     /// The kernel was built with CONFIG_ZSWAP, so memory.stat has the zswap
     /// lines.
     zswap: bool,
+    /// The kernel was built with CONFIG_SWAP, so cgroups have
+    /// memory.swap.events.
+    swap: bool,
     /// The cgroup2 mount accounts hugetlb, so memory.stat has that line. None
     /// when the mount table could not be read -- not the same as false.
     hugetlb_accounting: Option<bool>,
@@ -101,6 +108,9 @@ const ITEMS_READ_BY_INDEX: [(u32, &str); CGROUP_BPF_ITEM_NUM as usize] = [
     (CGROUP_BPF_ITEM_PGSTEAL_DIRECT, "PGSTEAL_DIRECT"),
     (CGROUP_BPF_ITEM_PGSTEAL_KHUGEPAGED, "PGSTEAL_KHUGEPAGED"),
     (CGROUP_BPF_ITEM_PGSTEAL_PROACTIVE, "PGSTEAL_PROACTIVE"),
+    (CGROUP_BPF_ITEM_ZSWPIN, "ZSWPIN"),
+    (CGROUP_BPF_ITEM_ZSWPOUT, "ZSWPOUT"),
+    (CGROUP_BPF_ITEM_ZSWPWB, "ZSWPWB"),
 ];
 
 /// Check the running kernel and the cgroup2 mount. Called once at startup; only
@@ -119,6 +129,8 @@ pub(crate) fn probe_host() -> KernelSupport {
     support.sock_throttled = btf_enum_has_item(&btf, "memcg_memory_event", "MEMCG_SOCK_THROTTLED");
     // CONFIG_ZSWAP drops the ZSWPIN event, so its absence stands for the option.
     support.zswap = btf_enum_has_item(&btf, "vm_event_item", "ZSWPIN");
+    // Likewise CONFIG_SWAP drops the SWAP_RA event.
+    support.swap = btf_enum_has_item(&btf, "vm_event_item", "SWAP_RA");
     for (slot, name) in ITEMS_READ_BY_INDEX {
         support.items[slot as usize] = find_item(&btf, name);
     }
@@ -225,10 +237,13 @@ impl BpfReadConfig {
             ..Default::default()
         };
 
-        // Nothing was checked, so leave both files that depend on a check to the
-        // file reader. The program needs BTF to load, so this should not happen.
+        // Nothing was checked, so leave every file that depends on a check to
+        // the file reader. The program needs BTF to load, so this should not
+        // happen.
         if !support.btf_readable {
-            config.skip_files |= (1 << CGROUP_FILES_MEM_STAT) | (1 << CGROUP_FILES_MEM_EVENTS);
+            config.skip_files |= (1 << CGROUP_FILES_MEM_STAT)
+                | (1 << CGROUP_FILES_MEM_EVENTS)
+                | (1 << CGROUP_FILES_MEM_SWAP_EVENTS);
             return config;
         }
 
@@ -258,6 +273,12 @@ impl BpfReadConfig {
         // the whole file goes to the file reader.
         if support.sock_throttled {
             config.skip_files |= 1 << CGROUP_FILES_MEM_EVENTS;
+        }
+
+        // Without CONFIG_SWAP there is no memory.swap.events, though the kernel
+        // still has the counters, so BPF must not supply one.
+        if !support.swap {
+            config.skip_files |= 1 << CGROUP_FILES_MEM_SWAP_EVENTS;
         }
 
         // zswap and hugetlb are printed only under an option, though the kernel

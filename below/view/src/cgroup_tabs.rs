@@ -298,6 +298,9 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::SlabUnreclaimable;
     use model::CgroupMemoryModelFieldId::Sock;
     use model::CgroupMemoryModelFieldId::Swap;
+    use model::CgroupMemoryModelFieldId::SwapEventsFail;
+    use model::CgroupMemoryModelFieldId::SwapEventsHigh;
+    use model::CgroupMemoryModelFieldId::SwapEventsMax;
     use model::CgroupMemoryModelFieldId::Swapcached;
     use model::CgroupMemoryModelFieldId::ThpCollapseAlloc;
     use model::CgroupMemoryModelFieldId::ThpFaultAlloc;
@@ -312,6 +315,9 @@ pub mod default_tabs {
     use model::CgroupMemoryModelFieldId::WorkingsetRestoreFile;
     use model::CgroupMemoryModelFieldId::Zswap;
     use model::CgroupMemoryModelFieldId::Zswapped;
+    use model::CgroupMemoryModelFieldId::Zswpin;
+    use model::CgroupMemoryModelFieldId::Zswpout;
+    use model::CgroupMemoryModelFieldId::Zswpwb;
     use model::CgroupNetworkModelFieldId::RxBytesPerSec;
     use model::CgroupNetworkModelFieldId::RxPacketsPerSec;
     use model::CgroupNetworkModelFieldId::TxBytesPerSec;
@@ -430,6 +436,9 @@ pub mod default_tabs {
             ViewItem::from_default(Mem(Pgdeactivate)),
             ViewItem::from_default(Mem(Pglazyfree)),
             ViewItem::from_default(Mem(Pglazyfreed)),
+            ViewItem::from_default(Mem(Zswpin)),
+            ViewItem::from_default(Mem(Zswpout)),
+            ViewItem::from_default(Mem(Zswpwb)),
             ViewItem::from_default(Mem(ThpFaultAlloc)),
             ViewItem::from_default(Mem(ThpCollapseAlloc)),
             ViewItem::from_default(Mem(EventsLow)),
@@ -438,6 +447,9 @@ pub mod default_tabs {
             ViewItem::from_default(Mem(EventsOom)),
             ViewItem::from_default(Mem(EventsOomKill)),
             ViewItem::from_default(Mem(EventsSockThrottled)),
+            ViewItem::from_default(Mem(SwapEventsHigh)),
+            ViewItem::from_default(Mem(SwapEventsMax)),
+            ViewItem::from_default(Mem(SwapEventsFail)),
         ]
     }
 

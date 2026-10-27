@@ -99,6 +99,9 @@ pub struct MemoryStat {
     pub pgdeactivate: Option<u64>,
     pub pglazyfree: Option<u64>,
     pub pglazyfreed: Option<u64>,
+    pub zswpin: Option<u64>,
+    pub zswpout: Option<u64>,
+    pub zswpwb: Option<u64>,
     pub thp_fault_alloc: Option<u64>,
     pub thp_collapse_alloc: Option<u64>,
 }
@@ -154,6 +157,13 @@ pub struct MemoryEventsLocal {
     pub oom: Option<u64>,
     pub oom_kill: Option<u64>,
     pub sock_throttled: Option<u64>,
+}
+
+#[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub struct MemorySwapEvents {
+    pub high: Option<u64>,
+    pub max: Option<u64>,
+    pub fail: Option<u64>,
 }
 
 #[derive(Default, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]

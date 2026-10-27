@@ -500,6 +500,7 @@ fn collect_cgroup_sample(
         memory_oom_group: wrap(reader.read_memory_oom_group())?,
         memory_events: wrap(reader.read_memory_events())?,
         memory_events_local: wrap(reader.read_memory_events_local())?,
+        memory_swap_events: wrap(reader.read_memory_swap_events())?,
         inode_number: match reader.read_inode_number() {
             Ok(st_ino) => Some(st_ino as i64),
             Err(e) => {

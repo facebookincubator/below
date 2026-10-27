@@ -305,6 +305,18 @@ impl CgroupModel {
                     aggregated_memory.events_sock_throttled,
                     child_memory.events_sock_throttled,
                 );
+                aggregated_memory.swap_events_high = opt_add(
+                    aggregated_memory.swap_events_high,
+                    child_memory.swap_events_high,
+                );
+                aggregated_memory.swap_events_max = opt_add(
+                    aggregated_memory.swap_events_max,
+                    child_memory.swap_events_max,
+                );
+                aggregated_memory.swap_events_fail = opt_add(
+                    aggregated_memory.swap_events_fail,
+                    child_memory.swap_events_fail,
+                );
             }
         }
         // Assign aggregated values to root memory model
@@ -317,6 +329,9 @@ impl CgroupModel {
             memory.events_oom = aggregated_memory.events_oom;
             memory.events_oom_kill = aggregated_memory.events_oom_kill;
             memory.events_sock_throttled = aggregated_memory.events_sock_throttled;
+            memory.swap_events_high = aggregated_memory.swap_events_high;
+            memory.swap_events_max = aggregated_memory.swap_events_max;
+            memory.swap_events_fail = aggregated_memory.swap_events_fail;
         }
 
         self
@@ -562,6 +577,9 @@ pub struct CgroupMemoryModel {
     pub pgdeactivate: Option<u64>,
     pub pglazyfree: Option<u64>,
     pub pglazyfreed: Option<u64>,
+    pub zswpin: Option<u64>,
+    pub zswpout: Option<u64>,
+    pub zswpwb: Option<u64>,
     pub thp_fault_alloc: Option<u64>,
     pub thp_collapse_alloc: Option<u64>,
     pub events_low: Option<u64>,
@@ -576,6 +594,9 @@ pub struct CgroupMemoryModel {
     pub events_local_oom: Option<u64>,
     pub events_local_oom_kill: Option<u64>,
     pub events_local_sock_throttled: Option<u64>,
+    pub swap_events_high: Option<u64>,
+    pub swap_events_max: Option<u64>,
+    pub swap_events_fail: Option<u64>,
 }
 
 impl std::ops::Add for CgroupMemoryModel {
@@ -654,6 +675,9 @@ impl std::ops::Add for CgroupMemoryModel {
             pgdeactivate: opt_add(self.pgdeactivate, other.pgdeactivate),
             pglazyfree: opt_add(self.pglazyfree, other.pglazyfree),
             pglazyfreed: opt_add(self.pglazyfreed, other.pglazyfreed),
+            zswpin: opt_add(self.zswpin, other.zswpin),
+            zswpout: opt_add(self.zswpout, other.zswpout),
+            zswpwb: opt_add(self.zswpwb, other.zswpwb),
             thp_fault_alloc: opt_add(self.thp_fault_alloc, other.thp_fault_alloc),
             thp_collapse_alloc: opt_add(self.thp_collapse_alloc, other.thp_collapse_alloc),
             events_low: opt_add(self.events_low, other.events_low),
@@ -671,6 +695,9 @@ impl std::ops::Add for CgroupMemoryModel {
                 self.events_local_sock_throttled,
                 other.events_local_sock_throttled,
             ),
+            swap_events_high: opt_add(self.swap_events_high, other.swap_events_high),
+            swap_events_max: opt_add(self.swap_events_max, other.swap_events_max),
+            swap_events_fail: opt_add(self.swap_events_fail, other.swap_events_fail),
         }
     }
 }
@@ -737,6 +764,22 @@ impl CgroupMemoryModel {
                 delta,
                 u64
             );
+        }
+        if let Some(swap_events) = &sample.memory_swap_events
+            && let Some((
+                CgroupSample {
+                    memory_swap_events: Some(last_swap_events),
+                    ..
+                },
+                delta,
+            )) = last
+        {
+            model.swap_events_high =
+                count_per_sec!(last_swap_events.high, swap_events.high, delta, u64);
+            model.swap_events_max =
+                count_per_sec!(last_swap_events.max, swap_events.max, delta, u64);
+            model.swap_events_fail =
+                count_per_sec!(last_swap_events.fail, swap_events.fail, delta, u64);
         }
         if let Some(stat) = &sample.memory_stat {
             model.anon = stat.anon;
@@ -863,6 +906,9 @@ impl CgroupMemoryModel {
                     count_per_sec!(last_stat.pglazyfree, stat.pglazyfree, delta, u64);
                 model.pglazyfreed =
                     count_per_sec!(last_stat.pglazyfreed, stat.pglazyfreed, delta, u64);
+                model.zswpin = count_per_sec!(last_stat.zswpin, stat.zswpin, delta, u64);
+                model.zswpout = count_per_sec!(last_stat.zswpout, stat.zswpout, delta, u64);
+                model.zswpwb = count_per_sec!(last_stat.zswpwb, stat.zswpwb, delta, u64);
                 model.thp_fault_alloc =
                     count_per_sec!(last_stat.thp_fault_alloc, stat.thp_fault_alloc, delta, u64);
                 model.thp_collapse_alloc = count_per_sec!(
@@ -1230,6 +1276,7 @@ mod tests {
                     events_oom: Some(4),
                     events_oom_kill: Some(5),
                     events_sock_throttled: Some(6),
+                    swap_events_fail: Some(7),
                     events_local_low: Some(10),
                     events_local_high: Some(20),
                     ..Default::default()
@@ -1256,6 +1303,7 @@ mod tests {
                     events_oom: Some(4),
                     events_oom_kill: Some(5),
                     events_sock_throttled: Some(6),
+                    swap_events_fail: Some(7),
                     events_local_low: Some(10),
                     events_local_high: Some(20),
                     ..Default::default()
@@ -1294,6 +1342,10 @@ mod tests {
         assert_eq!(
             root.data.memory.as_ref().unwrap().events_sock_throttled,
             Some(12)
+        );
+        assert_eq!(
+            root.data.memory.as_ref().unwrap().swap_events_fail,
+            Some(14)
         );
         assert_eq!(
             root.data.network.as_ref().unwrap().rx_bytes_per_sec,

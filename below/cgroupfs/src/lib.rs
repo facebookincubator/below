@@ -537,6 +537,16 @@ impl<'snapshot> CgroupReader<'snapshot> {
         MemoryEventsLocal::read(self)
     }
 
+    /// Read memory.swap.events - returning the number of times the cgroup's
+    /// swap usage hit memory.swap.high / memory.swap.max, and the number of
+    /// failed swap allocations
+    pub fn read_memory_swap_events(&self) -> Result<MemorySwapEvents> {
+        if let Some(bpf) = self.bpf.and_then(|b| b.memory_swap_events.clone()) {
+            return Ok(bpf);
+        }
+        MemorySwapEvents::read(self)
+    }
+
     pub fn read_cgroup_stat(&self) -> Result<CgroupStat> {
         if let Some(bpf) = self.bpf.and_then(|b| b.cgroup_stat.clone()) {
             return Ok(bpf);
@@ -843,6 +853,9 @@ key_values_format!(MemoryStat; memory.stat; [
     pgdeactivate,
     pglazyfree,
     pglazyfreed,
+    zswpin,
+    zswpout,
+    zswpwb,
     thp_fault_alloc,
     thp_collapse_alloc
 ]);
@@ -864,6 +877,8 @@ key_values_format!(MemoryEventsLocal; memory.events.local; [
     oom_kill,
     sock_throttled
 ]);
+
+key_values_format!(MemorySwapEvents; memory.swap.events; [high, max, fail]);
 
 key_values_format!(CgroupStat; cgroup.stat; [nr_descendants, nr_dying_descendants]);
 
