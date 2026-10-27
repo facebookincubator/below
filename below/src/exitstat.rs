@@ -18,9 +18,13 @@ use std::mem::MaybeUninit;
 use std::sync::Arc;
 use std::sync::LazyLock;
 use std::sync::Mutex;
+use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::Result;
+use libbpf_rs::MapCore;
+use libbpf_rs::MapFlags;
+use libbpf_rs::RingBufferBuilder;
 use libbpf_rs::skel::OpenSkel as _;
 use libbpf_rs::skel::Skel as _;
 use libbpf_rs::skel::SkelBuilder as _;
@@ -71,6 +75,12 @@ fn page_size() -> u64 {
         -1 => panic!("Failed to query page size"),
         x => x as u64,
     }
+}
+
+fn lost_event_delta(previous: &mut u64, current: u64) -> u64 {
+    let delta = current.wrapping_sub(*previous);
+    *previous = current;
+    delta
 }
 
 pub struct ExitstatDriver {
@@ -152,6 +162,31 @@ impl ExitstatDriver {
         warn!(logger, "Lost {} events on CPU {}", count, cpu);
     }
 
+    fn report_lost_events(&self, counters: Result<Option<Vec<Vec<u8>>>>, previous: &mut Vec<u64>) {
+        let values = match counters {
+            Ok(Some(values)) => values,
+            Ok(None) => {
+                warn!(self.logger, "Missing lost event counters");
+                return;
+            }
+            Err(error) => {
+                warn!(self.logger, "Failed to read lost event counters: {}", error);
+                return;
+            }
+        };
+        previous.resize(values.len(), 0);
+        for (cpu, (value, previous)) in values.iter().zip(previous).enumerate() {
+            let Ok(bytes) = value.as_slice().try_into() else {
+                warn!(self.logger, "Invalid lost event counter on CPU {}", cpu);
+                continue;
+            };
+            let count = lost_event_delta(previous, u64::from_ne_bytes(bytes));
+            if count != 0 {
+                Self::handle_lost_events(&self.logger, cpu as i32, count);
+            }
+        }
+    }
+
     /// Loops forever unless an error is hit
     pub fn drive(&mut self) -> Result<()> {
         let mut skel_builder = ExitstatSkelBuilder::default();
@@ -165,18 +200,78 @@ impl ExitstatDriver {
             .context("Failed to load BPF program")?;
         skel.attach().context("Failed to attach BPF program?")?;
 
-        // Set up perf ring buffer
         let buffer = self.get_buffer();
-        let logger_clone = self.logger.clone();
-        let perf = libbpf_rs::PerfBufferBuilder::new(&skel.maps.events)
-            .sample_cb(move |_, data: &[u8]| Self::handle_event(&buffer, data))
-            .lost_cb(move |cpu, count| Self::handle_lost_events(&logger_clone, cpu, count))
-            .build()?;
+        let mut ring_builder = RingBufferBuilder::new();
+        ring_builder.add(&skel.maps.events, move |data| {
+            Self::handle_event(&buffer, data);
+            0
+        })?;
+        let ring = ring_builder.build()?;
+        let mut previous_lost = Vec::new();
+        let mut last_lost_check = Instant::now();
 
-        // Poll events
         loop {
-            perf.poll(Duration::from_millis(100))
-                .context("Error polling perf buffer")?;
+            ring.poll(Duration::from_millis(100))
+                .context("Error polling ring buffer")?;
+            if last_lost_check.elapsed() < Duration::from_secs(1) {
+                continue;
+            }
+            last_lost_check = Instant::now();
+            self.report_lost_events(
+                skel.maps
+                    .lost_events
+                    .lookup_percpu(&0u32.to_ne_bytes(), MapFlags::ANY)
+                    .context("Lost event counter lookup"),
+                &mut previous_lost,
+            );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lost_event_deltas() {
+        let mut previous = [0, 0];
+        assert_eq!(lost_event_delta(&mut previous[0], 0), 0);
+        assert_eq!(lost_event_delta(&mut previous[0], 3), 3);
+        assert_eq!(lost_event_delta(&mut previous[0], 3), 0);
+        assert_eq!(lost_event_delta(&mut previous[0], 5), 2);
+        assert_eq!(lost_event_delta(&mut previous[1], 1), 1);
+        assert_eq!(previous, [5, 1]);
+        previous[0] = u64::MAX;
+        assert_eq!(lost_event_delta(&mut previous[0], 1), 2);
+        assert_eq!(previous, [1, 1]);
+    }
+
+    #[test]
+    fn lost_reporting_failures_are_best_effort() {
+        let logger = slog::Logger::root(slog::Discard, slog::o!());
+        let driver = ExitstatDriver::new(logger, false);
+        let mut previous = vec![3, 4];
+        driver.report_lost_events(Err(anyhow::anyhow!("Interrupted lookup")), &mut previous);
+        assert_eq!(previous, [3, 4]);
+        driver.report_lost_events(Ok(None), &mut previous);
+        assert_eq!(previous, [3, 4]);
+        driver.report_lost_events(
+            Ok(Some(vec![vec![0; 7], 5u64.to_ne_bytes().to_vec()])),
+            &mut previous,
+        );
+        assert_eq!(previous, [3, 5]);
+        driver.report_lost_events(
+            Ok(Some(vec![
+                8u64.to_ne_bytes().to_vec(),
+                6u64.to_ne_bytes().to_vec(),
+            ])),
+            &mut previous,
+        );
+        assert_eq!(previous, [8, 6]);
+        let mut record = vec![0; std::mem::size_of::<Event>()];
+        record[..4].copy_from_slice(&42i32.to_ne_bytes());
+        let buffer = driver.get_buffer();
+        ExitstatDriver::handle_event(&buffer, &record);
+        assert!(buffer.lock().expect("lock poisoned").contains_key(&42));
     }
 }

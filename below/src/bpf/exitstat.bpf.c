@@ -28,10 +28,16 @@
 #define TASK_COMM_LEN 16
 
 struct {
-  __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-  __type(key, u32);
-  __type(value, u32);
+  __uint(type, BPF_MAP_TYPE_RINGBUF);
+  __uint(max_entries, 2 * 1024 * 1024);
 } events SEC(".maps");
+
+struct {
+  __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+  __uint(max_entries, 1);
+  __type(key, u32);
+  __type(value, u64);
+} lost_events SEC(".maps");
 
 struct metadata {
   pid_t tid; // thread (task) ID
@@ -110,30 +116,39 @@ SEC("tracepoint/sched/sched_process_exit")
 int tracepoint__sched__sched_process_exit(
     struct trace_event_raw_sched_process_template* args
 ) {
+  struct event* data = bpf_ringbuf_reserve(&events, sizeof(struct event), 0);
+  if (!data) {
+    u32 key = 0;
+    u64* lost = bpf_map_lookup_elem(&lost_events, &key);
+    if (lost)
+      __sync_fetch_and_add(lost, 1);
+    return 1;
+  }
+  __builtin_memset(data, 0, sizeof(*data));
+
   struct task_struct* task = bpf_get_current_task_btf();
   u64 pid_tgid = bpf_get_current_pid_tgid();
   u64 now = bpf_ktime_get_ns();
 
-  struct event data = {};
-  data.meta.tid = pid_tgid & 0xFFFFFFFF;
-  data.meta.ppid = task->real_parent->tgid;
-  data.meta.pgrp = task->group_leader->tgid;
-  data.meta.sid = task->sessionid;
-  data.meta.cpu = task_cpu(task);
-  bpf_get_current_comm(&data.meta.comm, sizeof(data.meta.comm));
+  data->meta.tid = pid_tgid & 0xFFFFFFFF;
+  data->meta.ppid = task->real_parent->tgid;
+  data->meta.pgrp = task->group_leader->tgid;
+  data->meta.sid = task->sessionid;
+  data->meta.cpu = task_cpu(task);
+  bpf_get_current_comm(&data->meta.comm, sizeof(data->meta.comm));
 
   /* read/calculate exitstats */
-  data.stats.min_flt = task->min_flt;
-  data.stats.maj_flt = task->maj_flt;
-  data.stats.utime_us = task->utime / 1000;
-  data.stats.stime_us = task->stime / 1000;
-  data.stats.nr_threads = task->signal->nr_threads;
+  data->stats.min_flt = task->min_flt;
+  data->stats.maj_flt = task->maj_flt;
+  data->stats.utime_us = task->utime / 1000;
+  data->stats.stime_us = task->stime / 1000;
+  data->stats.nr_threads = task->signal->nr_threads;
 
   /* CONFIG_TASK_IO_ACCOUNTING is always enabled in fbk kernels */
-  data.stats.io_read_bytes = task->ioac.read_bytes;
-  data.stats.io_write_bytes = task->ioac.write_bytes;
+  data->stats.io_read_bytes = task->ioac.read_bytes;
+  data->stats.io_write_bytes = task->ioac.write_bytes;
 
-  data.stats.etime_us = (now - task->start_time) / 1000;
+  data->stats.etime_us = (now - task->start_time) / 1000;
   const struct mm_struct* mm = task->mm;
   if (mm) {
     u64 file_pages = 0;
@@ -153,13 +168,12 @@ int tracepoint__sched__sched_process_exit(
       anon_pages = percpu_counter_read_positive(&anon_fbc);
       shmem_pages = percpu_counter_read_positive(&shmem_fbc);
     }
-    data.stats.active_rss_pages = file_pages + anon_pages + shmem_pages;
+    data->stats.active_rss_pages = file_pages + anon_pages + shmem_pages;
   } else {
-    data.stats.active_rss_pages = 0;
+    data->stats.active_rss_pages = 0;
   }
 
-  bpf_perf_event_output(
-      args, &events, BPF_F_CURRENT_CPU, &data, sizeof(struct event));
+  bpf_ringbuf_submit(data, 0);
   return 1;
 }
 
