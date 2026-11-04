@@ -15,7 +15,7 @@ common = { package = "below-common", version = "0.11.0", path = "../common" }
 libc = "0.2.186"
 nix = { version = "0.31.3", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 openat = "0.1.21"
-parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
+parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard", "serde"] }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 slog = { version = "2.8.2", features = ["max_level_trace", "nested-values"] }
 thiserror = "2.0.21"
