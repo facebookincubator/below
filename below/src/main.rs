@@ -1482,7 +1482,7 @@ fn record(
                 // Readiness means a sample was collected, not merely that the
                 // process started. A no-op when not run by systemd.
                 if !notified_ready {
-                    if let Err(e) = sd_notify::notify(false, &[NotifyState::Ready]) {
+                    if let Err(e) = sd_notify::notify(&[NotifyState::Ready]) {
                         warn!(logger, "Failed to notify systemd of readiness: {:#}", e);
                     }
                     notified_ready = true;
