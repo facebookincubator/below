@@ -11,7 +11,7 @@ license = "Apache-2.0"
 
 [dependencies]
 netlink-packet-core = "0.8.2"
-netlink-packet-route = "0.26.0"
+netlink-packet-route = "0.28.0"
 netlink-sys = "0.8.8"
 nix = { version = "0.31.3", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
