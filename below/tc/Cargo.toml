@@ -10,9 +10,9 @@ repository = "https://github.com/facebookincubator/below"
 license = "Apache-2.0"
 
 [dependencies]
-netlink-packet-core = "0.8.2"
-netlink-packet-route = "0.32.1"
-netlink-sys = "0.8.8"
+netlink-packet-core = "0.9.0"
+netlink-packet-route = "0.33.0"
+netlink-sys = "0.9.0"
 nix = { version = "0.31.3", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 thiserror = "2.0.21"
