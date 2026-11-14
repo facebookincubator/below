@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::path::Path;
-use std::time::Duration;
-
 use crate::init;
+use crate::record::RecordStats;
 
 pub struct Statistics {}
 
@@ -23,14 +21,6 @@ impl Statistics {
     pub fn new(_init_token: init::InitToken) -> Statistics {
         Statistics {}
     }
-
-    pub fn report_store_size<P: AsRef<Path>>(&mut self, _dir: P) {}
-
-    pub fn report_nr_accelerators(&mut self, _sample: &model::Sample) {}
 }
 
-pub fn report_collection_skew() {}
-
-pub fn report_collection_time_ms(ms: Duration) {}
-
-pub fn report_writer_time_ms(ms: Duration) {}
+impl RecordStats for Statistics {}

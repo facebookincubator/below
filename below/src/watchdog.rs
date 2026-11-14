@@ -1254,33 +1254,28 @@ mod tests {
 
         let opts = Opt::try_parse_from(["below", "record", "--watchdog-timeout-s", "30"])
             .expect("valid timeout");
-        let Some(Command::Record {
-            watchdog_timeout_s, ..
-        }) = opts.cmd
-        else {
+        let Some(Command::Record { args, .. }) = opts.cmd else {
             panic!("record command");
         };
-        assert_eq!(watchdog_timeout_s.map(|value| value.get()), Some(30));
+        assert_eq!(args.watchdog_timeout_s.map(|value| value.get()), Some(30));
         assert!(Opt::try_parse_from(["below", "record", "--watchdog-timeout-s", "0"]).is_err());
         assert!(Opt::try_parse_from(["below", "record", "--watchdog-timeout-s", "86401"]).is_err());
 
         let opts = Opt::try_parse_from(["below", "record"]).expect("defaults");
-        let Some(Command::Record {
-            watchdog_timeout_s,
-            writer_buffer_size,
-            ..
-        }) = opts.cmd
-        else {
+        let Some(Command::Record { args, .. }) = opts.cmd else {
             panic!("record command");
         };
-        assert_eq!(watchdog_timeout_s, None);
-        assert_eq!(writer_buffer_size, 10);
+        assert_eq!(args.watchdog_timeout_s, None);
+        assert_eq!(args.writer_buffer_size, 10);
 
         let five_seconds = Duration::from_secs(5);
-        assert!(crate::validate_watchdog_timeout(five_seconds, None).is_ok());
+        assert!(crate::record::validate_watchdog_timeout(five_seconds, None).is_ok());
         assert!(
-            crate::validate_watchdog_timeout(five_seconds, Some(Duration::from_secs(10))).is_ok()
+            crate::record::validate_watchdog_timeout(five_seconds, Some(Duration::from_secs(10)))
+                .is_ok()
         );
-        assert!(crate::validate_watchdog_timeout(five_seconds, Some(five_seconds)).is_err());
+        assert!(
+            crate::record::validate_watchdog_timeout(five_seconds, Some(five_seconds)).is_err()
+        );
     }
 }
