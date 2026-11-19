@@ -1163,8 +1163,11 @@ macro_rules! handle_fbthrift_error {
                 // The daemon is down or restarting. Every call here is a read,
                 // so skip the sample rather than back off.
                 if let T::ThriftError(e) = &e
-                    && let Some(ThriftError::Connect { .. } | ThriftError::ConnectionClosed(_)) =
-                        e.downcast_ref::<ThriftError>()
+                    && let Some(
+                        ThriftError::Connect { .. }
+                        | ThriftError::ConnectRefused { .. }
+                        | ThriftError::ConnectionClosed(_),
+                    ) = e.downcast_ref::<ThriftError>()
                 {
                     warn!($logger, "{}", e);
                     return Ok(None);
