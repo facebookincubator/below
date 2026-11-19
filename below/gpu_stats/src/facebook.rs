@@ -33,6 +33,8 @@ use futures::TryFutureExt;
 use nativeclient::Executor;
 use nativeclient::NativeChannelBuilder;
 use nativeclient::ThriftError;
+use nativeclient::ThriftErrorExt;
+use nativeclient::TransportError;
 use rgpu_service_clients::RgpuService;
 use rgpu_service_nativeclients::RgpuServiceExtNativeClient;
 use rgpu_service_nativeclients::build_RgpuService_ext_client_with_compact_protocol;
@@ -1163,11 +1165,11 @@ macro_rules! handle_fbthrift_error {
                 // The daemon is down or restarting. Every call here is a read,
                 // so skip the sample rather than back off.
                 if let T::ThriftError(e) = &e
-                    && let Some(
-                        ThriftError::Connect { .. }
-                        | ThriftError::ConnectRefused { .. }
-                        | ThriftError::ConnectionClosed(_),
-                    ) = e.downcast_ref::<ThriftError>()
+                    && let Some(ThriftError::Transport(
+                        TransportError::ConnectFailed { .. }
+                        | TransportError::ConnectRefused { .. }
+                        | TransportError::Closed(_),
+                    )) = e.thrift_error()
                 {
                     warn!($logger, "{}", e);
                     return Ok(None);
