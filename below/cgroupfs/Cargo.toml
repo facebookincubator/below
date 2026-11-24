@@ -28,7 +28,7 @@ tempfile = "3.27.0"
 
 [build-dependencies]
 below-vmlinux = { version = "0.11.0", path = "../vmlinux" }
-bindgen = { version = "0.72.1", features = ["logging", "prettyplease", "runtime"], default-features = false }
+bindgen = { version = "0.73.2", features = ["logging", "prettyplease", "runtime"], default-features = false }
 libbpf-cargo = { version = "0.27.2", default-features = false }
 
 [features]
