@@ -18,7 +18,7 @@ members = [
   "below/view",
   "below/vmlinux",
 ]
-resolver = "2"
+resolver = "3"
 
 [workspace.package]
 license = "Apache-2.0"
